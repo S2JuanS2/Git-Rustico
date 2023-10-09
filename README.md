@@ -19,7 +19,7 @@ Antes de ejecutar el proyecto, es necesario configurar ciertos parámetros, como
 Para ejecutar el servidor, utiliza el siguiente comando:
 
 ```bash
-cargo run --bin servidor
+cargo run --bin server
 ```
 
 Esto iniciará el servidor y estará listo para atender las solicitudes de los clientes.
@@ -29,7 +29,7 @@ Esto iniciará el servidor y estará listo para atender las solicitudes de los c
 Para ejecutar el cliente, utiliza el siguiente comando:
 
 ```bash
-cargo run --bin cliente
+cargo run --bin client
 ```
 
 El cliente se conectará al servidor y podrá realizar las operaciones disponibles.

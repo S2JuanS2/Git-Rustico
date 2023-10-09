@@ -1,3 +1,4 @@
+#[derive(Debug)]
 /// Enumeración que representa los posibles errores que pueden ocurrir durante la ejecución
 /// del programa Git.
 ///
@@ -12,6 +13,8 @@ pub enum GitError {
     InvalidUserNameError,
     InvalidUserMailError,
     InvalidLogDirectoryError,
+    ServerConnectionError,
+    ClientConnectionError,
 }
 
 impl GitError {
@@ -34,6 +37,9 @@ impl GitError {
             GitError::InvalidUserNameError => "Nombre de usuario inválido, revise su archivo de configuración.",
             GitError::InvalidUserMailError => "Correo de usuario inválido, revise su archivo de configuración.",
             GitError::InvalidLogDirectoryError => "Directorio de logs inválido, revise su archivo de configuración.",
+            GitError::ServerConnectionError => "No se pudo conectar al servidor.",
+            GitError::ClientConnectionError => "No se pudo conectar el cliente.",
+    
         }
     }
 }
