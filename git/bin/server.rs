@@ -4,7 +4,7 @@ use git::errors::GitError;
 fn main()
 {
     // Escucha en la dirección IP y el puerto deseados
-    let listener = match start_server("127.0.0.1:8080")
+    let listener = match start_server("127.0.0.1:9000")
     {
         Ok(listener) => listener,
         Err(e) => {
@@ -18,8 +18,6 @@ fn main()
         Ok((_socket, address)) => println!("Nueva conexión: {}", address),
         Err(e) => println!("Error: {}", e),
     }
-    return;
-
 }
 
 fn start_server(ip: &str) -> Result<TcpListener, GitError>
