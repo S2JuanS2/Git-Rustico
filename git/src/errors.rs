@@ -13,6 +13,7 @@ pub enum GitError {
     InvalidUserNameError,
     InvalidUserMailError,
     InvalidLogDirectoryError,
+    InvalidIpError,
     ServerConnectionError,
     ClientConnectionError,
 }
@@ -37,9 +38,9 @@ impl GitError {
             GitError::InvalidUserNameError => "Nombre de usuario inválido, revise su archivo de configuración.",
             GitError::InvalidUserMailError => "Correo de usuario inválido, revise su archivo de configuración.",
             GitError::InvalidLogDirectoryError => "Directorio de logs inválido, revise su archivo de configuración.",
+            GitError::InvalidIpError => "Dirección IP inválida, revise su archivo de configuración.",
             GitError::ServerConnectionError => "No se pudo conectar al servidor.",
             GitError::ClientConnectionError => "No se pudo conectar el cliente.",
-    
         }
     }
 }
