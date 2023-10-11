@@ -1,18 +1,28 @@
+use git::config::Config;
 use git::errors::GitError;
 use std::net::TcpStream;
 
 use std::thread;
 use std::time::Duration;
 
-fn main()
-{
-    
-    let _ = match start_client("127.0.0.1:9418") {
+fn main() {
+    let config = match Config::new() {
+        Ok(config) => config,
+        Err(error) => {
+            println!("Error: {}", error.message());
+            return;
+        }
+    };
+    print!("{}", config);
+
+    let addres = format!("{}:{}", config.ip, config.port);
+
+    let _ = match start_client(&addres) {
         Ok(s) => s,
         Err(e) => {
             println!("{}", e.message());
             return;
-        },
+        }
     };
     println!("Estoy conectado con daemon");
 
@@ -25,9 +35,7 @@ fn main()
     println!("Sali de mimir, me toca morir");
 }
 
-
-fn start_client(ip: &str) -> Result<TcpStream, GitError>
-{
+fn start_client(ip: &str) -> Result<TcpStream, GitError> {
     match TcpStream::connect(ip) {
         Ok(socket) => Ok(socket),
         Err(_) => Err(GitError::ClientConnectionError),

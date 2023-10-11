@@ -13,10 +13,10 @@
 //! ## Ejemplo de uso
 //!
 //! ```rust
-//! use mi_proyecto::util::submodulo1::funcion_especial;
+//! use git::util::validation::valid_ip;
 //!
-//! let resultado = funcion_especial(42);
-//! println!("Resultado: {}", resultado);
+//! let resultado = valid_ip("127.0.0.0");
+//! assert!(resultado.is_ok());
 //! ```
 //!
 //! ## Funciones disponibles
@@ -35,6 +35,6 @@
 //! ciertas tareas comunes en el proyecto. Explora los submódulos para acceder a funciones
 //! y tipos más específicos.
 //! ```
-//! 
+//!
 
 pub mod validation;

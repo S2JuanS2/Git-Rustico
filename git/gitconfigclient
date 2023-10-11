@@ -1,5 +1,5 @@
 name=Brayan
 email=b@fiar.com
 path_log=./op
-ip=127.0.8.4
-port=9238
+ip=127.0.0.0
+port=3982

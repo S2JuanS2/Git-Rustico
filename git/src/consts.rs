@@ -9,8 +9,8 @@
 //! ```
 //! use git::consts::*;
 //!
-//! let max_attempts = CONNECTION_RETRY_MAX_ATTEMPTS;
-//! println!("Número máximo de intentos de conexión: {}", max_attempts);
+//! let required_args = REQUIRED_ARG_COUNT;
+//! println!("Número de argumentos requeridos por Git: {}", required_args);
 //! ```
 //!
 
@@ -44,3 +44,12 @@ pub const IPV6_MAX: u16 = 65535;
 
 // Longitud de las secciones de IPV6
 pub const IPV4_SECTION_LENGTH: usize = 4;
+
+// Maximo valor de un puerto
+pub const PORT_MAX: u16 = 65535;
+
+// Minimo valor de un puerto
+pub const PORT_MIN: u16 = 1024;
+
+// Puerdo de git daemon
+pub const GIT_DAEMON_PORT: u16 = 9418;

@@ -21,8 +21,11 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use crate::{consts::*, util::validation::{is_valid_ip, valid_path_log, valid_email}};
 use crate::errors::GitError;
+use crate::{
+    consts::*,
+    util::validation::{valid_email, valid_ip, valid_path_log, valid_port},
+};
 
 type Operacion = fn(&str, &mut Config) -> Result<(), GitError>;
 
@@ -55,7 +58,7 @@ impl Config {
             email: String::new(),
             path_log: LOG_PATH_DEFAULT.to_string(),
             ip: IP_DEFAULT.to_string(),
-            port: PORT_DEFAULT.to_string(),
+            port: GIT_DAEMON_PORT.to_string(),
         };
 
         read_input(&path, &mut config, process_line)?;
@@ -109,8 +112,8 @@ pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
         "name" => config.name = value.to_string(),
         "email" => config.email = valid_email(value)?,
         "path_log" => config.path_log = valid_path_log(value)?,
-        "ip" => config.ip = is_valid_ip(value.to_string())?,
-        "port" => config.port = value.to_string(),
+        "ip" => config.ip = valid_ip(value)?,
+        "port" => config.port = valid_port(value)?,
         _ => return Err(GitError::InvalidConfigurationValueError),
     }
     Ok(())

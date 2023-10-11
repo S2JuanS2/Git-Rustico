@@ -12,6 +12,7 @@ pub enum GitError {
     InvalidConfigurationValueError,
     InvalidUserNameError,
     InvalidUserMailError,
+    InvalidPortError,
     InvalidLogDirectoryError,
     InvalidIpError,
     ServerConnectionError,
@@ -32,11 +33,12 @@ impl GitError {
     pub fn message(&self) -> &str {
         match self {
             GitError::ConfigFileError => "No se pudo abrir el archivo de configuración.",
-            GitError::MissingConfigPathError => "No se ha especificado la ruta del archivo de configuración.\nUse: cargo run -- <path config>",
+            GitError::MissingConfigPathError => "No se ha especificado la ruta del archivo de configuración.\nUse: cargo run --bin <mode> -- <path config>",
             GitError::InvalidArgumentCountError => "Número de argumentos inválido.\nUse: cargo run -- <path config>",
             GitError::InvalidConfigurationValueError => "Valor de configuración inválido, revise su archivo de configuración.",
             GitError::InvalidUserNameError => "Nombre de usuario inválido, revise su archivo de configuración.",
             GitError::InvalidUserMailError => "Correo de usuario inválido, revise su archivo de configuración.",
+            GitError::InvalidPortError => "Puerto inválido, revise su archivo de configuración.",
             GitError::InvalidLogDirectoryError => "Directorio de logs inválido, revise su archivo de configuración.",
             GitError::InvalidIpError => "Dirección IP inválida, revise su archivo de configuración.",
             GitError::ServerConnectionError => "No se pudo conectar al servidor.",

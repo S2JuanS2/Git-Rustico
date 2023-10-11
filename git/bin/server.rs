@@ -1,11 +1,21 @@
-use std::net::TcpListener;
+use git::config::Config;
 use git::errors::GitError;
+use std::net::TcpListener;
 
-fn main()
-{
+fn main() {
+    let config = match Config::new() {
+        Ok(config) => config,
+        Err(error) => {
+            println!("Error: {}", error.message());
+            return;
+        }
+    };
+    print!("{}", config);
+
+    let address = format!("{}:{}", config.ip, config.port);
+
     // Escucha en la dirección IP y el puerto deseados
-    let listener = match start_server("127.0.0.1:9000")
-    {
+    let listener = match start_server(&address) {
         Ok(listener) => listener,
         Err(e) => {
             println!("{}", e.message());
@@ -20,8 +30,7 @@ fn main()
     }
 }
 
-fn start_server(ip: &str) -> Result<TcpListener, GitError>
-{
+fn start_server(ip: &str) -> Result<TcpListener, GitError> {
     match TcpListener::bind(ip) {
         Ok(listener) => Ok(listener),
         Err(_) => Err(GitError::ServerConnectionError),
