@@ -19,20 +19,20 @@ Antes de ejecutar el proyecto, es necesario configurar ciertos parámetros, como
 Para ejecutar el servidor, utiliza el siguiente comando:
 
 ```bash
-cargo run --bin server
+cargo run --bin server -- path/config
 ```
 
-Esto iniciará el servidor y estará listo para atender las solicitudes de los clientes.
+Esto iniciará el servidor y estará listo para atender las solicitudes de los clientes. Asegúrate de configurar el archivo "path/config" con la información necesaria, incluyendo la dirección IP y el puerto.
 
 ## Ejecución del Cliente
 
 Para ejecutar el cliente, utiliza el siguiente comando:
 
 ```bash
-cargo run --bin client
+cargo run --bin client -- path/config
 ```
 
-El cliente se conectará al servidor y podrá realizar las operaciones disponibles.
+El cliente se conectará al servidor utilizando la información proporcionada en el archivo "path/config" y podrá realizar las operaciones disponibles. Asegúrate de que el archivo "path/config" esté configurado correctamente con la dirección IP y el puerto correspondientes.
 
 ## Uso
 
