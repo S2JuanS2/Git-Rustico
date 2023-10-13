@@ -17,6 +17,7 @@ pub enum GitError {
     InvalidIpError,
     ServerConnectionError,
     ClientConnectionError,
+    GenericError, // Error genérico, eliminar antes de la entrega
 }
 
 impl GitError {
@@ -43,6 +44,7 @@ impl GitError {
             GitError::InvalidIpError => "Dirección IP inválida, revise su archivo de configuración.",
             GitError::ServerConnectionError => "No se pudo conectar al servidor.",
             GitError::ClientConnectionError => "No se pudo conectar el cliente.",
+            GitError::GenericError => "Error genérico.",
         }
     }
 }
