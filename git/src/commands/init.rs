@@ -1,5 +1,5 @@
-use std::io::{self, Write};
 use std::fs;
+use std::io::{self, Write};
 use std::path::Path;
 
 const INITIAL_BRANCH: &str = "main";
@@ -7,13 +7,12 @@ const INITIAL_BRANCH: &str = "main";
 /// Crea un directorio si no existe
 /// ###Parametros:
 /// 'directory': dirección del directorio a crear
-fn create_directory(directory: &str) -> io::Result<()>{
-    if !Path::new(directory).exists(){
+fn create_directory(directory: &str) -> io::Result<()> {
+    if !Path::new(directory).exists() {
         fs::create_dir_all(directory)?;
     }
     Ok(())
 }
-
 
 /// Crea un archivo si no existe.
 /// ###Parametros:
@@ -29,18 +28,16 @@ fn create_file(file: &str, content: &str) -> io::Result<()> {
     Ok(())
 }
 
-
 /// Esta función inicia un repositorio git creando los directorios y archivos necesarios.
 /// ###Parametros:
 /// 'directory': dirección donde se inicializará el repositorio.
-pub fn git_init (directory: &str) -> io::Result<()>{
-
+pub fn git_init(directory: &str) -> io::Result<()> {
     create_directory(directory)?;
-    
+
     let git_dir = format!("{}/.git", directory);
     let objects_dir = format!("{}/objects", &git_dir);
     let heads_dir = format!("{}/refs/heads", &git_dir);
-    
+
     create_directory(&git_dir)?;
     create_directory(&objects_dir)?;
     create_directory(&heads_dir)?;
@@ -87,10 +84,3 @@ mod tests {
         fs::remove_dir_all(&temp_dir).expect("Failed to remove temporary directory");
     }
 }
-
-
-
-
-
-
-

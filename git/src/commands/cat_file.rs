@@ -1,14 +1,12 @@
-use std::io::{self, Read};
 use std::fs::File;
-
+use std::io::{self, Read};
 
 /// Esta función se utiliza para mostrar el contenido o información sobre los objetos (archivos, commits, etc.)
 /// ###Parametros:
 /// 'directory': dirección donde se encuentra inicializado el repositorio.
 /// 'object_hash': Valor hash de 40 caracteres (SHA-1) del objeto a leer.
-pub fn git_cat_file(directory: &str, object_hash: &str) -> io::Result<()>{
-
-    if object_hash.len() != 40{
+pub fn git_cat_file(directory: &str, object_hash: &str) -> io::Result<()> {
+    if object_hash.len() != 40 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "El hash del objeto no tiene 40 caracteres",
@@ -16,7 +14,7 @@ pub fn git_cat_file(directory: &str, object_hash: &str) -> io::Result<()>{
     }
 
     //Lee los primeros 2 digitos del hash contenidos en el nombre de la carpeta.
-    let path = format!("{}/.git/objects/{}",directory, &object_hash[..2]); 
+    let path = format!("{}/.git/objects/{}", directory, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
 
@@ -25,18 +23,17 @@ pub fn git_cat_file(directory: &str, object_hash: &str) -> io::Result<()>{
 
     file.read_to_string(&mut content)?;
 
-    println!("{}",content);
+    println!("{}", content);
 
     Ok(())
-
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs::{self, File};
     use std::io::Write;
     use std::path::Path;
-    use std::fs::{self, File};
 
     #[test]
     fn test_git_cat_file() {
@@ -58,7 +55,8 @@ mod tests {
 
         let object_file = object_dir.join(&object_hash[2..]);
         let mut file = File::create(&object_file).expect("Failed to create object file");
-        file.write_all(object_content.as_bytes()).expect("Failed to write to object file");
+        file.write_all(object_content.as_bytes())
+            .expect("Failed to write to object file");
 
         // Cuando llama a la función git_cat_file
         let result = git_cat_file(temp_dir.to_str().unwrap(), object_hash);
