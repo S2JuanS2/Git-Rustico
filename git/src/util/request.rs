@@ -16,7 +16,12 @@ impl RequestCommand {
     }
 }
 
-pub fn create_git_request(command: RequestCommand, repo: String, ip: String, port: String) -> String {
+pub fn create_git_request(
+    command: RequestCommand,
+    repo: String,
+    ip: String,
+    port: String,
+) -> String {
     let mut len: usize = 0;
 
     let command = format!("{} ", command.to_string());
