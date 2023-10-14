@@ -17,6 +17,9 @@ pub enum GitError {
     InvalidIpError,
     ServerConnectionError,
     ClientConnectionError,
+    ObjectBuildFailed,
+    GtkFailedInitiliaze,
+
 }
 
 impl GitError {
@@ -43,6 +46,8 @@ impl GitError {
             GitError::InvalidIpError => "Dirección IP inválida, revise su archivo de configuración.",
             GitError::ServerConnectionError => "No se pudo conectar al servidor.",
             GitError::ClientConnectionError => "No se pudo conectar el cliente.",
+            GitError::ObjectBuildFailed => "No se pudo obtener el objeto del constructor.",
+            GitError::GtkFailedInitiliaze => "No se pudo inicializar GTk",
         }
     }
 }
