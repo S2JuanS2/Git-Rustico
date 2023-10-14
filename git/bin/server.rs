@@ -1,5 +1,6 @@
 use git::config::Config;
 use git::util::connections::start_server;
+use std::env;
 use std::net::TcpStream;
 use std::io::Read;
 
@@ -16,7 +17,8 @@ fn handle_client(mut stream: TcpStream) {
 
 
 fn main() {
-    let config = match Config::new() {
+    let args: Vec<String> = env::args().collect();
+    let config = match Config::new(args) {
         Ok(config) => config,
         Err(error) => {
             println!("Error: {}", error.message());
