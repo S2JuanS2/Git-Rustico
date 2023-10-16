@@ -17,7 +17,8 @@ pub enum GitError {
     InvalidIpError,
     ServerConnectionError,
     ClientConnectionError,
-    GenericError, // Error genérico, eliminar antes de la entrega
+    InvalidPacketLineError,
+    GenericError, // Error genérico, eliminar antes de la entrega.
 }
 
 impl GitError {
@@ -45,6 +46,7 @@ impl GitError {
             GitError::ServerConnectionError => "No se pudo conectar al servidor.",
             GitError::ClientConnectionError => "No se pudo conectar el cliente.",
             GitError::GenericError => "Error genérico.",
+            GitError::InvalidPacketLineError => "Error al leer una línea de paquete.",
         }
     }
 }

@@ -67,3 +67,6 @@ pub const END_OF_STRING: &str = "\0";
 
 // Tamaño del prefijo de longitud
 pub const LENGTH_PREFIX_SIZE: usize = 4;
+
+// 
+pub const FLUSH_PKT: &str = "0000";

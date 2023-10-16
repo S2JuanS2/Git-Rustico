@@ -1,0 +1,190 @@
+use std::io::Read;
+
+use crate::{errors::GitError, consts::LENGTH_PREFIX_SIZE};
+
+
+/// Lee líneas de paquete del flujo de entrada proporcionado y las devuelve como un vector de vectores de bytes.
+///
+/// Esta función continúa leyendo líneas de paquete del flujo hasta encontrar una línea de paquete vacía,
+/// que indica el final del paquete.
+///
+/// Cada línea de paquete se lee utilizando la función `read_pkt_line`, que espera que el flujo de entrada
+/// contenga líneas de paquete según el formato de Git.
+///
+/// Si ocurre un error al leer cualquiera de las líneas de paquete, se devuelve un error `GitError`.
+///
+/// # Argumentos
+///
+/// - `stream`: Un mutable referencia a un objeto que implementa el trait `Read` para la entrada de datos.
+///
+/// # Retornoes
+///
+/// - `Result<Vec<Vec<u8>>, GitError>`: Un resultado que contiene un vector de vectores de bytes,
+///   donde cada vector representa una línea de paquete del paquete Git leído.
+///   Si ocurre un error, se devuelve el error correspondiente.
+pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, GitError> {
+    let mut lines: Vec<Vec<u8>> = Vec::new();
+
+    loop {
+        match read_pkt_line(stream) {
+            Ok(line) => {
+                if line.is_empty() {
+                    return Ok(lines);
+                }
+                lines.push(line);
+            }
+            Err(err) => return Err(err),
+        }
+    }
+}
+
+
+/// Lee una línea de paquete del flujo de entrada proporcionado y la devuelve como un vector de bytes.
+///
+/// Esta función espera que el flujo de entrada contenga líneas de paquete según el formato de Git:
+///
+/// 1. Lea los primeros 4 bytes que representan la longitud de la línea en formato hexadecimal.
+/// 2. Convierte la longitud hexadecimal a un número entero.
+/// 3. Lee la cantidad de bytes especificada por la longitud menos 1 (debido al carácter de nueva línea).
+/// 4. Devuelve el contenido de la línea de paquete como un vector de bytes.
+///
+/// Si ocurre un error al leer la línea de paquete o al convertir la longitud hexadecimal,
+/// se devuelve un error `GitError::InvalidPacketLineError`.
+///
+/// Si la longitud es 0, lo que indica el final del paquete, se devuelve un vector de bytes vacío.
+///
+/// # Argumentos
+///
+/// - `socket`: Un mutable referencia a un objeto que implementa el trait `Read` para la entrada de datos.
+///
+/// # Retornoes
+///
+/// - `Result<Vec<u8>, GitError>`: Un resultado que contiene el contenido de la línea de paquete o un error si ocurre alguno.
+fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError>
+{
+    let mut length_buf = [0u8; 4];
+    if socket.read_exact(&mut length_buf).is_err()
+    {
+        return Err(GitError::InvalidPacketLineError);
+    };
+
+    let length_hex = String::from_utf8_lossy(&length_buf);
+    let length = match u32::from_str_radix(length_hex.trim(), 16)
+    {
+        Ok(l) => l,
+        Err(_) => return Err(GitError::InvalidPacketLineError), 
+    };
+
+    if length == 0 {
+        // End of the packet
+        return Ok(vec![]);
+    }
+    
+    let length = length as usize - LENGTH_PREFIX_SIZE - 1; // 1 por el enter
+    let mut content = vec![0u8; length as usize];
+    if socket.read_exact(&mut content).is_err()
+    {
+        return Err(GitError::InvalidPacketLineError);
+    };
+
+    // Consume the newline character
+    let mut newline_buf = [0u8; 1];
+    if socket.read_exact(&mut newline_buf).is_err()
+    {
+        return Err(GitError::InvalidPacketLineError);
+    };
+
+    Ok(content)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::consts::FLUSH_PKT;
+
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn test_read_pkt_line_valid() {
+        // Crear un cursor con una cadena de longitud válida
+        let input = "0012hello, world!\n";
+        let mut cursor = Cursor::new(input);
+
+        let result = read_pkt_line(&mut cursor);
+        assert!(result.is_ok());
+
+        let content = result.unwrap();
+        assert_eq!(content, b"hello, world!");
+    }
+
+    #[test]
+    fn test_read_pkt_line_empty() {
+        // Crear un cursor con una cadena vacía (fin de paquete)
+        let input = FLUSH_PKT.to_string();
+        let mut cursor = Cursor::new(input);
+
+        let result = read_pkt_line(&mut cursor);
+        assert!(result.is_ok());
+
+        let content = result.unwrap();
+        assert_eq!(content, &[]);
+    }
+
+    #[test]
+    fn test_read_pkt_line_invalid_length() {
+        // Crear un cursor con una longitud no válida
+        let input = "0zinvalid_length\n";
+        let mut cursor = Cursor::new(input);
+
+        let result = read_pkt_line(&mut cursor);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_read_empty_stream() {
+        let input = FLUSH_PKT.as_bytes();
+        let mut stream = Cursor::new(input);
+
+        let result = read(&mut stream);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Vec::<Vec<u8>>::new());
+    }
+
+    #[test]
+    fn test_read_single_line() {
+        let input = format!("0012Hello, world!\n{}", FLUSH_PKT);
+        let mut stream = Cursor::new(input.as_bytes());
+
+        let result = read(&mut stream);
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0], b"Hello, world!");
+    }
+
+    #[test]
+    fn test_read_multiple_lines() {
+        let input = format!("000bLine 1\n000bLine 2\n000bLine 3\n{}", FLUSH_PKT);
+        let mut stream = Cursor::new(input.as_bytes());
+
+        let result = read(&mut stream);
+
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 3);
+        assert_eq!(lines[0], b"Line 1");
+        assert_eq!(lines[1], b"Line 2");
+        assert_eq!(lines[2], b"Line 3");
+    }
+
+    #[test]
+    fn test_read_incomplete_line() {
+        let input = b"0036Incomplete Line";
+        let mut stream = Cursor::new(input);
+
+        let result = read(&mut stream);
+
+        assert!(result.is_err());
+    }
+}
