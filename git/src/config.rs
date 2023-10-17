@@ -16,7 +16,7 @@
 //!
 
 use std::{
-    env, fmt,
+    fmt,
     fs::File,
     io::{BufRead, BufReader},
 };
@@ -50,8 +50,11 @@ impl fmt::Display for Config {
 }
 
 impl Config {
-    pub fn new() -> Result<Config, GitError> {
-        let path = parse_config_path()?;
+
+    /// Crea una nueva estructura `Config` a partir de un archivo de configuración
+    /// ubicado en la ruta especificada en los argumentos recibidos por parametro.
+    pub fn new(args: Vec<String>) -> Result<Config, GitError> {
+        let path = parse_config_path(args)?;
 
         let mut config = Config {
             name: String::new(),
@@ -67,8 +70,9 @@ impl Config {
     }
 }
 
-fn parse_config_path() -> Result<String, GitError> {
-    let args: Vec<String> = env::args().collect();
+/// recibe los argumentos de entrada y devuelve el path del archivo de configuración o un error
+/// en caso de que no haya la cantidad correcta de argumentos.
+fn parse_config_path(args: Vec<String>) -> Result<String, GitError> {
     if args.len() > REQUIRED_ARG_COUNT {
         return Err(GitError::InvalidArgumentCountError);
     }
@@ -80,6 +84,7 @@ fn parse_config_path() -> Result<String, GitError> {
     Ok(args[CONFIG_PATH_ARG_INDEX].clone())
 }
 
+/// Lee el archivo de configuración y procesa cada línea con la función `process`.
 pub fn read_input(path: &str, config: &mut Config, process: Operacion) -> Result<(), GitError> {
     let file = open_file_for_reading(path)?;
     let mut reader: BufReader<File> = BufReader::new(file);
@@ -95,6 +100,8 @@ pub fn read_input(path: &str, config: &mut Config, process: Operacion) -> Result
     Ok(())
 }
 
+/// Abre el archivo de configuración para lectura.
+/// Devuelve un error en caso de que no se pueda abrir el archivo.
 pub fn open_file_for_reading(path: &str) -> Result<File, GitError> {
     match File::open(path) {
         Ok(f) => Ok(f),
@@ -102,6 +109,8 @@ pub fn open_file_for_reading(path: &str) -> Result<File, GitError> {
     }
 }
 
+/// Procesa una línea del archivo de configuración y actualiza la configuración del cliente Git.
+/// Devuelve un error en caso de que la línea no sea válida.
 pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
     let line = line.trim();
     let mut parts = line.split('=');
@@ -117,4 +126,84 @@ pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
         _ => return Err(GitError::InvalidConfigurationValueError),
     }
     Ok(())
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_creates_default_config() {
+        let args = vec!["git".to_string(),"testfile".to_string()];
+        let result = Config::new(args);
+        let config = result.unwrap();
+        assert_eq!(config.name, String::new());
+        assert_eq!(config.email, String::new());
+        assert_eq!(config.path_log, LOG_PATH_DEFAULT.to_string());
+        assert_eq!(config.ip, IP_DEFAULT.to_string());
+        assert_eq!(config.port, GIT_DAEMON_PORT.to_string());
+    }
+
+    #[test]
+    fn test_parse_config_path_with_missing_args() {
+        let args = vec![];
+        let result = parse_config_path(args);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), GitError::MissingConfigPathError);
+    }
+
+    #[test]
+    fn test_parse_config_path_with_too_many_args() {
+        let args = vec!["git".to_string(),"path".to_string(), "extra".to_string()];
+        let result = parse_config_path(args);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), GitError::InvalidArgumentCountError);
+    }
+
+    #[test]
+    fn test_parse_config_path_with_valid_args() {
+        let args = vec!["git".to_string(),"path".to_string()];
+        let result = parse_config_path(args);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "path");
+    }
+
+    #[test]
+    fn test_read_input_with_valid_path() {
+        let mut config = Config::new(vec!["git".to_string(),"testfile".to_string()]).unwrap();
+        let result = read_input("testfile", &mut config, process_line);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_open_file_for_reading_with_invalid_path() {
+        let result = open_file_for_reading("invalid");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), GitError::ConfigFileError);
+    }
+
+    #[test]
+    fn test_open_file_for_reading_with_valid_path() {
+        let result = open_file_for_reading("testfile");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_process_line_with_valid_key_value() {
+        let mut config = Config::new(vec!["git".to_string(),"testfile".to_string()]).unwrap();
+        let result = process_line("name=Test", &mut config);
+        assert!(result.is_ok());
+        assert_eq!(config.name, "Test");
+    }
+
+    #[test]
+    fn test_process_line_with_invalid_key_value() {
+        let mut config = Config::new(vec!["git".to_string(),"testfile".to_string()]).unwrap();
+        let result = process_line("invalid=Test", &mut config);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), GitError::InvalidConfigurationValueError);
+    }
+
+
 }
