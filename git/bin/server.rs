@@ -8,13 +8,12 @@ fn handle_client(mut stream: TcpStream) {
     // Leer datos del cliente
     let mut buffer = [0; 1024];
 
-    if let Err(error)  = stream.read(&mut buffer) { 
+    if let Err(error) = stream.read(&mut buffer) {
         eprintln!("Error al leer: {}", error);
         return;
     }
     println!("Recibido: {}", String::from_utf8_lossy(&buffer));
 }
-
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -46,12 +45,11 @@ fn main() {
                 println!("Nueva conexión: {:?}", stream.local_addr());
                 std::thread::spawn(|| {
                     handle_client(stream);
-            });
+                });
             }
             Err(e) => {
                 eprintln!("Error al aceptar la conexión: {}", e);
             }
         }
     }
-
 }
