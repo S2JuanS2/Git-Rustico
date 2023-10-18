@@ -1,10 +1,11 @@
 use git::config::Config;
 use git::util::connections::start_client;
-use std::io;
+use std::{io, env};
 use std::io::Write;
 
 fn main() {
-    let config = match Config::new() {
+    let args: Vec<String> = env::args().collect();
+    let config = match Config::new(args) {
         Ok(config) => config,
         Err(error) => {
             println!("Error: {}", error.message());

@@ -10,4 +10,5 @@
 
 pub mod hash_object;
 /// Importa submódulos específicos para los comandos Git.
+pub mod branch;
 pub mod init;
