@@ -19,7 +19,6 @@ pub enum GitError {
     ClientConnectionError,
     ObjectBuildFailed,
     GtkFailedInitiliaze,
-
 }
 
 impl GitError {

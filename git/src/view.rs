@@ -4,7 +4,7 @@
 //!
 //! ## Submódulos
 //!
-//! 
+//!
 
 /// Importa submódulos específicos para las vistas de Git.
 pub mod view_client;

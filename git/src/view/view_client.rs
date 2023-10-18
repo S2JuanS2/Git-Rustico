@@ -1,8 +1,7 @@
-use gtk::prelude::*;
 use crate::errors::GitError;
+use gtk::prelude::*;
 
-pub fn start_view() -> Result<(), GitError>{
-
+pub fn start_view() -> Result<(), GitError> {
     if gtk::init().is_err() {
         return Err(GitError::GtkFailedInitiliaze);
     }
@@ -30,7 +29,6 @@ pub fn start_view() -> Result<(), GitError>{
     };
     button.connect_clicked(move |_| {
         println!("Comando recibido: {}", entry.text());
-        
     });
 
     window.show_all();
@@ -38,7 +36,6 @@ pub fn start_view() -> Result<(), GitError>{
     gtk::main();
 
     Ok(())
-    
 }
 
 /*
@@ -53,4 +50,3 @@ mod tests {
     }
 }
 */
-
