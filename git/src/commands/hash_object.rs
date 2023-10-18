@@ -1,8 +1,8 @@
 use crate::errors::GitError;
 extern crate sha1;
 
+use sha1::{Digest, Sha1};
 use std::{fs::File, io::Read};
-use sha1::{Sha1, Digest};
 
 const BLOB: &str = "blob";
 const TREE: &str = "tree";
@@ -12,8 +12,7 @@ const TAG: &str = "tag";
 /// Dado un contenido, genera el valor hash
 /// ###Parametros:
 /// 'content': contenido del que se creará el hash
-fn calculate_hash(content: &[u8]) -> String{
-
+fn calculate_hash(content: &[u8]) -> String {
     let mut hasher = Sha1::new();
     hasher.update(content);
     let result = hasher.finalize();
@@ -26,37 +25,61 @@ fn calculate_hash(content: &[u8]) -> String{
 /// ###Parametros:
 /// 'type_object': tipo del objeto, puede ser, commit, tree, blob, tag
 /// 'file_name': Nombre del archivo del cual se leera el contenido para generar el hash
-pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitError>{
-    
-    let mut file = match File::open(file_name){
+pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitError> {
+    let mut file = match File::open(file_name) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
     };
 
     let mut content = Vec::new();
 
-    match file.read_to_end(&mut content){
+    match file.read_to_end(&mut content) {
         Ok(_) => (),
         Err(_) => return Err(GitError::ReadFileError),
     }
 
-    let mut object_contents = String::new();
+    let object_contents: String;
 
     match type_object {
         BLOB => {
-            object_contents = format!("{} {}\0{}",BLOB, content.len(), String::from_utf8_lossy(&content));
+            object_contents = format!(
+                "{} {}\0{}",
+                BLOB,
+                content.len(),
+                String::from_utf8_lossy(&content)
+            );
         }
         TREE => {
-            object_contents = format!("{} {}\0{}",TREE, content.len(), String::from_utf8_lossy(&content));
+            object_contents = format!(
+                "{} {}\0{}",
+                TREE,
+                content.len(),
+                String::from_utf8_lossy(&content)
+            );
         }
         COMMIT => {
-            object_contents = format!("{} {}\0{}",COMMIT, content.len(), String::from_utf8_lossy(&content));
+            object_contents = format!(
+                "{} {}\0{}",
+                COMMIT,
+                content.len(),
+                String::from_utf8_lossy(&content)
+            );
         }
         TAG => {
-            object_contents = format!("{} {}\0{}",TAG, content.len(), String::from_utf8_lossy(&content));
+            object_contents = format!(
+                "{} {}\0{}",
+                TAG,
+                content.len(),
+                String::from_utf8_lossy(&content)
+            );
         }
         _ => {
-            object_contents = format!("{} {}\0{}",BLOB, content.len(), String::from_utf8_lossy(&content)); //DEFAULT
+            object_contents = format!(
+                "{} {}\0{}",
+                BLOB,
+                content.len(),
+                String::from_utf8_lossy(&content)
+            );
         }
     }
 
@@ -68,7 +91,7 @@ pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitErro
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
     use std::fs;
 

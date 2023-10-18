@@ -18,7 +18,6 @@ fn main() {
 
     match start_client(&addres) {
         Ok(mut stream) => {
-
             println!("Ingrese un comando Git: ");
 
             let mut input = String::new();
@@ -28,7 +27,6 @@ fn main() {
                     let command_bytes = input.trim().as_bytes();
                     if let Err(error) = stream.write(command_bytes) {
                         eprintln!("Error al escribir: {}", error);
-                        return;
                     }
                 }
                 Err(error) => {
@@ -38,9 +36,6 @@ fn main() {
         }
         Err(e) => {
             println!("{}", e.message());
-            return;
         }
     };
-
-
 }

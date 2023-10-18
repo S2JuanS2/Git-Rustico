@@ -1,19 +1,18 @@
 use git::config::Config;
 use git::util::connections::start_server;
-use std::net::TcpStream;
 use std::io::Read;
+use std::net::TcpStream;
 
 fn handle_client(mut stream: TcpStream) {
     // Leer datos del cliente
     let mut buffer = [0; 1024];
 
-    if let Err(error)  = stream.read(&mut buffer) { 
+    if let Err(error) = stream.read(&mut buffer) {
         eprintln!("Error al leer: {}", error);
         return;
     }
     println!("Recibido: {}", String::from_utf8_lossy(&buffer));
 }
-
 
 fn main() {
     let config = match Config::new() {
@@ -44,12 +43,11 @@ fn main() {
                 println!("Nueva conexión: {:?}", stream.local_addr());
                 std::thread::spawn(|| {
                     handle_client(stream);
-            });
+                });
             }
             Err(e) => {
                 eprintln!("Error al aceptar la conexión: {}", e);
             }
         }
     }
-
 }
