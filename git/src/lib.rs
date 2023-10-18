@@ -7,3 +7,5 @@ pub mod config;
 pub mod util;
 
 pub mod commands;
+
+pub mod view;
