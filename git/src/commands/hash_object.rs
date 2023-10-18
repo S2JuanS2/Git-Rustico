@@ -47,20 +47,18 @@ pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitErro
             object_contents = format!("{} {}\0{}",BLOB, content.len(), String::from_utf8_lossy(&content));
         }
         TREE => {
-
+            object_contents = format!("{} {}\0{}",TREE, content.len(), String::from_utf8_lossy(&content));
         }
         COMMIT => {
-
+            object_contents = format!("{} {}\0{}",COMMIT, content.len(), String::from_utf8_lossy(&content));
         }
         TAG => {
-
+            object_contents = format!("{} {}\0{}",TAG, content.len(), String::from_utf8_lossy(&content));
         }
         _ => {
             object_contents = format!("{} {}\0{}",BLOB, content.len(), String::from_utf8_lossy(&content)); //DEFAULT
         }
     }
-
-    
 
     let hash = calculate_hash(object_contents.as_bytes());
 
@@ -76,14 +74,14 @@ mod tests{
 
     #[test]
     fn test_git_hash_object() {
-        let file_name = "prueba.txt";
+        let temp_file_name = "prueba.txt";
 
-        fs::write(file_name, "Chau mundo").expect("Failed to write to file");
+        fs::write(temp_file_name, "Chau mundo").expect("Falló al escribir en el archivo");
 
-        let result = git_hash_object("blob", file_name);
+        let result = git_hash_object("blob", temp_file_name);
 
         assert!(result.is_ok());
 
-        fs::remove_file(file_name).expect("Failed to remove test file");
+        fs::remove_file(temp_file_name).expect("Falló al remover el archivo");
     }
 }
