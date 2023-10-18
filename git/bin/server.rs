@@ -1,11 +1,23 @@
 use git::config::Config;
 use git::util::connections::start_server;
-// use git::errors::GitError;
-// use std::net::TcpListener;
-// use std::io::{Write, Read};
+use std::env;
+use std::net::TcpStream;
+use std::io::Read;
+
+fn handle_client(mut stream: TcpStream) {
+    // Leer datos del cliente
+    let mut buffer = [0; 1024];
+
+    if let Err(error) = stream.read(&mut buffer) {
+        eprintln!("Error al leer: {}", error);
+        return;
+    }
+    println!("Recibido: {}", String::from_utf8_lossy(&buffer));
+}
 
 fn main() {
-    let config = match Config::new() {
+    let args: Vec<String> = env::args().collect();
+    let config = match Config::new(args) {
         Ok(config) => config,
         Err(error) => {
             println!("Error: {}", error.message());
@@ -25,54 +37,19 @@ fn main() {
             return;
         }
     };
-    println!("Servidor escuchando en 127.0.0.1:8080");
+    println!("Servidor escuchando en {}", address);
 
-    match listener.accept() {
-        Ok((_socket, address)) => println!("Nueva conexión: {}", address),
-        Err(e) => println!("Error: {}", e),
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                println!("Nueva conexión: {:?}", stream.local_addr());
+                std::thread::spawn(|| {
+                    handle_client(stream);
+                });
+            }
+            Err(e) => {
+                eprintln!("Error al aceptar la conexión: {}", e);
+            }
+        }
     }
 }
-
-// fn mi_funcion() {
-//     let listener = match start_server("127.0.0.1:27000")
-//         {
-//             Ok(listener) => listener,
-//             Err(e) => {
-//                 println!("{}", e.message());
-//                 return;
-//             }
-//         };
-//         println!("Servidor escuchando en 127.0.0.1:8080");
-//         println!("Servidor escuchando en 127.0.0.1:27000");
-
-//         match listener.accept() {
-//             Ok((_socket, address)) => println!("Nueva conexión: {}", address),
-//             Ok((mut socket, address)) => {
-//                 println!("Nueva conexión: {}", address);
-
-//                 let mut command = String::new();
-//                 match socket.read_to_string(&mut command) {
-//                     Ok(_) => println!("Comando recibido: {}", command),
-//                     Err(e) => {
-//                         println!("Error: {}", e);
-//                         return;
-//                     }
-//                 }
-//                 println!("Lei algo del client");
-
-//                 // Procesar el comando y simular una respuesta de "status"
-//                 let mut status_response = "On branch main\0";
-//                 // status_response.push('\0');
-//                 // match socket.write(status_response.as_bytes()) {
-//                 match socket.write(b"lala\0") {
-//                     Ok(_) => {println!("Envie la respuesta al cliente")},
-//                     Err(e) => {
-//                         println!("Error: {}", e);
-//                         return;
-//                     }
-//                 }
-//             },
-//             Err(e) => println!("Error: {}", e),
-//         }
-//         return;
-// }

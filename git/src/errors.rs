@@ -1,6 +1,6 @@
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 /// Enumeración que representa los posibles errores que pueden ocurrir durante la ejecución
-/// del programa Git.
+/// del progbranch Git.
 ///
 /// Cada variante de este enum representa un tipo específico de error que puede ocurrir, y
 /// se utiliza para identificar y manejar los errores de manera adecuada.
@@ -19,6 +19,16 @@ pub enum GitError {
     ClientConnectionError,
     ObjectBuildFailed,
     GtkFailedInitiliaze,
+    OpenFileError,
+    ReadFileError,
+    ReadBranchesError,
+    BranchDirectoryOpenError,
+    BranchAlreadyExistsError,
+    BranchFileCreationError,
+    BranchFileWriteError,
+    DeleteBranchError,
+    BranchDoesntExistError,
+    BranchNotFoundError,
 }
 
 impl GitError {
@@ -47,6 +57,16 @@ impl GitError {
             GitError::ClientConnectionError => "No se pudo conectar el cliente.",
             GitError::ObjectBuildFailed => "No se pudo obtener el objeto del constructor.",
             GitError::GtkFailedInitiliaze => "No se pudo inicializar GTk",
+            GitError::OpenFileError => "No se pudo abrir el archivo",
+            GitError::ReadFileError => "No se pudo leer el archivo",
+            GitError::ReadBranchesError => "No se pudieron leer las branchs del repositorio.",
+            GitError::BranchDirectoryOpenError => "No se pudo abrir el directorio de branchs.",
+            GitError::BranchAlreadyExistsError => "fatal: la rama ya existe",
+            GitError::BranchFileCreationError => "No se pudo crear el archivo de la branch.",
+            GitError::BranchFileWriteError => "No se pudo escribir en el archivo de la branch.",
+            GitError::DeleteBranchError => "No se pudo borrar la branch",
+            GitError::BranchDoesntExistError => "Ruta especificada no concordó con ningún archivo conocido por git",
+            GitError::BranchNotFoundError => "fatal: la rama no existe",
         }
     }
 }
