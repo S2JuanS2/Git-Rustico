@@ -1,4 +1,4 @@
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 /// Enumeración que representa los posibles errores que pueden ocurrir durante la ejecución
 /// del progbranch Git.
 ///
