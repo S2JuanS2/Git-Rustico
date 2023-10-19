@@ -1,7 +1,7 @@
 use git::config::Config;
 use git::util::connections::start_client;
-use std::{io, env};
 use std::io::Write;
+use std::{env, io};
 
 fn main() {
     let args: Vec<String> = env::args().collect();

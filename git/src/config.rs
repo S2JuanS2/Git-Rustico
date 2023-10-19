@@ -50,7 +50,6 @@ impl fmt::Display for Config {
 }
 
 impl Config {
-
     /// Crea una nueva estructura `Config` a partir de un archivo de configuración
     /// ubicado en la ruta especificada en los argumentos recibidos por parametro.
     pub fn new(args: Vec<String>) -> Result<Config, GitError> {
@@ -128,14 +127,13 @@ pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_new_creates_default_config() {
-        let args = vec!["git".to_string(),"testfile".to_string()];
+        let args = vec!["git".to_string(), "testfile".to_string()];
         let result = Config::new(args);
         let config = result.unwrap();
         assert_eq!(config.name, String::new());
@@ -155,7 +153,7 @@ mod tests {
 
     #[test]
     fn test_parse_config_path_with_too_many_args() {
-        let args = vec!["git".to_string(),"path".to_string(), "extra".to_string()];
+        let args = vec!["git".to_string(), "path".to_string(), "extra".to_string()];
         let result = parse_config_path(args);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), GitError::InvalidArgumentCountError);
@@ -163,7 +161,7 @@ mod tests {
 
     #[test]
     fn test_parse_config_path_with_valid_args() {
-        let args = vec!["git".to_string(),"path".to_string()];
+        let args = vec!["git".to_string(), "path".to_string()];
         let result = parse_config_path(args);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "path");
@@ -171,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_read_input_with_valid_path() {
-        let mut config = Config::new(vec!["git".to_string(),"testfile".to_string()]).unwrap();
+        let mut config = Config::new(vec!["git".to_string(), "testfile".to_string()]).unwrap();
         let result = read_input("testfile", &mut config, process_line);
         assert!(result.is_ok());
     }
@@ -191,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_process_line_with_valid_key_value() {
-        let mut config = Config::new(vec!["git".to_string(),"testfile".to_string()]).unwrap();
+        let mut config = Config::new(vec!["git".to_string(), "testfile".to_string()]).unwrap();
         let result = process_line("name=Test", &mut config);
         assert!(result.is_ok());
         assert_eq!(config.name, "Test");
@@ -199,11 +197,12 @@ mod tests {
 
     #[test]
     fn test_process_line_with_invalid_key_value() {
-        let mut config = Config::new(vec!["git".to_string(),"testfile".to_string()]).unwrap();
+        let mut config = Config::new(vec!["git".to_string(), "testfile".to_string()]).unwrap();
         let result = process_line("invalid=Test", &mut config);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), GitError::InvalidConfigurationValueError);
+        assert_eq!(
+            result.unwrap_err(),
+            GitError::InvalidConfigurationValueError
+        );
     }
-
-
 }

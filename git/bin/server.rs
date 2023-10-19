@@ -1,8 +1,8 @@
 use git::config::Config;
 use git::util::connections::start_server;
 use std::env;
-use std::net::TcpStream;
 use std::io::Read;
+use std::net::TcpStream;
 
 fn handle_client(mut stream: TcpStream) {
     // Leer datos del cliente
