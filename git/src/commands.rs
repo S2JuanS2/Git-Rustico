@@ -13,3 +13,4 @@ pub mod checkout;
 /// Importa submódulos específicos para los comandos Git.
 pub mod hash_object;
 pub mod init;
+pub mod commit;
