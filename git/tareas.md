@@ -6,3 +6,7 @@
 -Operacion -> ELiminarlo
 3 comandos de git y un servidor basico
 - AGrega 
+
+## commands
+
+- Corregir nombres de errores.
