@@ -29,6 +29,7 @@ pub enum GitError {
     DeleteBranchError,
     BranchDoesntExistError,
     BranchNotFoundError,
+    RemoteDoesntExistError,
 }
 
 impl GitError {
@@ -67,6 +68,7 @@ impl GitError {
             GitError::DeleteBranchError => "No se pudo borrar la branch",
             GitError::BranchDoesntExistError => "Ruta especificada no concordó con ningún archivo conocido por git",
             GitError::BranchNotFoundError => "fatal: la rama no existe",
+            GitError::RemoteDoesntExistError => "fatal: el repositorio remoto no existe",
         }
     }
 }

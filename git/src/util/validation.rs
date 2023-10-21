@@ -260,7 +260,7 @@ fn is_ipv6(ip: &str) -> bool {
             Err(_) => return false,
         };
 
-        if value > IPV6_MAX.into() {
+        if value > u32::from(IPV6_MAX) {
             return false;
         }
     }
