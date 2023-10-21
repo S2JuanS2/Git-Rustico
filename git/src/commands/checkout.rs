@@ -16,7 +16,6 @@ const HEAD_FILE: &str = "HEAD";
 pub fn git_checkout_switch(directory: &str, branch_name: &str) -> Result<(), GitError> {
     //Falta implementar que verifique si realizó commit ante la pérdida de datos.
     let branches = get_branch(directory)?;
-    println!("{:?}", branches);
     if !branches.contains(&branch_name.to_string()) {
         return Err(GitError::BranchDoesntExistError);
     }
@@ -59,8 +58,7 @@ mod tests {
         }
         // Cuando ejecuto la función
         let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch1");
-        println!("{:?}", result);
-
+        
         // Limpia el archivo de prueba
         if !Path::new(TEST_DIRECTORY).exists(){
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
