@@ -24,7 +24,9 @@ fn main() {
     };
 
     println!("Conexión establecida con el servidor");
-    git_clone(&mut socket).unwrap();
-    // let repo_name = "sisop_2023a_ricaldi";
-    // git_clone(&mut socket, repo_name).unwrap();
+    match git_clone(&mut socket)
+    {
+        Ok(_) => println!("Clonado exitoso"),
+        Err(e) => println!("Error: {}", e.message()),
+    };
 }

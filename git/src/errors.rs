@@ -18,6 +18,9 @@ pub enum GitError {
     ServerConnectionError,
     ClientConnectionError,
     InvalidPacketLineError,
+    InvalidServerReferenceError,
+    InvalidVersionNumberError,
+    InvalidObjectIdError,
     GenericError, // Error genérico, eliminar antes de la entrega.
 }
 
@@ -47,6 +50,9 @@ impl GitError {
             GitError::ClientConnectionError => "No se pudo conectar el cliente.",
             GitError::GenericError => "Error genérico.",
             GitError::InvalidPacketLineError => "Error al leer una línea de paquete.",
+            GitError::InvalidVersionNumberError => "Número de versión inválido, solo se acepta v1 y v2.",
+            GitError::InvalidServerReferenceError => "Referencia no reconocida por el servidor.",
+            GitError::InvalidObjectIdError => "Se encontro un object id no valido del servidor.",
         }
     }
 }

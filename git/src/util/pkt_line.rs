@@ -17,7 +17,7 @@ use crate::{errors::GitError, consts::LENGTH_PREFIX_SIZE};
 ///
 /// - `stream`: Un mutable referencia a un objeto que implementa el trait `Read` para la entrada de datos.
 ///
-/// # Retornoes
+/// # Retorno
 ///
 /// - `Result<Vec<Vec<u8>>, GitError>`: Un resultado que contiene un vector de vectores de bytes,
 ///   donde cada vector representa una línea de paquete del paquete Git leído.
@@ -57,7 +57,7 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, GitError> {
 ///
 /// - `socket`: Un mutable referencia a un objeto que implementa el trait `Read` para la entrada de datos.
 ///
-/// # Retornoes
+/// # Retorno
 ///
 /// - `Result<Vec<u8>, GitError>`: Un resultado que contiene el contenido de la línea de paquete o un error si ocurre alguno.
 fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError>
@@ -94,8 +94,10 @@ fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError>
         return Err(GitError::InvalidPacketLineError);
     };
 
+    
     Ok(content)
 }
+
 
 #[cfg(test)]
 mod tests {
