@@ -54,13 +54,15 @@ mod tests {
     fn test_git_checkout_switch_error() {
         let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
         if let Err(err) = fs::create_dir_all(&branch_path) {
-            panic!("Failed to create test directory: {}", err);
+            panic!("Falló al crear el directorio: {}", err);
         }
         // Cuando ejecuto la función
         let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch");
 
-        // Borro el directorio temporal
-        fs::remove_dir_all(TEST_DIRECTORY).expect("Error al borrar el directorio");
+        // Limpia el archivo de prueba
+        if !Path::new(TEST_DIRECTORY).exists(){
+            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        };
 
         // Entonces la función lanza error
         assert!(result.is_err());
@@ -77,8 +79,10 @@ mod tests {
         // Cuando ejecuto la función
         let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch");
 
-        // Borro el directorio temporal
-        fs::remove_dir_all(TEST_DIRECTORY).expect("Error al borrar el directorio");
+        // Limpia el archivo de prueba
+        if !Path::new(TEST_DIRECTORY).exists(){
+            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        }
 
         // Entonces la función no lanza error.
         assert!(result.is_ok());

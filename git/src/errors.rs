@@ -21,6 +21,9 @@ pub enum GitError {
     GtkFailedInitiliaze,
     OpenFileError,
     ReadFileError,
+    CreateFileError,
+    WriteFileError,
+    CreateDirError,
     ReadBranchesError,
     BranchDirectoryOpenError,
     BranchAlreadyExistsError,
@@ -30,6 +33,7 @@ pub enum GitError {
     BranchDoesntExistError,
     BranchNotFoundError,
     HashObjectInvalid,
+    DecompressionFailed,
 }
 
 impl GitError {
@@ -69,6 +73,10 @@ impl GitError {
             GitError::BranchDoesntExistError => "Ruta especificada no concordó con ningún archivo conocido por git",
             GitError::BranchNotFoundError => "fatal: la rama no existe",
             GitError::HashObjectInvalid => "Hash del Objeto inválido",
+            GitError::DecompressionFailed => "Falló al descomprimir el archivo",
+            GitError::CreateFileError => "Falló al crear el archivo",
+            GitError::WriteFileError => "Falló al escribir en el archivo",
+            GitError::CreateDirError => "Falló al crear el directorio",
         }
     }
 }
