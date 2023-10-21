@@ -8,6 +8,7 @@
 //! - [`push.rs`](push/index.html): Representa el comando `git push`, que se utiliza para enviar los cambios locales a un repositorio remoto.
 //! - ...
 
+pub mod add;
 pub mod branch;
 pub mod checkout;
 /// Importa submódulos específicos para los comandos Git.

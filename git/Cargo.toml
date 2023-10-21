@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 gtk = { git = "https://github.com/gtk-rs/gtk3-rs.git" }
 sha1 = "0.10.6"
+flate2 = "1.0"
 
 [[bin]]
 name = "main"
