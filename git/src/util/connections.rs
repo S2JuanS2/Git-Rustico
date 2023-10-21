@@ -4,6 +4,9 @@ use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
 
+use super::advertised::AdvertisedRefs;
+use super::pkt_line;
+
 pub fn start_server(ip: &str) -> Result<TcpListener, GitError> {
     match TcpListener::bind(ip) {
         Ok(listener) => Ok(listener),
@@ -17,6 +20,14 @@ pub fn start_client(ip: &str) -> Result<TcpStream, GitError> {
         Err(_) => Err(GitError::ClientConnectionError),
     }
 }
+
+pub fn reference_discovery(socket: &mut TcpStream, message: String) -> Result<Vec<AdvertisedRefs>, GitError>
+{
+    send_message(socket, message)?;
+    let lines = pkt_line::read(socket)?;
+    AdvertisedRefs::classify_vec(&lines)
+}
+
 
 /// Envía un mensaje a través de un socket a un servidor.
 ///

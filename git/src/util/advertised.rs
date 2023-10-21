@@ -1,13 +1,13 @@
 use crate::errors::GitError;
 
 use super::validation::is_valid_obj_id;
-use std::fmt;
+use std::{fmt, vec};
 #[derive(Debug, Clone)]
 pub enum AdvertisedRefs {
     Version(u8),
-    // Capabilities(Vec<String>), // a implementar
+    Capabilities(Vec<String>), // a implementar
     Ref{obj_id: String, ref_name: String},
-    Shallows{obj_id: String},
+    Shallow{obj_id: String},
 }
 
 impl fmt::Display for AdvertisedRefs {
@@ -15,8 +15,8 @@ impl fmt::Display for AdvertisedRefs {
         match self {
             AdvertisedRefs::Version(version) => write!(f, "Version: {}", version),
             AdvertisedRefs::Ref{obj_id, ref_name} => write!(f, "Ref: (obj: {}, name: {})", obj_id, ref_name),
-            AdvertisedRefs::Shallows{obj_id} => write!(f, "Shallow: {}", obj_id),
-            
+            AdvertisedRefs::Shallow{obj_id} => write!(f, "Shallow: {}", obj_id),
+            AdvertisedRefs::Capabilities(capabilities) => write!(f, "Capabilities: {:?}", capabilities),
         }
     }
 }
@@ -49,19 +49,29 @@ impl AdvertisedRefs
         if is_valid_obj_id(obj_id) == false {
             return Err(GitError::InvalidObjectIdError);
         }
-        Ok(vec![AdvertisedRefs::Shallows{obj_id: obj_id.to_string()}])
+        Ok(vec![AdvertisedRefs::Shallow{obj_id: obj_id.to_string()}])
     }
 
-    fn create_ref(obj_id: &str, ref_name: &str) -> Result<Vec<AdvertisedRefs>, GitError> {
-        if is_valid_obj_id(obj_id) == false {
+    fn create_ref(input: &str) -> Result<Vec<AdvertisedRefs>, GitError> {
+        
+        if !contains_capacity_list(input)
+        {
+            return _create_ref(input);
+        }
+
+        let parts:Vec<&str> = input.split('\0').collect();
+        if parts.len() != 2 {
             return Err(GitError::InvalidObjectIdError);
         }
-        Ok(vec![AdvertisedRefs::Ref{obj_id: obj_id.to_string(), ref_name: ref_name.to_string()}])
+
+        let mut vec: Vec<AdvertisedRefs> = _create_ref(parts[0])?;
+        vec.insert(0, extract_capabilities(parts[1]));
+        Ok(vec)
     }
 
-    fn classify_server_refs(info: &str) -> Result<Vec<AdvertisedRefs>, GitError> {
+    fn classify_server_refs(input: &str) -> Result<Vec<AdvertisedRefs>, GitError> {
         // print!("Info: {}", info);
-        let parts: Vec<&str> = info.split_whitespace().collect();
+        let parts: Vec<&str> = input.split_whitespace().collect();
     
         // Verificar si el primer elemento es una versión válida
         if parts[0] == "version" {
@@ -74,26 +84,31 @@ impl AdvertisedRefs
         
         // Verificar si el segundo elemento parece ser una referencia
         if parts[1].starts_with("refs/") || parts[1].starts_with("HEAD"){
-            return AdvertisedRefs::create_ref(parts[0], parts[1]);
+            return AdvertisedRefs::create_ref(input);
         }
-    
-    
         Err(GitError::InvalidServerReferenceError)
     }
 
 }
 
-// d8e5f4121f852fa9612d145675cfb2ccac68b150 HEAD\0multi_ack thin-pack side-band side-band-64k ofs-delta shallow deepen-since deepen-not deepen-relative no-progress include-tag multi_ack_detailed symref=HEAD:refs/heads/main object-format=sha1 agent=git/2.42.0
-// fn extract_capabilities(pkt_line: &str) -> (Vec<u8>, Vec<String>) {
-//     let mut capabilities: Vec<String> = Vec::new();
-//     let reference = pkt_line;
-//     let pkt_line_str = String::from_utf8_lossy(pkt_line);
+fn extract_capabilities(input: &str) -> AdvertisedRefs {
+    let mut capabilities: Vec<String> = Vec::new();
+    capabilities.extend(input.split_whitespace().map(String::from));
+    return AdvertisedRefs::Capabilities(capabilities);
+}
 
-//     if let Some(pos) = pkt_line.find('\0') {
-//         // Extract the part of the line after the NUL character, which contains capabilities.
-//         let capabilities_str = &pkt_line[pos + 1..];
-//         capabilities.extend(capabilities_str.split_whitespace().map(String::from));
-//     }
+fn contains_capacity_list(input: &str) -> bool {
+    input.contains('\0')
+}
 
-//     (reference.to_vec(), capabilities)
-// }
+fn _create_ref(input: &str) -> Result<Vec<AdvertisedRefs>, GitError>
+{
+    let parts: Vec<&str> = input.split_whitespace().collect();
+    if parts.len() != 2 {
+        return Err(GitError::InvalidServerReferenceError);
+    }
+    if is_valid_obj_id(parts[0]) == false {
+        return Err(GitError::InvalidObjectIdError);
+    }
+    Ok(vec![AdvertisedRefs::Ref{obj_id: parts[0].to_string(), ref_name: parts[1].to_string()}])
+}

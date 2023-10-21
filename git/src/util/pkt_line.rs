@@ -98,6 +98,18 @@ fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError>
     Ok(content)
 }
 
+pub fn add_length_prefix(message: &str, len: usize) -> String {
+    // Obtener la longitud del mensaje con el prefijo
+    let message_length = len + LENGTH_PREFIX_SIZE;
+
+    // Convertir la longitud en una cadena hexadecimal de 4 caracteres
+    let length_hex = format!("{:04x}", message_length);
+
+    // Concatenar la longitud al principio del mensaje
+    let prefixed_message = format!("{}{}", length_hex, message);
+
+    prefixed_message
+}
 
 #[cfg(test)]
 mod tests {
