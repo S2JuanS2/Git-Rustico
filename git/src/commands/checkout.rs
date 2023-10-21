@@ -16,6 +16,7 @@ const HEAD_FILE: &str = "HEAD";
 pub fn git_checkout_switch(directory: &str, branch_name: &str) -> Result<(), GitError> {
     //Falta implementar que verifique si realizó commit ante la pérdida de datos.
     let branches = get_branch(directory)?;
+    println!("{:?}", branches);
     if !branches.contains(&branch_name.to_string()) {
         return Err(GitError::BranchDoesntExistError);
     }
@@ -44,7 +45,7 @@ pub fn git_checkout_switch(directory: &str, branch_name: &str) -> Result<(), Git
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::branch::git_branch_create;
+    use crate::commands::branch::{git_branch_create, git_branch_delete};
     use std::fs;
 
     const TEST_DIRECTORY: &str = "./test_repo";
@@ -57,7 +58,8 @@ mod tests {
             panic!("Falló al crear el directorio: {}", err);
         }
         // Cuando ejecuto la función
-        let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch");
+        let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch1");
+        println!("{:?}", result);
 
         // Limpia el archivo de prueba
         if !Path::new(TEST_DIRECTORY).exists(){
@@ -74,10 +76,13 @@ mod tests {
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio: {}", err);
         }
-        git_branch_create(TEST_DIRECTORY, "test_branch_switch", "commit_hash_branch")
+        let _ = git_branch_delete(TEST_DIRECTORY, "test_branch_switch2");
+        git_branch_create(TEST_DIRECTORY, "test_branch_switch2", "commit_hash_branch")
             .expect("Falló en la creación de la branch");
         // Cuando ejecuto la función
-        let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch");
+        let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch2");
+
+        
 
         // Limpia el archivo de prueba
         if !Path::new(TEST_DIRECTORY).exists(){
