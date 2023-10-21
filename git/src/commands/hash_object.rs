@@ -12,7 +12,7 @@ const TAG: &str = "tag";
 /// Dado un contenido, genera el valor hash
 /// ###Parametros:
 /// 'content': contenido del que se creará el hash
-fn calculate_hash(content: &[u8]) -> String {
+pub fn calculate_hash(content: &[u8]) -> String {
     let mut hasher = Sha1::new();
     hasher.update(content);
     let result = hasher.finalize();

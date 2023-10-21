@@ -9,8 +9,10 @@
 //! - ...
 
 /// Importa submódulos específicos para los comandos Git.
+pub mod commit;
+pub mod add;
 pub mod branch;
 pub mod checkout;
-pub mod commit;
 pub mod hash_object;
 pub mod init;
+pub mod cat_file;
