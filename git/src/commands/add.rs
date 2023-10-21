@@ -1,35 +1,8 @@
 //use crate::commands::hash_object::calculate_hash;
 use crate::errors::GitError;
-use flate2::write::ZlibEncoder;
-use flate2::Compression;
+use crate::util::formats::compressor_object;
 use std::fs;
-use std::io::Write;
 use std::{fs::File, io::Read};
-
-/// Dado un contenido lo comprime y lo guarda en un archivo
-/// ###Parametros:
-/// 'store': contenido que se comprimirá
-/// 'file_object': archivo donde se guardará el contenido comprimido
-pub fn compressor_object(store: String, mut file_object: File) -> Result<(), GitError> {
-    let mut compressor = ZlibEncoder::new(Vec::new(), Compression::default());
-
-    match compressor.write_all(store.as_bytes()) {
-        Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
-    }
-
-    let compressed_bytes = match compressor.finish() {
-        Ok(compressed_bytes) => compressed_bytes,
-        Err(_) => return Err(GitError::ReadFileError),
-    };
-
-    match file_object.write_all(&compressed_bytes) {
-        Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
-    }
-
-    Ok(())
-}
 
 /// Esta función crea el objeto y lo guarda
 /// ###Parametros:

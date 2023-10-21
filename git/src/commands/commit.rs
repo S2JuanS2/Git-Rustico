@@ -1,12 +1,11 @@
 use crate::errors::GitError;
+use crate::util::formats::hash_generate;
+
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-
-use sha1::{Digest, Sha1};
-
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const COMMIT_EDITMSG: &str = "COMMIT_EDITMSG";
@@ -80,18 +79,6 @@ impl Commit {
     }
 }
 
-/// Dado un contenido, genera el valor hash
-/// ###Parametros:
-/// 'content': contenido del que se creará el hash
-fn hash_generate(content: String) -> String {
-    let mut hasher = Sha1::new();
-    hasher.update(content);
-    let result = hasher.finalize();
-    let hash_commit: String = format!("{:x}", result);
-
-    hash_commit
-}
-
 /// Creará el archivo donde se guarda el mensaje del commit
 /// ###Parametros:
 /// 'directory': Directorio del git
@@ -101,11 +88,11 @@ fn commit_msg_edit(directory: &str, msg: String) -> Result<(), GitError> {
     let commit_msg_path = format!("{}{}", directory, COMMIT_EDITMSG);
     let mut file = match fs::File::create(commit_msg_path) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(GitError::CreateFileError),
     };
     match file.write_all(msg.as_bytes()) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(GitError::WriteFileError),
     };
 
     Ok(())
@@ -120,7 +107,7 @@ fn commit_log(directory: &str) -> Result<(), GitError> {
     if !Path::new(&logs_path).exists() {
         match fs::create_dir_all(logs_path) {
             Ok(_) => (),
-            Err(_) => return Err(GitError::ReadFileError),
+            Err(_) => return Err(GitError::CreateDirError),
         };
     }
     Ok(())
@@ -136,7 +123,7 @@ fn object_commit_save(directory: &str, hash_commit: String) -> Result<(), GitErr
     let object_commit_path = format!("{}/.git/objects/{}", directory, &hash_commit[..2]);
     match fs::create_dir_all(object_commit_path) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(GitError::CreateDirError),
     }
 
     let object_commit_path = format!(
@@ -147,7 +134,7 @@ fn object_commit_save(directory: &str, hash_commit: String) -> Result<(), GitErr
     );
     match File::create(object_commit_path) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(GitError::CreateFileError),
     }
     //Falta comprimir el store y guardarlo en ese archivo.
     Ok(())
@@ -196,7 +183,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
 
     let store = header + &content;
 
-    let hash_commit = hash_generate(store);
+    let hash_commit = hash_generate(&store);
     object_commit_save(directory, hash_commit)?;
     commit_log(directory)?;
     commit_msg_edit(directory, commit.get_message())?;
