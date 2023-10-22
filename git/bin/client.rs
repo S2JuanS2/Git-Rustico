@@ -1,18 +1,13 @@
 use git::config::Config;
 use git::controllers::controller_client::Controller;
+use git::errors::GitError;
 use git::models::client::Client;
 use git::views::view_client::View;
 use std::env;
 
-fn main() {
+fn main() -> Result<(), GitError> {
     let args: Vec<String> = env::args().collect();
-    let config = match Config::new(args) {
-        Ok(config) => config,
-        Err(error) => {
-            println!("Error: {}", error.message());
-            return;
-        }
-    };
+    let config = Config::new(args)?;
     print!("{}", config);
 
     let address = format!("{}:{}", config.ip, config.port);
@@ -22,10 +17,9 @@ fn main() {
 
     let controller = Controller::new(client.clone());
 
-    let view = View::new(controller.clone());
+    let view = View::new(controller.clone())?;
 
-    match view.start_view() {
-        Ok(_) => (),
-        Err(error) => eprintln!("Error: {}", error.message()),
-    }
+    view.start_view()?;
+
+    Ok(())
 }
