@@ -2,8 +2,15 @@ use std::io::Read;
 use std::net::TcpStream;
 
 use crate::errors::GitError;
-use crate::util::connections::{packfile_negotiation, reference_discovery};
+use crate::util::connections::{packfile_negotiation, reference_discovery, start_client};
 use crate::util::request::{create_git_request, RequestCommand};
+
+pub fn handle_clone(address: &String) -> Result<(), GitError> {
+    let mut socket = start_client(address)?;
+    git_clone(&mut socket)?;
+    Ok(())
+
+}
 
 pub fn git_clone(socket: &mut TcpStream) -> Result<(), GitError> {
     // Prepara la solicitud "git-upload-pack" para el servidor
