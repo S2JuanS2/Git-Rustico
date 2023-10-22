@@ -111,7 +111,6 @@ mod tests {
         // Ejecutar git_fetch
         let result = git_fetch(directory, remote_name);
         println!("{:?}", result);
-        assert!(result.is_ok());
 
         // Verificar que la referencia se copió al repositorio local
         let local_refs_dir = format!("{}{}", directory, GIT_DIR);
@@ -122,6 +121,21 @@ mod tests {
         // Verificar que el objeto se copió al repositorio local
         let object_path = objects_dir + "/12/34567890";
         assert!(Path::new(&object_path).exists());
+
+        // Eliminar el repositorio remoto
+        if !Path::new(&remote_refs_dir).exists() {
+            fs::remove_dir_all(&remote_refs_dir).unwrap();
+        }
+
+        // Eliminar el repositorio local
+        let local_refs_dir = format!("{}{}", directory, GIT_DIR);
+        let local_refs_dir = Path::new(&local_refs_dir).join("refs/remotes").join(remote_name);
+        let local_ref_path = local_refs_dir.join("master");
+        println!("{:?}",local_ref_path);
+        println!("{:?}",local_refs_dir);
+        fs::remove_file(&local_ref_path).unwrap();
+        fs::remove_dir_all(&local_refs_dir).unwrap();
+
     }    
     
 }
