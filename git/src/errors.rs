@@ -41,6 +41,8 @@ pub enum GitError {
     BranchNotFoundError,
     HashObjectInvalid,
     DecompressionFailed,
+    WriteStreamError,
+    SendCommandError,
 }
 
 impl GitError {
@@ -91,6 +93,8 @@ impl GitError {
             GitError::CreateFileError => "Falló al crear el archivo",
             GitError::WriteFileError => "Falló al escribir en el archivo",
             GitError::CreateDirError => "Falló al crear el directorio",
+            GitError::WriteStreamError => "Falló al enviar datos al socket",
+            GitError::SendCommandError => "Falló al enviar el comando",
         }
     }
 }

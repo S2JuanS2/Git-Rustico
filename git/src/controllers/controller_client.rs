@@ -18,17 +18,15 @@ impl Controller {
         match start_client(&cloned_client.get_ip()) {
             Ok(mut stream) => {
                 let command_bytes = command.trim().as_bytes();
-                if let Err(error) = stream.write(command_bytes) {
-                    eprintln!("Error al escribir: {}", error);
+                if let Err(_) = stream.write(command_bytes) {
+                    return Err(GitError::WriteStreamError);
                 }
 
-                stream
-                    .shutdown(std::net::Shutdown::Both)
-                    .expect("Falló al cerrar la conexion");
+                if let Err(_) = stream.shutdown(std::net::Shutdown::Both) {
+                    return Err(GitError::ServerConnectionError);
+                }
             }
-            Err(e) => {
-                println!("{}", e.message());
-            }
+            Err(_) => return Err(GitError::GtkFailedInitiliaze),
         };
 
         Ok(())
