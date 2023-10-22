@@ -60,7 +60,7 @@ mod tests {
         let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch");
 
         // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists(){
+        if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         };
 
@@ -80,7 +80,7 @@ mod tests {
         let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch");
 
         // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists(){
+        if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         }
 
