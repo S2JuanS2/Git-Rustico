@@ -5,17 +5,19 @@ use std::rc::Rc;
 
 pub struct View {
     controller: Controller,
+    window: gtk::Window,
+    button_clear: gtk::Button,
+    button_send: gtk::Button,
+    entry: gtk::Entry,
+    response: Rc<gtk::TextView>,
 }
 
 impl View {
-    pub fn new(controller: Controller) -> View {
-        View { controller }
-    }
-
-    pub fn start_view(self) -> Result<(), GitError> {
+    pub fn new(controller: Controller) -> Result<View, GitError> {
         if gtk::init().is_err() {
             return Err(GitError::GtkFailedInitiliaze);
         }
+
         let glade_src = include_str!("git_ppal.glade");
 
         let builder = gtk::Builder::from_string(glade_src);
@@ -52,29 +54,43 @@ impl View {
             }
         });
 
-        let response_for_button_send = Rc::clone(&response);
+        Ok(View {
+            controller,
+            window,
+            button_clear,
+            button_send,
+            entry,
+            response,
+        })
+    }
 
-        button_send.connect_clicked(move |_| {
-            let command = entry.text().to_string();
-            entry.set_text("");
+    pub fn start_view(self) -> Result<(), GitError> {
+        let response_for_button_send = Rc::clone(&self.response);
+
+        self.button_send.connect_clicked(move |_| {
+            let command = self.entry.text().to_string();
+            self.entry.set_text("");
 
             let command_input = format!("{}\n\n", &command);
 
-            let buffer = response_for_button_send.buffer().unwrap();
-            let mut end_iter = buffer.end_iter();
-            buffer.insert(&mut end_iter, &command_input);
+            if let Some(buffer) = response_for_button_send.buffer() {
+                let mut end_iter = buffer.end_iter();
+                buffer.insert(&mut end_iter, &command_input);
+            };
 
+            //Arreglar.
             match self.controller.send_command(command) {
                 Ok(_) => (),
                 Err(_) => return (),
             };
         });
-        button_clear.connect_clicked(move |_| {
-            let buffer = response.buffer().unwrap();
-            buffer.set_text("");
+        self.button_clear.connect_clicked(move |_| {
+            if let Some(buffer) = self.response.buffer() {
+                buffer.set_text("");
+            };
         });
 
-        window.show_all();
+        self.window.show_all();
 
         gtk::main();
 

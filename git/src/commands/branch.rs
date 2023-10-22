@@ -142,9 +142,9 @@ mod tests {
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio temporal: {}", err);
         }
+        let _ = git_branch_delete(TEST_DIRECTORY, "test_new_branch");
         // Cuando ejecuto la función
         let result = git_branch_create(TEST_DIRECTORY, "test_new_branch", "commit_hash_branch");
-
         // Limpia el archivo de prueba
         if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");

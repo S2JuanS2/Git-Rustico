@@ -43,6 +43,8 @@ pub enum GitError {
     HashObjectInvalid,
     DecompressionFailed,
     RemoteDoesntExistError,
+    WriteStreamError,
+    SendCommandError,
 }
 
 impl GitError {
@@ -95,6 +97,8 @@ impl GitError {
             GitError::CopyFileError => "Falló al copiar el archivo",
             GitError::CreateDirError => "Falló al crear el directorio",
             GitError::RemoteDoesntExistError => "fatal: el repositorio remoto no existe",
+            GitError::WriteStreamError => "Falló al enviar datos al socket",
+            GitError::SendCommandError => "Falló al enviar el comando",
         }
     }
 }
