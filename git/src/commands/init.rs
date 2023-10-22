@@ -1,15 +1,20 @@
 use std::fs;
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::Path;
+
+use crate::errors::GitError;
 
 const INITIAL_BRANCH: &str = "main";
 
 /// Crea un directorio si no existe
 /// ###Parametros:
 /// 'directory': dirección del directorio a crear
-fn create_directory(directory: &str) -> io::Result<()> {
+fn create_directory(directory: &str) -> Result<(), GitError> {
     if !Path::new(directory).exists() {
-        fs::create_dir_all(directory)?;
+        match fs::create_dir_all(directory) {
+            Ok(_) => (),
+            Err(_) => return Err(GitError::CreateDirError),
+        };
     }
     Ok(())
 }
@@ -18,20 +23,27 @@ fn create_directory(directory: &str) -> io::Result<()> {
 /// ###Parametros:
 /// 'file': archivo a crear.
 /// 'content': contenido que se escribirá en el archivo.
-fn create_file(file: &str, content: &str) -> io::Result<()> {
+fn create_file(file: &str, content: &str) -> Result<(), GitError> {
     if fs::metadata(file).is_ok() {
         return Ok(());
     }
 
-    let mut file = fs::File::create(file)?;
-    file.write_all(content.as_bytes())?;
+    let mut file = match fs::File::create(file) {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::CreateFileError),
+    };
+    match file.write_all(content.as_bytes()) {
+        Ok(_) => (),
+        Err(_) => return Err(GitError::WriteFileError),
+    };
+
     Ok(())
 }
 
 /// Esta función inicia un repositorio git creando los directorios y archivos necesarios.
 /// ###Parametros:
 /// 'directory': dirección donde se inicializará el repositorio.
-pub fn git_init(directory: &str) -> io::Result<()> {
+pub fn git_init(directory: &str) -> Result<(), GitError> {
     create_directory(directory)?;
 
     let git_dir = format!("{}/.git", directory);
@@ -61,7 +73,7 @@ mod tests {
     fn test_git_init() {
         // Se Crea un directorio temporal para el test
         let temp_dir = env::temp_dir().join("test_git_init");
-        fs::create_dir(&temp_dir).expect("Failed to create temporary directory");
+        fs::create_dir(&temp_dir).expect("Falló al crear el directorio temporal");
 
         // Cuando ejecuto la función git_init en el directorio temporal
         let result = git_init(&temp_dir.to_str().unwrap());
@@ -81,6 +93,6 @@ mod tests {
         let head_file = git_dir.join("HEAD");
         assert!(head_file.exists());
 
-        fs::remove_dir_all(&temp_dir).expect("Failed to remove temporary directory");
+        fs::remove_dir_all(&temp_dir).expect("Falló al remover el directorio temporal");
     }
 }

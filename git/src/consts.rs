@@ -53,3 +53,24 @@ pub const PORT_MIN: u16 = 1024;
 
 // Puerdo de git daemon
 pub const GIT_DAEMON_PORT: u16 = 9418;
+
+// Request de git-upload-pack
+pub const GIT_UPLOAD_PACK: &str = "git-upload-pack";
+
+// Request de git-receive-pack
+pub const GIT_RECEIVE_PACK: &str = "git-receive-pack";
+
+// Request de git-upload-archive
+pub const GIT_UPLOAD_ARCHIVE: &str = "git-upload-archive";
+
+pub const END_OF_STRING: &str = "\0";
+
+// Tamaño del prefijo de longitud
+pub const LENGTH_PREFIX_SIZE: usize = 4;
+
+//
+pub const FLUSH_PKT: &str = "0000";
+
+pub const DONE: &str = "0009done\n";
+
+pub const NACK: &str = "0008NAK\n";

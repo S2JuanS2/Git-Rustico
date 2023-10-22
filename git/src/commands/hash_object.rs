@@ -1,25 +1,11 @@
 use crate::errors::GitError;
-extern crate sha1;
+use crate::util::formats::hash_generate;
 
-use sha1::{Digest, Sha1};
 use std::{fs::File, io::Read};
 
 const BLOB: &str = "blob";
 const TREE: &str = "tree";
 const COMMIT: &str = "commit";
-const TAG: &str = "tag";
-
-/// Dado un contenido, genera el valor hash
-/// ###Parametros:
-/// 'content': contenido del que se creará el hash
-fn calculate_hash(content: &[u8]) -> String {
-    let mut hasher = Sha1::new();
-    hasher.update(content);
-    let result = hasher.finalize();
-
-    let hash_string_result = String::from_utf8_lossy(&result);
-    hash_string_result.to_string()
-}
 
 /// Esta función devuelve el hash de un objeto según su tipo.
 /// ###Parametros:
@@ -65,14 +51,6 @@ pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitErro
                 String::from_utf8_lossy(&content)
             );
         }
-        TAG => {
-            object_contents = format!(
-                "{} {}\0{}",
-                TAG,
-                content.len(),
-                String::from_utf8_lossy(&content)
-            );
-        }
         _ => {
             object_contents = format!(
                 "{} {}\0{}",
@@ -83,7 +61,7 @@ pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitErro
         }
     }
 
-    let hash = calculate_hash(object_contents.as_bytes());
+    let hash = hash_generate(&object_contents);
 
     println!("{}", hash);
 

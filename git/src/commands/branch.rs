@@ -103,6 +103,7 @@ pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<(), GitEr
 mod tests {
     use super::*;
     use std::fs;
+    use std::path::Path;
 
     const TEST_DIRECTORY: &str = "./test_repo";
 
@@ -127,7 +128,9 @@ mod tests {
         let result = git_branch_list(TEST_DIRECTORY);
 
         // Limpia el archivo de prueba
-        fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        if !Path::new(TEST_DIRECTORY).exists(){
+            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        }
 
         // Entonces la función no lanza error.
         assert!(result.is_ok());
@@ -137,13 +140,15 @@ mod tests {
     fn test_git_branch_create() {
         let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
         if let Err(err) = fs::create_dir_all(&branch_path) {
-            panic!("alló al crear el directorio temporal: {}", err);
+            panic!("Falló al crear el directorio temporal: {}", err);
         }
         // Cuando ejecuto la función
         let result = git_branch_create(TEST_DIRECTORY, "test_new_branch", "commit_hash_branch");
 
         // Limpia el archivo de prueba
-        fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        if !Path::new(TEST_DIRECTORY).exists(){
+            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        }
 
         // Entonces la función no lanza error.
         assert!(result.is_ok());
@@ -169,10 +174,14 @@ mod tests {
 
         // Entonces la función no lanza error.
         assert!(result.is_ok());
+      
         // Entonces la rama ha sido eliminada.
         assert!(fs::metadata(&branch_path).is_err());
 
         // Limpia el archivo de prueba
-        fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        if !Path::new(TEST_DIRECTORY).exists(){
+            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        }
+        
     }
 }

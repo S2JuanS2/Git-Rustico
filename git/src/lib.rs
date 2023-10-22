@@ -8,4 +8,8 @@ pub mod util;
 
 pub mod commands;
 
-pub mod view;
+pub mod views;
+
+pub mod controllers;
+
+pub mod models;

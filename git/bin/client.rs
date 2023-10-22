@@ -1,7 +1,9 @@
+use git::commands::clone::git_clone;
 use git::config::Config;
-use git::util::connections::start_client;
-use std::io::Write;
-use std::{env, io};
+use std::env;
+use git::models::client::Client;
+use git::controllers::controller_client::Controller;
+use git::views::view_client::View;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -14,29 +16,17 @@ fn main() {
     };
     print!("{}", config);
 
-    let addres = format!("{}:{}", config.ip, config.port);
-    println!("Me voy a conectar a: {}", addres);
+    let address = format!("{}:{}", config.ip, config.port);
 
-    match start_client(&addres) {
-        Ok(mut stream) => {
-            println!("Ingrese un comando Git: ");
+    //Cambiar el directorio del cliente
+    let client = Client::new(address, "./test/".to_string());
 
-            let mut input = String::new();
+    let controller = Controller::new(client.clone());
 
-            match io::stdin().read_line(&mut input) {
-                Ok(_) => {
-                    let command_bytes = input.trim().as_bytes();
-                    if let Err(error) = stream.write(command_bytes) {
-                        eprintln!("Error al escribir: {}", error);
-                    }
-                }
-                Err(error) => {
-                    eprintln!("Error al leer la entrada: {}", error);
-                }
-            }
-        }
-        Err(e) => {
-            println!("{}", e.message());
-        }
-    };
+    let view = View::new(controller.clone());
+    
+    match view.start_view(){
+        Ok(_) => (),
+        Err(error) => eprintln!("Error: {}", error.message()),
+    }
 }
