@@ -338,7 +338,7 @@ fn is_valid_local_part(local_part: &str) -> bool {
             return false;
         }
     }
-    return true;
+    true
 }
 
 /// Verifica si la parte de dominio de una dirección de correo electrónico es válida.
@@ -350,16 +350,6 @@ fn is_valid_local_part(local_part: &str) -> bool {
 ///
 /// # Argumentos
 /// - `domain_part`: Una cadena que representa la parte de dominio de una dirección de correo.
-///
-/// # Ejemplo
-///
-/// ```
-/// let valid_domain = "example.com";
-/// assert!(is_valid_domain_part(valid_domain));
-///
-/// let invalid_domain = "sub_domain.domain@example.com";
-/// assert!(!is_valid_domain_part(invalid_domain));
-/// ```
 ///
 /// # Retorno
 /// Un valor booleano (`true` si es válido, `false` si no lo es).
