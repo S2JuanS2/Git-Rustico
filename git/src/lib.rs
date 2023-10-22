@@ -7,3 +7,9 @@ pub mod config;
 pub mod util;
 
 pub mod commands;
+
+pub mod views;
+
+pub mod controllers;
+
+pub mod models;

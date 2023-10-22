@@ -1,9 +1,13 @@
 use git::commands::clone::git_clone;
 use git::config::Config;
-use git::util::connections::start_client;
+use std::env;
+use git::models::client::Client;
+use git::controllers::controller_client::Controller;
+use git::views::view_client::View;
 
 fn main() {
-    let config = match Config::new() {
+    let args: Vec<String> = env::args().collect();
+    let config = match Config::new(args) {
         Ok(config) => config,
         Err(error) => {
             println!("Error: {}", error.message());
@@ -12,20 +16,17 @@ fn main() {
     };
     print!("{}", config);
 
-    let addres = format!("{}:{}", config.ip, config.port);
-    println!("Me voy a conectar a: {}", addres);
+    let address = format!("{}:{}", config.ip, config.port);
 
-    let mut socket = match start_client(&addres) {
-        Ok(s) => s,
-        Err(e) => {
-            println!("{}", e.message());
-            return;
-        }
-    };
+    //Cambiar el directorio del cliente
+    let client = Client::new(address, "./test/".to_string());
 
-    println!("Conexión establecida con el servidor");
-    match git_clone(&mut socket) {
-        Ok(_) => println!("Clonado exitoso"),
-        Err(e) => println!("Error: {}", e.message()),
-    };
+    let controller = Controller::new(client.clone());
+
+    let view = View::new(controller.clone());
+    
+    match view.start_view(){
+        Ok(_) => (),
+        Err(error) => eprintln!("Error: {}", error.message()),
+    }
 }

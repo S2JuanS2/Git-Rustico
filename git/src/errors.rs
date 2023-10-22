@@ -1,6 +1,6 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 /// Enumeración que representa los posibles errores que pueden ocurrir durante la ejecución
-/// del programa Git.
+/// del progbranch Git.
 ///
 /// Cada variante de este enum representa un tipo específico de error que puede ocurrir, y
 /// se utiliza para identificar y manejar los errores de manera adecuada.
@@ -21,9 +21,26 @@ pub enum GitError {
     InvalidServerReferenceError,
     InvalidVersionNumberError,
     InvalidObjectIdError,
-    GenericError, // Error genérico, eliminar antes de la entrega.
+    GenericError, // Error genérico, lo uso para tests.
     UploadRequest,
     PackfileNegotiationNACK,
+    ObjectBuildFailed,
+    GtkFailedInitiliaze,
+    OpenFileError,
+    ReadFileError,
+    CreateFileError,
+    WriteFileError,
+    CreateDirError,
+    ReadBranchesError,
+    BranchDirectoryOpenError,
+    BranchAlreadyExistsError,
+    BranchFileCreationError,
+    BranchFileWriteError,
+    DeleteBranchError,
+    BranchDoesntExistError,
+    BranchNotFoundError,
+    HashObjectInvalid,
+    DecompressionFailed,
 }
 
 impl GitError {
@@ -57,6 +74,23 @@ impl GitError {
             GitError::InvalidObjectIdError => "Se encontro un object id no valido del servidor.",
             GitError::UploadRequest => "NO se pudo completar el pedido para la negociacion con el servidor",
             GitError::PackfileNegotiationNACK => "La negocion fallo porque no se recibio el NACK del servidor",
+            GitError::ObjectBuildFailed => "No se pudo obtener el objeto del constructor.",
+            GitError::GtkFailedInitiliaze => "No se pudo inicializar GTk",
+            GitError::OpenFileError => "No se pudo abrir el archivo",
+            GitError::ReadFileError => "No se pudo leer el archivo",
+            GitError::ReadBranchesError => "No se pudieron leer las branchs del repositorio.",
+            GitError::BranchDirectoryOpenError => "No se pudo abrir el directorio de branchs.",
+            GitError::BranchAlreadyExistsError => "fatal: la rama ya existe",
+            GitError::BranchFileCreationError => "No se pudo crear el archivo de la branch.",
+            GitError::BranchFileWriteError => "No se pudo escribir en el archivo de la branch.",
+            GitError::DeleteBranchError => "No se pudo borrar la branch",
+            GitError::BranchDoesntExistError => "Ruta especificada no concordó con ningún archivo conocido por git",
+            GitError::BranchNotFoundError => "fatal: la rama no existe",
+            GitError::HashObjectInvalid => "Hash del Objeto inválido",
+            GitError::DecompressionFailed => "Falló al descomprimir el archivo",
+            GitError::CreateFileError => "Falló al crear el archivo",
+            GitError::WriteFileError => "Falló al escribir en el archivo",
+            GitError::CreateDirError => "Falló al crear el directorio",
         }
     }
 }

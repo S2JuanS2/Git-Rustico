@@ -3,8 +3,24 @@ use std::io::Read;
 use git::config::Config;
 use git::util::connections::start_server;
 
+use std::env;
+use std::io::Read;
+use std::net::TcpStream;
+
+fn handle_client(mut stream: TcpStream) {
+    // Leer datos del cliente
+    let mut buffer = [0; 1024];
+
+    if let Err(error) = stream.read(&mut buffer) {
+        eprintln!("Error al leer: {}", error);
+        return;
+    }
+    println!("Recibido: {}", String::from_utf8_lossy(&buffer));
+}
+
 fn main() {
-    let config = match Config::new() {
+    let args: Vec<String> = env::args().collect();
+    let config = match Config::new(args) {
         Ok(config) => config,
         Err(error) => {
             println!("Error: {}", error.message());
@@ -24,30 +40,19 @@ fn main() {
             return;
         }
     };
-    println!("Servidor escuchando en 127.0.0.1:8080");
+    println!("Servidor escuchando en {}", address);
 
-    let (mut stream, _address) = match listener.accept() {
-        Ok((stream, address)) => {
-            println!("Nueva conexión: {}", address);
-            (stream, address)
-        }
-        Err(e) => {
-            println!("Error: {}", e);
-            return;
-        }
-    };
-    let mut buffer = [0; 1024]; // Un búfer para almacenar los datos recibidos.
-
-    match stream.read(&mut buffer) {
-        Ok(n) => {
-            if n > 0 {
-                // Convierte los bytes leídos en una cadena y muestra el mensaje.
-                let message = String::from_utf8_lossy(&buffer[..n]);
-                println!("Mensaje del cliente: {}", message);
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                println!("Nueva conexión: {:?}", stream.local_addr());
+                std::thread::spawn(|| {
+                    handle_client(stream);
+                });
             }
-        }
-        Err(e) => {
-            println!("Error: {}", e);
+            Err(e) => {
+                eprintln!("Error al aceptar la conexión: {}", e);
+            }
         }
     }
 }
