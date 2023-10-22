@@ -1,7 +1,6 @@
 use std::io::Read;
 
-use crate::{errors::GitError, consts::LENGTH_PREFIX_SIZE};
-
+use crate::{consts::LENGTH_PREFIX_SIZE, errors::GitError};
 
 /// Lee líneas de paquete del flujo de entrada proporcionado y las devuelve como un vector de vectores de bytes.
 ///
@@ -38,7 +37,6 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, GitError> {
     }
 }
 
-
 /// Lee una línea de paquete del flujo de entrada proporcionado y la devuelve como un vector de bytes.
 ///
 /// Esta función espera que el flujo de entrada contenga líneas de paquete según el formato de Git:
@@ -60,41 +58,35 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, GitError> {
 /// # Retorno
 ///
 /// - `Result<Vec<u8>, GitError>`: Un resultado que contiene el contenido de la línea de paquete o un error si ocurre alguno.
-fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError>
-{
+fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError> {
     let mut length_buf = [0u8; 4];
-    if socket.read_exact(&mut length_buf).is_err()
-    {
+    if socket.read_exact(&mut length_buf).is_err() {
         return Err(GitError::InvalidPacketLineError);
     };
 
     let length_hex = String::from_utf8_lossy(&length_buf);
-    let length = match u32::from_str_radix(length_hex.trim(), 16)
-    {
+    let length = match u32::from_str_radix(length_hex.trim(), 16) {
         Ok(l) => l,
-        Err(_) => return Err(GitError::InvalidPacketLineError), 
+        Err(_) => return Err(GitError::InvalidPacketLineError),
     };
 
     if length == 0 {
         // End of the packet
         return Ok(vec![]);
     }
-    
+
     let length = length as usize - LENGTH_PREFIX_SIZE - 1; // 1 por el enter
-    let mut content = vec![0u8; length as usize];
-    if socket.read_exact(&mut content).is_err()
-    {
+    let mut content = vec![0u8; length];
+    if socket.read_exact(&mut content).is_err() {
         return Err(GitError::InvalidPacketLineError);
     };
 
     // Consume the newline character
     let mut newline_buf = [0u8; 1];
-    if socket.read_exact(&mut newline_buf).is_err()
-    {
+    if socket.read_exact(&mut newline_buf).is_err() {
         return Err(GitError::InvalidPacketLineError);
     };
 
-    
     Ok(content)
 }
 

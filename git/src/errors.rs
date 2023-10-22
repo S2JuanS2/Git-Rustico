@@ -22,6 +22,8 @@ pub enum GitError {
     InvalidVersionNumberError,
     InvalidObjectIdError,
     GenericError, // Error genérico, eliminar antes de la entrega.
+    UploadRequest,
+    PackfileNegotiationNACK,
 }
 
 impl GitError {
@@ -53,6 +55,8 @@ impl GitError {
             GitError::InvalidVersionNumberError => "Número de versión inválido, solo se acepta v1 y v2.",
             GitError::InvalidServerReferenceError => "Referencia no reconocida por el servidor.",
             GitError::InvalidObjectIdError => "Se encontro un object id no valido del servidor.",
+            GitError::UploadRequest => "NO se pudo completar el pedido para la negociacion con el servidor",
+            GitError::PackfileNegotiationNACK => "La negocion fallo porque no se recibio el NACK del servidor",
         }
     }
 }

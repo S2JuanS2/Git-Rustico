@@ -24,8 +24,7 @@ fn main() {
     };
 
     println!("Conexión establecida con el servidor");
-    match git_clone(&mut socket)
-    {
+    match git_clone(&mut socket) {
         Ok(_) => println!("Clonado exitoso"),
         Err(e) => println!("Error: {}", e.message()),
     };
