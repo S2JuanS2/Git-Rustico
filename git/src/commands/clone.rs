@@ -39,17 +39,5 @@ pub fn git_clone(socket: &mut TcpStream) -> Result<(), GitError> {
         }
     };
 
-    let mut buffer = [0; 4096]; // Tamaño del búfer de lectura
-    match socket.read(&mut buffer) {
-        Ok(_) => {
-            let m = String::from_utf8(buffer.to_vec()).expect("No se pudo convertir a String");
-            println!("Lectura exitosa: {:?}", m);
-        }
-        Err(e) => {
-            println!("Error: {}", e);
-            return Err(GitError::GenericError);
-        }
-    };
-
     Ok(())
 }
