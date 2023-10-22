@@ -274,7 +274,6 @@ fn is_valid_ipv4(input: &str) -> bool {
     true
 }
 
-
 /// Verifica si una cadena dada representa una dirección IPv6 válida.
 ///
 /// Esta función comprueba si la cadena cumple con el formato de una dirección IPv6 válida,
@@ -295,7 +294,7 @@ fn is_ipv6(ip: &str) -> bool {
     }
 
     for part in parts {
-        if part.len() != IPV4_SECTION_LENGTH && !(part.len() == 1 && part == "0"){
+        if part.len() != IPV4_SECTION_LENGTH && !(part.len() == 1 && part == "0") {
             return false;
         }
 
@@ -315,7 +314,6 @@ fn is_ipv6(ip: &str) -> bool {
 
     true
 }
-
 
 /// Verifica si la parte local de una dirección de correo electrónico es válida.
 ///
@@ -340,12 +338,11 @@ fn is_valid_local_part(local_part: &str) -> bool {
             return false;
         }
     }
-    return true
+    return true;
 }
 
-
 /// Verifica si la parte de dominio de una dirección de correo electrónico es válida.
-/// 
+///
 /// Para que la parte de dominio sea válida, debe cumplir con los siguientes criterios:
 /// - No debe estar vacía.
 /// - Debe contener al menos un punto (`.`) para separar subdominios.
@@ -355,7 +352,7 @@ fn is_valid_local_part(local_part: &str) -> bool {
 /// - `domain_part`: Una cadena que representa la parte de dominio de una dirección de correo.
 ///
 /// # Ejemplo
-/// 
+///
 /// ```
 /// let valid_domain = "example.com";
 /// assert!(is_valid_domain_part(valid_domain));
@@ -388,7 +385,7 @@ fn is_valid_domain_part(domain_part: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_valid_ip_v4() {
         let valid_ipv4 = "192.168.1.1";
@@ -396,7 +393,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), valid_ipv4);
     }
-    
+
     #[test]
     fn test_valid_ip_v6() {
         let valid_ipv6 = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
@@ -404,7 +401,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), valid_ipv6);
     }
-    
+
     #[test]
     fn test_invalid_ip() {
         let invalid_ip = "invalid";
@@ -488,7 +485,6 @@ mod tests {
         let short_obj_id = "0123456789abcdef0123456789abcdef0123456";
         assert!(!is_valid_obj_id(short_obj_id));
     }
-
 
     #[test]
     fn valid_email_with_alphanumeric_chars_should_succeed() {
