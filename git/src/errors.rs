@@ -8,6 +8,7 @@
 pub enum GitError {
     MissingConfigPathError,
     ConfigFileError,
+    InvalidConfigFormatError,
     InvalidArgumentCountError,
     InvalidConfigurationValueError,
     InvalidUserNameError,
@@ -63,6 +64,7 @@ impl GitError {
             GitError::ConfigFileError => "No se pudo abrir el archivo de configuración.",
             GitError::MissingConfigPathError => "No se ha especificado la ruta del archivo de configuración.\nUse: cargo run --bin <mode> -- <path config>",
             GitError::InvalidArgumentCountError => "Número de argumentos inválido.\nUse: cargo run -- <path config>",
+            GitError::InvalidConfigFormatError => "Formato de archivo de configuración inválido. Format: key=value",
             GitError::InvalidConfigurationValueError => "Valor de configuración inválido, revise su archivo de configuración.",
             GitError::InvalidUserNameError => "Nombre de usuario inválido, revise su archivo de configuración.",
             GitError::InvalidUserMailError => "Correo de usuario inválido, revise su archivo de configuración.",

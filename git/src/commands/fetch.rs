@@ -18,15 +18,16 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
     let remote_refs_dir = format!("{}{}", directory, remote_dir);
 
     if !Path::new(&remote_refs_dir).exists() {
-        return Err(GitError::RemoteDoesntExistError,
-        );
+        return Err(GitError::RemoteDoesntExistError);
     }
 
     // Copia las referencias del repositorio remoto al directorio local
     let local_refs_dir = format!("{}{}", directory, GIT_DIR);
-    let local_refs_dir = Path::new(&local_refs_dir).join("refs/remotes").join(remote_name);
+    let local_refs_dir = Path::new(&local_refs_dir)
+        .join("refs/remotes")
+        .join(remote_name);
 
-    if let Err(_) = fs::create_dir_all(&local_refs_dir){
+    if let Err(_) = fs::create_dir_all(&local_refs_dir) {
         return Err(GitError::OpenFileError);
     }
 
@@ -114,7 +115,9 @@ mod tests {
 
         // Verificar que la referencia se copió al repositorio local
         let local_refs_dir = format!("{}{}", directory, GIT_DIR);
-        let local_refs_dir = Path::new(&local_refs_dir).join("refs/remotes").join(remote_name);
+        let local_refs_dir = Path::new(&local_refs_dir)
+            .join("refs/remotes")
+            .join(remote_name);
         let local_ref_path = local_refs_dir.join("master");
         assert!(local_ref_path.exists());
 
@@ -129,13 +132,13 @@ mod tests {
 
         // Eliminar el repositorio local
         let local_refs_dir = format!("{}{}", directory, GIT_DIR);
-        let local_refs_dir = Path::new(&local_refs_dir).join("refs/remotes").join(remote_name);
+        let local_refs_dir = Path::new(&local_refs_dir)
+            .join("refs/remotes")
+            .join(remote_name);
         let local_ref_path = local_refs_dir.join("master");
-        println!("{:?}",local_ref_path);
-        println!("{:?}",local_refs_dir);
+        println!("{:?}", local_ref_path);
+        println!("{:?}", local_refs_dir);
         fs::remove_file(&local_ref_path).unwrap();
         fs::remove_dir_all(&local_refs_dir).unwrap();
-
-    }    
-    
+    }
 }
