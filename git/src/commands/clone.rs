@@ -5,11 +5,10 @@ use crate::errors::GitError;
 use crate::util::connections::{packfile_negotiation, reference_discovery, start_client};
 use crate::util::request::{create_git_request, RequestCommand};
 
-pub fn handle_clone(address: &String) -> Result<(), GitError> {
+pub fn handle_clone(address: &str) -> Result<(), GitError> {
     let mut socket = start_client(address)?;
     git_clone(&mut socket)?;
     Ok(())
-
 }
 
 pub fn git_clone(socket: &mut TcpStream) -> Result<(), GitError> {

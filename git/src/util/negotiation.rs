@@ -1,4 +1,8 @@
-use super::{advertised::AdvertisedRefs, connections::{send_message, send_flush}, pkt_line};
+use super::{
+    advertised::AdvertisedRefs,
+    connections::{send_flush, send_message},
+    pkt_line,
+};
 use crate::{consts::NACK, errors::GitError};
 use std::{io::Read, net::TcpStream};
 
@@ -47,16 +51,14 @@ pub fn upload_request(
 }
 
 pub fn receive_nack(stream: &mut dyn Read) -> Result<(), GitError> {
-        let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
-        if stream.read_exact(&mut buffer).is_err()
-        {
-            return Err(GitError::PackfileNegotiationNACK);
-        }
-        let response = String::from_utf8_lossy(&buffer);
+    let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
+    if stream.read_exact(&mut buffer).is_err() {
+        return Err(GitError::PackfileNegotiationNACK);
+    }
+    let response = String::from_utf8_lossy(&buffer);
 
-        if response != NACK
-        {
-            return Err(GitError::PackfileNegotiationNACK);
-        }
-        Ok(())
+    if response != NACK {
+        return Err(GitError::PackfileNegotiationNACK);
+    }
+    Ok(())
 }
