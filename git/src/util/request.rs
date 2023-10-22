@@ -1,6 +1,14 @@
 use crate::consts::END_OF_STRING;
 use crate::util::pkt_line::add_length_prefix;
 
+/// Enumeración `RequestCommand` representa los comandos de solicitud en un protocolo Git.
+///
+/// Esta enumeración define tres comandos utilizados en las operaciones de Git.
+///
+/// - `UploadPack`: Comando para solicitar una transferencia de paquetes a través de "git-upload-pack".
+/// - `ReceivePack`: Comando para solicitar una recepción de paquetes a través de "git-receive-pack".
+/// - `UploadArchive`: Comando para solicitar la carga de un archivo de almacenamiento a través de "git-upload-archive".
+///
 pub enum RequestCommand {
     UploadPack,
     ReceivePack,
@@ -8,6 +16,7 @@ pub enum RequestCommand {
 }
 
 impl RequestCommand {
+    /// Convierte un valor de `RequestCommand` en su representación de cadena.
     fn to_string(&self) -> &str {
         match self {
             RequestCommand::UploadPack => "git-upload-pack",
@@ -17,6 +26,38 @@ impl RequestCommand {
     }
 }
 
+/// Crea una solicitud Git con los datos especificados.
+///
+/// Esta función genera una solicitud Git formateada como una cadena, basada en el comando de solicitud,
+/// el repositorio, la dirección IP y el puerto proporcionados como argumentos. La solicitud incluye
+/// información sobre el comando, el proyecto (repositorio) y el host (IP y puerto).
+///
+/// ## Argumentos
+///
+/// - `command`: El comando de solicitud Git (`RequestCommand`) que se utilizará.
+/// - `repo`: El nombre del repositorio en el que se realizará la solicitud.
+/// - `ip`: La dirección IP del host al que se enviará la solicitud.
+/// - `port`: El puerto en el que se realizará la conexión con el host.
+///
+/// ## Ejemplo
+///
+/// ```
+/// use git::util::request::{create_git_request, RequestCommand};
+///
+/// let command = RequestCommand::UploadPack;
+/// let repo = "mi-repositorio".to_string();
+/// let ip = "127.0.0.1".to_string();
+/// let port = "22".to_string();
+///
+/// let git_request = create_git_request(command, repo, ip, port);
+///
+/// // Verificar el resultado esperado
+/// assert_eq!(git_request, "0036git-upload-pack /mi-repositorio\0host=127.0.0.1:22\0");
+/// ```
+///
+/// ## Retorno
+///
+/// Una line pkt que representa la solicitud Git formateada.
 pub fn create_git_request(
     command: RequestCommand,
     repo: String,

@@ -113,8 +113,10 @@ pub fn open_file_for_reading(path: &str) -> Result<File, GitError> {
 pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
     let line = line.trim();
     let mut parts = line.split('=');
-    let key = parts.next().unwrap();
-    let value = parts.next().unwrap();
+    let key = parts.next().ok_or(GitError::InvalidConfigFormatError)?;
+    let value = parts.next().ok_or(GitError::InvalidConfigFormatError)?;
+    // let key = parts.next().unwrap();
+    // let value = parts.next().unwrap();
 
     match key {
         "name" => config.name = value.to_string(),

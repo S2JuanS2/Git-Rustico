@@ -567,9 +567,25 @@ mod tests {
 
     #[test]
     fn test_invalid_local_part() {
-        assert_eq!(is_valid_local_part(""), false);
-        assert_eq!(is_valid_local_part("user@example.com"), false);
-        assert_eq!(is_valid_local_part("user name"), false);
-        assert_eq!(is_valid_local_part("user!name"), false);
+        assert!(!is_valid_local_part(""));
+        assert!(!is_valid_local_part("user@example.com"));
+        assert!(!is_valid_local_part("user name"));
+        assert!(!is_valid_local_part("user!name"));
+    }
+
+    #[test]
+    fn test_valid_domain_part() {
+        assert!(is_valid_domain_part("example.com"));
+        assert!(is_valid_domain_part("sub-domain.ar"));
+        assert!(is_valid_domain_part("a-b-c.area51"));
+    }
+
+    #[test]
+    fn test_invalid_domain_part() {
+        assert!(!is_valid_domain_part("")); // Empty domain part
+        assert!(!is_valid_domain_part("x")); // Domain part with only one character
+        assert!(!is_valid_domain_part("-example")); // Domain part starting with a hyphen
+        assert!(!is_valid_domain_part("example-")); // Domain part ending with a hyphen
+        assert!(!is_valid_domain_part("ex@mple")); // Domain part with special characters
     }
 }
