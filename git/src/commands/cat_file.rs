@@ -66,7 +66,7 @@ mod tests {
         let result = git_cat_file(TEST_DIRECTORY, object_hash);
 
         // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists(){
+        if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         }
 

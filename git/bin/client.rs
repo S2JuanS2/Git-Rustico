@@ -1,9 +1,8 @@
-use git::commands::clone::git_clone;
 use git::config::Config;
-use std::env;
-use git::models::client::Client;
 use git::controllers::controller_client::Controller;
+use git::models::client::Client;
 use git::views::view_client::View;
+use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -24,8 +23,8 @@ fn main() {
     let controller = Controller::new(client.clone());
 
     let view = View::new(controller.clone());
-    
-    match view.start_view(){
+
+    match view.start_view() {
         Ok(_) => (),
         Err(error) => eprintln!("Error: {}", error.message()),
     }
