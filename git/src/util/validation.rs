@@ -219,6 +219,45 @@ pub fn valid_email(input: &str) -> Result<String, GitError> {
     Ok(input.to_string())
 }
 
+/// Verifica si un objeto ID (obj_id) dado es válido.
+///
+/// Un objeto ID válido debe cumplir con los siguientes criterios:
+///
+/// 1. Debe tener una longitud de 40 caracteres, que es la longitud típica de un objeto ID en Git.
+/// 2. Debe contener caracteres válidos que son dígitos hexadecimales (0-9, a-f, A-F).
+///
+/// # Argumentos
+///
+/// * `obj_id`: Un objeto ID (hash) que se desea validar.
+///
+/// # Ejemplo
+///
+/// ```
+/// use git::util::validation::is_valid_obj_id;
+/// let obj_id_valido = "7217a7c7e582c46cec22a130adf4b9d7d950fba0";
+/// let obj_id_invalido = "invalid_hash";
+///
+/// assert_eq!(is_valid_obj_id(obj_id_valido), true);
+/// assert_eq!(is_valid_obj_id(obj_id_invalido), false);
+/// ```
+///
+/// # Retorno
+///
+/// `true` si el objeto ID es válido, `false` en caso contrario.
+pub fn is_valid_obj_id(obj_id: &str) -> bool {
+    if obj_id.len() != 40 {
+        return false;
+    }
+
+    for c in obj_id.chars() {
+        if !c.is_ascii_hexdigit() {
+            return false;
+        }
+    }
+
+    true
+}
+
 fn is_valid_ipv4(input: &str) -> bool {
     let octets: Vec<&str> = input.split('.').collect();
 

@@ -1,3 +1,4 @@
+use git::commands::clone::git_clone;
 use git::config::Config;
 use std::env;
 use git::models::client::Client;
@@ -28,5 +29,4 @@ fn main() {
         Ok(_) => (),
         Err(error) => eprintln!("Error: {}", error.message()),
     }
-
 }

@@ -174,6 +174,7 @@ mod tests {
 
         // Entonces la función no lanza error.
         assert!(result.is_ok());
+      
         // Entonces la rama ha sido eliminada.
         assert!(fs::metadata(&branch_path).is_err());
 

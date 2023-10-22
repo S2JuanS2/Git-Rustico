@@ -16,3 +16,5 @@ pub mod checkout;
 pub mod commit;
 pub mod hash_object;
 pub mod init;
+
+pub mod clone;
