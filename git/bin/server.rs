@@ -1,5 +1,3 @@
-use std::io::Read;
-
 use git::config::Config;
 use git::util::connections::start_server;
 

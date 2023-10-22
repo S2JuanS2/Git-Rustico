@@ -1,8 +1,9 @@
 use std::fs;
-use std::io;
 use std::path::Path;
 
 use crate::errors::GitError;
+
+use super::cat_file::git_cat_file;
 
 const GIT_DIR: &str = "/.git";
 const REMOTES_DIR: &str = "refs/remotes/";
@@ -25,69 +26,102 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
     let local_refs_dir = format!("{}{}", directory, GIT_DIR);
     let local_refs_dir = Path::new(&local_refs_dir).join("refs/remotes").join(remote_name);
 
-    fs::create_dir_all(&local_refs_dir)?;
+    if let Err(_) = fs::create_dir_all(&local_refs_dir){
+        return Err(GitError::OpenFileError);
+    }
 
-    for entry in fs::read_dir(&remote_refs_dir)? {
-        if let Ok(entry) = entry {
-            let file_name = entry.file_name();
-            let local_ref_path = local_refs_dir.join(file_name);
-            let remote_ref_path = entry.path();
+    let entries = match fs::read_dir(&remote_refs_dir) {
+        Ok(entries) => entries,
+        Err(_) => return Err(GitError::ReadFileError),
+    };
 
-            fs::copy(remote_ref_path, local_ref_path)?;
+    for entry in entries {
+        match entry {
+            Ok(entry) => {
+                let file_name = entry.file_name();
+                let local_ref_path = local_refs_dir.join(file_name);
+                let remote_ref_path = entry.path();
+
+                if let Err(_) = fs::copy(remote_ref_path, local_ref_path) {
+                    return Err(GitError::CopyFileError);
+                }
+            }
+            Err(_) => {
+                return Err(GitError::ReadFileError);
+            }
         }
     }
 
     // Descarga los objetos necesarios desde el repositorio remoto
     let objects_dir = format!("{}{}", directory, GIT_DIR);
-    for entry in fs::read_dir(&objects_dir)? {
-        if let Ok(entry) = entry {
-            let file_name = entry.file_name();
-            let object_hash = file_name.to_string_lossy().to_string();
 
-            // Usar git_cat_file para descargar el objeto
+    let objects = match fs::read_dir(&objects_dir) {
+        Ok(objects) => objects,
+        Err(_) => return Err(GitError::ReadFileError),
+    };
+
+    for entry in objects {
+        match entry {
+            Ok(entry) => {
+                let file_name = entry.file_name();
+                let object_hash = file_name.to_string_lossy().to_string();
+
+                git_cat_file(directory, &object_hash)?;
+            }
+            Err(_) => {
+                return Err(GitError::ReadFileError);
+            }
         }
     }
 
     Ok(())
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::env;
+    use std::fs::File;
+    use std::io::Write;
 
     #[test]
     fn test_git_fetch() {
-        // Se Crea un directorio temporal para el test
-        let temp_dir = env::temp_dir().join("test_git_fetch");
-        fs::create_dir(&temp_dir).unwrap();
+        let directory = env::current_dir().unwrap();
+        let directory = directory.to_str().unwrap();
 
-        // Se crea un repositorio remoto
-        let remote_dir = temp_dir.join("remote");
-        fs::create_dir(&remote_dir).unwrap();
-        git_init(&remote_dir.to_string_lossy().to_string()).unwrap();
+        // Crear un repositorio remoto
+        let remote_name = "origin";
+        let remote_dir = format!("{}{}", REMOTES_DIR, remote_name);
+        let remote_refs_dir = format!("{}{}", directory, remote_dir);
+        fs::create_dir_all(&remote_refs_dir).unwrap();
 
-        // Se crea un repositorio local
-        let local_dir = temp_dir.join("local");
-        fs::create_dir(&local_dir).unwrap();
-        git_init(&local_dir.to_string_lossy().to_string()).unwrap();
+        // Crear una referencia en el repositorio remoto
+        let remote_ref_path = remote_refs_dir.clone() + "/master";
+        let mut file = File::create(remote_ref_path).unwrap();
+        let _ = write!(file, "1234567890").unwrap();
 
-        // Se crea un archivo en el repositorio remoto
-        let file_path = remote_dir.join("test.txt");
-        fs::write(&file_path, "test").unwrap();
-        //add  y commit
+        // Crear un objeto en el repositorio remoto
+        let objects_dir = format!("{}{}", directory, GIT_DIR);
+        let object_dir = objects_dir.clone() + "/12";
+        fs::create_dir_all(&object_dir).unwrap();
+        let object_path = object_dir + "/34567890";
+        let mut file = File::create(object_path).unwrap();
+        let _ = write!(file, "test").unwrap();
 
-        // Se agrega el repositorio remoto al repositorio local
+        // Ejecutar git_fetch
+        let result = git_fetch(directory, remote_name);
+        println!("{:?}", result);
+        assert!(result.is_ok());
 
-        // Se ejecuta el comando fetch
-        git_fetch(&local_dir.to_string_lossy().to_string(), "origin").unwrap();
+        // Verificar que la referencia se copió al repositorio local
+        let local_refs_dir = format!("{}{}", directory, GIT_DIR);
+        let local_refs_dir = Path::new(&local_refs_dir).join("refs/remotes").join(remote_name);
+        let local_ref_path = local_refs_dir.join("master");
+        assert!(local_ref_path.exists());
 
-        // Se verifica que el archivo exista en el repositorio local
-        let file_path = local_dir.join("test.txt");
-        assert!(file_path.exists());
-
-        // Se elimina el directorio temporal
-        fs::remove_dir_all(&temp_dir).unwrap();
-    }
+        // Verificar que el objeto se copió al repositorio local
+        let object_path = objects_dir + "/12/34567890";
+        assert!(Path::new(&object_path).exists());
+    }    
     
-}*/
+}
