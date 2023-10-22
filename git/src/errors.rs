@@ -30,6 +30,7 @@ pub enum GitError {
     ReadFileError,
     CreateFileError,
     WriteFileError,
+    CopyFileError,
     CreateDirError,
     ReadBranchesError,
     BranchDirectoryOpenError,
@@ -41,6 +42,7 @@ pub enum GitError {
     BranchNotFoundError,
     HashObjectInvalid,
     DecompressionFailed,
+    RemoteDoesntExistError,
     WriteStreamError,
     SendCommandError,
 }
@@ -92,7 +94,9 @@ impl GitError {
             GitError::DecompressionFailed => "Falló al descomprimir el archivo",
             GitError::CreateFileError => "Falló al crear el archivo",
             GitError::WriteFileError => "Falló al escribir en el archivo",
+            GitError::CopyFileError => "Falló al copiar el archivo",
             GitError::CreateDirError => "Falló al crear el directorio",
+            GitError::RemoteDoesntExistError => "fatal: el repositorio remoto no existe",
             GitError::WriteStreamError => "Falló al enviar datos al socket",
             GitError::SendCommandError => "Falló al enviar el comando",
         }
