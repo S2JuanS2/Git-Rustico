@@ -128,7 +128,7 @@ mod tests {
         let result = git_branch_list(TEST_DIRECTORY);
 
         // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists(){
+        if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         }
 
@@ -146,7 +146,7 @@ mod tests {
         let result = git_branch_create(TEST_DIRECTORY, "test_new_branch", "commit_hash_branch");
 
         // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists(){
+        if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         }
 
@@ -174,14 +174,13 @@ mod tests {
 
         // Entonces la función no lanza error.
         assert!(result.is_ok());
-      
+
         // Entonces la rama ha sido eliminada.
         assert!(fs::metadata(&branch_path).is_err());
 
         // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists(){
+        if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         }
-        
     }
 }
