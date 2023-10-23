@@ -72,6 +72,7 @@ pub enum GitError {
     FlagHashObjectNotRecognizedError,
     InvalidArgumentCountInitError,
     InvalidArgumentCountStatusError,
+    CloneMissingRepoError,
 }
 
 impl GitError {
@@ -153,6 +154,7 @@ impl GitError {
             GitError::FlagHashObjectNotRecognizedError => "Flag no reconocida para el comando hash-object",
             GitError::InvalidArgumentCountInitError => "Número de argumentos inválido para el comando init.\nUsar: git init",
             GitError::InvalidArgumentCountStatusError => "Número de argumentos inválido para el comando status.\nUsar: git status",
+            GitError::CloneMissingRepoError => "Use: git clone <repositorio>",
         }
     }
 }
