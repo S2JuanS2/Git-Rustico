@@ -1,6 +1,7 @@
 use crate::errors::GitError;
 use crate::util::formats::hash_generate;
 
+use crate::models::client::Client;
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::File;
@@ -77,6 +78,33 @@ impl Commit {
     pub fn get_parent_hash(&self) -> String {
         self.parent_hash.to_string()
     }
+}
+
+/// Esta función se encarga de llamar al comando commit con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de Strings que contiene los parametros que se le pasaran al comando commit
+pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    if args.len() != 2 {
+        return Err(GitError::InvalidArgumentCountCommitError);
+    }
+    if args[1] != "-m" {
+        return Err(GitError::FlagCommitNotRecognizedError);
+    }
+    let directory = client.get_directory_path();
+
+    let message = args[1];
+
+    let test_commit = Commit::new(
+        message.to_string(),
+        "Juan".to_string(),
+        "jdr@fi.uba.ar".to_string(),
+        "Juan".to_string(),
+        "jdr@fi.uba.ar".to_string(),
+        "01234567".to_string(),
+        "ABCDEF1234".to_string(),
+    );
+
+    git_commit(&directory, test_commit)
 }
 
 /// Creará el archivo donde se guarda el mensaje del commit
@@ -171,9 +199,8 @@ fn commit_content_format(commit: &Commit) -> String {
 }
 /// Esta función genera y crea el objeto commit
 /// ###Parametros:
-/// 'message': mensaje del commit
-/// 'author': Nombre del autor del commit principal
-/// 'commiter': Nombre del que realiza el commit
+/// 'directory': Directorio del git
+/// 'commit': Estructura que contiene la información del commit
 pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
     let content = commit_content_format(&commit);
 

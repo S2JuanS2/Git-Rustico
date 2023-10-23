@@ -2,12 +2,32 @@ use crate::errors::GitError;
 
 use super::branch::get_branch;
 
+use crate::models::client::Client;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 
 const GIT_DIR: &str = "/.git";
 const HEAD_FILE: &str = "HEAD";
+
+/// Esta función se encarga de llamar al comando checkout con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función checkout
+pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    let directory = client.get_directory_path();
+    if args.len() == 1 {
+        git_checkout_switch(&directory, args[0])?;
+    } else if args.len() == 2 {
+        if args[0] == "-b" {
+            //git_checkout_create(directory.to_str().unwrap(), args[1])?;
+        } else {
+            return Err(GitError::FlagCheckoutNotRecognisedError);
+        }
+    } else {
+        return Err(GitError::InvalidArgumentCountCheckoutError);
+    }
+    Ok(())
+}
 
 /// Cambia a otra branch existente
 /// ###Parámetros:

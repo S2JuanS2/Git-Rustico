@@ -7,6 +7,22 @@ const BLOB: &str = "blob";
 const TREE: &str = "tree";
 const COMMIT: &str = "commit";
 
+/// Esta función se encarga de llamar al comando hash-object con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función hash-object
+pub fn handle_hash_object(args: Vec<&str>) -> Result<(), GitError> {
+    if args.len() != 3 {
+        return Err(GitError::InvalidArgumentCountHashObjectError);
+    }
+    if args[0] != "-t" {
+        return Err(GitError::FlagHashObjectNotRecognizedError);
+    }
+    let type_object = args[1];
+    let file_name = args[2];
+
+    git_hash_object(type_object, file_name)
+}
+
 /// Esta función devuelve el hash de un objeto según su tipo.
 /// ###Parametros:
 /// 'type_object': tipo del objeto, puede ser, commit, tree, blob, tag

@@ -1,7 +1,20 @@
 use crate::errors::GitError;
-use crate::util::formats::{compressor_object,hash_generate};
+use crate::models::client::Client;
+use crate::util::formats::{compressor_object, hash_generate};
 use std::fs;
 use std::{fs::File, io::Read};
+
+/// Esta función se encarga de llamar al comando add con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
+pub fn handle_add(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    if args.len() != 1 {
+        return Err(GitError::InvalidArgumentCountAddError);
+    }
+    let directory = client.get_directory_path();
+    let file_name = args[0];
+    git_add(&directory, file_name)
+}
 
 /// Esta función crea el objeto y lo guarda
 /// ###Parametros:
