@@ -1,4 +1,5 @@
 use crate::errors::GitError;
+use crate::models::client::Client;
 use crate::util::formats::hash_generate;
 use std::collections::HashMap;
 use std::fs;
@@ -9,6 +10,17 @@ use std::path::Path;
 const GIT_DIR: &str = "/.git";
 const HEAD_FILE: &str = "HEAD";
 const OBJECTS_DIR: &str = "objects";
+
+/// Esta función se encarga de llamar al comando status con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
+pub fn handle_status(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    if args.is_empty() {
+        return Err(GitError::InvalidArgumentCountStatusError);
+    }
+    let directory = client.get_directory_path();
+    git_status(&directory)
+}
 
 /// Devuelve el nombre de la rama actual.
 /// ###Parámetros:
@@ -299,7 +311,7 @@ mod tests {
         let _ = fs::File::create(&file_path).expect("Falló al crear el archivo");
 
         assert!(print_head(TEST_DIRECTORY).is_ok());
-        assert!(check_hash(TEST_DIRECTORY).is_ok());
+        assert!(git_status(TEST_DIRECTORY).is_ok());
 
         // Elimina el directorio de prueba
         if fs::remove_dir_all(TEST_DIRECTORY).is_err() {
