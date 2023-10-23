@@ -259,15 +259,51 @@ pub fn calculate_directory_hashes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
+    use std::io::Write;
+
+    const TEST_DIRECTORY: &str = "./test_repo";
 
     #[test]
     fn test_git_status() {
-        let binding = env::current_dir().expect("No se puede obtener el directorio actual");
-        let current_dir = binding.to_str().unwrap();
-        let current_dir = current_dir.replace("/git", "");
+        let dir_path = TEST_DIRECTORY.to_string();
+        if let Err(err) = fs::create_dir_all(&dir_path) {
+            panic!("Falló al crear el repo de test: {}", err);
+        }
 
-        assert!(print_head(&current_dir).is_ok());
-        assert!(git_status(&current_dir).is_ok());
+        let repo_path = format!("{}{}", dir_path, "/git/src");
+        if let Err(err) = fs::create_dir_all(&repo_path) {
+            panic!("Falló al crear la carpeta 'git': {}", err);
+        }
+
+        // El hash de este archivo es: 48124d6dc3b2e693a207667c32ac672414913994
+        let file_path1 = format!("{}/main.rs", repo_path);
+        let mut file = fs::File::create(&file_path1).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo").expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/errors.rs", repo_path);
+        let mut file = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file.write_all(b"Aca habria errores").expect("Error al escribir en el archivo");
+
+        let objects_path = format!("{}{}", dir_path, "/.git/objects");
+        if let Err(err) = fs::create_dir_all(&objects_path) {
+            panic!("Falló al crear la carpeta 'objects': {}", err);
+        }
+
+        // Agrego en la carpeta el hash unicamente del file_path1
+        let folder_path = format!("{}/{}", objects_path, "48");
+        if let Err(err) = fs::create_dir_all(&folder_path) {
+            panic!("Falló al crear la carpeta 'd5': {}", err);
+        }
+
+        let file_path = format!("{}/124d6dc3b2e693a207667c32ac672414913994", folder_path);
+        let _ = fs::File::create(&file_path).expect("Falló al crear el archivo");
+
+        assert!(print_head(TEST_DIRECTORY).is_ok());
+        assert!(check_hash(TEST_DIRECTORY).is_ok());
+
+        // Elimina el directorio de prueba
+        if fs::remove_dir_all(TEST_DIRECTORY).is_err() {
+            eprintln!("Error al intentar eliminar el directorio temporal");
+        }
     }
 }
