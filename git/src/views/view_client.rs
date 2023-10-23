@@ -79,10 +79,9 @@ impl View {
             };
 
             //Arreglar.
-            match self.controller.send_command(command) {
-                Ok(_) => (),
-                Err(_) => return (),
-            };
+            if self.controller.send_command(command).is_err() {
+                eprintln!("Error al eviar el comando");
+            }
         });
         self.button_clear.connect_clicked(move |_| {
             if let Some(buffer) = self.response.buffer() {

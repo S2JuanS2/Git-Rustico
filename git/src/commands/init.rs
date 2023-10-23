@@ -11,7 +11,7 @@ const INITIAL_BRANCH: &str = "main";
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función init
 pub fn handle_init(args: Vec<&str>, client: Client) -> Result<(), GitError> {
-    if args.len() != 0 {
+    if args.is_empty() {
         return Err(GitError::InvalidArgumentCountInitError);
     }
     let directory = client.get_directory_path();
