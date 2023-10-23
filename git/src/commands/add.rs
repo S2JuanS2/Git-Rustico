@@ -37,7 +37,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     let header = format!("blob {}\0", content.len());
 
-    let store = header + &String::from_utf8_lossy(&content).to_string();
+    let store = header + String::from_utf8_lossy(&content).as_ref();
 
     let hash_object = hash_generate(&store);
 
@@ -45,11 +45,11 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
     let objects_dir = format!(
         "{}/objects/{}/{}",
         &git_dir,
-        hash_object[..2].to_string(),
-        hash_object[2..].to_string()
+        &hash_object[..2],
+        &hash_object[2..]
     );
 
-    let hash_object_path = format!("{}/objects/{}/", &git_dir, hash_object[..2].to_string());
+    let hash_object_path = format!("{}/objects/{}/", &git_dir, &hash_object[..2]);
 
     match fs::create_dir_all(hash_object_path) {
         Ok(_) => (),
