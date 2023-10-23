@@ -47,6 +47,12 @@ pub enum GitError {
     WriteStreamError,
     SendCommandError,
     HeaderPackFileReadError,
+    HeadBranchError,
+    VisitDirectoryError,
+    GetHashError,
+    ReadDirError,
+    DirEntryError,
+    PathToStringError,
 }
 
 impl GitError {
@@ -103,6 +109,12 @@ impl GitError {
             GitError::WriteStreamError => "Falló al enviar datos al socket",
             GitError::SendCommandError => "Falló al enviar el comando",
             GitError::HeaderPackFileReadError => "Falló al leer el header del packfile recibo del servidor",
+            GitError::ReadDirError => "Falló al leer el directorio",
+            GitError::DirEntryError => "Falló al obtener la entrada del directorio",
+            GitError::HeadBranchError => "No se pudo obtener la rama HEAD",
+            GitError::VisitDirectoryError => "No se pudo recorrer el directorio",
+            GitError::GetHashError => "No se pudo obtener el hash del objeto",
+            GitError::PathToStringError => "No se pudo convertir el path a str",
         }
     }
 }
