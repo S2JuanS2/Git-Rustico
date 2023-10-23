@@ -1,8 +1,20 @@
-//use crate::commands::hash_object::calculate_hash;
 use crate::errors::GitError;
-use crate::util::formats::compressor_object;
+use crate::models::client::Client;
+use crate::util::formats::{compressor_object, hash_generate};
 use std::fs;
 use std::{fs::File, io::Read};
+
+/// Esta función se encarga de llamar al comando add con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
+pub fn handle_add(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    if args.len() != 1 {
+        return Err(GitError::InvalidArgumentCountAddError);
+    }
+    let directory = client.get_directory_path();
+    let file_name = args[0];
+    git_add(&directory, file_name)
+}
 
 /// Esta función crea el objeto y lo guarda
 /// ###Parametros:
@@ -27,12 +39,9 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     let store = header + &String::from_utf8_lossy(&content).to_string();
 
-    // NO ESTARIA GENERANDO BIEN EL HASH DESPUES SE ARREGLARÁ.
-    //let hash_object =calculate_hash(store.as_bytes());
-    let hash_object = "ABCDEF1234567891234567801234567891ABCEDF";
+    let hash_object = hash_generate(&store);
 
-    //CAMBIAR POR .git
-    let git_dir = format!("{}test", directory);
+    let git_dir = format!("{}.git", directory);
     let objects_dir = format!(
         "{}/objects/{}/{}",
         &git_dir,
@@ -54,6 +63,8 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     compressor_object(store, file_object)?;
 
+    //Falta el index(Staging area)
+
     Ok(())
 }
 
@@ -63,11 +74,11 @@ mod tests {
 
     #[test]
     fn add_test() {
-        fs::create_dir_all("./test/objects").expect("Error");
+        fs::create_dir_all("./.git/objects").expect("Error");
 
         let result = git_add("./", "testfile");
 
-        fs::remove_dir_all("./test").expect("Falló al remover el directorio temporal");
+        fs::remove_dir_all("./.git").expect("Falló al remover el directorio temporal");
         assert!(result.is_ok());
     }
 }

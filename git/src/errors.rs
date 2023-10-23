@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 /// Enumeración que representa los posibles errores que pueden ocurrir durante la ejecución
-/// del progbranch Git.
+/// del programa Git.
 ///
 /// Cada variante de este enum representa un tipo específico de error que puede ocurrir, y
 /// se utiliza para identificar y manejar los errores de manera adecuada.
@@ -47,8 +47,31 @@ pub enum GitError {
     WriteStreamError,
     SendCommandError,
     HeaderPackFileReadError,
+    HeadBranchError,
+    VisitDirectoryError,
+    GetHashError,
+    ReadDirError,
+    DirEntryError,
+    PathToStringError,
     InvalidObjectType,
     InvalidObjectLength,
+    CommandDoesNotStartWithGitError,
+    CommandNotRecognizedError,
+    InvalidArgumentCountAddError,
+    DirectoryOpenError,
+    InvalidArgumentCountBranchError,
+    InvalidArgumentCountCatFileError,
+    FlagCatFileNotRecognizedError,
+    InvalidArgumentCountCheckoutError,
+    FlagCheckoutNotRecognisedError,
+    InvalidArgumentCountCloneError,
+    InvalidArgumentCountCommitError,
+    FlagCommitNotRecognizedError,
+    InvalidArgumentCountFetchError,
+    InvalidArgumentCountHashObjectError,
+    FlagHashObjectNotRecognizedError,
+    InvalidArgumentCountInitError,
+    InvalidArgumentCountStatusError,
 }
 
 impl GitError {
@@ -102,11 +125,37 @@ impl GitError {
             GitError::CopyFileError => "Fallo al copiar el archivo",
             GitError::CreateDirError => "Fallo al crear el directorio",
             GitError::RemoteDoesntExistError => "fatal: el repositorio remoto no existe",
+            GitError::WriteStreamError => "Falló al enviar datos al socket",
+            GitError::SendCommandError => "Falló al enviar el comando",
+            GitError::HeaderPackFileReadError => "Falló al leer el header del packfile recibo del servidor",
+            GitError::ReadDirError => "Falló al leer el directorio",
+            GitError::DirEntryError => "Falló al obtener la entrada del directorio",
+            GitError::HeadBranchError => "No se pudo obtener la rama HEAD",
+            GitError::VisitDirectoryError => "No se pudo recorrer el directorio",
+            GitError::GetHashError => "No se pudo obtener el hash del objeto",
+            GitError::PathToStringError => "No se pudo convertir el path a str",
             GitError::WriteStreamError => "Fallo al enviar datos al socket",
             GitError::SendCommandError => "Fallo al enviar el comando",
             GitError::HeaderPackFileReadError => "Fallo al leer el header del packfile recibo del servidor",
             GitError::InvalidObjectType => "Fallo al leer en el header, se leyo un tipo de objeto invalido",
             GitError::InvalidObjectLength => "Fallo al leer en el header, se leyo una longitud de objecto invalido",
+            GitError::CommandDoesNotStartWithGitError => "El comando no comienza con git",
+            GitError::CommandNotRecognizedError => "El comando no es reconocido por git",
+            GitError::InvalidArgumentCountAddError => "Número de argumentos inválido para el comando add.\nUsar: git add <file name>",
+            GitError::DirectoryOpenError => "No se pudo abrir el directorio",
+            GitError::InvalidArgumentCountBranchError => "Número de argumentos inválido para el comando branch.",
+            GitError::InvalidArgumentCountCatFileError => "Número de argumentos inválido para el comando cat-file.\nUsar: git cat-file <flag> <object hash>",
+            GitError::FlagCatFileNotRecognizedError => "Flag no reconocida para el comando cat-file",
+            GitError::InvalidArgumentCountCheckoutError => "Número de argumentos inválido para el comando checkout.",
+            GitError::FlagCheckoutNotRecognisedError => "Flag no reconocida para el comando checkout",
+            GitError::InvalidArgumentCountCloneError => "Número de argumentos inválido para el comando clone.\nUsar: git clone <url> <path>",
+            GitError::InvalidArgumentCountCommitError => "Número de argumentos inválido para el comando commit.\nUsar: git commit -m <message>",
+            GitError::FlagCommitNotRecognizedError => "Flag no reconocida para el comando commit",
+            GitError::InvalidArgumentCountFetchError => "Número de argumentos inválido para el comando fetch.\nUsar: git fetch <remote name>",
+            GitError::InvalidArgumentCountHashObjectError => "Número de argumentos inválido para el comando hash-object.\nUsar: git hash-object <file name>",
+            GitError::FlagHashObjectNotRecognizedError => "Flag no reconocida para el comando hash-object",
+            GitError::InvalidArgumentCountInitError => "Número de argumentos inválido para el comando init.\nUsar: git init",
+            GitError::InvalidArgumentCountStatusError => "Número de argumentos inválido para el comando status.\nUsar: git status",
         }
     }
 }

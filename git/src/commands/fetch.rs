@@ -4,9 +4,27 @@ use std::path::Path;
 use crate::errors::GitError;
 
 use super::cat_file::git_cat_file;
+use crate::models::client::Client;
 
 const GIT_DIR: &str = "/.git";
 const REMOTES_DIR: &str = "refs/remotes/";
+
+/// Esta función se encarga de llamar al comando fetch con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función fetch
+pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    // Verifica que se haya ingresado un nombre de repositorio remoto
+    let directory = client.get_directory_path();
+    if args.len() == 1 {
+        git_fetch(&directory, args[0])?;
+    } else if args.len() == 2 {
+        //fetch para una rama especifica
+    } else {
+        return Err(GitError::InvalidArgumentCountFetchError);
+    }
+
+    Ok(())
+}
 
 /// Recupera las referencias y objetos del repositorio remoto.
 /// ###Parámetros:
