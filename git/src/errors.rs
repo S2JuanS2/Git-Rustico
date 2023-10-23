@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 /// Enumeración que representa los posibles errores que pueden ocurrir durante la ejecución
-/// del progbranch Git.
+/// del programa Git.
 ///
 /// Cada variante de este enum representa un tipo específico de error que puede ocurrir, y
 /// se utiliza para identificar y manejar los errores de manera adecuada.
