@@ -39,7 +39,6 @@ impl Controller {
             }
             Err(_) => return Err(GitError::GtkFailedInitiliaze),
         };
-
         Ok(())
     }
 }
