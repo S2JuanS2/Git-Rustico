@@ -3,13 +3,13 @@ use std::io::Read;
 use crate::errors::GitError;
 
 /// Estructura que representa una entrada de objeto en el sistema de control de versiones Git.
-/// 
+///
 /// Una entrada de objeto almacena información sobre el tipo y la longitud de un objeto Git.
 /// Esto es esencial para identificar y gestionar objetos almacenados en un repositorio Git.
 
 /// - `object_type`: El tipo de objeto, representado mediante un valor de la enumeración `ObjectType`.
 /// - `object_length`: La longitud o tamaño del objeto en bytes.
-/// 
+///
 #[derive(Debug)]
 pub struct ObjectEntry {
     pub object_type: ObjectType,
@@ -17,7 +17,7 @@ pub struct ObjectEntry {
 }
 
 /// Enumeración que representa los tipos de objetos Git.
-/// 
+///
 /// Cada variante de esta enumeración corresponde a un tipo de objeto en el sistema de control de versiones Git.
 /// Estos tipos de objetos son utilizados para identificar y gestionar los distintos tipos de datos almacenados en un repositorio Git.
 
@@ -27,7 +27,7 @@ pub struct ObjectEntry {
 /// - `Tag`: Objeto de tipo Tag, que representa una etiqueta en Git.
 /// - `OfsDelta`: Objeto de tipo OfsDelta, que representa un objeto delta relativo a una posición en un paquete.
 /// - `RefDelta`: Objeto de tipo RefDelta, que representa un objeto delta referenciado en un paquete.
-/// 
+///
 #[derive(Debug, PartialEq)]
 pub enum ObjectType {
     Commit,
@@ -77,14 +77,13 @@ fn read_variable_length(reader: &mut dyn Read, length_bits: usize) -> Result<usi
 /// # Argumentos
 ///
 /// * `type_bits`: Un valor de 8 bits que representa el tipo de objeto.
-/// 
+///
 /// # Retorno
 ///
 /// * `Ok(ObjectType)`: Si el valor de `type_bits` corresponde a un tipo de objeto válido.
 /// * `Err(GitError)`: Si el valor de `type_bits` no corresponde a un tipo de objeto válido y genera un error `GitError::InvalidObjectType`.
 ///
-fn create_object(type_bits :u8) -> Result<ObjectType, GitError>
-{
+fn create_object(type_bits: u8) -> Result<ObjectType, GitError> {
     match type_bits {
         1 => Ok(ObjectType::Commit),
         2 => Ok(ObjectType::Tree),

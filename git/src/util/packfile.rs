@@ -4,7 +4,6 @@ use crate::{consts::PACK_SIGNATURE, errors::GitError};
 
 use super::objects::read_type_and_length;
 
-
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
     read_signature(reader)?;
     println!("Signature: {}", PACK_SIGNATURE);
@@ -12,7 +11,7 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
     println!("Version: {}", version);
     let number_object = read_objects_contained(reader)?;
     println!("Number of objects: {}", number_object);
-    let object_entry= read_type_and_length(reader)?;
+    let object_entry = read_type_and_length(reader)?;
     println!("Object entry: {:?}", object_entry);
     Ok(())
 }
@@ -106,16 +105,14 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, GitError> {
     Ok(value)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Cursor, self};
-
+    use std::io::{self, Cursor};
 
     #[test]
     fn test_read_signature_valid_signature() -> Result<(), GitError> {
-        let data: [u8; 4] = [b'P', b'A', b'C', b'K'];  // Firma válida "PACK"
+        let data: [u8; 4] = [b'P', b'A', b'C', b'K']; // Firma válida "PACK"
         let mut cursor = Cursor::new(&data);
         read_signature(&mut cursor)?;
 
@@ -124,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_read_signature_invalid_data() {
-        let data: [u8; 3] = [b'P', b'A', b'C'];  // Datos de longitud incorrecta
+        let data: [u8; 3] = [b'P', b'A', b'C']; // Datos de longitud incorrecta
         let mut cursor = Cursor::new(&data);
         let result = read_signature(&mut cursor);
 
@@ -133,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_read_signature_invalid_signature() {
-        let data: [u8; 4] = [b'P', b'A', b'X', b'K'];  // Firma incorrecta
+        let data: [u8; 4] = [b'P', b'A', b'X', b'K']; // Firma incorrecta
         let mut cursor = Cursor::new(&data);
         let result = read_signature(&mut cursor);
 
@@ -142,7 +139,7 @@ mod tests {
 
     #[test]
     fn test_read_signature_io_error() {
-        let mut invalid_reader = io::empty();  // Un lector vacío provocará un error
+        let mut invalid_reader = io::empty(); // Un lector vacío provocará un error
         let result = read_signature(&mut invalid_reader);
 
         assert!(result.is_err());
@@ -150,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_read_version_valid_version_2() -> Result<(), GitError> {
-        let data: [u8; 4] = [0, 0, 0, 2];  // Versión válida 2
+        let data: [u8; 4] = [0, 0, 0, 2]; // Versión válida 2
         let mut cursor = Cursor::new(&data);
         let version = read_version(&mut cursor)?;
 
@@ -160,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_read_version_valid_version_3() -> Result<(), GitError> {
-        let data: [u8; 4] = [0, 0, 0, 3];  // Versión válida 3
+        let data: [u8; 4] = [0, 0, 0, 3]; // Versión válida 3
         let mut cursor = Cursor::new(&data);
         let version = read_version(&mut cursor)?;
 
@@ -170,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_read_version_invalid_data() {
-        let data: [u8; 3] = [0, 0, 2];  // Datos de longitud incorrecta
+        let data: [u8; 3] = [0, 0, 2]; // Datos de longitud incorrecta
         let mut cursor = Cursor::new(&data);
         let result = read_version(&mut cursor);
 
@@ -179,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_read_version_invalid_version() {
-        let data: [u8; 4] = [0, 0, 0, 4];  // Versión inválida (no es 2 ni 3)
+        let data: [u8; 4] = [0, 0, 0, 4]; // Versión inválida (no es 2 ni 3)
         let mut cursor = Cursor::new(&data);
         let result = read_version(&mut cursor);
 
@@ -188,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_read_version_io_error() {
-        let mut invalid_reader = io::empty();  // Un lector vacío provocará un error
+        let mut invalid_reader = io::empty(); // Un lector vacío provocará un error
         let result = read_version(&mut invalid_reader);
 
         assert!(result.is_err());
@@ -196,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_read_objects_contained_valid() -> Result<(), GitError> {
-        let data: [u8; 4] = [0, 0, 0, 42];  // Número de objetos: 42
+        let data: [u8; 4] = [0, 0, 0, 42]; // Número de objetos: 42
         let mut cursor = Cursor::new(&data);
         let num_objects = read_objects_contained(&mut cursor)?;
 
@@ -206,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_read_objects_contained_invalid_data() {
-        let data: [u8; 3] = [0, 0, 42];  // Datos de longitud incorrecta
+        let data: [u8; 3] = [0, 0, 42]; // Datos de longitud incorrecta
         let mut cursor = Cursor::new(&data);
         let result = read_objects_contained(&mut cursor);
 
@@ -215,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_read_objects_contained_io_error() {
-        let mut invalid_reader = io::empty();  // Un lector vacío provocará un error
+        let mut invalid_reader = io::empty(); // Un lector vacío provocará un error
         let result = read_objects_contained(&mut invalid_reader);
 
         assert!(result.is_err());
