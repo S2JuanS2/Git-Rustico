@@ -53,6 +53,8 @@ pub enum GitError {
     ReadDirError,
     DirEntryError,
     PathToStringError,
+    InvalidObjectType,
+    InvalidObjectLength,
 }
 
 impl GitError {
@@ -80,7 +82,7 @@ impl GitError {
             GitError::InvalidIpError => "Dirección IP inválida, revise su archivo de configuración.",
             GitError::ServerConnectionError => "No se pudo conectar al servidor.",
             GitError::ClientConnectionError => "No se pudo conectar el cliente.",
-            GitError::GenericError => "Error genérico.",
+            GitError::GenericError => "Error generico.",
             GitError::InvalidPacketLineError => "Error al leer una línea de paquete.",
             GitError::InvalidVersionNumberError => "Número de versión inválido, solo se acepta v1 y v2.",
             GitError::InvalidServerReferenceError => "Referencia no reconocida por el servidor.",
@@ -100,11 +102,11 @@ impl GitError {
             GitError::BranchDoesntExistError => "Ruta especificada no concordó con ningún archivo conocido por git",
             GitError::BranchNotFoundError => "fatal: la rama no existe",
             GitError::HashObjectInvalid => "Hash del Objeto inválido",
-            GitError::DecompressionFailed => "Falló al descomprimir el archivo",
-            GitError::CreateFileError => "Falló al crear el archivo",
-            GitError::WriteFileError => "Falló al escribir en el archivo",
-            GitError::CopyFileError => "Falló al copiar el archivo",
-            GitError::CreateDirError => "Falló al crear el directorio",
+            GitError::DecompressionFailed => "Fallo al descomprimir el archivo",
+            GitError::CreateFileError => "Fallo al crear el archivo",
+            GitError::WriteFileError => "Fallo al escribir en el archivo",
+            GitError::CopyFileError => "Fallo al copiar el archivo",
+            GitError::CreateDirError => "Fallo al crear el directorio",
             GitError::RemoteDoesntExistError => "fatal: el repositorio remoto no existe",
             GitError::WriteStreamError => "Falló al enviar datos al socket",
             GitError::SendCommandError => "Falló al enviar el comando",
@@ -115,6 +117,11 @@ impl GitError {
             GitError::VisitDirectoryError => "No se pudo recorrer el directorio",
             GitError::GetHashError => "No se pudo obtener el hash del objeto",
             GitError::PathToStringError => "No se pudo convertir el path a str",
+            GitError::WriteStreamError => "Fallo al enviar datos al socket",
+            GitError::SendCommandError => "Fallo al enviar el comando",
+            GitError::HeaderPackFileReadError => "Fallo al leer el header del packfile recibo del servidor",
+            GitError::InvalidObjectType => "Fallo al leer en el header, se leyo un tipo de objeto invalido",
+            GitError::InvalidObjectLength => "Fallo al leer en el header, se leyo una longitud de objecto invalido",
         }
     }
 }

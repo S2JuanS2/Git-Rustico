@@ -52,3 +52,5 @@ pub mod negotiation;
 pub mod formats;
 
 pub mod packfile;
+
+pub mod objects;
