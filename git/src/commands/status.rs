@@ -1,4 +1,5 @@
 use crate::errors::GitError;
+use crate::models::client::Client;
 use crate::util::formats::hash_generate;
 use std::collections::HashMap;
 use std::fs;
@@ -9,6 +10,17 @@ use std::path::Path;
 const GIT_DIR: &str = "/.git";
 const HEAD_FILE: &str = "HEAD";
 const OBJECTS_DIR: &str = "objects";
+
+/// Esta función se encarga de llamar al comando status con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
+pub fn handle_status(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    if args.len() != 0 {
+        return Err(GitError::InvalidArgumentCountStatusError);
+    }
+    let directory = client.get_directory_path();
+    git_status(&directory)
+}
 
 /// Devuelve el nombre de la rama actual.
 /// ###Parámetros:
@@ -111,7 +123,10 @@ fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Option<Res
 /// ###Parámetros:
 /// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
 /// 'objects_hash_list': vector con los hashes de los archivos en objects.
-fn compare_hash_lists(working_directory_hash_list: HashMap<String, String>, objects_hash_list: Vec<String>) -> Vec<String> {
+fn compare_hash_lists(
+    working_directory_hash_list: HashMap<String, String>,
+    objects_hash_list: Vec<String>,
+) -> Vec<String> {
     // Comparo los hashes de mis archivos con los de objects para crear un vector con los archivos que se modificaron
     let mut updated_files_list: Vec<String> = Vec::new();
     for hash in &working_directory_hash_list {
@@ -139,7 +154,9 @@ fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, Result<(), G
 /// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, Result<(), GitError>> {
+fn get_hashes_working_directory(
+    directory: &str,
+) -> Result<HashMap<String, String>, Result<(), GitError>> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = format!("{}{}", directory, "/git/src");
     let visit_working_directory =

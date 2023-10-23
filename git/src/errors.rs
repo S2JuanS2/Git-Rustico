@@ -71,6 +71,7 @@ pub enum GitError {
     InvalidArgumentCountHashObjectError,
     FlagHashObjectNotRecognizedError,
     InvalidArgumentCountInitError,
+    InvalidArgumentCountStatusError,
 }
 
 impl GitError {
@@ -154,6 +155,7 @@ impl GitError {
             GitError::InvalidArgumentCountHashObjectError => "Número de argumentos inválido para el comando hash-object.\nUsar: git hash-object <file name>",
             GitError::FlagHashObjectNotRecognizedError => "Flag no reconocida para el comando hash-object",
             GitError::InvalidArgumentCountInitError => "Número de argumentos inválido para el comando init.\nUsar: git init",
+            GitError::InvalidArgumentCountStatusError => "Número de argumentos inválido para el comando status.\nUsar: git status",
         }
     }
 }

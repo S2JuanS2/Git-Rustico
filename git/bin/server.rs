@@ -4,7 +4,6 @@ use std::env;
 use std::io::Read;
 use std::net::TcpStream;
 
-
 fn handle_client(mut stream: TcpStream) {
     // Leer datos del cliente
     let mut buffer = [0; 1024];

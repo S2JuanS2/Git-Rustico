@@ -1,16 +1,17 @@
+use crate::commands::add::handle_add;
+use crate::commands::branch::handle_branch;
+use crate::commands::cat_file::handle_cat_file;
+use crate::commands::checkout::handle_checkout;
+use crate::commands::clone::handle_clone;
+use crate::commands::commit::handle_commit;
+use crate::commands::fetch::handle_fetch;
+use crate::commands::hash_object::handle_hash_object;
+use crate::commands::init::handle_init;
+use crate::commands::status::handle_status;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
 use std::io::Write;
-use crate::commands::branch::handle_branch;
-use crate::commands::clone::handle_clone;
-use crate::commands::commit::handle_commit;
-use crate::commands::init::handle_init;
-use crate::commands::cat_file::handle_cat_file;
-use crate::commands::add::handle_add;
-use crate::commands::checkout::handle_checkout;
-use crate::commands::fetch::handle_fetch;
-use crate::commands::hash_object::handle_hash_object;
 
 #[derive(Clone)]
 pub struct Controller {
@@ -39,6 +40,7 @@ impl Controller {
             }
             Err(_) => return Err(GitError::GtkFailedInitiliaze),
         };
+
         Ok(())
     }
 }
@@ -78,6 +80,9 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
             }
             "hash_object" => {
                 handle_hash_object(rest_of_command)?;
+            }
+            "status" => {
+                handle_status(rest_of_command, client)?;
             }
             _ => {
                 return Err(GitError::CommandNotRecognizedError);

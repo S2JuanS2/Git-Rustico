@@ -1,6 +1,6 @@
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::formats::{compressor_object,hash_generate};
+use crate::util::formats::{compressor_object, hash_generate};
 use std::fs;
 use std::{fs::File, io::Read};
 
