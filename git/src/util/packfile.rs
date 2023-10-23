@@ -2,6 +2,8 @@ use std::io::Read;
 
 use crate::{consts::PACK_SIGNATURE, errors::GitError};
 
+use super::objects::read_type_and_length;
+
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
     read_signature(reader)?;
@@ -10,6 +12,8 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
     println!("Version: {}", version);
     let number_object = read_objects_contained(reader)?;
     println!("Number of objects: {}", number_object);
+    let object_entry= read_type_and_length(reader)?;
+    println!("Object entry: {:?}", object_entry);
     Ok(())
 }
 
@@ -101,6 +105,7 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, GitError> {
 
     Ok(value)
 }
+
 
 #[cfg(test)]
 mod tests {
