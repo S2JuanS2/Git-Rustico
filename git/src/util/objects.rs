@@ -39,37 +39,62 @@ pub enum ObjectType {
 }
 
 pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitError> {
-    let mut type_and_length = [0u8; 1];
-    if reader.read_exact(&mut type_and_length).is_err() {
+    let mut buffer = [0u8; 1];
+    if reader.read_exact(&mut buffer).is_err() {
         return Err(GitError::HeaderPackFileReadError);
     };
+    let byte = buffer[0];
 
-    let type_bits = (type_and_length[0] >> 4) & 0b00000111;
-    let length_bits = (type_and_length[0] & 0b00001111) as usize;
+    let msb = (byte & 0b10000000) != 0;
+    let type_bits = (byte & 0b01110000) >> 4;
+    let mut length_bits = (byte & 0b00001111) as usize;
 
     let object_type: ObjectType = create_object(type_bits)?;
 
-    let object_length: usize = read_variable_length(reader, length_bits)?;
+    if msb {
+        read_size_encoded_length(reader, &mut length_bits)?;
+    }
 
     Ok(ObjectEntry {
         object_type,
-        object_length,
+        object_length: length_bits,
     })
 }
 
-fn read_variable_length(reader: &mut dyn Read, length_bits: usize) -> Result<usize, GitError> {
-    let mut object_length: usize = 0;
-    for i in 0..length_bits {
+// fn read_variable_length(reader: &mut dyn Read, length_bits: usize) -> Result<usize, GitError> {
+//     let mut object_length: usize = 0;
+//     for i in 0..length_bits {
+//         let mut byte = [0u8; 1];
+//         if reader.read_exact(&mut byte).is_err() {
+
+//         };
+//         object_length |= ((byte[0] as usize) & 0x7F) << (7 * i);
+//         if (byte[0] & 0x80) == 0 {
+//             break;
+//         }
+//     }
+//     Ok(object_length)
+// }
+
+fn read_size_encoded_length(reader: &mut dyn Read, length: &mut usize) -> Result<(), GitError> {
+    let mut shift: usize = 0;
+
+    loop {
         let mut byte = [0u8; 1];
         if reader.read_exact(&mut byte).is_err() {
             return Err(GitError::HeaderPackFileReadError);
         };
-        object_length |= ((byte[0] as usize) & 0x7F) << (7 * i);
+
+        let seven_bits = (byte[0] as usize) & 0x7F;
+        *length |= seven_bits << shift;
+
         if (byte[0] & 0x80) == 0 {
             break;
         }
+
+        shift += 7;
     }
-    Ok(object_length)
+    Ok(())
 }
 
 /// Crea un objeto `ObjectType` a partir de un valor de tipo de objeto representado por `type_bits`.
