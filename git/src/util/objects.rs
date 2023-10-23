@@ -45,7 +45,6 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
     };
     let byte = buffer[0];
 
-
     let msb = (byte & 0b10000000) != 0;
     let type_bits = (byte & 0b01110000) >> 4;
     let mut length_bits = (byte & 0b00001111) as usize;
@@ -67,7 +66,7 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
 //     for i in 0..length_bits {
 //         let mut byte = [0u8; 1];
 //         if reader.read_exact(&mut byte).is_err() {
-            
+
 //         };
 //         object_length |= ((byte[0] as usize) & 0x7F) << (7 * i);
 //         if (byte[0] & 0x80) == 0 {
@@ -82,8 +81,7 @@ fn read_size_encoded_length(reader: &mut dyn Read, length: &mut usize) -> Result
 
     loop {
         let mut byte = [0u8; 1];
-        if reader.read_exact(&mut byte).is_err()
-        {
+        if reader.read_exact(&mut byte).is_err() {
             return Err(GitError::HeaderPackFileReadError);
         };
 
@@ -98,7 +96,6 @@ fn read_size_encoded_length(reader: &mut dyn Read, length: &mut usize) -> Result
     }
     Ok(())
 }
-
 
 /// Crea un objeto `ObjectType` a partir de un valor de tipo de objeto representado por `type_bits`.
 ///
