@@ -13,7 +13,7 @@ const BRANCH_DIR: &str = "refs/heads/";
 /// 'args': Vector de Strings que contiene los argumentos que se le pasaran al comando branch
 pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     let directory = client.get_directory_path();
-    if args.len() == 0 {
+    if args.is_empty() {
         git_branch_list(&directory)
     } else if args.len() == 1 {
         git_branch_create(&directory, args[0], "123456789")

@@ -45,7 +45,7 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
         .join("refs/remotes")
         .join(remote_name);
 
-    if let Err(_) = fs::create_dir_all(&local_refs_dir) {
+    if fs::create_dir_all(&local_refs_dir).is_err() {
         return Err(GitError::OpenFileError);
     }
 
@@ -61,7 +61,7 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
                 let local_ref_path = local_refs_dir.join(file_name);
                 let remote_ref_path = entry.path();
 
-                if let Err(_) = fs::copy(remote_ref_path, local_ref_path) {
+                if fs::copy(remote_ref_path, local_ref_path).is_err() {
                     return Err(GitError::CopyFileError);
                 }
             }

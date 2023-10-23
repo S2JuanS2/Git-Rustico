@@ -46,8 +46,8 @@ pub fn compressor_object(store: String, mut file_object: File) -> Result<(), Git
 /// Dado un contenido lo descomprime y lo guarda
 /// ###Parametros:
 /// 'content': contenido comprimido a descomprimir
-pub fn decompression_object(compressed_data: &mut Vec<u8>) -> Result<String, GitError> {
-    let mut decompression = GzDecoder::new(&compressed_data[..]);
+pub fn decompression_object(compressed_data: &[u8]) -> Result<String, GitError> {
+    let mut decompression = GzDecoder::new(compressed_data);
     let mut content_string = String::new();
 
     match decompression.read_to_string(&mut content_string) {
