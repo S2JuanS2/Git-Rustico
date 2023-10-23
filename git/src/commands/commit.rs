@@ -1,6 +1,7 @@
 use crate::errors::GitError;
 use crate::util::formats::hash_generate;
 
+use crate::models::client::Client;
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::File;
@@ -81,19 +82,15 @@ impl Commit {
 
 /// Esta función se encarga de llamar al comando commit con los parametros necesarios
 /// ###Parametros:
-/// 'args': Vector de Strings que contiene los parametros que se le pasaran al comando
-pub fn handle_commit(args: Vec<&str>) -> Result<(), GitError> {
-
+/// 'args': Vector de Strings que contiene los parametros que se le pasaran al comando commit
+pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.len() != 2 {
         return Err(GitError::InvalidArgumentCountCommitError);
     }
     if args[1] != "-m" {
         return Err(GitError::FlagCommitNotRecognizedError);
     }
-    let directory = match env::current_dir() {
-        Ok(dir) => dir,
-        Err(_) => return Err(GitError::DirectoryOpenError),
-    };
+    let directory = client.get_directory_path();
 
     let message = args[1];
 
@@ -107,9 +104,7 @@ pub fn handle_commit(args: Vec<&str>) -> Result<(), GitError> {
         "ABCDEF1234".to_string(),
     );
 
-    git_commit(directory, commit)?;
-
-    Ok(())
+    git_commit(&directory, test_commit)
 }
 
 /// Creará el archivo donde se guarda el mensaje del commit

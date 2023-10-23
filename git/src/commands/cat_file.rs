@@ -1,16 +1,15 @@
 //use crate::util::formats::decompression_object;
+use crate::models::client::Client;
+use crate::util::formats::hash_generate;
 use std::fs::File;
 use std::io::Read;
-use crate::util::formats::hash_generate;
-
 
 use crate::errors::GitError;
 
-
 /// Esta función se encarga de llamar a al comando cat-file con los parametros necesarios
 /// ###Parametros:
-/// 'args': Vector de Strings que contiene el comando que se le pasara al servidor
-pub fn handle_cat_file(args: Vec<&str>) -> Result<(), GitError> {
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función cat-file
+pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.len() != 2 {
         return Err(GitError::InvalidArgumentCountCatFileError);
     }
@@ -18,12 +17,9 @@ pub fn handle_cat_file(args: Vec<&str>) -> Result<(), GitError> {
         return Err(GitError::FlagCatFileNotRecognizedError);
     }
 
-    let directory = match env::current_dir() {
-        Ok(dir) => dir,
-        Err(_) => return Err(GitError::DirectoryOpenError),
-    };
+    let directory = client.get_directory_path();
     let object_hash = hash_generate(args[1]);
-    git_cat_file(directory, object_hash)
+    git_cat_file(&directory, &object_hash)
 }
 
 /// Esta función se utiliza para mostrar el contenido o información sobre los objetos (archivos, commits, etc.)

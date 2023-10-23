@@ -2,18 +2,19 @@ use std::io::Read;
 use std::net::TcpStream;
 
 use crate::errors::GitError;
-use crate::util::connections::{packfile_negotiation, reference_discovery};
+use crate::models::client::Client;
+use crate::util::connections::{packfile_negotiation, reference_discovery, start_client};
 use crate::util::request::{create_git_request, RequestCommand};
-
 
 /// Esta función se encarga de llamar a al comando clone con los parametros necesarios
 /// ###Parametros:
-/// 'args': Vector de strings que contiene el comando que se le pasara al servidor
-pub fn handle_clone(args: Vec<&str>) -> Result<(), GitError> {
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función clone
+pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.len() != 1 {
         return Err(GitError::InvalidArgumentCountCloneError);
     }
-    Ok(())
+    let mut socket = start_client(&client.get_ip())?;
+    git_clone(&mut socket)
 }
 
 /// Esta función se encarga de clonar un repositorio remoto
