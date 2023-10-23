@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::net::TcpStream;
 
 use crate::errors::GitError;
