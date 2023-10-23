@@ -4,6 +4,25 @@ use crate::util::formats::compressor_object;
 use std::fs;
 use std::{fs::File, io::Read};
 
+
+/// Esta función se encarga de llamar al comando add con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
+pub fn handle_add(args: Vec<&str>) -> Result<(), GitError> {
+    if args.len() != 1 {
+        return Err(GitError::InvalidArgumentCountAddError);
+    }
+
+    let directory = match env::current_dir() {
+        Ok(dir) => dir,
+        Err(_) => return Err(GitError::DirectoryOpenError),
+    };
+    let file_name = args[0];
+    git_add(directory, file_name)?;
+
+    Ok(())
+}
+
 /// Esta función crea el objeto y lo guarda
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio

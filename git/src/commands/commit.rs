@@ -79,6 +79,39 @@ impl Commit {
     }
 }
 
+/// Esta función se encarga de llamar al comando commit con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de Strings que contiene los parametros que se le pasaran al comando
+pub fn handle_commit(args: Vec<&str>) -> Result<(), GitError> {
+
+    if args.len() != 2 {
+        return Err(GitError::InvalidArgumentCountCommitError);
+    }
+    if args[1] != "-m" {
+        return Err(GitError::FlagCommitNotRecognizedError);
+    }
+    let directory = match env::current_dir() {
+        Ok(dir) => dir,
+        Err(_) => return Err(GitError::DirectoryOpenError),
+    };
+
+    let message = args[1];
+
+    let test_commit = Commit::new(
+        message.to_string(),
+        "Juan".to_string(),
+        "jdr@fi.uba.ar".to_string(),
+        "Juan".to_string(),
+        "jdr@fi.uba.ar".to_string(),
+        "01234567".to_string(),
+        "ABCDEF1234".to_string(),
+    );
+
+    git_commit(directory, commit)?;
+
+    Ok(())
+}
+
 /// Creará el archivo donde se guarda el mensaje del commit
 /// ###Parametros:
 /// 'directory': Directorio del git
@@ -171,9 +204,8 @@ fn commit_content_format(commit: &Commit) -> String {
 }
 /// Esta función genera y crea el objeto commit
 /// ###Parametros:
-/// 'message': mensaje del commit
-/// 'author': Nombre del autor del commit principal
-/// 'commiter': Nombre del que realiza el commit
+/// 'directory': Directorio del git
+/// 'commit': Estructura que contiene la información del commit
 pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
     let content = commit_content_format(&commit);
 

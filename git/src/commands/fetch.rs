@@ -8,6 +8,27 @@ use super::cat_file::git_cat_file;
 const GIT_DIR: &str = "/.git";
 const REMOTES_DIR: &str = "refs/remotes/";
 
+
+/// Esta función se encarga de llamar al comando fetch con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
+pub fn handle_fetch(args: Vec<&str>) -> Result<(), GitError> {
+    // Verifica que se haya ingresado un nombre de repositorio remoto
+    let directory = match env::current_dir() {
+        Ok(dir) => dir,
+        Err(_) => return Err(GitError::DirectoryOpenError),
+    };
+    if args.len() == 1 {
+        git_fetch(directory, args[0])?;
+    }else if args.len() == 2 {
+        //fetch para una rama especifica
+    }else {
+        return Err(GitError::InvalidArgumentCountFetchError);
+    }
+
+    Ok(())
+}
+
 /// Recupera las referencias y objetos del repositorio remoto.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.

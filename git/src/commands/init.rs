@@ -6,6 +6,18 @@ use crate::errors::GitError;
 
 const INITIAL_BRANCH: &str = "main";
 
+
+pub fn handle_init(args:Vec<&str>) -> Result<(), GitError> {
+    if args.len() != 0 {
+        return Err(GitError::InvalidArgumentCountInitError);
+    }
+    let directory = match env::current_dir() {
+        Ok(dir) => dir,
+        Err(_) => return Err(GitError::DirectoryOpenError),
+    };
+    git_init(directory)
+}
+
 /// Crea un directorio si no existe
 /// ###Parametros:
 /// 'directory': dirección del directorio a crear

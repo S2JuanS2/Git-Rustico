@@ -9,6 +9,30 @@ use std::path::Path;
 const GIT_DIR: &str = "/.git";
 const HEAD_FILE: &str = "HEAD";
 
+
+/// Esta función se encarga de llamar al comando checkout con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
+pub fn handle_checkout(args: Vec<&str>) -> Result<(), GitError> {
+    let directory = match env::current_dir() {
+        Ok(dir) => dir,
+        Err(_) => return Err(GitError::DirectoryOpenError),
+    };
+    if args.len() == 1 {
+        git_checkout_switch(directory, args[0])?;
+    } else if args.len() == 2 {
+        if args[0] == "-b" {
+            //git_checkout_create(directory.to_str().unwrap(), args[1])?;
+        } else {
+            return Err(GitError::FlagCheckoutNotRecognisedError);
+        }
+    } else {
+        return Err(GitError::InvalidArgumentCountCheckoutError);
+
+    }
+    Ok(())
+}
+
 /// Cambia a otra branch existente
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
