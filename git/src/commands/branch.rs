@@ -1,4 +1,5 @@
 use crate::errors::GitError;
+use crate::models::client::Client;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -6,6 +7,22 @@ use std::path::Path;
 
 const GIT_DIR: &str = "/.git";
 const BRANCH_DIR: &str = "refs/heads/";
+
+/// Esta función se encarga de llamar a al comando branch con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de Strings que contiene los argumentos que se le pasaran al comando branch
+pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    let directory = client.get_directory_path();
+    if args.len() == 0 {
+        git_branch_list(&directory)
+    } else if args.len() == 1 {
+        git_branch_create(&directory, args[0], "123456789")
+    } else if (args.len() == 2 && args[0] == "-d") || (args.len() == 2 && args[0] == "-D") {
+        git_branch_delete(&directory, args[1])
+    } else {
+        return Err(GitError::InvalidArgumentCountBranchError);
+    }
+}
 
 /// Muestra por pantalla las branch existentes.
 /// ###Parámetros:
