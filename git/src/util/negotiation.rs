@@ -1,6 +1,10 @@
-use super::{advertised::AdvertisedRefs, connections::send_message, pkt_line};
+use super::{
+    advertised::AdvertisedRefs,
+    connections::{send_flush, send_message},
+    pkt_line,
+};
 use crate::{consts::NACK, errors::GitError};
-use std::{io::Write, net::TcpStream};
+use std::{io::Read, net::TcpStream};
 
 /// Realiza una solicitud de carga al servidor Git.
 ///
@@ -41,9 +45,20 @@ pub fn upload_request(
         let message = pkt_line::add_length_prefix(&message, message.len());
         send_message(socket, message, GitError::UploadRequest)?;
     }
+    // println!();
+    send_flush(socket, GitError::UploadRequest)?;
     Ok(())
 }
 
-pub fn receive_nack(socket: &mut dyn Write) -> Result<(), GitError> {
-    send_message(socket, NACK.to_string(), GitError::PackfileNegotiationNACK)
+pub fn receive_nack(stream: &mut dyn Read) -> Result<(), GitError> {
+    let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
+    if stream.read_exact(&mut buffer).is_err() {
+        return Err(GitError::PackfileNegotiationNACK);
+    }
+    let response = String::from_utf8_lossy(&buffer);
+
+    if response != NACK {
+        return Err(GitError::PackfileNegotiationNACK);
+    }
+    Ok(())
 }

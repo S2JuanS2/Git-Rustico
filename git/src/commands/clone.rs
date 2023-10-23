@@ -1,9 +1,16 @@
-use std::io::Read;
 use std::net::TcpStream;
 
 use crate::errors::GitError;
-use crate::util::connections::{packfile_negotiation, reference_discovery};
+use crate::util::connections::{
+    packfile_negotiation, receive_packfile, reference_discovery, start_client,
+};
 use crate::util::request::{create_git_request, RequestCommand};
+
+pub fn handle_clone(address: &str) -> Result<(), GitError> {
+    let mut socket = start_client(address)?;
+    git_clone(&mut socket)?;
+    Ok(())
+}
 
 pub fn git_clone(socket: &mut TcpStream) -> Result<(), GitError> {
     // Prepara la solicitud "git-upload-pack" para el servidor
@@ -20,29 +27,8 @@ pub fn git_clone(socket: &mut TcpStream) -> Result<(), GitError> {
     // Packfile Negotiation
     packfile_negotiation(socket, advertised)?;
 
-    let mut buffer = [0; 4096]; // Tamaño del búfer de lectura
-    match socket.read(&mut buffer) {
-        Ok(_) => {
-            let m = String::from_utf8(buffer.to_vec()).expect("No se pudo convertir a String");
-            println!("Lectura exitosa: {:?}", m);
-        }
-        Err(e) => {
-            println!("Error: {}", e);
-            return Err(GitError::GenericError);
-        }
-    };
-
-    let mut buffer = [0; 4096]; // Tamaño del búfer de lectura
-    match socket.read(&mut buffer) {
-        Ok(_) => {
-            let m = String::from_utf8(buffer.to_vec()).expect("No se pudo convertir a String");
-            println!("Lectura exitosa: {:?}", m);
-        }
-        Err(e) => {
-            println!("Error: {}", e);
-            return Err(GitError::GenericError);
-        }
-    };
+    // Packfile Data
+    receive_packfile(socket)?;
 
     Ok(())
 }

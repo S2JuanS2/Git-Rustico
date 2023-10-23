@@ -46,6 +46,7 @@ pub enum GitError {
     RemoteDoesntExistError,
     WriteStreamError,
     SendCommandError,
+    HeaderPackFileReadError,
 }
 
 impl GitError {
@@ -101,6 +102,7 @@ impl GitError {
             GitError::RemoteDoesntExistError => "fatal: el repositorio remoto no existe",
             GitError::WriteStreamError => "Falló al enviar datos al socket",
             GitError::SendCommandError => "Falló al enviar el comando",
+            GitError::HeaderPackFileReadError => "Falló al leer el header del packfile recibo del servidor",
         }
     }
 }

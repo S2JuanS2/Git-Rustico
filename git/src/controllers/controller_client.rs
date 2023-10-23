@@ -14,7 +14,7 @@ impl Controller {
     }
     pub fn send_command(&self, command: String) -> Result<(), GitError> {
         let cloned_client = self.client.clone();
-
+        
         match start_client(&cloned_client.get_ip()) {
             Ok(mut stream) => {
                 let command_bytes = command.trim().as_bytes();
@@ -28,7 +28,6 @@ impl Controller {
             }
             Err(_) => return Err(GitError::GtkFailedInitiliaze),
         };
-
         Ok(())
     }
 }
