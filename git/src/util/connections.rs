@@ -8,6 +8,7 @@ use std::net::TcpStream;
 use super::advertised::AdvertisedRefs;
 use super::negotiation::receive_nack;
 use super::negotiation::upload_request;
+use super::packfile::read_pack_header;
 use super::pkt_line;
 
 /// Inicia un servidor en la dirección IP y puerto proporcionados.
@@ -79,6 +80,10 @@ pub fn packfile_negotiation(
     send_done(socket, GitError::UploadRequest)?;
     receive_nack(socket)?;
     Ok(())
+}
+
+pub fn receive_packfile(socket: &mut TcpStream) -> Result<(), GitError> {
+    read_pack_header(socket)
 }
 
 /// Envía un mensaje a través de un socket a un servidor.

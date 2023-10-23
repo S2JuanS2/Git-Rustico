@@ -23,6 +23,7 @@ impl Controller {
         }
         match parts[0] {
             "clone" => return handle_clone(&cloned_client.get_ip()),
+            // "init" => return handle_init(address),
             _ => return Ok(()),
         }
 

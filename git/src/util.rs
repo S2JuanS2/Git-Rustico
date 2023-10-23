@@ -50,3 +50,5 @@ pub mod advertised;
 pub mod negotiation;
 
 pub mod formats;
+
+pub mod packfile;
