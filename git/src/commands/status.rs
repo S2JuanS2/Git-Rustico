@@ -1,9 +1,8 @@
-// use crate::errors::GitError;
+use crate::errors::GitError;
 use crate::util::formats::hash_generate;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
-use std::io;
 use std::io::Read;
 use std::path::Path;
 
@@ -11,7 +10,10 @@ const GIT_DIR: &str = "/.git";
 const HEAD_FILE: &str = "HEAD";
 const OBJECTS_DIR: &str = "objects";
 
-fn get_head_branch(directory: &str) -> io::Result<String> {
+/// Devuelve el nombre de la rama actual.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+fn get_head_branch(directory: &str) -> Result<String, GitError> {
     // "directory/.git/HEAD"
     let directory_git = format!("{}{}", directory, GIT_DIR);
     let head_file_path = Path::new(&directory_git).join(HEAD_FILE);
@@ -19,116 +21,75 @@ fn get_head_branch(directory: &str) -> io::Result<String> {
     let head_file = File::open(head_file_path);
     let mut head_file = match head_file {
         Ok(file) => file,
-        Err(_) => {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "No se pudo abrir el archivo HEAD",
-            ))
-        }
+        Err(_) => return Err(GitError::OpenFileError),
     };
     let mut head_branch: String = String::new();
     let read_head_file = head_file.read_to_string(&mut head_branch);
     let _ = match read_head_file {
         Ok(file) => file,
-        Err(_) => {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "No se pudo leer el archivo HEAD",
-            ))
-        }
+        Err(_) => return Err(GitError::ReadFileError),
     };
     let head_branch_name = head_branch.split('/').last();
     let head_branch_name = match head_branch_name {
         Some(name) => name,
-        None => {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "No se pudo obtener el nombre de la rama",
-            ))
-        }
+        None => return Err(GitError::HeadBranchError),
     };
     let head_branch_name = head_branch_name.trim().to_string();
 
     Ok(head_branch_name)
 }
 
-pub fn print_head(directory: &str) -> io::Result<()> {
+/// Muestra por pantalla el nombre de la rama actual.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+pub fn print_head(directory: &str) -> Result<(), GitError> {
     let head_branch_name = get_head_branch(directory);
     let head_branch_name = match head_branch_name {
         Ok(name) => name,
-        Err(_) => {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "No se pudo obtener el nombre de la rama para imprimir",
-            ))
-        }
+        Err(_) => return Err(GitError::HeadBranchError),
     };
     println!("On branch {}", head_branch_name);
     Ok(())
 }
 
-pub fn check_hash(directory: &str) -> io::Result<()> {
+/// Compara los hashes de los archivos del directorio de trabajo con los de objects e imprime el estado
+/// del repositorio local, incluyendo las diferencias entre los archivos locales y los archivos que ya
+/// fueron agregados al staging area.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+pub fn git_status(directory: &str) -> Result<(), GitError> {
     // "directory/.git"
     let directory_git = format!("{}{}", directory, GIT_DIR);
 
-    // Creo un hashmap para guardar los archivos del directorio de trabajo y sus hashes correspondientes
-    let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
-    let working_directory = format!("{}{}", directory, "/git/src");
-    let visit_working_directory =
-        calculate_directory_hashes(&working_directory, &mut working_directory_hash_list);
-    match visit_working_directory {
-        Ok(file) => file,
-        Err(_) => {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "No se pudo recorrer el directorio de trabajo",
-            ))
-        }
+    let working_directory_hash_list = match get_hashes_working_directory(directory) {
+        Ok(value) => value,
+        Err(value) => return value,
     };
 
-    println!("working_directory_hash_list: {:?}", working_directory_hash_list);
-
-    // Leo los archivos de objects
-    // "directory/.git/objects"
-    let objects_dir = Path::new(&directory_git).join(OBJECTS_DIR);
-    let mut objects_hash_list: Vec<String> = Vec::new();
-    let visit_objects = visit_dirs(&objects_dir, &mut objects_hash_list);
-    match visit_objects {
-        Ok(file) => file,
-        Err(_) => {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "No se pudo recorrer el directorio objects",
-            ))
-        }
+    let objects_hash_list = match get_hashes_objects(directory_git) {
+        Ok(value) => value,
+        Err(value) => return value,
     };
 
-    // Comparo los hashes de mis archivos con los de objects para crear un vector con los archivos que se modificaron
-    let mut updated_files_list: Vec<String> = Vec::new();
-    for hash in &working_directory_hash_list {
-        if objects_hash_list.contains(hash.1) {
-            println!(
-                "hash en objects list: {:?} ubicado en archivo: {}",
-                hash.1, hash.0
-            );
-        } else {
-            updated_files_list.push(hash.0.to_string());
-        }
+    let updated_files_list = compare_hash_lists(working_directory_hash_list, objects_hash_list);
+
+    if let Some(value) = print_changes(updated_files_list, directory) {
+        return value;
     }
+    Ok(())
+}
 
-    println!("updated_files_list: {:?}", updated_files_list);
-
+/// Imprime los cambios que se realizaron en el repositorio local y no estan en el staging area.
+/// ###Parámetros:
+/// 'updated_files_list': vector con los nombres de los archivos que se modificaron.
+/// 'directory': directorio del repositorio local.
+fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Option<Result<(), GitError>> {
     // Si el vector de archivos modificados esta vacio, significa que no hay cambios
     if updated_files_list.is_empty() {
         let head_branch_name = get_head_branch(directory);
         let head_branch_name = match head_branch_name {
             Ok(name) => name,
-            Err(_) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "No se pudo obtener el nombre de la rama correctamente",
-                ))
-            }
+            Err(_) => return Some(Err(GitError::HeadBranchError)),
         };
         println!(
             "Your branch is up to date with 'origin/{}'.",
@@ -142,25 +103,76 @@ pub fn check_hash(directory: &str) -> io::Result<()> {
             println!("\tmodified:   {}", file);
         }
     }
-    Ok(())
+    None
 }
 
-fn visit_dirs(dir: &Path, hash_list: &mut Vec<String>) -> io::Result<()> {
+/// Compara los hashes de los archivos del directorio de trabajo con los de objects y devuelve un vector
+/// con los nombres de los archivos que se modificaron.
+/// ###Parámetros:
+/// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
+/// 'objects_hash_list': vector con los hashes de los archivos en objects.
+fn compare_hash_lists(working_directory_hash_list: HashMap<String, String>, objects_hash_list: Vec<String>) -> Vec<String> {
+    // Comparo los hashes de mis archivos con los de objects para crear un vector con los archivos que se modificaron
+    let mut updated_files_list: Vec<String> = Vec::new();
+    for hash in &working_directory_hash_list {
+        if !objects_hash_list.contains(hash.1) {
+            updated_files_list.push(hash.0.to_string());
+        }
+    }
+    updated_files_list
+}
+
+/// Devuelve un vector con los hashes de los archivos en objects.
+/// ###Parámetros:
+/// 'directory_git': directorio del repositorio local.
+fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, Result<(), GitError>> {
+    let objects_dir = Path::new(&directory_git).join(OBJECTS_DIR);
+    let mut objects_hash_list: Vec<String> = Vec::new();
+    let visit_objects = visit_dirs(&objects_dir, &mut objects_hash_list);
+    match visit_objects {
+        Ok(file) => file,
+        Err(_) => return Err(Err(GitError::VisitDirectoryError)),
+    };
+    Ok(objects_hash_list)
+}
+
+/// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, Result<(), GitError>> {
+    let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
+    let working_directory = format!("{}{}", directory, "/git/src");
+    let visit_working_directory =
+        calculate_directory_hashes(&working_directory, &mut working_directory_hash_list);
+    match visit_working_directory {
+        Ok(file) => file,
+        Err(_) => return Err(Err(GitError::VisitDirectoryError)),
+    };
+    Ok(working_directory_hash_list)
+}
+
+/// Recorre el directorio de objects recursivamente y devuelve un vector con los hashes de los archivos alli.
+/// ###Parámetros:
+/// 'dir': directorio del repositorio local.
+/// 'hash_list': vector con los hashes de los archivos en objects.
+fn visit_dirs(dir: &Path, hash_list: &mut Vec<String>) -> Result<(), GitError> {
     if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
+        let fs = match fs::read_dir(dir) {
+            Ok(fs) => fs,
+            Err(_) => return Err(GitError::ReadDirError),
+        };
+        for entry in fs {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(_) => return Err(GitError::ReadFileError),
+            };
             let path = entry.path();
 
             if path.is_dir() {
                 let visit = visit_dirs(&path, hash_list);
                 match visit {
                     Ok(file) => file,
-                    Err(_) => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::Other,
-                            "No se pudo recorrer el directorio objects del path",
-                        ))
-                    }
+                    Err(_) => return Err(GitError::VisitDirectoryError),
                 };
             } else {
                 let hash_first_part = dir.file_name();
@@ -169,20 +181,10 @@ fn visit_dirs(dir: &Path, hash_list: &mut Vec<String>) -> io::Result<()> {
                         let name_str = name.to_str();
                         match name_str {
                             Some(name_str) => name_str,
-                            None => {
-                                return Err(io::Error::new(
-                                    io::ErrorKind::Other,
-                                    "No se pudo convertir a str la primera parte del hash",
-                                ))
-                            }
+                            None => return Err(GitError::GetHashError),
                         }
                     }
-                    None => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::Other,
-                            "No se pudo obtener la primera parte del hash",
-                        ))
-                    }
+                    None => return Err(GitError::GetHashError),
                 };
 
                 let hash_second_part = path.file_name();
@@ -191,20 +193,10 @@ fn visit_dirs(dir: &Path, hash_list: &mut Vec<String>) -> io::Result<()> {
                         let name_str = name.to_str();
                         match name_str {
                             Some(name_str) => name_str,
-                            None => {
-                                return Err(io::Error::new(
-                                    io::ErrorKind::Other,
-                                    "No se pudo convertir a str la segunda parte del hash",
-                                ))
-                            }
+                            None => return Err(GitError::GetHashError),
                         }
                     }
-                    None => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::Other,
-                            "No se pudo obtener la segunda parte del hash",
-                        ))
-                    }
+                    None => return Err(GitError::GetHashError),
                 };
                 let hash = format!("{}{}", hash_first_part, hash_second_part);
                 hash_list.push(hash);
@@ -214,68 +206,45 @@ fn visit_dirs(dir: &Path, hash_list: &mut Vec<String>) -> io::Result<()> {
     Ok(())
 }
 
+/// Recorre el directorio de trabajo recursivamente y devuelve un HashMap con los nombres de los archivos y
+/// sus hashes correspondientes.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
 pub fn calculate_directory_hashes(
     directory: &str,
     hash_list: &mut HashMap<String, String>,
-) -> Result<(), io::Error> {
+) -> Result<(), GitError> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
-        Err(_) => {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "No se pudo abrir el directorio",
-            ))
-        }
+        Err(_) => return Err(GitError::ReadDirError),
     };
 
     for entry in entries {
         let entry = match entry {
             Ok(entry) => entry,
-            Err(_) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "No se pudo obtener la entrada del directorio",
-                ))
-            }
+            Err(_) => return Err(GitError::DirEntryError),
         };
         let path = entry.path();
 
         if path.is_dir() {
             let direct = match path.to_str() {
                 Some(direct) => direct,
-                None => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        "No se pudo convertir el path a str",
-                    ))
-                }
+                None => return Err(GitError::PathToStringError),
             };
             match calculate_directory_hashes(direct, hash_list) {
                 Ok(_) => {}
-                Err(_) => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        "No se pudo calcular el hash del directorio",
-                    ))
-                }
+                Err(_) => return Err(GitError::GetHashError),
             };
         } else {
             let file_name = match path.to_str() {
                 Some(file_name) => file_name,
-                None => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        "No se pudo convertir el path a str",
-                    ))
-                }
+                None => return Err(GitError::PathToStringError),
             };
             let file_content = match fs::read_to_string(&path) {
                 Ok(content) => content,
                 Err(e) => {
-                    eprintln!(
-                        "Error al leer el contenido del archivo {}: {:?}",
-                        file_name, e
-                    );
+                    println!("Error: {}", e);
                     continue;
                 }
             };
@@ -299,6 +268,6 @@ mod tests {
         let current_dir = current_dir.replace("/git", "");
 
         assert!(print_head(&current_dir).is_ok());
-        assert!(check_hash(&current_dir).is_ok());
+        assert!(git_status(&current_dir).is_ok());
     }
 }

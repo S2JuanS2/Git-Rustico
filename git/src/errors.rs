@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 /// Enumeración que representa los posibles errores que pueden ocurrir durante la ejecución
-/// del progbranch Git.
+/// del programa Git.
 ///
 /// Cada variante de este enum representa un tipo específico de error que puede ocurrir, y
 /// se utiliza para identificar y manejar los errores de manera adecuada.
@@ -47,6 +47,12 @@ pub enum GitError {
     WriteStreamError,
     SendCommandError,
     HeaderPackFileReadError,
+    HeadBranchError,
+    VisitDirectoryError,
+    GetHashError,
+    ReadDirError,
+    DirEntryError,
+    PathToStringError,
     InvalidObjectType,
     InvalidObjectLength,
 }
@@ -102,6 +108,15 @@ impl GitError {
             GitError::CopyFileError => "Fallo al copiar el archivo",
             GitError::CreateDirError => "Fallo al crear el directorio",
             GitError::RemoteDoesntExistError => "fatal: el repositorio remoto no existe",
+            GitError::WriteStreamError => "Falló al enviar datos al socket",
+            GitError::SendCommandError => "Falló al enviar el comando",
+            GitError::HeaderPackFileReadError => "Falló al leer el header del packfile recibo del servidor",
+            GitError::ReadDirError => "Falló al leer el directorio",
+            GitError::DirEntryError => "Falló al obtener la entrada del directorio",
+            GitError::HeadBranchError => "No se pudo obtener la rama HEAD",
+            GitError::VisitDirectoryError => "No se pudo recorrer el directorio",
+            GitError::GetHashError => "No se pudo obtener el hash del objeto",
+            GitError::PathToStringError => "No se pudo convertir el path a str",
             GitError::WriteStreamError => "Fallo al enviar datos al socket",
             GitError::SendCommandError => "Fallo al enviar el comando",
             GitError::HeaderPackFileReadError => "Fallo al leer el header del packfile recibo del servidor",
