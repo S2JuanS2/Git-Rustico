@@ -76,4 +76,3 @@ pub const DONE: &str = "0009done\n";
 pub const NACK: &str = "0008NAK\n";
 
 pub const PACK_SIGNATURE: &str = "PACK";
-

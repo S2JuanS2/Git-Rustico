@@ -1,9 +1,8 @@
 use std::io::Read;
 
-use crate::{errors::GitError, consts::PACK_SIGNATURE};
+use crate::{consts::PACK_SIGNATURE, errors::GitError};
 
-pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError>
-{
+pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
     read_signature(reader)?;
     println!("Signature: {}", PACK_SIGNATURE);
     let version = read_version(reader)?;
@@ -13,8 +12,7 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError>
     Ok(())
 }
 
-pub fn read_packfile_data(reader: &mut dyn Read) -> Result<(), GitError>
-{
+pub fn read_packfile_data(reader: &mut dyn Read) -> Result<(), GitError> {
     let mut buffer = [0; 4096]; // Tamaño del búfer de lectura
     match reader.read(&mut buffer) {
         Ok(_) => {
@@ -29,14 +27,13 @@ pub fn read_packfile_data(reader: &mut dyn Read) -> Result<(), GitError>
     Ok(())
 }
 
-fn read_signature(reader: &mut dyn Read) -> Result<(), GitError>
-{
+fn read_signature(reader: &mut dyn Read) -> Result<(), GitError> {
     let mut buffer = [0u8; 4];
     if reader.read_exact(&mut buffer).is_err() {
         return Err(GitError::HeaderPackFileReadError);
     };
-    
-    if &buffer != PACK_SIGNATURE.as_bytes() {
+
+    if buffer != PACK_SIGNATURE.as_bytes() {
         return Err(GitError::HeaderPackFileReadError);
     }
     Ok(())
@@ -47,7 +44,7 @@ fn read_version(reader: &mut dyn Read) -> Result<u32, GitError> {
     if reader.read_exact(&mut buffer).is_err() {
         return Err(GitError::HeaderPackFileReadError);
     };
-    
+
     let version: u32 = u32::from_be_bytes(buffer);
     if version != 2 && version != 3 {
         return Err(GitError::HeaderPackFileReadError);

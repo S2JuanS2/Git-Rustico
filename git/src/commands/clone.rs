@@ -1,7 +1,9 @@
 use std::net::TcpStream;
 
 use crate::errors::GitError;
-use crate::util::connections::{packfile_negotiation, reference_discovery, start_client, receive_packfile};
+use crate::util::connections::{
+    packfile_negotiation, receive_packfile, reference_discovery, start_client,
+};
 use crate::util::request::{create_git_request, RequestCommand};
 
 pub fn handle_clone(address: &str) -> Result<(), GitError> {
