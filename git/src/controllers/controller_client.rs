@@ -30,11 +30,11 @@ impl Controller {
         match start_client(&cloned_client.get_ip()) {
             Ok(mut stream) => {
                 let command_bytes = command.trim().as_bytes();
-                if let Err(_) = stream.write(command_bytes) {
+
+                if stream.write(command_bytes).is_err() {
                     return Err(GitError::WriteStreamError);
                 }
-
-                if let Err(_) = stream.shutdown(std::net::Shutdown::Both) {
+                if stream.shutdown(std::net::Shutdown::Both).is_err() {
                     return Err(GitError::ServerConnectionError);
                 }
             }
@@ -52,6 +52,15 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
     let command = buffer.trim();
     let commands = command.split_whitespace().collect::<Vec<&str>>();
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
+
+    if command.is_empty(){
+        return Err(GitError::CommandDoesNotStartWithGitError);
+    }
+
+    if command.split_whitespace().count() == 1{
+        return Err(GitError::CommandDoesNotStartWithGitError);
+    }
+
     if commands[0] == "git" {
         match commands[1] {
             "branch" => {

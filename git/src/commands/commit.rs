@@ -238,14 +238,13 @@ mod tests {
             "ABCDEF1234".to_string(),
         );
 
-        let directory = "./";
+        let directory = "./directory_test";
         let file_test_path = format!("{}{}", directory, COMMIT_EDITMSG);
 
         let result = git_commit(directory, test_commit);
 
         fs::remove_file(file_test_path).expect("Falló al remover el archivo temporal");
-        fs::remove_dir_all("./logs").expect("Falló al remover los directorios");
-        fs::remove_dir_all("./.git").expect("Falló al remover el directorio");
+        fs::remove_dir_all(directory).expect("Falló al remover los directorios");
 
         assert!(result.is_ok());
     }

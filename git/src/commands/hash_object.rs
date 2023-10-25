@@ -40,42 +40,40 @@ pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitErro
         Err(_) => return Err(GitError::ReadFileError),
     }
 
-    let object_contents: String;
-
-    match type_object {
+    let object_contents = match type_object {
         BLOB => {
-            object_contents = format!(
+            format!(
                 "{} {}\0{}",
                 BLOB,
                 content.len(),
                 String::from_utf8_lossy(&content)
-            );
+            )
         }
         TREE => {
-            object_contents = format!(
+            format!(
                 "{} {}\0{}",
                 TREE,
                 content.len(),
                 String::from_utf8_lossy(&content)
-            );
+            )
         }
         COMMIT => {
-            object_contents = format!(
+            format!(
                 "{} {}\0{}",
                 COMMIT,
                 content.len(),
                 String::from_utf8_lossy(&content)
-            );
+            )
         }
         _ => {
-            object_contents = format!(
+            format!(
                 "{} {}\0{}",
                 BLOB,
                 content.len(),
                 String::from_utf8_lossy(&content)
-            );
+            )
         }
-    }
+    };
 
     let hash = hash_generate(&object_contents);
 
