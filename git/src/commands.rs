@@ -20,3 +20,4 @@ pub mod init;
 
 pub mod clone;
 pub mod status;
+pub mod rm;
