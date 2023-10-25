@@ -1,18 +1,49 @@
 use std::io::Read;
-
 use crate::{consts::PACK_SIGNATURE, errors::GitError};
-
 use super::objects::read_type_and_length;
+// use std::fs::File;
+// use flate2::read::ZlibDecoder;
+
+
+
+
+// fn process_packfile(file_path: &str) -> Result<(), GitError> {
+//     let mut packfile = match File::open(file_path)
+//     {
+//         Ok(file) => file,
+//         Err(e) => {
+//             println!("Error: {}", e);
+//             return Err(GitError::GenericError);
+//         }
+//     };
+
+//     let decompressed = ZlibDecoder::new(&mut packfile);
+//     Ok(())
+// }
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
     read_signature(reader)?;
     println!("Signature: {}", PACK_SIGNATURE);
+
     let version = read_version(reader)?;
     println!("Version: {}", version);
+
     let number_object = read_objects_contained(reader)?;
     println!("Number of objects: {}", number_object);
-    let object_entry = read_type_and_length(reader)?;
-    println!("Object entry: {:?}", object_entry);
+
+    for _ in 0..number_object {
+        let object_entry = read_type_and_length(reader)?;
+        let mut buffer = vec![0u8; object_entry.obj_length as usize];
+        if reader.read_exact(&mut buffer).is_err() {
+            return Err(GitError::HeaderPackFileReadError);
+        };
+        println!("Object entry: {:?}", object_entry);
+        println!("Object data len: {:?}", buffer.len());
+        // let m = String::from_utf8(buffer.to_vec()).expect("No se pudo convertir a String");
+        // println!("Lectura exitosa: {:?}", m);
+        println!("Object data: {:?}", buffer)
+
+    }
     Ok(())
 }
 
