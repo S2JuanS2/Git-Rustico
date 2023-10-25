@@ -2,6 +2,7 @@ use git::config::Config;
 use git::errors::GitError;
 use git::util::connections::start_server;
 use std::fs::OpenOptions;
+use std::sync::{Mutex, Arc};
 use std::sync::mpsc::{self, Sender, Receiver};
 use std::thread::JoinHandle;
 use std::{env, thread};
@@ -9,8 +10,17 @@ use std::io::Read;
 use std::net::{TcpStream, TcpListener};
 use std::io::Write;
 
-fn handle_client(mut stream: TcpStream) {
+fn handle_client(mut stream: TcpStream, tx: Arc<Mutex<Sender<String>>>) {
     // Leer datos del cliente
+    let client_description = stream.peer_addr().ok().map_or_else(
+        || "Cliente desconocido conectado".to_string(),
+        |peer_addr| format!("Conexión establecida con {}", peer_addr),
+    );
+    
+    {
+        let _ = &tx.lock().unwrap().send(client_description).unwrap();
+    }
+
     let mut buffer = [0; 1024];
 
     if let Err(error) = stream.read(&mut buffer) {
@@ -46,14 +56,15 @@ fn main() -> Result<(), GitError> {
 }
 
 fn receive_client(listener: & TcpListener, tx: Sender<String>) -> Result<Vec<JoinHandle<()>>, GitError> {
-    let _ = tx;
+    let shared_tx = Arc::new(Mutex::new(tx));
     let mut handles: Vec<JoinHandle<()>> = vec![];
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
+                let tx = Arc::clone(&shared_tx);
                 println!("Nueva conexión: {:?}", stream.local_addr());
                 handles.push(std::thread::spawn(|| {
-                    handle_client(stream);
+                    handle_client(stream, tx);
                 }));
             }
             Err(e) => {
