@@ -34,11 +34,11 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
 
     if command.is_empty(){
-        return Err(GitError::CommandDoesNotStartWithGitError);
+        return Err(GitError::NonGitCommandError);
     }
 
     if command.split_whitespace().count() == 1{
-        return Err(GitError::CommandDoesNotStartWithGitError);
+        return Err(GitError::NonGitCommandError);
     }
 
     if commands[0] == "git" {
@@ -78,7 +78,7 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
             }
         }
     } else {
-        return Err(GitError::CommandDoesNotStartWithGitError);
+        return Err(GitError::NonGitCommandError);
     }
     Ok(())
 }
