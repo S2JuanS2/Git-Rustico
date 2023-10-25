@@ -76,7 +76,7 @@ fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError> {
     }
 
     let length = length as usize - LENGTH_PREFIX_SIZE - 1; // 1 por el enter
-    let mut content = vec![0u8; length as usize];
+    let mut content = vec![0u8; length];
     if socket.read_exact(&mut content).is_err() {
         return Err(GitError::InvalidPacketLineError);
     };
@@ -223,5 +223,26 @@ mod tests {
         let result = read(&mut stream);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_add_length_prefix() {
+        let message = "7217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag\n";
+
+        let prefixed_message = add_length_prefix(message, 132);
+
+        assert_eq!(prefixed_message, "00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack side-band side-band-64k ofs-delta shallow no-progress include-tag\n");
+    }
+
+    #[test]
+    fn test_add_length_prefix_incorrect() {
+        let message = "Hola, mundo!";
+        let length = message.len();
+
+        // Le quito 1 al len para que me de un prefijo incorrecto
+        let prefixed_message = add_length_prefix(message, length - 1);
+
+        // assert_eq!(prefixed_message, incorrect_reference);
+        assert_ne!(prefixed_message, "0010Hola, mundo!");
     }
 }
