@@ -2,8 +2,8 @@ use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::formats::{compressor_object, hash_generate};
 use std::fs;
-use std::{fs::File, io::Read, io::Write};
 use std::fs::OpenOptions;
+use std::{fs::File, io::Read, io::Write};
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
@@ -72,16 +72,15 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
     Ok(())
 }
 
-fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Option<Result<(), GitError>> {
-
+fn add_to_index(
+    git_dir: String,
+    file_name: &str,
+    hash_object: String,
+) -> Option<Result<(), GitError>> {
     let index_path = format!("{}/index", &git_dir);
 
     // Abre el archivo de índice en modo lectura y escritura.
-    let mut index_file = match OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(&index_path)
-    {
+    let mut index_file = match OpenOptions::new().read(true).write(true).open(&index_path) {
         Ok(index_file) => index_file,
         Err(_) => return Some(Err(GitError::OpenFileError)),
     };
@@ -138,13 +137,20 @@ mod tests {
 
         // Se crea un archivo temporal para el index y se le agrega una entrada.
         let mut index_file = File::create("./.git/index").expect("Error");
-        index_file.write_all(b"hola.rs blob sj2839sj2k3hs0dlquwjsodm2n3j4djsk3777sja").expect("Error");
+        index_file
+            .write_all(b"hola.rs blob sj2839sj2k3hs0dlquwjsodm2n3j4djsk3777sja")
+            .expect("Error");
         let mut index_file = File::open("./.git/index").expect("Error");
         let mut index_content = String::new();
-        index_file.read_to_string(&mut index_content).expect("Error");
+        index_file
+            .read_to_string(&mut index_content)
+            .expect("Error");
 
         // Se chequea que el index se haya creado bien.
-        assert_eq!(index_content, "hola.rs blob sj2839sj2k3hs0dlquwjsodm2n3j4djsk3777sja");
+        assert_eq!(
+            index_content,
+            "hola.rs blob sj2839sj2k3hs0dlquwjsodm2n3j4djsk3777sja"
+        );
 
         let result = git_add("./", "testfile");
 
@@ -152,7 +158,9 @@ mod tests {
         drop(index_file);
         let mut index_file = File::open("./.git/index").expect("Error");
         let mut index_content = String::new();
-        index_file.read_to_string(&mut index_content).expect("Error");
+        index_file
+            .read_to_string(&mut index_content)
+            .expect("Error");
         assert_eq!(index_content, "hola.rs blob sj2839sj2k3hs0dlquwjsodm2n3j4djsk3777sja\ntestfile blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391");
 
         // Se elimina el directorio temporal.

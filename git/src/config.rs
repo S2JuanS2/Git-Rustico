@@ -41,9 +41,9 @@ pub struct Config {
 
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
+        writeln!(
             f,
-            "Name: {}\nEmail: {}\nLog Path: {}\nIp: {}\nPort: {}\n",
+            "Config:{{Name: {}, Email: {}, Log Path: {}, Ip: {}, Port: {}}}",
             self.name, self.email, self.path_log, self.ip, self.port
         )
     }

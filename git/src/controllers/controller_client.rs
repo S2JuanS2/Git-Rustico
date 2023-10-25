@@ -10,8 +10,6 @@ use crate::commands::init::handle_init;
 use crate::commands::status::handle_status;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::connections::start_client;
-use std::io::Write;
 
 #[derive(Clone)]
 pub struct Controller {
@@ -22,26 +20,8 @@ impl Controller {
     pub fn new(client: Client) -> Controller {
         Controller { client }
     }
-    pub fn send_command(&self, command: String) -> Result<(), GitError> {
-        let cloned_client = self.client.clone();
-
-        handle_command(command.clone(), self.client.clone())?;
-
-        match start_client(&cloned_client.get_ip()) {
-            Ok(mut stream) => {
-                let command_bytes = command.trim().as_bytes();
-
-                if stream.write(command_bytes).is_err() {
-                    return Err(GitError::WriteStreamError);
-                }
-                if stream.shutdown(std::net::Shutdown::Both).is_err() {
-                    return Err(GitError::ServerConnectionError);
-                }
-            }
-            Err(_) => return Err(GitError::GtkFailedInitiliaze),
-        };
-
-        Ok(())
+    pub fn send_command(&self, command: &str) -> Result<(), GitError> {
+        handle_command(command.to_string().clone(), self.client.clone())
     }
 }
 
@@ -53,12 +33,12 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
     let commands = command.split_whitespace().collect::<Vec<&str>>();
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
 
-    if command.is_empty(){
-        return Err(GitError::CommandDoesNotStartWithGitError);
+    if command.is_empty() {
+        return Err(GitError::NonGitCommandError);
     }
 
-    if command.split_whitespace().count() == 1{
-        return Err(GitError::CommandDoesNotStartWithGitError);
+    if command.split_whitespace().count() == 1 {
+        return Err(GitError::NonGitCommandError);
     }
 
     if commands[0] == "git" {
@@ -98,7 +78,7 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
             }
         }
     } else {
-        return Err(GitError::CommandDoesNotStartWithGitError);
+        return Err(GitError::NonGitCommandError);
     }
     Ok(())
 }

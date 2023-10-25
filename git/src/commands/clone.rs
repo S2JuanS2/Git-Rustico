@@ -16,7 +16,7 @@ pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<(), GitError> {
         return Err(GitError::CloneMissingRepoError);
     }
     let mut socket = start_client(&address)?;
-    let parts = address.split(":").collect::<Vec<&str>>();
+    let parts = address.split(':').collect::<Vec<&str>>();
     let ip = parts[0].to_string();
     let port = parts[1].to_string();
     git_clone(&mut socket, ip, port, args[0].to_string())
