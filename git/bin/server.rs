@@ -1,4 +1,5 @@
 use git::config::Config;
+use git::errors::GitError;
 use git::util::connections::start_server;
 use std::env;
 use std::io::Read;
@@ -15,28 +16,15 @@ fn handle_client(mut stream: TcpStream) {
     println!("Recibido: {}", String::from_utf8_lossy(&buffer));
 }
 
-fn main() {
+fn main() -> Result<(), GitError> {
     let args: Vec<String> = env::args().collect();
-    let config = match Config::new(args) {
-        Ok(config) => config,
-        Err(error) => {
-            println!("Error: {}", error.message());
-            return;
-        }
-    };
+    let config =  Config::new(args)?;
     print!("{}", config);
 
     let address = format!("{}:{}", config.ip, config.port);
-    println!("{}", address);
 
     // Escucha en la dirección IP y el puerto deseados
-    let listener = match start_server(&address) {
-        Ok(listener) => listener,
-        Err(e) => {
-            println!("{}", e.message());
-            return;
-        }
-    };
+    let listener = start_server(&address)?;
     println!("Servidor escuchando en {}", address);
 
     for stream in listener.incoming() {
@@ -52,4 +40,6 @@ fn main() {
             }
         }
     }
+
+    Ok(())
 }
