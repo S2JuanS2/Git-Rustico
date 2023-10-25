@@ -73,8 +73,7 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
 // |1111|1111
 fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, GitError> {
     let mut length_bits = (byte & 0b00001111) as usize;
-    if (byte & 0b10000000) == 0
-    {
+    if (byte & 0b10000000) == 0 {
         return Ok(length_bits);
     }
     println!("(MSB)Length firts: {:?}", length_bits);
@@ -89,7 +88,10 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
 
         let seven_bits = (byte[0] & 0b01111111) as usize;
         print_u8_bits(byte[0] & 0b01111111);
-        println!("(MSB)Unire:length seven: {:?} y length_bits: {}", seven_bits, length_bits);
+        println!(
+            "(MSB)Unire:length seven: {:?} y length_bits: {}",
+            seven_bits, length_bits
+        );
         length_bits |= seven_bits << shift;
         println!("(MSB)Length final: {:?}", length_bits);
         if (byte[0] & 0x80) == 0 {
@@ -133,7 +135,7 @@ fn print_u8_bits(value: u8) {
         let bit = (value >> i) & 1;
         print!("{}", bit);
     }
-    println!();  // Salto de línea después de imprimir los bits
+    println!(); // Salto de línea después de imprimir los bits
 }
 
 #[cfg(test)]
@@ -195,8 +197,8 @@ mod tests {
     fn test_read_size_encoded_length() {
         // Simulamos un Reader con datos de entrada
         let data: Vec<u8> = vec![
-            0b10001010,  // 138 en decimal
-            0b01011000,  // 88 en decimal
+            0b10001010, // 138 en decimal
+            0b01011000, // 88 en decimal
         ];
 
         // Creamos un cursor para simular la entrada de datos
@@ -205,16 +207,15 @@ mod tests {
         // Leemos la longitud codificada
         let result = read_size_encoded_length(&mut cursor, 0b10011010); // 154 en decimal
         assert_eq!(result, Ok(180394));
-
     }
 
     #[test]
     fn test_read_type_and_length() {
         // Simulamos un Reader con datos de entrada
         let data: Vec<u8> = vec![
-            0b10011010,  // 154 en decimal
-            0b10001010,  // 138 en decimal
-            0b01011000,  // 88 en decimal
+            0b10011010, // 154 en decimal
+            0b10001010, // 138 en decimal
+            0b01011000, // 88 en decimal
         ];
 
         // Creamos un cursor para simular la entrada de datos
@@ -234,15 +235,12 @@ mod tests {
     fn test_read_type_and_length_2() {
         // Simulamos un Reader con datos de entrada
         let data: Vec<u8> = vec![
-            0b10011010,  // 154 en decimal
-            0b10001010,  // 138 en decimal
-            0b01011000,  // 88 en decimal
-            
+            0b10011010, // 154 en decimal
+            0b10001010, // 138 en decimal
+            0b01011000, // 88 en decimal
             0b01001010, //  74 en decimal
-
             0b11101111, // 239 en decimal
             0b01011000, //  88 en decimal
-
         ];
 
         // Creamos un cursor para simular la entrada de datos
@@ -314,5 +312,4 @@ mod tests {
     //         })
     //     );
     // }
-
 }

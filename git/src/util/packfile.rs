@@ -1,11 +1,8 @@
-use std::io::Read;
-use crate::{consts::PACK_SIGNATURE, errors::GitError};
 use super::objects::read_type_and_length;
+use crate::{consts::PACK_SIGNATURE, errors::GitError};
+use std::io::Read;
 // use std::fs::File;
 // use flate2::read::ZlibDecoder;
-
-
-
 
 // fn process_packfile(file_path: &str) -> Result<(), GitError> {
 //     let mut packfile = match File::open(file_path)
@@ -42,7 +39,6 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
         // let m = String::from_utf8(buffer.to_vec()).expect("No se pudo convertir a String");
         // println!("Lectura exitosa: {:?}", m);
         println!("Object data: {:?}", buffer)
-
     }
     Ok(())
 }
