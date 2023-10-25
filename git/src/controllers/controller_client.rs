@@ -33,11 +33,11 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
     let commands = command.split_whitespace().collect::<Vec<&str>>();
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
 
-    if command.is_empty(){
+    if command.is_empty() {
         return Err(GitError::NonGitCommandError);
     }
 
-    if command.split_whitespace().count() == 1{
+    if command.split_whitespace().count() == 1 {
         return Err(GitError::NonGitCommandError);
     }
 

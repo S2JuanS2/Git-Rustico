@@ -2,13 +2,13 @@ use git::config::Config;
 use git::errors::GitError;
 use git::util::connections::start_server;
 use std::fs::OpenOptions;
-use std::sync::{Mutex, Arc};
-use std::sync::mpsc::{self, Sender, Receiver};
+use std::io::Read;
+use std::io::Write;
+use std::net::{TcpListener, TcpStream};
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
-use std::io::Read;
-use std::net::{TcpStream, TcpListener};
-use std::io::Write;
 
 fn handle_client(mut stream: TcpStream, tx: Arc<Mutex<Sender<String>>>) {
     // Leer datos del cliente
@@ -16,7 +16,7 @@ fn handle_client(mut stream: TcpStream, tx: Arc<Mutex<Sender<String>>>) {
         || "Cliente desconocido conectado".to_string(),
         |peer_addr| format!("Conexión establecida con {}", peer_addr),
     );
-    
+
     {
         let _ = &tx.lock().unwrap().send(client_description).unwrap();
     }
@@ -32,7 +32,7 @@ fn handle_client(mut stream: TcpStream, tx: Arc<Mutex<Sender<String>>>) {
 
 fn main() -> Result<(), GitError> {
     let args: Vec<String> = env::args().collect();
-    let config =  Config::new(args)?;
+    let config = Config::new(args)?;
     print!("{}", config);
 
     let address = format!("{}:{}", config.ip, config.port);
@@ -56,7 +56,10 @@ fn main() -> Result<(), GitError> {
     Ok(())
 }
 
-fn receive_client(listener: & TcpListener, tx: Sender<String>) -> Result<Vec<JoinHandle<()>>, GitError> {
+fn receive_client(
+    listener: &TcpListener,
+    tx: Sender<String>,
+) -> Result<Vec<JoinHandle<()>>, GitError> {
     let shared_tx = Arc::new(Mutex::new(tx));
     let mut handles: Vec<JoinHandle<()>> = vec![];
     for stream in listener.incoming() {
