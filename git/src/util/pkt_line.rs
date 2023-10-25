@@ -97,6 +97,50 @@ fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError>
     Ok(content)
 }
 
+/// Agrega un prefijo de longitud a un mensaje y lo devuelve como una cadena.
+///
+/// Esta función toma un mensaje y la longitud del mensaje sin el prefijo y agrega un
+/// prefijo hexadecimal de 4 caracteres que indica la longitud del mensaje completo.
+///
+/// # Argumentos
+///
+/// * `message`: Un mensaje al que se le agregará el prefijo de longitud.
+/// * `len`: La longitud del mensaje original (sin el prefijo), el motivo de este argumento
+///     es porque algunas cadenas contienen \0 y la función `len()` no funciona correctamente.
+///
+/// # Ejemplo
+///
+/// ```
+/// use git::util::pkt_line::add_length_prefix;
+///
+/// let message = "Hola, mundo!";
+/// let length = message.len();
+///
+/// let prefixed_message = add_length_prefix(message, length);
+///
+/// // El resultado será una cadena con el prefijo de longitud:
+/// // "0010Hola, mundo!"
+/// ```
+///
+/// # Retorno
+///
+/// Devuelve una cadena que contiene el mensaje original con un prefijo de longitud hexadecimal.
+///
+/// Nota: El prefijo de longitud se calcula automáticamente y tiene una longitud fija de 4 caracteres.
+///
+pub fn add_length_prefix(message: &str, len: usize) -> String {
+    // Obtener la longitud del mensaje con el prefijo
+    let message_length = len + LENGTH_PREFIX_SIZE;
+
+    // Convertir la longitud en una cadena hexadecimal de 4 caracteres
+    let length_hex = format!("{:04x}", message_length);
+
+    // Concatenar la longitud al principio del mensaje
+    let prefixed_message = format!("{}{}", length_hex, message);
+
+    prefixed_message
+}
+
 #[cfg(test)]
 mod tests {
     use crate::consts::FLUSH_PKT;

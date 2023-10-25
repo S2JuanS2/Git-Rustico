@@ -39,18 +39,19 @@ fn main() -> Result<(), GitError> {
 
     // Escucha en la dirección IP y el puerto deseados
     let listener = start_server(&address)?;
-    println!("Servidor escuchando en {}", address);
 
     let (tx, rx) = mpsc::channel();
 
-    thread::spawn(move || {
+    let log = thread::spawn(move || {
         let _ = write_log_file(&config.path_log, rx);
     });
 
-    thread::spawn(move || {
+    let clients = thread::spawn(move || {
         let _ = receive_client(&listener, tx);
     });
 
+    clients.join().expect("No hay clientes");
+    log.join().expect("No se pudo escribir el archivo de log");
 
     Ok(())
 }
@@ -89,6 +90,5 @@ fn write_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), std::io::E
 
     // Cerramos el archivo al finalizar.
     file.sync_all()?;
-
     Ok(())
 }

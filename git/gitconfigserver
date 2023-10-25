@@ -1,5 +1,5 @@
 name=Brayan
 email=b@fiar.com
-path_log=./op
+path_log=./history.log
 ip=127.0.0.1
-port=9418
+port=10002
