@@ -72,8 +72,13 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
 
 // |1111|1111
 fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, GitError> {
+    // let mut length_bits = (byte & 0b00001111) as usize;
+    // if (byte & 0b10000000) == 0 {
+    //     return Ok(length_bits);
+    // }
+
     let mut length_bits = (byte & 0b00001111) as usize;
-    if (byte & 0b10000000) == 0 {
+    if (byte & 0b00010000) == 0 {
         return Ok(length_bits);
     }
     println!("(MSB)Length firts: {:?}", length_bits);
@@ -115,8 +120,8 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
 /// * `Err(GitError)`: Si el valor de `type_bits` no corresponde a un tipo de objeto válido y genera un error `GitError::InvalidObjectType`.
 ///
 fn create_object(byte: u8) -> Result<ObjectType, GitError> {
-    let type_bits = (byte & 0b01110000) >> 4;
-    // let type_bits = (byte & 0b11100000) >> 5;
+    // let type_bits = (byte & 0b01110000) >> 4;
+    let type_bits = (byte & 0b11100000) >> 5;
 
     match type_bits {
         1 => Ok(ObjectType::Commit),
@@ -209,51 +214,108 @@ mod tests {
         assert_eq!(result, Ok(180394));
     }
 
-    #[test]
-    fn test_read_type_and_length() {
-        // Simulamos un Reader con datos de entrada
-        let data: Vec<u8> = vec![
-            0b10011010, // 154 en decimal
-            0b10001010, // 138 en decimal
-            0b01011000, // 88 en decimal
-        ];
+    // #[test]
+    // fn test_read_type_and_length() {
+    //     // Simulamos un Reader con datos de entrada
+    //     let data: Vec<u8> = vec![
+    //         0b10011010, // 154 en decimal
+    //         0b10001010, // 138 en decimal
+    //         0b01011000, // 88 en decimal
+    //     ];
 
-        // Creamos un cursor para simular la entrada de datos
-        let mut cursor = Cursor::new(data);
+    //     // Creamos un cursor para simular la entrada de datos
+    //     let mut cursor = Cursor::new(data);
 
-        let result = read_type_and_length(&mut cursor);
-        assert_eq!(
-            result,
-            Ok(ObjectEntry {
-                obj_type: ObjectType::Commit,
-                obj_length: 180394
-            })
-        );
-    }
+    //     let result = read_type_and_length(&mut cursor);
+    //     assert_eq!(
+    //         result,
+    //         Ok(ObjectEntry {
+    //             obj_type: ObjectType::Commit,
+    //             obj_length: 180394
+    //         })
+    //     );
+    // }
+
+    // #[test]
+    // fn test_read_type_and_length_2() {
+    //     // Simulamos un Reader con datos de entrada
+    //     let data: Vec<u8> = vec![
+    //         0b10011010, // 154 en decimal
+    //         0b10001010, // 138 en decimal
+    //         0b01011000, // 88 en decimal
+    //         0b01001010, //  74 en decimal
+    //         0b11101111, // 239 en decimal
+    //         0b01011000, //  88 en decimal
+    //     ];
+
+    //     // Creamos un cursor para simular la entrada de datos
+    //     let mut cursor = Cursor::new(data);
+
+    //     let result = read_type_and_length(&mut cursor);
+    //     assert_eq!(
+    //         result,
+    //         Ok(ObjectEntry {
+    //             obj_type: ObjectType::Commit,
+    //             obj_length: 180394
+    //         })
+    //     );
+
+    //     let result = read_type_and_length(&mut cursor);
+    //     assert_eq!(
+    //         result,
+    //         Ok(ObjectEntry {
+    //             obj_type: ObjectType::Tag,
+    //             obj_length: 10
+    //         })
+    //     );
+
+    //     let result = read_type_and_length(&mut cursor);
+    //     assert_eq!(
+    //         result,
+    //         Ok(ObjectEntry {
+    //             obj_type: ObjectType::OfsDelta,
+    //             obj_length: 1423
+    //         })
+    //     );
+    // }
+
+        // #[test]
+    // fn test_read_type_and_length() {
+    //     // Simulamos un Reader con datos de entrada
+    //     let data: Vec<u8> = vec![
+    //         0b10011010, // 154 en decimal
+    //         0b10001010, // 138 en decimal
+    //         0b01011000, // 88 en decimal
+    //     ];
+
+    //     // Creamos un cursor para simular la entrada de datos
+    //     let mut cursor = Cursor::new(data);
+
+    //     let result = read_type_and_length(&mut cursor);
+    //     assert_eq!(
+    //         result,
+    //         Ok(ObjectEntry {
+    //             obj_type: ObjectType::Commit,
+    //             obj_length: 180394
+    //         })
+    //     );
+    // }
 
     #[test]
     fn test_read_type_and_length_2() {
         // Simulamos un Reader con datos de entrada
         let data: Vec<u8> = vec![
-            0b10011010, // 154 en decimal
-            0b10001010, // 138 en decimal
+            0b10001010, // 154 en decimal
+            0b11011010, // 138 en decimal
             0b01011000, // 88 en decimal
-            0b01001010, //  74 en decimal
-            0b11101111, // 239 en decimal
+            0b01000010, //  74 en decimal
+            0b11111111, // 239 en decimal
+            0b11011000, //  88 en decimal
             0b01011000, //  88 en decimal
         ];
 
         // Creamos un cursor para simular la entrada de datos
         let mut cursor = Cursor::new(data);
-
-        let result = read_type_and_length(&mut cursor);
-        assert_eq!(
-            result,
-            Ok(ObjectEntry {
-                obj_type: ObjectType::Commit,
-                obj_length: 180394
-            })
-        );
 
         let result = read_type_and_length(&mut cursor);
         assert_eq!(
@@ -269,47 +331,27 @@ mod tests {
             result,
             Ok(ObjectEntry {
                 obj_type: ObjectType::OfsDelta,
-                obj_length: 1423
+                obj_length: 1418
+            })
+        );
+
+        let result = read_type_and_length(&mut cursor);
+        assert_eq!(
+            result,
+            Ok(ObjectEntry {
+                obj_type: ObjectType::Tree,
+                obj_length: 2
+            })
+        );
+
+        let result = read_type_and_length(&mut cursor);
+        assert_eq!(
+            result,
+            Ok(ObjectEntry {
+                obj_type: ObjectType::RefDelta,
+                obj_length: 181647
             })
         );
     }
 
-    // #[test]
-    // fn test_read_size_encoded_length() {
-    //     // Simulamos un Reader con datos de entrada
-    //     let data: Vec<u8> = vec![
-    //         0b10001010,  // 138 en decimal
-    //         0b01011000,  // 88 en decimal
-    //     ];
-
-    //     // Creamos un cursor para simular la entrada de datos
-    //     let mut cursor = Cursor::new(data);
-
-    //     // Leemos la longitud codificada
-    //     let result = read_size_encoded_length(&mut cursor, 0b10011010); // 154 en decimal
-    //     assert_eq!(result, Ok(180394));
-
-    // }
-
-    // #[test]
-    // fn test_read_type_and_length() {
-    //     // Simulamos un Reader con datos de entrada
-    //     let data: Vec<u8> = vec![
-    //         0b10011010,  // 154 en decimal
-    //         0b10001010,  // 138 en decimal
-    //         0b01011000,  // 88 en decimal
-    //     ];
-
-    //     // Creamos un cursor para simular la entrada de datos
-    //     let mut cursor = Cursor::new(data);
-
-    //     let result = read_type_and_length(&mut cursor);
-    //     assert_eq!(
-    //         result,
-    //         Ok(ObjectEntry {
-    //             obj_type: ObjectType::Commit,
-    //             obj_length: 180394
-    //         })
-    //     );
-    // }
 }
