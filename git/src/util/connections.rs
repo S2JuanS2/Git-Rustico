@@ -84,8 +84,8 @@ pub fn packfile_negotiation(
 }
 
 pub fn receive_packfile(socket: &mut TcpStream) -> Result<(), GitError> {
-    read_packfile_header(socket)?;
-    read_packfile_data(socket)
+    read_packfile_header(socket)
+    // read_packfile_data(socket)
 }
 
 /// Envía un mensaje a través de un socket a un servidor.
