@@ -19,5 +19,5 @@ pub mod hash_object;
 pub mod init;
 
 pub mod clone;
-pub mod status;
 pub mod rm;
+pub mod status;

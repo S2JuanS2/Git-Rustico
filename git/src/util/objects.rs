@@ -46,7 +46,7 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
     println!("(read_type_and_length)Buffer: {:?}", buffer);
     let byte = buffer[0];
 
-    let obj_type: ObjectType = create_object(byte)?;
+    let obj_type: ObjectType = create_object_bits(byte)?;
     let length = read_size_encoded_length(reader, byte)?;
 
     Ok(ObjectEntry {
@@ -88,6 +88,11 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
     Ok(length_bits)
 }
 
+fn create_object_bits(byte: u8) -> Result<ObjectType, GitError> {
+    let byte = (byte & 0b01110000) >> 4;
+    create_object(byte)
+}
+
 /// Crea un objeto `ObjectType` a partir de un valor de tipo de objeto representado por `type_bits`.
 ///
 /// # Argumentos
@@ -100,9 +105,7 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
 /// * `Err(GitError)`: Si el valor de `type_bits` no corresponde a un tipo de objeto válido y genera un error `GitError::InvalidObjectType`.
 ///
 fn create_object(byte: u8) -> Result<ObjectType, GitError> {
-    let type_bits = (byte & 0b01110000) >> 4;
-
-    match type_bits {
+    match byte {
         1 => Ok(ObjectType::Commit),
         2 => Ok(ObjectType::Tree),
         3 => Ok(ObjectType::Blob),
@@ -257,5 +260,4 @@ mod tests {
             })
         );
     }
-
 }

@@ -1,5 +1,3 @@
-use sha1::digest::core_api::Buffer;
-
 use crate::{consts::PACK_SIGNATURE, errors::GitError, util::objects::read_type_and_length};
 use std::io::Read;
 // use std::fs::File;
@@ -29,30 +27,18 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
     let number_object = read_objects_contained(reader)?;
     println!("Number of objects: {}", number_object);
 
-    // for _ in 0..number_object {
-    //     let object_entry = read_type_and_length(reader)?;
-    //     let mut buffer: Vec<u8> = vec![0u8; object_entry.obj_length as usize];
-    //     println!("Object entry: {:?}", object_entry);
-    //     break;
-        // let mut buffer: Vec<u8> = vec![0u8; 132];
+    for _ in 0..number_object {
+        let object_entry = read_type_and_length(reader)?;
+        let mut buffer: Vec<u8> = vec![0u8; object_entry.obj_length as usize - 2];
+        println!("Object entry: {:?}", object_entry);
 
-        // if reader.read_exact(&mut buffer).is_err() {
-        //     println!("No se pudo completar el buffer");
-        //     return Err(GitError::HeaderPackFileReadError);
-        // };
-        // println!("Object data len: {:?}", buffer.len());
-        // println!("Object data: {:?}", buffer)
-    // }
-    // let mut buffer = vec![0u8; 218];
-    // let _ = reader.read(&mut buffer);
-    // println!("Object data: {:?}", buffer);
-    // for i in 0..218 {
-    //     print!("(i: {}, v: {}) - ", i, buffer[i]);
-    //     if i % 10 == 0 {
-    //         println!();
-    //     }
-    // }
-
+        if reader.read_exact(&mut buffer).is_err() {
+            println!("No se pudo completar el buffer");
+            return Err(GitError::HeaderPackFileReadError);
+        };
+        println!("Object data len: {:?}", buffer.len());
+        println!("Object data: {:?}", buffer)
+    }
     Ok(())
 }
 
