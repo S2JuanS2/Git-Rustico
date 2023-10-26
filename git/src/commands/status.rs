@@ -123,7 +123,10 @@ fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Option<Res
 /// ###Parámetros:
 /// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
 /// 'objects_hash_list': vector con los hashes de los archivos en objects.
-fn compare_hash_lists(working_directory_hash_list: HashMap<String, String>, objects_hash_list: Vec<String>) -> Vec<String> {
+fn compare_hash_lists(
+    working_directory_hash_list: HashMap<String, String>,
+    objects_hash_list: Vec<String>,
+) -> Vec<String> {
     // Comparo los hashes de mis archivos con los de objects para crear un vector con los archivos que se modificaron
     let mut updated_files_list: Vec<String> = Vec::new();
     for hash in &working_directory_hash_list {
@@ -151,7 +154,9 @@ fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, Result<(), G
 /// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, Result<(), GitError>> {
+fn get_hashes_working_directory(
+    directory: &str,
+) -> Result<HashMap<String, String>, Result<(), GitError>> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = format!("{}{}", directory, "/git/src");
     let visit_working_directory =
@@ -290,11 +295,13 @@ mod tests {
         // El hash de este archivo es: 48124d6dc3b2e693a207667c32ac672414913994
         let file_path1 = format!("{}/main.rs", repo_path);
         let mut file = fs::File::create(&file_path1).expect("Falló al crear el archivo");
-        file.write_all(b"Hola Mundo").expect("Error al escribir en el archivo");
+        file.write_all(b"Hola Mundo")
+            .expect("Error al escribir en el archivo");
 
         let file_path2 = format!("{}/errors.rs", repo_path);
         let mut file = fs::File::create(&file_path2).expect("Falló al crear el archivo");
-        file.write_all(b"Aca habria errores").expect("Error al escribir en el archivo");
+        file.write_all(b"Aca habria errores")
+            .expect("Error al escribir en el archivo");
 
         let objects_path = format!("{}{}", dir_path, "/.git/objects");
         if let Err(err) = fs::create_dir_all(&objects_path) {
