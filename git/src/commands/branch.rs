@@ -11,6 +11,7 @@ const BRANCH_DIR: &str = "refs/heads/";
 /// Esta función se encarga de llamar a al comando branch con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de Strings que contiene los argumentos que se le pasaran al comando branch
+/// 'client': Cliente que contiene el directorio del repositorio local
 pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     let directory = client.get_directory_path();
     if args.is_empty() {

@@ -8,6 +8,7 @@ use std::{fs::File, io::Read, io::Write};
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
+/// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_add(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.len() != 1 {
         return Err(GitError::InvalidArgumentCountAddError);
@@ -87,7 +88,7 @@ fn add_to_index(
 
     // Lee el contenido del archivo de índice.
     let mut index_content = String::new();
-    if let Err(_) = index_file.read_to_string(&mut index_content) {
+    if index_file.read_to_string(&mut index_content).is_err() {
         return Some(Err(GitError::ReadFileError));
     }
 
@@ -116,10 +117,10 @@ fn add_to_index(
         Ok(index_file) => index_file,
         Err(_) => return Some(Err(GitError::OpenFileError)),
     };
-    if let Err(_) = index_file.set_len(0) {
+    if index_file.set_len(0).is_err() {
         return Some(Err(GitError::WriteFileError));
     }
-    if let Err(_) = index_file.write_all(updated_index_content.as_bytes()) {
+    if index_file.write_all(updated_index_content.as_bytes()).is_err() {
         return Some(Err(GitError::WriteFileError));
     }
 

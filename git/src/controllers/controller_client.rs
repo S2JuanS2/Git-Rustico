@@ -7,7 +7,14 @@ use crate::commands::commit::handle_commit;
 use crate::commands::fetch::handle_fetch;
 use crate::commands::hash_object::handle_hash_object;
 use crate::commands::init::handle_init;
+use crate::commands::merge::handle_merge;
+use crate::commands::pull::handle_pull;
+use crate::commands::push::handle_push;
+use crate::commands::remote::handle_remote;
 use crate::commands::status::handle_status;
+use crate::commands::log::handle_log;
+use crate::commands::rm::handle_rm;
+
 use crate::errors::GitError;
 use crate::models::client::Client;
 
@@ -72,6 +79,24 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
             }
             "status" => {
                 handle_status(rest_of_command, client)?;
+            }
+            "log" =>{
+                handle_log(rest_of_command, client)?;
+            }
+            "pull" =>{
+                handle_pull(rest_of_command, client)?;
+            }
+            "push" =>{
+                handle_push(rest_of_command, client)?;
+            }
+            "merge" =>{
+                handle_merge(rest_of_command, client)?;
+            }
+            "remote" =>{
+                handle_remote(rest_of_command, client)?;
+            }
+            "rm" =>{
+                handle_rm(rest_of_command, client)?;
             }
             _ => {
                 return Err(GitError::CommandNotRecognizedError);

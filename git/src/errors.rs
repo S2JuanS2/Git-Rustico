@@ -73,6 +73,12 @@ pub enum GitError {
     InvalidArgumentCountInitError,
     InvalidArgumentCountStatusError,
     CloneMissingRepoError,
+    InvalidArgumentCountLogError,
+    InvalidArgumentCountMergeError,
+    InvalidArgumentCountPullError,
+    InvalidArgumentCountPushError,
+    InvalidArgumentCountRemoteError,
+    InvalidArgumentCountRmError,
 }
 
 impl GitError {
@@ -155,6 +161,13 @@ impl GitError {
             GitError::InvalidArgumentCountInitError => "Número de argumentos inválido para el comando init.\nUsar: git init",
             GitError::InvalidArgumentCountStatusError => "Número de argumentos inválido para el comando status.\nUsar: git status",
             GitError::CloneMissingRepoError => "Use: git clone <repositorio>",
+            GitError::InvalidArgumentCountLogError => "Número de argumentos inválido para el comando log.\nUsar: git log",
+            GitError::InvalidArgumentCountMergeError => "Número de argumentos inválido para el comando merge.\nUsar: git merge <branch name>",
+            GitError::InvalidArgumentCountPullError => "Número de argumentos inválido para el comando pull.\nUsar: git pull <remote name> <branch name>",
+            GitError::InvalidArgumentCountPushError => "Número de argumentos inválido para el comando push.\nUsar: git push <remote name> <branch name>",
+            GitError::InvalidArgumentCountRemoteError => "Número de argumentos inválido para el comando remote.\nUsar: git remote <flag> <remote name> <url>",
+            GitError::InvalidArgumentCountRmError => "Número de argumentos inválido para el comando rm.\nUsar: git rm <file name>",
+
         }
     }
 }

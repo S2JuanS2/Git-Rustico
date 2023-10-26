@@ -9,6 +9,7 @@ use crate::errors::GitError;
 /// Esta función se encarga de llamar a al comando cat-file con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función cat-file
+/// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.len() != 2 {
         return Err(GitError::InvalidArgumentCountCatFileError);
