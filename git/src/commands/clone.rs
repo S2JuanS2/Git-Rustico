@@ -12,7 +12,7 @@ use crate::util::request::{create_git_request, RequestCommand};
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función clone
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<(), GitError> {
-    let address = client.get_ip();
+    let address: String = client.get_ip();
     if args.len() != 1 {
         return Err(GitError::CloneMissingRepoError);
     }
@@ -35,6 +35,8 @@ pub fn git_clone(
     port: String,
     repo: String,
 ) -> Result<(), GitError> {
+    println!("Clonando repositorio remoto: {}", repo);
+
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message = create_git_request(RequestCommand::UploadPack, repo, ip, port);
 

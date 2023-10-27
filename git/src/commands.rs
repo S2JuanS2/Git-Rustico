@@ -21,7 +21,7 @@ pub mod log;
 pub mod pull;
 pub mod push;
 pub mod clone;
-pub mod status;
 pub mod rm;
+pub mod status;
 pub mod remote;
 pub mod merge;

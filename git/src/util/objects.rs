@@ -10,10 +10,10 @@ use crate::errors::GitError;
 /// - `object_type`: El tipo de objeto, representado mediante un valor de la enumeración `ObjectType`.
 /// - `object_length`: La longitud o tamaño del objeto en bytes.
 ///
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ObjectEntry {
-    pub object_type: ObjectType,
-    pub object_length: usize,
+    pub obj_type: ObjectType,
+    pub obj_length: usize,
 }
 
 /// Enumeración que representa los tipos de objetos Git.
@@ -43,58 +43,54 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
     if reader.read_exact(&mut buffer).is_err() {
         return Err(GitError::HeaderPackFileReadError);
     };
+    println!("(read_type_and_length)Buffer: {:?}", buffer);
     let byte = buffer[0];
 
-    let msb = (byte & 0b10000000) != 0;
-    let type_bits = (byte & 0b01110000) >> 4;
-    let mut length_bits = (byte & 0b00001111) as usize;
-
-    let object_type: ObjectType = create_object(type_bits)?;
-
-    if msb {
-        read_size_encoded_length(reader, &mut length_bits)?;
-    }
+    let obj_type: ObjectType = create_object_bits(byte)?;
+    let length = read_size_encoded_length(reader, byte)?;
 
     Ok(ObjectEntry {
-        object_type,
-        object_length: length_bits,
+        obj_type,
+        obj_length: length,
     })
 }
 
-// fn read_variable_length(reader: &mut dyn Read, length_bits: usize) -> Result<usize, GitError> {
-//     let mut object_length: usize = 0;
-//     for i in 0..length_bits {
-//         let mut byte = [0u8; 1];
-//         if reader.read_exact(&mut byte).is_err() {
+fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, GitError> {
+    let mut length_bits = (byte & 0b00001111) as usize;
+    if (byte & 0b10000000) == 0 {
+        return Ok(length_bits);
+    }
 
-//         };
-//         object_length |= ((byte[0] as usize) & 0x7F) << (7 * i);
-//         if (byte[0] & 0x80) == 0 {
-//             break;
-//         }
-//     }
-//     Ok(object_length)
-// }
-
-fn read_size_encoded_length(reader: &mut dyn Read, length: &mut usize) -> Result<(), GitError> {
-    let mut shift: usize = 0;
+    println!("(MSB)Length firts: {:?}", length_bits);
+    let mut shift: usize = 4;
 
     loop {
         let mut byte = [0u8; 1];
         if reader.read_exact(&mut byte).is_err() {
             return Err(GitError::HeaderPackFileReadError);
         };
+        println!("(MSB)Buffer: {:?}", byte);
 
-        let seven_bits = (byte[0] as usize) & 0x7F;
-        *length |= seven_bits << shift;
-
+        let seven_bits = (byte[0] & 0b01111111) as usize;
+        print_u8_bits(byte[0] & 0b01111111);
+        println!(
+            "(MSB)Unire:length seven: {:?} y length_bits: {}",
+            seven_bits, length_bits
+        );
+        length_bits |= seven_bits << shift;
+        println!("(MSB)Length final: {:?}", length_bits);
         if (byte[0] & 0x80) == 0 {
             break;
         }
 
         shift += 7;
     }
-    Ok(())
+    Ok(length_bits)
+}
+
+fn create_object_bits(byte: u8) -> Result<ObjectType, GitError> {
+    let byte = (byte & 0b01110000) >> 4;
+    create_object(byte)
 }
 
 /// Crea un objeto `ObjectType` a partir de un valor de tipo de objeto representado por `type_bits`.
@@ -108,8 +104,8 @@ fn read_size_encoded_length(reader: &mut dyn Read, length: &mut usize) -> Result
 /// * `Ok(ObjectType)`: Si el valor de `type_bits` corresponde a un tipo de objeto válido.
 /// * `Err(GitError)`: Si el valor de `type_bits` no corresponde a un tipo de objeto válido y genera un error `GitError::InvalidObjectType`.
 ///
-fn create_object(type_bits: u8) -> Result<ObjectType, GitError> {
-    match type_bits {
+fn create_object(byte: u8) -> Result<ObjectType, GitError> {
+    match byte {
         1 => Ok(ObjectType::Commit),
         2 => Ok(ObjectType::Tree),
         3 => Ok(ObjectType::Blob),
@@ -120,8 +116,19 @@ fn create_object(type_bits: u8) -> Result<ObjectType, GitError> {
     }
 }
 
+fn print_u8_bits(value: u8) {
+    print!("bits: ");
+    for i in (0..8).rev() {
+        let bit = (value >> i) & 1;
+        print!("{}", bit);
+    }
+    println!(); // Salto de línea después de imprimir los bits
+}
+
 #[cfg(test)]
 mod tests {
+    use std::io::Cursor;
+
     use super::*;
     use crate::errors::GitError;
 
@@ -171,5 +178,86 @@ mod tests {
     fn test_create_object_invalid_type_0() {
         let object_type = create_object(0); // Tipo inválido
         assert_eq!(object_type, Err(GitError::InvalidObjectType));
+    }
+
+    #[test]
+    fn test_read_size_encoded_length() {
+        // Simulamos un Reader con datos de entrada
+        let data: Vec<u8> = vec![
+            0b10001010, // 138 en decimal
+            0b01011000, // 88 en decimal
+        ];
+
+        // Creamos un cursor para simular la entrada de datos
+        let mut cursor = Cursor::new(data);
+
+        // Leemos la longitud codificada
+        let result = read_size_encoded_length(&mut cursor, 0b10011010); // 154 en decimal
+        assert_eq!(result, Ok(180394));
+    }
+
+    #[test]
+    fn test_read_type_and_length() {
+        // Simulamos un Reader con datos de entrada
+        let data: Vec<u8> = vec![
+            0b10011010, // 154 en decimal
+            0b10001010, // 138 en decimal
+            0b01011000, // 88 en decimal
+        ];
+
+        // Creamos un cursor para simular la entrada de datos
+        let mut cursor = Cursor::new(data);
+
+        let result = read_type_and_length(&mut cursor);
+        assert_eq!(
+            result,
+            Ok(ObjectEntry {
+                obj_type: ObjectType::Commit,
+                obj_length: 180394
+            })
+        );
+    }
+
+    #[test]
+    fn test_read_type_and_length_2() {
+        // Simulamos un Reader con datos de entrada
+        let data: Vec<u8> = vec![
+            0b10011010, // 154 en decimal
+            0b10001010, // 138 en decimal
+            0b01011000, // 88 en decimal
+            0b01001010, //  74 en decimal
+            0b11101111, // 239 en decimal
+            0b01011000, //  88 en decimal
+        ];
+
+        // Creamos un cursor para simular la entrada de datos
+        let mut cursor = Cursor::new(data);
+
+        let result = read_type_and_length(&mut cursor);
+        assert_eq!(
+            result,
+            Ok(ObjectEntry {
+                obj_type: ObjectType::Commit,
+                obj_length: 180394
+            })
+        );
+
+        let result = read_type_and_length(&mut cursor);
+        assert_eq!(
+            result,
+            Ok(ObjectEntry {
+                obj_type: ObjectType::Tag,
+                obj_length: 10
+            })
+        );
+
+        let result = read_type_and_length(&mut cursor);
+        assert_eq!(
+            result,
+            Ok(ObjectEntry {
+                obj_type: ObjectType::OfsDelta,
+                obj_length: 1423
+            })
+        );
     }
 }

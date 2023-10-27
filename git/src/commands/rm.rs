@@ -3,36 +3,20 @@ use crate::util::formats::hash_generate;
 use std::fs::{self, File};
 use std::io::Read;
 use std::io::Write;
-use crate::models::client::Client;
 
 const GIT_DIR: &str = "/.git";
-
-/// Esta función se encarga de llamar al comando rm con los parametros necesarios
-/// ###Parametros:
-/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función rm
-/// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<(), GitError> {
-    if args.len() != 1 {
-        return Err(GitError::InvalidArgumentCountRmError);
-    }
-    let directory = client.get_directory_path();
-    let file_name = args[0];
-    git_rm(&directory, file_name)
-}
 
 /// Remueve un archivo del working directory y del index.
 /// ###Parametros
 /// 'directory': directorio del repositorio local.
 /// 'file_name': nombre del archivo a remover.
 pub fn git_rm(directory: &str, file_name: &str) -> Result<(), GitError> {
-
     match compare_hash(file_name, directory) {
         Ok(can_rm) => can_rm,
         Err(_) => return Err(GitError::ReadFileError),
     };
 
     Ok(())
-
 }
 
 /// Compara el hash del archivo que se quiere remover con el hash de ese archivo que esta en el index.
@@ -46,10 +30,10 @@ fn compare_hash(file_name: &str, directory: &str) -> Result<(), GitError> {
         Err(_) => return Err(GitError::ReadFileError),
     };
     let hash_file = hash_generate(&file_content);
-    
+
     match remove_from_index(directory, file_name, hash_file.as_str()) {
-        Ok(_) => {},
-        Err(_) => return Err(GitError::ReadFileError),   // CAMBIAR ERROR
+        Ok(_) => {}
+        Err(_) => return Err(GitError::ReadFileError), // CAMBIAR ERROR
     };
 
     Ok(())
@@ -83,9 +67,7 @@ fn remove_from_index(directory: &str, file_name: &str, hash_file: &str) -> Resul
     let mut lines: Vec<String> = index_content.lines().map(String::from).collect();
 
     // Encuentra la línea que empiece con el nombre del archivo.
-    let index_hash = lines
-        .iter()
-        .position(|line| line.starts_with(file_name));
+    let index_hash = lines.iter().position(|line| line.starts_with(file_name));
 
     // Si se encuentra la línea, elimínala del vector.
     if let Some(index) = index_hash {
@@ -94,11 +76,10 @@ fn remove_from_index(directory: &str, file_name: &str, hash_file: &str) -> Resul
             let file_path = format!("{}/{}", directory, file_name);
             // Se remueve del working directory
             match fs::remove_file(file_path) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(_) => return Err(GitError::OpenFileError), // CAMBIAR EL ERROR
             };
-        }
-        else {
+        } else {
             println!("No se puede remover el archivo porque no esta en su version mas reciente.");
         }
     }
@@ -117,7 +98,6 @@ fn remove_from_index(directory: &str, file_name: &str, hash_file: &str) -> Resul
 
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -139,7 +119,9 @@ mod tests {
         index_file.write_all(b"remove.rs blob 99800b85d3383e3a2fb45eb7d0066a4879a9dad0\nhola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0").expect("Error");
         let mut index_file = File::open("a/.git/index").expect("Error");
         let mut index_content = String::new();
-        index_file.read_to_string(&mut index_content).expect("Error");
+        index_file
+            .read_to_string(&mut index_content)
+            .expect("Error");
 
         // Se chequea que el index se haya creado bien.
         assert_eq!(index_content, "remove.rs blob 99800b85d3383e3a2fb45eb7d0066a4879a9dad0\nhola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0");
@@ -150,8 +132,13 @@ mod tests {
         drop(index_file);
         let mut index_file = File::open("a/.git/index").expect("Error");
         let mut index_content = String::new();
-        index_file.read_to_string(&mut index_content).expect("Error");
-        assert_eq!(index_content, "hola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0\n");
+        index_file
+            .read_to_string(&mut index_content)
+            .expect("Error");
+        assert_eq!(
+            index_content,
+            "hola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0\n"
+        );
 
         fs::remove_dir_all("a/").expect("Falló al remover el directorio temporal");
         assert!(result.is_ok());
