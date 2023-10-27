@@ -10,6 +10,7 @@ const INITIAL_BRANCH: &str = "main";
 /// Esta función se encarga de llamar al comando init con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función init
+/// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_init(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.is_empty() {
         return Err(GitError::InvalidArgumentCountInitError);

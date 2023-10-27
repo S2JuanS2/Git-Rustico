@@ -17,7 +17,11 @@ pub mod commit;
 pub mod fetch;
 pub mod hash_object;
 pub mod init;
-
+pub mod log;
+pub mod pull;
+pub mod push;
 pub mod clone;
 pub mod status;
 pub mod rm;
+pub mod remote;
+pub mod merge;

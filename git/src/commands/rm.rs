@@ -3,8 +3,22 @@ use crate::util::formats::hash_generate;
 use std::fs::{self, File};
 use std::io::Read;
 use std::io::Write;
+use crate::models::client::Client;
 
 const GIT_DIR: &str = "/.git";
+
+/// Esta función se encarga de llamar al comando rm con los parametros necesarios
+/// ###Parametros:
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función rm
+/// 'client': Cliente que contiene la información del cliente que se conectó
+pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    if args.len() != 1 {
+        return Err(GitError::InvalidArgumentCountRmError);
+    }
+    let directory = client.get_directory_path();
+    let file_name = args[0];
+    git_rm(&directory, file_name)
+}
 
 /// Remueve un archivo del working directory y del index.
 /// ###Parametros
