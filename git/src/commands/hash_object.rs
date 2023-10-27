@@ -10,6 +10,7 @@ const COMMIT: &str = "commit";
 /// Esta función se encarga de llamar al comando hash-object con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función hash-object
+/// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_hash_object(args: Vec<&str>) -> Result<(), GitError> {
     if args.len() != 3 {
         return Err(GitError::InvalidArgumentCountHashObjectError);

@@ -12,6 +12,7 @@ const REMOTES_DIR: &str = "refs/remotes/";
 /// Esta función se encarga de llamar al comando fetch con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función fetch
+/// 'client': cliente que contiene el directorio del repositorio local
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     // Verifica que se haya ingresado un nombre de repositorio remoto
     let directory = client.get_directory_path();
