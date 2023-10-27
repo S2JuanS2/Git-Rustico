@@ -56,15 +56,18 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
 }
 
 fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, GitError> {
+    let mut bytes_spent = 1;
+
     let mut length_bits = (byte & 0b00001111) as usize;
     if (byte & 0b10000000) == 0 {
-        return Ok(length_bits);
+        return Ok(length_bits - bytes_spent); // Se gasto un bit para el tipo
     }
 
     println!("(MSB)Length firts: {:?}", length_bits);
     let mut shift: usize = 4;
 
     loop {
+        bytes_spent += 1;
         let mut byte = [0u8; 1];
         if reader.read_exact(&mut byte).is_err() {
             return Err(GitError::HeaderPackFileReadError);
@@ -72,7 +75,7 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
         println!("(MSB)Buffer: {:?}", byte);
 
         let seven_bits = (byte[0] & 0b01111111) as usize;
-        print_u8_bits(byte[0] & 0b01111111);
+        // print_u8_bits(byte[0] & 0b01111111);
         println!(
             "(MSB)Unire:length seven: {:?} y length_bits: {}",
             seven_bits, length_bits
@@ -85,7 +88,7 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
 
         shift += 7;
     }
-    Ok(length_bits)
+    Ok(length_bits - bytes_spent)
 }
 
 fn create_object_bits(byte: u8) -> Result<ObjectType, GitError> {
@@ -124,6 +127,7 @@ fn print_u8_bits(value: u8) {
     }
     println!(); // Salto de línea después de imprimir los bits
 }
+
 
 #[cfg(test)]
 mod tests {

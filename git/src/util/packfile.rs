@@ -1,5 +1,9 @@
 use crate::{consts::PACK_SIGNATURE, errors::GitError, util::objects::read_type_and_length};
-use std::io::Read;
+use std::{io::{Read, Write}, fs::File};
+use flate2::{read::ZlibDecoder, write::ZlibEncoder};
+use flate2::Compression;
+
+
 // use std::fs::File;
 // use flate2::read::ZlibDecoder;
 
@@ -17,7 +21,7 @@ use std::io::Read;
 //     Ok(())
 // }
 
-pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
+pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, GitError> {
     read_signature(reader)?;
     println!("Signature: {}", PACK_SIGNATURE);
 
@@ -26,36 +30,121 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<(), GitError> {
 
     let number_object = read_objects_contained(reader)?;
     println!("Number of objects: {}", number_object);
+    Ok(number_object)
+}
 
-    for _ in 0..number_object {
+pub fn read_packfile_data(reader: &mut dyn Read, objects: usize) -> Result<(), GitError> {
+    
+    for _ in 0..objects {
         let object_entry = read_type_and_length(reader)?;
-        let mut buffer: Vec<u8> = vec![0u8; object_entry.obj_length as usize - 2];
         println!("Object entry: {:?}", object_entry);
-
-        if reader.read_exact(&mut buffer).is_err() {
-            println!("No se pudo completar el buffer");
-            return Err(GitError::HeaderPackFileReadError);
-        };
-        println!("Object data len: {:?}", buffer.len());
-        println!("Object data: {:?}", buffer)
+        read_object_data(reader, object_entry.obj_length)?;
     }
     Ok(())
 }
 
-pub fn read_packfile_data(reader: &mut dyn Read) -> Result<(), GitError> {
-    let mut buffer = [0; 10]; // Tamaño del búfer de lectura
-    match reader.read(&mut buffer) {
-        Ok(_) => {
-            let m = String::from_utf8(buffer.to_vec()).expect("No se pudo convertir a String");
-            println!("Lectura exitosa: {:?}", m);
-        }
-        Err(e) => {
-            println!("Error: {}", e);
-            return Err(GitError::GenericError);
-        }
+fn read_object_data(reader: &mut dyn Read, object_length: usize) -> Result<Vec<u8>, GitError> {
+    let mut buffer = vec![0; object_length];
+    if reader.read_exact(&mut buffer).is_err() {
+        println!("No se pudo completar el buffer");
+        return Err(GitError::HeaderPackFileReadError);
     };
-    Ok(())
+    Ok(buffer)
 }
+
+// fn compress_data(data: &[u8]) -> Result<(), GitError> {
+//     let compressed_data = Vec::new();
+//     let mut encoder = ZlibEncoder::new(compressed_data, Compression::default());
+//     match encoder.write_all(data)
+//     {
+//         Ok(_) => (),
+//         Err(e) => {
+//             println!("Error: {}", e);
+//             return Err(GitError::GenericError);
+//         }
+//     };
+//     let a = match encoder.finish()
+//     {
+//         Ok(a) => a,
+//         Err(e) => {
+//             println!("Error: {}", e);
+//             return Err(GitError::GenericError);
+//         }
+//     };
+//     println!("Compressed data: {:?}", a);
+//     Ok(())
+// }
+// pub fn read_pack_prueba(reader: &mut dyn Read) -> Result<(), GitError>
+// {
+    // // Crear un buffer para almacenar los datos recibidos
+    // let mut server_response = Vec::new();
+    // let mut buffer = [0; 4096]; // Tamaño del buffer, ajusta según tus necesidades
+
+    // // Leer los datos del servidor y almacenarlos en server_response
+    // loop {
+    //     let bytes_read = reader.read(&mut buffer).expect("Error al leer del servidor");
+    //     if bytes_read == 0 {
+    //         break; // No quedan más datos por leer
+    //     }
+    //     server_response.extend_from_slice(&buffer[..bytes_read]);
+    // }
+
+    // println!("Recibido: {:?}", server_response);
+    // println!("Len: {:?}", server_response.len());
+    // // Supongamos que `server_response` contiene los datos del packfile recibidos del servidor
+    // let mut zlib_decoder = ZlibDecoder::new(&server_response[..]);
+    // // Crear un vector para almacenar los datos descomprimidos
+    // let mut decompressed_data = Vec::new();
+    // zlib_decoder.read_to_end(&mut decompressed_data).expect("Error al descomprimir el packfile");
+    // println!("Descomprimido: {:?}", decompressed_data);
+    // Ok(())
+    // Crea un archivo .pack en el sistema de archivos local
+//         let mut file = match File::create("nombre_del_archivo.pack")
+//         {
+//             Ok(file) => file,
+//             Err(e) => {
+//                 println!("Error: {}", e);
+//                 return Err(GitError::GenericError);
+//             }
+//         };
+
+//         // Lee del stream y copia los datos al archivo
+//         let mut buffer = [0u8; 4096]; // Puedes ajustar el tamaño del búfer según tus necesidades
+//         loop {
+//             let bytes_read = match reader.read(&mut buffer)
+//             {
+//                 Ok(bytes_read) => bytes_read,
+//                 Err(e) => {
+//                     println!("Error: {}", e);
+//                     return Err(GitError::GenericError);
+//                 }
+//             };
+//             if bytes_read == 0 {
+//                 break; // Se llegó al final del archivo
+//             }
+//             match file.write_all(&buffer[..bytes_read])
+//             {
+//                 Ok(_) => (),
+//                 Err(e) => {
+//                     println!("Error: {}", e);
+//                     return Err(GitError::GenericError);
+//                 }
+//             };
+//             file.flush().expect("Error al escribir en el archivo");
+//         }
+
+//         let lala = match reader.read(&mut buffer)
+//         {
+//             Ok(bytes_read) => bytes_read,
+//             Err(e) => {
+//                 println!("Error: {}", e);
+//                 return Err(GitError::GenericError);
+//             }
+//         };
+//         println!("Lala: {:?}", lala);
+//         println!("HOla");
+//         Ok(())
+// }
 
 /// Lee y verifica la firma del encabezado del archivo PACKFILE a partir del lector proporcionado.
 ///
