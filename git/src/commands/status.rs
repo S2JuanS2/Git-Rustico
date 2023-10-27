@@ -14,6 +14,7 @@ const OBJECTS_DIR: &str = "objects";
 /// Esta función se encarga de llamar al comando status con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
+/// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_status(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.is_empty() {
         return Err(GitError::InvalidArgumentCountStatusError);

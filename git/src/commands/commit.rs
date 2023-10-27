@@ -83,6 +83,7 @@ impl Commit {
 /// Esta función se encarga de llamar al comando commit con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de Strings que contiene los parametros que se le pasaran al comando commit
+/// 'client': Cliente que contiene el directorio del repositorio local
 pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.len() != 2 {
         return Err(GitError::InvalidArgumentCountCommitError);
