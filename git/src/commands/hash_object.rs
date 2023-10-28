@@ -11,24 +11,23 @@ const COMMIT: &str = "commit";
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función hash-object
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_hash_object(args: Vec<&str>) -> Result<(), GitError> {
-    if args.len() != 3 {
-        return Err(GitError::InvalidArgumentCountHashObjectError);
+pub fn handle_hash_object(args: Vec<&str>) -> Result<String, GitError> {
+    if args.len() == 1 && args[0] != "-t"{
+        git_hash_object(BLOB, args[0])
     }
-    if args[0] != "-t" {
-        return Err(GitError::FlagHashObjectNotRecognizedError);
+    else if args.len() == 3 && args[0] == "-t"{
+        git_hash_object(args[1], args[2])
     }
-    let type_object = args[1];
-    let file_name = args[2];
-
-    git_hash_object(type_object, file_name)
+    else{
+        return Err(GitError::InvalidArgumentCountHashObjectError)
+    }
 }
 
 /// Esta función devuelve el hash de un objeto según su tipo.
 /// ###Parametros:
 /// 'type_object': tipo del objeto, puede ser, commit, tree, blob, tag
 /// 'file_name': Nombre del archivo del cual se leera el contenido para generar el hash
-pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitError> {
+pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<String, GitError> {
     let mut file = match File::open(file_name) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
@@ -78,9 +77,7 @@ pub fn git_hash_object(type_object: &str, file_name: &str) -> Result<(), GitErro
 
     let hash = hash_generate(&object_contents);
 
-    println!("{}", hash);
-
-    Ok(())
+    Ok(hash)
 }
 
 #[cfg(test)]

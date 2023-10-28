@@ -1,8 +1,8 @@
+use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use std::path::Path;
 
-const GIT_DIR: &str = "/.git";
 const BRANCH_DIR: &str = "refs/heads/";
 
 

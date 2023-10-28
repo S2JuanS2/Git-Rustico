@@ -12,8 +12,7 @@ fn main() -> Result<(), GitError> {
 
     let address = format!("{}:{}", config.ip, config.port);
 
-    //Cambiar el directorio del cliente
-    let client = Client::new(address, "./test/".to_string());
+    let client = Client::new(address, "./test_repo".to_string());
 
     let controller = Controller::new(client.clone());
 
