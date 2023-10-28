@@ -16,7 +16,7 @@ pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, GitError> 
         return Err(GitError::InvalidArgumentCountInitError);
     }
 
-    let directory = format!("{}",client.get_directory_path());
+    let directory = format!("{}", client.get_directory_path());
     let result = git_init(&directory)?;
 
     Ok(result)

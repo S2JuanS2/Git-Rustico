@@ -1,7 +1,7 @@
-use crate::errors::GitError;
-use crate::util::formats::hash_generate;
 use crate::consts::*;
+use crate::errors::GitError;
 use crate::models::client::Client;
+use crate::util::formats::hash_generate;
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::File;
@@ -149,7 +149,7 @@ fn commit_log(directory: &str) -> Result<(), GitError> {
 /// 'hash_commit': hash del objeto commit previamente generado
 fn object_commit_save(directory: &str, hash_commit: String) -> Result<(), GitError> {
     //Crear el objeto commit
-    let object_commit_path = format!("{}{}/objects/{}",directory, GIT_DIR, &hash_commit[..2]);
+    let object_commit_path = format!("{}{}/objects/{}", directory, GIT_DIR, &hash_commit[..2]);
     match fs::create_dir_all(object_commit_path) {
         Ok(_) => (),
         Err(_) => return Err(GitError::CreateDirError),

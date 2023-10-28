@@ -28,7 +28,6 @@ impl Controller {
         Controller { client }
     }
     pub fn send_command(&self, command: &str) -> Result<String, GitError> {
-        
         let result = handle_command(command.to_string().clone(), self.client.clone())?;
 
         Ok(result)

@@ -1,8 +1,8 @@
 use crate::errors::GitError;
 extern crate flate2;
+use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use flate2::read::ZlibDecoder;
 use sha1::{Digest, Sha1};
 use std::fs::File;
 use std::io::{Read, Write};
@@ -48,8 +48,7 @@ pub fn compressor_object(store: String, mut file_object: File) -> Result<(), Git
 /// ###Parametros:
 /// 'content': directorio del archivo comprimido a descomprimir
 pub fn decompression_object(path: &str) -> Result<String, GitError> {
-
-    let file = match File::open(&path){
+    let file = match File::open(&path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
     };
@@ -57,8 +56,8 @@ pub fn decompression_object(path: &str) -> Result<String, GitError> {
     let mut reader = ZlibDecoder::new(file);
 
     let mut uncompressed_content = String::new();
-    if let Err(_) = reader.read_to_string(&mut uncompressed_content){
-        return Err(GitError::ReadFileError)
+    if let Err(_) = reader.read_to_string(&mut uncompressed_content) {
+        return Err(GitError::ReadFileError);
     };
 
     Ok(uncompressed_content)
@@ -79,7 +78,6 @@ mod tests {
         assert_eq!(result_hash.len(), 40);
     }
 
-
     #[test]
     fn test_compressor_and_decompression_objects() {
         // Contenido de prueba
@@ -88,7 +86,8 @@ mod tests {
         let test_file = "test_file";
 
         // Llamar a la función de compresión
-        let file_for_compression = File::create(test_file).expect("Falló al crear el archivo de prueba");
+        let file_for_compression =
+            File::create(test_file).expect("Falló al crear el archivo de prueba");
         match compressor_object(test_content.to_string(), file_for_compression) {
             Ok(_) => (),
             Err(err) => {
@@ -108,5 +107,4 @@ mod tests {
         // Se borra el archivo de prueba
         std::fs::remove_file(test_file).expect("Falló al remover el archivo de prueba");
     }
-
 }

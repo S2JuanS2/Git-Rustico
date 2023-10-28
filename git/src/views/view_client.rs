@@ -75,22 +75,22 @@ impl View {
             let result = self.controller.send_command(&command);
 
             if let Some(buffer) = response_for_button_send.buffer() {
-            let mut end_iter = buffer.end_iter();
-            match result {
-                Ok(response) => {
-                    let response_format = format!("\n{}\n{}",DIV,response);
-                    buffer.insert(&mut end_iter, &response_format);
+                let mut end_iter = buffer.end_iter();
+                match result {
+                    Ok(response) => {
+                        let response_format = format!("\n{}\n{}", DIV, response);
+                        buffer.insert(&mut end_iter, &response_format);
+                    }
+                    Err(e) => {
+                        let error_message = format!(
+                            "\n{}\nError al enviar el comando '{}'\n[Error] {}\n",
+                            DIV,
+                            command,
+                            e.message()
+                        );
+                        buffer.insert(&mut end_iter, &error_message);
+                    }
                 }
-                Err(e) => {
-                    let error_message = format!(
-                        "\n{}\nError al enviar el comando '{}'\n[Error] {}\n",
-                        DIV,
-                        command,
-                        e.message()
-                    );
-                    buffer.insert(&mut end_iter, &error_message);
-                }
-            }
             }
         });
 

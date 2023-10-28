@@ -109,7 +109,8 @@ fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Result<Str
         ));
     } else {
         formatted_result.push_str("Changes not staged for commit:\n");
-        formatted_result.push_str("  (use \"git add <file>...\" to update what will be committed)\n");
+        formatted_result
+            .push_str("  (use \"git add <file>...\" to update what will be committed)\n");
         formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
 
         for file in updated_files_list {
@@ -155,9 +156,7 @@ fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, GitError> {
 /// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-fn get_hashes_working_directory(
-    directory: &str,
-) -> Result<HashMap<String, String>, GitError> {
+fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = format!("{}", directory);
     let visit_working_directory =

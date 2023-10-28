@@ -10,14 +10,12 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
-
 fn send_message_log(
-    tx: & Arc<Mutex<Sender<String>>>,
+    tx: &Arc<Mutex<Sender<String>>>,
     message: &str,
     error: GitError,
 ) -> Result<(), GitError> {
-    match tx.lock().unwrap().send(message.to_string())
-    {
+    match tx.lock().unwrap().send(message.to_string()) {
         Ok(_) => Ok(()),
         Err(_) => Err(error),
     }
@@ -27,14 +25,17 @@ fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) -> Result<(), Git
     Ok(())
 }
 
-fn init_new_client(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, GitError> {
+fn init_new_client(
+    stream: &TcpStream,
+    tx: &Arc<Mutex<Sender<String>>>,
+) -> Result<String, GitError> {
     // Leer datos del cliente
     let client_description = match stream.peer_addr() {
         Ok(addr) => {
             let message = format!("Conexión establecida con {}", addr);
             log_message(tx, &message)?;
             format!("Client {} => ", addr)
-        },
+        }
         Err(_) => {
             log_message(tx, "Cliente desconocido conectado")?;
             "Cliente desconocido => ".to_string()
@@ -43,7 +44,7 @@ fn init_new_client(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>) -> Resul
     Ok(client_description)
 }
 
-fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError>{
+fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
     let client_description = init_new_client(stream, &tx)?;
     let mut buffer = [0; 1024]; // Buffer de lectura
 

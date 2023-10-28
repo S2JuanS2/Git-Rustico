@@ -12,14 +12,12 @@ const COMMIT: &str = "commit";
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función hash-object
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_hash_object(args: Vec<&str>) -> Result<String, GitError> {
-    if args.len() == 1 && args[0] != "-t"{
+    if args.len() == 1 && args[0] != "-t" {
         git_hash_object(BLOB, args[0])
-    }
-    else if args.len() == 3 && args[0] == "-t"{
+    } else if args.len() == 3 && args[0] == "-t" {
         git_hash_object(args[1], args[2])
-    }
-    else{
-        return Err(GitError::InvalidArgumentCountHashObjectError)
+    } else {
+        return Err(GitError::InvalidArgumentCountHashObjectError);
     }
 }
 
