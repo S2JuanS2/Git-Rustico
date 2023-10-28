@@ -149,7 +149,7 @@ fn commit_log(directory: &str) -> Result<(), GitError> {
 /// 'hash_commit': hash del objeto commit previamente generado
 fn object_commit_save(directory: &str, hash_commit: String) -> Result<(), GitError> {
     //Crear el objeto commit
-    let object_commit_path = format!("{}{}/objects/{}",GIT_DIR, directory, &hash_commit[..2]);
+    let object_commit_path = format!("{}{}/objects/{}",directory, GIT_DIR, &hash_commit[..2]);
     match fs::create_dir_all(object_commit_path) {
         Ok(_) => (),
         Err(_) => return Err(GitError::CreateDirError),
