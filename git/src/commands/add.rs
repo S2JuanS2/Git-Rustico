@@ -122,7 +122,10 @@ fn add_to_index(
     if index_file.set_len(0).is_err() {
         return Some(Err(GitError::WriteFileError));
     }
-    if index_file.write_all(updated_index_content.as_bytes()).is_err() {
+    if index_file
+        .write_all(updated_index_content.as_bytes())
+        .is_err()
+    {
         return Some(Err(GitError::WriteFileError));
     }
 

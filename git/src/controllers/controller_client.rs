@@ -7,13 +7,13 @@ use crate::commands::commit::handle_commit;
 use crate::commands::fetch::handle_fetch;
 use crate::commands::hash_object::handle_hash_object;
 use crate::commands::init::handle_init;
+use crate::commands::log::handle_log;
 use crate::commands::merge::handle_merge;
 use crate::commands::pull::handle_pull;
 use crate::commands::push::handle_push;
 use crate::commands::remote::handle_remote;
-use crate::commands::status::handle_status;
-use crate::commands::log::handle_log;
 use crate::commands::rm::handle_rm;
+use crate::commands::status::handle_status;
 
 use crate::errors::GitError;
 use crate::models::client::Client;
@@ -87,22 +87,22 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
             "status" => {
                 result = handle_status(rest_of_command, client)?;
             }
-            "log" =>{
+            "log" => {
                 handle_log(rest_of_command, client)?;
             }
-            "pull" =>{
+            "pull" => {
                 handle_pull(rest_of_command, client)?;
             }
-            "push" =>{
+            "push" => {
                 handle_push(rest_of_command, client)?;
             }
-            "merge" =>{
+            "merge" => {
                 handle_merge(rest_of_command, client)?;
             }
-            "remote" =>{
+            "remote" => {
                 handle_remote(rest_of_command, client)?;
             }
-            "rm" =>{
+            "rm" => {
                 handle_rm(rest_of_command, client)?;
             }
             _ => {

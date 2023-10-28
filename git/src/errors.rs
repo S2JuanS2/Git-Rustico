@@ -79,6 +79,7 @@ pub enum GitError {
     InvalidArgumentCountPushError,
     InvalidArgumentCountRemoteError,
     InvalidArgumentCountRmError,
+    PackObjectReadError,
 }
 
 impl GitError {
@@ -167,7 +168,7 @@ impl GitError {
             GitError::InvalidArgumentCountPushError => "Número de argumentos inválido para el comando push.\nUsar: git push <remote name> <branch name>",
             GitError::InvalidArgumentCountRemoteError => "Número de argumentos inválido para el comando remote.\nUsar: git remote <flag> <remote name> <url>",
             GitError::InvalidArgumentCountRmError => "Número de argumentos inválido para el comando rm.\nUsar: git rm <file name>",
-
+            GitError::PackObjectReadError => "No se pudo leer el objeto del packfile",
         }
     }
 }
