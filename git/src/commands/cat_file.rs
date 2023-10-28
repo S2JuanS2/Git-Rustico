@@ -1,5 +1,6 @@
 //use crate::util::formats::decompression_object;
 use crate::models::client::Client;
+use crate::consts::*;
 use crate::util::formats::hash_generate;
 use std::fs::File;
 use std::io::Read;
@@ -33,7 +34,7 @@ pub fn git_cat_file(directory: &str, object_hash: &str) -> Result<(), GitError> 
     }
 
     //Lee los primeros 2 digitos del hash contenidos en el nombre de la carpeta.
-    let path = format!("{}/.git/objects/{}", directory, &object_hash[..2]);
+    let path = format!("{}{}/objects/{}",GIT_DIR, directory, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
 

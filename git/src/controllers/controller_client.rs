@@ -27,18 +27,23 @@ impl Controller {
     pub fn new(client: Client) -> Controller {
         Controller { client }
     }
-    pub fn send_command(&self, command: &str) -> Result<(), GitError> {
-        handle_command(command.to_string().clone(), self.client.clone())
+    pub fn send_command(&self, command: &str) -> Result<String, GitError> {
+        
+        let result = handle_command(command.to_string().clone(), self.client.clone())?;
+
+        Ok(result)
     }
 }
 
 /// Esta función se encarga de llamar a al comando adecuado con los parametros necesarios
 /// ###Parametros:
 /// 'buffer': String que contiene el comando que se le pasara al servidor
-fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
+fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
     let command = buffer.trim();
     let commands = command.split_whitespace().collect::<Vec<&str>>();
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
+
+    let mut result = " ".to_string();
 
     if command.is_empty() {
         return Err(GitError::NonGitCommandError);
@@ -51,18 +56,18 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
     if commands[0] == "git" {
         match commands[1] {
             "branch" => {
-                handle_branch(rest_of_command, client)?;
+                result = handle_branch(rest_of_command, client)?;
             }
             "clone" => {
                 let result = handle_clone(rest_of_command, client);
                 println!("Result: {:?}", result);
-                return result;
+                //return result;
             }
             "commit" => {
                 handle_commit(rest_of_command, client)?;
             }
             "init" => {
-                handle_init(rest_of_command, client)?;
+                result = handle_init(rest_of_command, client)?;
             }
             "cat_file" => {
                 handle_cat_file(rest_of_command, client)?;
@@ -71,16 +76,16 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
                 handle_add(rest_of_command, client)?;
             }
             "checkout" => {
-                handle_checkout(rest_of_command, client)?;
+                result = handle_checkout(rest_of_command, client)?;
             }
             "fetch" => {
                 handle_fetch(rest_of_command, client)?;
             }
             "hash_object" => {
-                handle_hash_object(rest_of_command)?;
+                result = handle_hash_object(rest_of_command)?;
             }
             "status" => {
-                handle_status(rest_of_command, client)?;
+                result = handle_status(rest_of_command, client)?;
             }
             "log" => {
                 handle_log(rest_of_command, client)?;
@@ -107,5 +112,5 @@ fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
     } else {
         return Err(GitError::NonGitCommandError);
     }
-    Ok(())
+    Ok(result)
 }

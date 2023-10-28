@@ -1,11 +1,10 @@
 use crate::errors::GitError;
+use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::formats::hash_generate;
 use std::fs::{self, File};
 use std::io::Read;
 use std::io::Write;
-
-const GIT_DIR: &str = "/.git";
 
 /// Esta función se encarga de llamar al comando rm con los parametros necesarios
 /// ###Parametros:

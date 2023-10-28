@@ -11,12 +11,15 @@ const INITIAL_BRANCH: &str = "main";
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función init
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_init(args: Vec<&str>, client: Client) -> Result<(), GitError> {
-    if args.is_empty() {
+pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+    if args.len() > 0 {
         return Err(GitError::InvalidArgumentCountInitError);
     }
-    let directory = client.get_directory_path();
-    git_init(&directory)
+
+    let directory = format!("{}",client.get_directory_path());
+    let result = git_init(&directory)?;
+
+    Ok(result)
 }
 
 /// Crea un directorio si no existe
@@ -56,7 +59,7 @@ fn create_file(file: &str, content: &str) -> Result<(), GitError> {
 /// Esta función inicia un repositorio git creando los directorios y archivos necesarios.
 /// ###Parametros:
 /// 'directory': dirección donde se inicializará el repositorio.
-pub fn git_init(directory: &str) -> Result<(), GitError> {
+pub fn git_init(directory: &str) -> Result<String, GitError> {
     create_directory(directory)?;
 
     let git_dir = format!("{}/.git", directory);
@@ -69,12 +72,14 @@ pub fn git_init(directory: &str) -> Result<(), GitError> {
 
     let head_file = format!("{}/HEAD", &git_dir);
     let head_content = format!("ref: /refs/heads/{}\n", INITIAL_BRANCH);
+    let index_file = format!("{}/index", &git_dir);
 
     create_file(&head_file, &head_content)?;
+    create_file(&index_file, "")?;
 
-    println!("Repositorio inicializado en {}", directory);
+    let result = format!("Repositorio inicializado");
 
-    Ok(())
+    Ok(result)
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use crate::errors::GitError;
 use crate::util::formats::hash_generate;
-
+use crate::consts::*;
 use crate::models::client::Client;
 use chrono::{DateTime, Local};
 use std::fs;
@@ -149,7 +149,7 @@ fn commit_log(directory: &str) -> Result<(), GitError> {
 /// 'hash_commit': hash del objeto commit previamente generado
 fn object_commit_save(directory: &str, hash_commit: String) -> Result<(), GitError> {
     //Crear el objeto commit
-    let object_commit_path = format!("{}/.git/objects/{}", directory, &hash_commit[..2]);
+    let object_commit_path = format!("{}{}/objects/{}",GIT_DIR, directory, &hash_commit[..2]);
     match fs::create_dir_all(object_commit_path) {
         Ok(_) => (),
         Err(_) => return Err(GitError::CreateDirError),
@@ -178,8 +178,8 @@ fn commit_content_format(commit: &Commit) -> String {
         .expect("Time error")
         .as_secs();
 
-    //tree <hash-del-arbol>
-    //parent <hash-del-padre1>
+    //tree <hash-del-arbol> -> contiene las referencias a los archivos y directorios
+    //parent <hash-del-padre1> -> contiene el commit anterior
     //parent <hash-del-padre2>
     //author Nombre del Autor <correo@ejemplo.com> Fecha
     //committer Nombre del Commitador <correo@ejemplo.com> Fecha

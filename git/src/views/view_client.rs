@@ -3,6 +3,7 @@ use crate::errors::GitError;
 use gtk::prelude::*;
 use std::rc::Rc;
 
+const DIV: &str = "-----------------------------------------";
 pub struct View {
     controller: Controller,
     window: gtk::Window,
@@ -71,24 +72,28 @@ impl View {
             let command = self.entry.text().to_string();
             self.entry.set_text("");
 
-            let command_input = format!("{}\n\n", &command);
+            let result = self.controller.send_command(&command);
 
             if let Some(buffer) = response_for_button_send.buffer() {
-                let mut end_iter = buffer.end_iter();
-                buffer.insert(&mut end_iter, &command_input);
-            };
-
-            //Arreglar.
-            let result = self.controller.send_command(&command);
-            let _ = match result {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    eprintln!("Error al enviar el comando: {}", command);
-                    eprintln!("Info del error: {}", e.message());
-                    Err(e)
+            let mut end_iter = buffer.end_iter();
+            match result {
+                Ok(response) => {
+                    let response_format = format!("\n{}\n{}",DIV,response);
+                    buffer.insert(&mut end_iter, &response_format);
                 }
-            };
+                Err(e) => {
+                    let error_message = format!(
+                        "\n{}\nError al enviar el comando '{}'\n[Error] {}\n",
+                        DIV,
+                        command,
+                        e.message()
+                    );
+                    buffer.insert(&mut end_iter, &error_message);
+                }
+            }
+            }
         });
+
         self.button_clear.connect_clicked(move |_| {
             if let Some(buffer) = self.response.buffer() {
                 buffer.set_text("");

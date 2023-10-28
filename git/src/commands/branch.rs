@@ -1,18 +1,18 @@
 use crate::errors::GitError;
+use crate::consts::*;
 use crate::models::client::Client;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-const GIT_DIR: &str = "/.git";
 const BRANCH_DIR: &str = "refs/heads/";
 
 /// Esta función se encarga de llamar a al comando branch con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de Strings que contiene los argumentos que se le pasaran al comando branch
 /// 'client': Cliente que contiene el directorio del repositorio local
-pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     let directory = client.get_directory_path();
     if args.is_empty() {
         git_branch_list(&directory)
@@ -28,13 +28,14 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 /// Muestra por pantalla las branch existentes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn git_branch_list(directory: &str) -> Result<(), GitError> {
+pub fn git_branch_list(directory: &str) -> Result<String, GitError> {
     let branches = get_branch(directory)?;
+    let mut formatted_branches = String::new();
     for branch in branches {
-        println!("{}", branch);
+        formatted_branches.push_str(&format!(" - {}\n", branch))
     }
 
-    Ok(())
+    Ok(formatted_branches)
 }
 
 /// Crea una nueva branch si no existe.
@@ -46,7 +47,7 @@ pub fn git_branch_create(
     directory: &str,
     branch_name: &str,
     commit_hash: &str,
-) -> Result<(), GitError> {
+) -> Result<String, GitError> {
     let branches = get_branch(directory)?;
     if branches.contains(&branch_name.to_string()) {
         return Err(GitError::BranchAlreadyExistsError);
@@ -64,7 +65,7 @@ pub fn git_branch_create(
         Ok(_) => (),
         Err(_) => return Err(GitError::BranchFileWriteError),
     }
-    Ok(())
+    Ok("Rama creada con éxito".to_string())
 }
 
 // Devuelve un vector con los nombres de las branchs
@@ -100,7 +101,7 @@ pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a eliminar.
-pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<(), GitError> {
+pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<String, GitError> {
     // falta implementar si estas parado en una brac, no la podes eliminar
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_name.to_string()) {
@@ -114,7 +115,7 @@ pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<(), GitEr
         return Err(GitError::DeleteBranchError);
     }
 
-    Ok(())
+    Ok("Rama eliminada con éxito".to_string())
 }
 
 #[cfg(test)]

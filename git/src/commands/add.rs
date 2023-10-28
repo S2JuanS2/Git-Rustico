@@ -1,9 +1,11 @@
 use crate::errors::GitError;
+use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::formats::{compressor_object, hash_generate};
 use std::fs;
 use std::fs::OpenOptions;
 use std::{fs::File, io::Read, io::Write};
+
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
@@ -43,7 +45,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     let hash_object = hash_generate(&store);
 
-    let git_dir = format!("{}.git", directory);
+    let git_dir = format!("{}{}",GIT_DIR, directory);
     let objects_dir = format!(
         "{}/objects/{}/{}",
         &git_dir,
@@ -55,12 +57,12 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     match fs::create_dir_all(hash_object_path) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(GitError::CreateDirError),
     }
 
     let file_object = match File::create(objects_dir) {
         Ok(file_object) => file_object,
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(GitError::CreateFileError),
     };
 
     compressor_object(store, file_object)?;
