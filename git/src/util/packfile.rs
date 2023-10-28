@@ -3,6 +3,8 @@ use std::{io::{Read, Write}, fs::File};
 use flate2::{read::ZlibDecoder, write::ZlibEncoder};
 use flate2::Compression;
 
+use super::pkt_line::read;
+
 
 // use std::fs::File;
 // use flate2::read::ZlibDecoder;
@@ -34,22 +36,38 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, GitError> {
 }
 
 pub fn read_packfile_data(reader: &mut dyn Read, objects: usize) -> Result<(), GitError> {
-    
     for _ in 0..objects {
+        let mut buffer = [0u8; 132];
+        reader.read_exact(&mut buffer).expect("Error al leer del servidor");
         let object_entry = read_type_and_length(reader)?;
         println!("Object entry: {:?}", object_entry);
         read_object_data(reader, object_entry.obj_length)?;
+        let mut buffer = Vec::new();
+        let a = reader.read_to_end(&mut buffer).expect("Error al leer del servidor");
+        println!("Buffer: {:?}", buffer);
+        println!("Len: {:?}", buffer.len());
+        println!("a: {:?}", a);
     }
     Ok(())
 }
 
-fn read_object_data(reader: &mut dyn Read, object_length: usize) -> Result<Vec<u8>, GitError> {
-    let mut buffer = vec![0; object_length];
-    if reader.read_exact(&mut buffer).is_err() {
-        println!("No se pudo completar el buffer");
-        return Err(GitError::HeaderPackFileReadError);
-    };
-    Ok(buffer)
+fn read_object_data(reader: &mut dyn Read, object_length: usize) -> Result<u8, GitError> {
+    // let mut count = 0;
+    let mut buffer = vec![0; 250];
+    reader.read(&mut buffer).expect("Error al leer del servidor");
+    println!("Buffer: {:?}", buffer);
+
+    let mut decompressed_data = Vec::new();
+
+    let mut zlib_decoder: ZlibDecoder<&[u8]> = ZlibDecoder::new(&buffer[..]);
+    // let mut zlib_decoder = ZlibDecoder::new(reader);
+    let n = zlib_decoder.read_to_end(&mut decompressed_data).unwrap();
+    println!("n: {}", n);
+    println!("Len: {:?}", decompressed_data.len());
+    println!("Descomprimido: {:?}", decompressed_data);
+    let bytes_read = zlib_decoder.total_in();
+    println!("Bytes read: {}", bytes_read);
+    Ok(0)
 }
 
 // fn compress_data(data: &[u8]) -> Result<(), GitError> {
