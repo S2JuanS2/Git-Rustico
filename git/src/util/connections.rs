@@ -86,7 +86,7 @@ pub fn packfile_negotiation(
 
 pub fn receive_packfile(socket: &mut TcpStream) -> Result<(), GitError> {
     // read_pack_prueba(socket)?;
-    let objects= read_packfile_header(socket)?;
+    let objects = read_packfile_header(socket)?;
     read_packfile_data(socket, objects as usize)
     // Ok(())
 }

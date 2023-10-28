@@ -55,7 +55,10 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
     })
 }
 
-pub fn read_type_and_length_from_vec(data: &Vec<u8>, offset: &mut usize) -> Result<ObjectEntry, GitError> {
+pub fn read_type_and_length_from_vec(
+    data: &Vec<u8>,
+    offset: &mut usize,
+) -> Result<ObjectEntry, GitError> {
     let byte = data[*offset];
     *offset += 1;
     let obj_type: ObjectType = create_object_bits(byte)?;
@@ -67,7 +70,11 @@ pub fn read_type_and_length_from_vec(data: &Vec<u8>, offset: &mut usize) -> Resu
     })
 }
 
-fn read_size_encoded_length_from_vec(data: &Vec<u8>, byte: u8, offset: &mut usize) -> Result<usize, GitError> {
+fn read_size_encoded_length_from_vec(
+    data: &Vec<u8>,
+    byte: u8,
+    offset: &mut usize,
+) -> Result<usize, GitError> {
     let mut length_bits = (byte & 0b00001111) as usize;
     if (byte & 0b10000000) == 0 {
         return Ok(length_bits); // Se gasto un bit para el tipo
@@ -151,7 +158,6 @@ fn create_object(byte: u8) -> Result<ObjectType, GitError> {
         _ => Err(GitError::InvalidObjectType),
     }
 }
-
 
 #[cfg(test)]
 mod tests {

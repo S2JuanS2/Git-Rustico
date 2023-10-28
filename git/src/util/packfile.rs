@@ -1,10 +1,16 @@
-use crate::{consts::PACK_SIGNATURE, errors::GitError, util::objects::{read_type_and_length, read_type_and_length_from_vec}};
-use std::{io::{Read, Write}, fs::File};
-use flate2::{read::ZlibDecoder, write::ZlibEncoder};
+use crate::{
+    consts::PACK_SIGNATURE,
+    errors::GitError,
+    util::objects::{read_type_and_length, read_type_and_length_from_vec},
+};
 use flate2::Compression;
+use flate2::{read::ZlibDecoder, write::ZlibEncoder};
+use std::{
+    fs::File,
+    io::{Read, Write},
+};
 
 use super::pkt_line::read;
-
 
 // struct HandleFile<'a> {
 //     reader: &'a mut dyn Read,
@@ -53,7 +59,7 @@ pub fn read_packfile_data(reader: &mut dyn Read, objects: usize) -> Result<(), G
         Err(_) => return Err(GitError::HeaderPackFileReadError),
     };
     let mut offset: usize = 0;
-    
+
     for _ in 0..objects {
         let object_entry = read_type_and_length_from_vec(&buffer, &mut offset)?;
         println!("Object entry: {:?}", object_entry);

@@ -5,7 +5,6 @@ use std::path::Path;
 const GIT_DIR: &str = "/.git";
 const BRANCH_DIR: &str = "refs/heads/";
 
-
 /// Esta función se encarga de llamar al comando log con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función log
@@ -20,7 +19,7 @@ pub fn handle_log(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 
 /// muestra el log de los commits
 /// ###Parametros:
-/// 'directory': directorio del repositorio local 
+/// 'directory': directorio del repositorio local
 pub fn git_log(directory: &str) -> Result<(), GitError> {
     let log = String::new();
     let commit = String::new();
@@ -43,5 +42,4 @@ pub fn git_log(directory: &str) -> Result<(), GitError> {
     println!("{}", line_number);
     println!("{}", line_count);
     Ok(())
-
 }
