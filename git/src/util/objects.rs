@@ -79,8 +79,6 @@ fn read_size_encoded_length_from_vec(
     if (byte & 0b10000000) == 0 {
         return Ok(length_bits); // Se gasto un bit para el tipo
     }
-
-    println!("(MSB)Length firts: {:?}", length_bits);
     let mut shift: usize = 4;
 
     loop {

@@ -6,33 +6,6 @@ use crate::{
 use flate2::read::ZlibDecoder;
 use std::io::Read;
 
-// struct HandleFile<'a> {
-//     reader: &'a mut dyn Read,
-//     buffer: Vec<u8>,
-//     index: usize,
-// }
-
-// impl HandleFile<'_> {
-//     fn new<'a>(reader: &'a mut dyn Read) -> Self {
-//         Self {
-//             reader,
-//             buffer: vec![0; 1024],
-//             index: 0,
-//         }
-//     }
-
-//     fn read(&mut self) -> Result<u8, GitError> {
-//         if self.index == self.buffer.len() {
-//             self.buffer.clear();
-//             self.reader.read_to_end(&mut self.buffer)?;
-//             self.index = 0;
-//         }
-//         let byte = self.buffer[self.index];
-//         self.index += 1;
-//         Ok(byte)
-//     }
-// }
-
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, GitError> {
     read_signature(reader)?;
     println!("Signature: {}", PACK_SIGNATURE);
@@ -50,7 +23,7 @@ pub fn read_packfile_data(reader: &mut dyn Read, objects: usize) -> Result<(), G
     match reader.read_to_end(&mut buffer) // Necesita refactorizar, si el packfile es muy grande habra problema
     {
         Ok(buffer) => buffer,
-        Err(_) => return Err(GitError::HeaderPackFileReadError),
+        Err(_) => return Err(GitError::PackObjectReadError),
     };
     let mut offset: usize = 0;
 
@@ -59,7 +32,7 @@ pub fn read_packfile_data(reader: &mut dyn Read, objects: usize) -> Result<(), G
         println!("Object entry: {:?}", object_entry);
         let lenght: usize = read_object_data(&buffer, &mut offset)?;
         if lenght != object_entry.obj_length {
-            return Err(GitError::HeaderPackFileReadError);
+            return Err(GitError::PackObjectReadError);
         }
     }
     Ok(())
@@ -70,11 +43,11 @@ fn read_object_data(data: &[u8], offset: &mut usize) -> Result<usize, GitError> 
 
     let mut zlib_decoder: ZlibDecoder<&[u8]> = ZlibDecoder::new(&data[*offset..]);
     let n = zlib_decoder.read_to_end(&mut decompressed_data).unwrap();
-    println!("n: {}", n);
-    println!("Len: {:?}", decompressed_data.len());
-    println!("Descomprimido: {:?}", decompressed_data);
+    if n == 0
+    {
+        return Err(GitError::PackObjectReadError);
+    }
     let bytes_read = zlib_decoder.total_in();
-    println!("Bytes read: {}", bytes_read);
     *offset += bytes_read as usize;
     Ok(zlib_decoder.total_out() as usize)
 }
