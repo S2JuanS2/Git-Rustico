@@ -10,24 +10,57 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
-fn handle_client(mut stream: TcpStream, tx: Arc<Mutex<Sender<String>>>) {
-    // Leer datos del cliente
-    let client_description = stream.peer_addr().ok().map_or_else(
-        || "Cliente desconocido conectado".to_string(),
-        |peer_addr| format!("Conexión establecida con {}", peer_addr),
-    );
 
+fn send_message_log(
+    tx: & Arc<Mutex<Sender<String>>>,
+    message: &str,
+    error: GitError,
+) -> Result<(), GitError> {
+    match tx.lock().unwrap().send(message.to_string())
     {
-        let _ = &tx.lock().unwrap().send(client_description).unwrap();
+        Ok(_) => Ok(()),
+        Err(_) => Err(error),
+    }
+}
+fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) -> Result<(), GitError> {
+    send_message_log(tx, message, GitError::GenericError)?;
+    Ok(())
+}
+
+fn init_new_client(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, GitError> {
+    // Leer datos del cliente
+    let client_description = match stream.peer_addr() {
+        Ok(addr) => {
+            let message = format!("Conexión establecida con {}\n", addr);
+            log_message(tx, &message)?;
+            format!("Client {}: ", addr)
+        },
+        Err(_) => {
+            log_message(tx, "Cliente desconocido conectado\n")?;
+            "Cliente desconocido: ".to_string()
+        }
+    };
+    Ok(client_description)
+}
+
+fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError>{
+    let client_description = init_new_client(stream, &tx)?;
+    let mut buffer = [0; 1024]; // Buffer de lectura
+
+    while let Ok(bytes_read) = stream.read(&mut buffer) {
+        if bytes_read == 0 {
+            break;
+        }
+
+        // Trabajar con los datos leídos en el buffer
+        let data = &buffer[..bytes_read];
+        // format!("Datos recibidos: {:?}", data);
+        println!("Datos recibidos: {:?}", data);
+
     }
 
-    let mut buffer = [0; 1024];
-
-    if let Err(error) = stream.read(&mut buffer) {
-        eprintln!("Error al leer: {}", error);
-        return;
-    }
-    println!("Recibido: {}", String::from_utf8_lossy(&buffer));
+    // println!("Recibido: {}", String::from_utf8_lossy(&buffer));
+    Ok(())
 }
 
 fn main() -> Result<(), GitError> {
@@ -42,7 +75,7 @@ fn main() -> Result<(), GitError> {
 
     let (tx, rx) = mpsc::channel();
 
-    let log = thread::spawn(move || {
+    let log: JoinHandle<()> = thread::spawn(move || {
         let _ = write_log_file(&config.path_log, rx);
     });
 
@@ -64,11 +97,11 @@ fn receive_client(
     let mut handles: Vec<JoinHandle<()>> = vec![];
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => {
+            Ok(mut stream) => {
                 let tx = Arc::clone(&shared_tx);
                 println!("Nueva conexión: {:?}", stream.local_addr());
-                handles.push(std::thread::spawn(|| {
-                    handle_client(stream, tx);
+                handles.push(std::thread::spawn(move || {
+                    let _ = handle_client(&mut stream, tx);
                 }));
             }
             Err(e) => {
