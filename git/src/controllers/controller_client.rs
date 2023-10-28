@@ -70,7 +70,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
                 result = handle_init(rest_of_command, client)?;
             }
             "cat_file" => {
-                handle_cat_file(rest_of_command, client)?;
+                result = handle_cat_file(rest_of_command, client)?;
             }
             "add" => {
                 handle_add(rest_of_command, client)?;

@@ -45,7 +45,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     let hash_object = hash_generate(&store);
 
-    let git_dir = format!("{}{}",GIT_DIR, directory);
+    let git_dir = format!("{}{}",directory, GIT_DIR);
     let objects_dir = format!(
         "{}/objects/{}/{}",
         &git_dir,
