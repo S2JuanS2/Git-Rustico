@@ -31,13 +31,13 @@ fn init_new_client(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>) -> Resul
     // Leer datos del cliente
     let client_description = match stream.peer_addr() {
         Ok(addr) => {
-            let message = format!("Conexión establecida con {}\n", addr);
+            let message = format!("Conexión establecida con {}", addr);
             log_message(tx, &message)?;
-            format!("Client {}: ", addr)
+            format!("Client {} => ", addr)
         },
         Err(_) => {
-            log_message(tx, "Cliente desconocido conectado\n")?;
-            "Cliente desconocido: ".to_string()
+            log_message(tx, "Cliente desconocido conectado")?;
+            "Cliente desconocido => ".to_string()
         }
     };
     Ok(client_description)
@@ -52,14 +52,16 @@ fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Resu
             break;
         }
 
-        // Trabajar con los datos leídos en el buffer
         let data = &buffer[..bytes_read];
-        // format!("Datos recibidos: {:?}", data);
-        println!("Datos recibidos: {:?}", data);
-
+        let message = format!("{}Datos recibidos: {:?}", client_description, data);
+        log_message(&tx, &message)?;
+        // let data = &buffer[..bytes_read];
+        // if let Ok(string_data) = std::str::from_utf8(data) {
+        //     println!("Datos recibidos como String: {}", string_data);
+        // } else {
+        //     println!("Los datos recibidos no son una cadena UTF-8 válida.");
+        // }
     }
-
-    // println!("Recibido: {}", String::from_utf8_lossy(&buffer));
     Ok(())
 }
 
