@@ -54,3 +54,5 @@ pub mod formats;
 pub mod packfile;
 
 pub mod objects;
+
+pub mod files;

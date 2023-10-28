@@ -1,11 +1,8 @@
-use crate::models::client::Client;
-use std::fs;
-use std::io::Write;
 use std::path::Path;
-
+use crate::models::client::Client;
+use crate::util::files::*;
 use crate::errors::GitError;
-
-const INITIAL_BRANCH: &str = "main";
+use crate::consts::*;
 
 /// Esta función se encarga de llamar al comando init con los parametros necesarios
 /// ###Parametros:
@@ -15,69 +12,33 @@ pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, GitError> 
     if args.len() > 0 {
         return Err(GitError::InvalidArgumentCountInitError);
     }
-
-    let directory = format!("{}",client.get_directory_path());
-    let result = git_init(&directory)?;
+    let result = git_init(client.get_directory_path().as_str())?;
 
     Ok(result)
-}
-
-/// Crea un directorio si no existe
-/// ###Parametros:
-/// 'directory': dirección del directorio a crear
-fn create_directory(directory: &str) -> Result<(), GitError> {
-    if !Path::new(directory).exists() {
-        match fs::create_dir_all(directory) {
-            Ok(_) => (),
-            Err(_) => return Err(GitError::CreateDirError),
-        };
-    }
-    Ok(())
-}
-
-/// Crea un archivo si no existe.
-/// ###Parametros:
-/// 'file': archivo a crear.
-/// 'content': contenido que se escribirá en el archivo.
-fn create_file(file: &str, content: &str) -> Result<(), GitError> {
-    if fs::metadata(file).is_ok() {
-        return Ok(());
-    }
-
-    let mut file = match fs::File::create(file) {
-        Ok(file) => file,
-        Err(_) => return Err(GitError::CreateFileError),
-    };
-    match file.write_all(content.as_bytes()) {
-        Ok(_) => (),
-        Err(_) => return Err(GitError::WriteFileError),
-    };
-
-    Ok(())
 }
 
 /// Esta función inicia un repositorio git creando los directorios y archivos necesarios.
 /// ###Parametros:
 /// 'directory': dirección donde se inicializará el repositorio.
 pub fn git_init(directory: &str) -> Result<String, GitError> {
-    create_directory(directory)?;
+    create_directory(Path::new(directory))?;
 
-    let git_dir = format!("{}/.git", directory);
-    let objects_dir = format!("{}/objects", &git_dir);
-    let heads_dir = format!("{}/refs/heads", &git_dir);
+    let git_dir = format!("{}/{}", directory, GIT_DIR);
+    let objects_dir = format!("{}/{}", &git_dir, DIR_OBJECTS);
+    let heads_dir = format!("{}/{}", &git_dir, REF_HEADS);
 
-    create_directory(&git_dir)?;
-    create_directory(&objects_dir)?;
-    create_directory(&heads_dir)?;
+    create_directory(Path::new(&git_dir))?;
+    create_directory(Path::new(&objects_dir))?;
+    create_directory(Path::new(&heads_dir))?;
 
-    let head_file = format!("{}/HEAD", &git_dir);
-    let head_content = format!("ref: /refs/heads/{}\n", INITIAL_BRANCH);
-    let index_file = format!("{}/index", &git_dir);
+    let head_file = format!("{}/{}", &git_dir, HEAD);
+    let head_content = format!("{}{}\n", HEAD_POINTER_REF, INITIAL_BRANCH);
+    let index_file = format!("{}/{}", &git_dir, INDEX);
 
     create_file(&head_file, &head_content)?;
-    create_file(&index_file, "")?;
+    create_file(&index_file, CONTENT_EMPTY)?;
 
-    let result = format!("Repositorio inicializado");
+    let result = format!("Repositorio vacío inicializado en la direcección: {}", directory);
 
     Ok(result)
 }
@@ -85,30 +46,30 @@ pub fn git_init(directory: &str) -> Result<String, GitError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
+    use std::fs;
 
     #[test]
     fn test_git_init() {
         // Se Crea un directorio temporal para el test
-        let temp_dir = env::temp_dir().join("test_git_init");
-        fs::create_dir(&temp_dir).expect("Falló al crear el directorio temporal");
+        let temp_dir = Path::new("git_init_test");
+        create_directory(temp_dir).expect("Falló al crear el directorio de prueba");
 
         // Cuando ejecuto la función git_init en el directorio temporal
-        let result = git_init(&temp_dir.to_str().unwrap());
+        let result = git_init("git_init_test");
 
         // No debería resultar en error
         assert!(result.is_ok());
 
-        let git_dir = temp_dir.join(".git");
+        let git_dir = temp_dir.join(GIT_DIR);
         assert!(git_dir.exists());
 
-        let objects_dir = git_dir.join("objects");
+        let objects_dir = git_dir.join(DIR_OBJECTS);
         assert!(objects_dir.exists());
 
-        let heads_dir = git_dir.join("refs/heads");
+        let heads_dir = git_dir.join(REF_HEADS);
         assert!(heads_dir.exists());
 
-        let head_file = git_dir.join("HEAD");
+        let head_file = git_dir.join(HEAD);
         assert!(head_file.exists());
 
         fs::remove_dir_all(&temp_dir).expect("Falló al remover el directorio temporal");
