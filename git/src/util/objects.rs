@@ -56,7 +56,7 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
 }
 
 pub fn read_type_and_length_from_vec(
-    data: &Vec<u8>,
+    data: &[u8],
     offset: &mut usize,
 ) -> Result<ObjectEntry, GitError> {
     let byte = data[*offset];
@@ -71,7 +71,7 @@ pub fn read_type_and_length_from_vec(
 }
 
 fn read_size_encoded_length_from_vec(
-    data: &Vec<u8>,
+    data: &[u8],
     byte: u8,
     offset: &mut usize,
 ) -> Result<usize, GitError> {
@@ -84,7 +84,7 @@ fn read_size_encoded_length_from_vec(
     let mut shift: usize = 4;
 
     loop {
-        let mut byte = data[*offset];
+        let byte = data[*offset];
         *offset += 1;
 
         let seven_bits = (byte & 0b01111111) as usize;

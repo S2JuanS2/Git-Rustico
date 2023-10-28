@@ -1,16 +1,10 @@
 use crate::{
     consts::PACK_SIGNATURE,
     errors::GitError,
-    util::objects::{read_type_and_length, read_type_and_length_from_vec},
+    util::objects::read_type_and_length_from_vec,
 };
-use flate2::Compression;
-use flate2::{read::ZlibDecoder, write::ZlibEncoder};
-use std::{
-    fs::File,
-    io::{Read, Write},
-};
-
-use super::pkt_line::read;
+use flate2::read::ZlibDecoder;
+use std::io::Read;
 
 // struct HandleFile<'a> {
 //     reader: &'a mut dyn Read,
@@ -71,7 +65,7 @@ pub fn read_packfile_data(reader: &mut dyn Read, objects: usize) -> Result<(), G
     Ok(())
 }
 
-fn read_object_data(data: &Vec<u8>, offset: &mut usize) -> Result<usize, GitError> {
+fn read_object_data(data: &[u8], offset: &mut usize) -> Result<usize, GitError> {
     let mut decompressed_data = Vec::new();
 
     let mut zlib_decoder: ZlibDecoder<&[u8]> = ZlibDecoder::new(&data[*offset..]);
