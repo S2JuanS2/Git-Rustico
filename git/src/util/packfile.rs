@@ -49,6 +49,7 @@ fn read_object_data(data: &[u8], offset: &mut usize) -> Result<usize, GitError> 
     }
     let bytes_read = zlib_decoder.total_in();
     *offset += bytes_read as usize;
+    println!("Decompressed data: {:?}", decompressed_data);
     Ok(zlib_decoder.total_out() as usize)
 }
 
