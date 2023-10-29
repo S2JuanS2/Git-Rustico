@@ -54,7 +54,7 @@ pub fn git_branch_create(
     }
 
     // Crear un nuevo archivo en .git/refs/heads/ con el nombre de la rama y el contenido es el hash del commit actual.
-    let branch_path = format!("{}{}/{}{}", directory, GIT_DIR, BRANCH_DIR, branch_name);
+    let branch_path = format!("{}/{}/{}{}", directory, GIT_DIR, BRANCH_DIR, branch_name);
 
     let mut file = match File::create(branch_path) {
         Ok(file) => file,
