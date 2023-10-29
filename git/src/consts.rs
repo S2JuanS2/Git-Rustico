@@ -93,3 +93,7 @@ pub const REF_HEADS: &str = "refs/heads";
 pub const DIR_OBJECTS: &str = "objects";
 
 pub const CONTENT_EMPTY: &str = "";
+
+pub const BLOB: &str = "blob";
+
+pub const ALL: &str = ".";
