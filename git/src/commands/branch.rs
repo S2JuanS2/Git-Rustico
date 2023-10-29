@@ -4,6 +4,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::io::{BufRead, BufReader};
 
 const GIT_DIR: &str = "/.git";
 const BRANCH_DIR: &str = "refs/heads/";
@@ -23,6 +24,27 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     } else {
         return Err(GitError::InvalidArgumentCountBranchError);
     }
+}
+
+pub fn get_current_branch(directory: &str) -> Result<String, GitError> {
+    let head_path = format!("{}{}/HEAD", directory, GIT_DIR);
+    let head_file = match File::open(head_path) {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::BranchDirectoryOpenError),
+    };
+
+    let reader = BufReader::new(head_file);
+    let mut branch = String::new();
+    for line in reader.lines() {
+        let line = match line {
+            Ok(line) => line,
+            Err(_) => return Err(GitError::BranchFileReadError),
+        };
+        let line_split: Vec<&str> = line.split('/').collect();
+        branch = line_split[line_split.len() - 1].to_string();
+    }
+
+    Ok(branch)
 }
 
 /// Muestra por pantalla las branch existentes.
@@ -101,7 +123,10 @@ pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a eliminar.
 pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<(), GitError> {
-    // falta implementar si estas parado en una brac, no la podes eliminar
+    if get_current_branch(directory) == Ok(branch_name.to_string()) {
+        return Err(GitError::DeleteBranchError);
+    }
+
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_name.to_string()) {
         return Err(GitError::BranchNotFoundError);
@@ -122,6 +147,8 @@ mod tests {
     use super::*;
     use std::fs;
     use std::path::Path;
+    use crate::commands::init::git_init;
+    use crate::commands::checkout::git_checkout_switch;
 
     const TEST_DIRECTORY: &str = "./test_repo";
 
@@ -200,5 +227,15 @@ mod tests {
         if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         }
+    }
+
+    #[test]
+    fn test_get_current_branch() -> Result<(), GitError>{
+        git_init(TEST_DIRECTORY)?;
+        git_branch_create(TEST_DIRECTORY, "test_branch3", "commit_hash_branch")?;
+        git_checkout_switch(TEST_DIRECTORY, "test_branch3")?;
+        let result = get_current_branch(TEST_DIRECTORY);
+        assert_eq!(result, Ok("test_branch3".to_string()));
+        Ok(())
     }
 }
