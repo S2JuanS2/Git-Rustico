@@ -15,13 +15,12 @@ fn send_message_channel(
         Err(_) => Err(error),
     }
 }
-pub fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) -> Result<(), GitError> {
+pub fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) {
     match send_message_channel(tx, message, GitError::GenericError)
     {
         Ok(_) => (),
         Err(_) => eprintln!("Fallo al escribir en el logger: {}", message),
     };
-    Ok(())
 }
 
 pub fn write_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), std::io::Error> {
@@ -42,17 +41,17 @@ pub fn write_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), std::i
 }
 
 
-pub fn new_client_logger(
+pub fn log_client_connect(
     stream: &TcpStream,
     tx: &Arc<Mutex<Sender<String>>>,
 ){
     match stream.peer_addr() {
         Ok(addr) => {
             let message = format!("Conexión establecida con {}", addr);
-            let _ = log_message(tx, &message);
+            log_message(tx, &message);
         }
         Err(_) => {
-            let _ = log_message(tx, "Cliente desconocido conectado");
+            log_message(tx, "Cliente desconocido conectado");
         },
     };
 }
@@ -62,4 +61,9 @@ pub fn get_client_signature(stream: &TcpStream) -> Result<String, GitError> {
         Ok(addr) => Ok(format!("Client {} => ", addr)),
         Err(_) => Ok("Cliente desconocido => ".to_string())
     }
+}
+
+pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
+    let message = format!("{}Conexión terminada", signature);
+    log_message(&tx, &message)
 }

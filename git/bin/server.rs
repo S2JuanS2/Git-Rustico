@@ -1,7 +1,7 @@
 use git::config::Config;
 use git::errors::GitError;
 use git::util::connections::start_server;
-use git::util::logger::{log_message, write_log_file, new_client_logger, get_client_signature};
+use git::util::logger::{log_message, write_log_file, log_client_connect, get_client_signature, log_client_disconnection};
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{self, Sender};
@@ -11,8 +11,9 @@ use std::{env, thread};
 
 
 fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
-    new_client_logger(stream, &tx);
+    log_client_connect(stream, &tx);
     let signature = get_client_signature(&stream)?;
+
     let mut buffer = [0; 2048]; // Buffer de lectura
 
     while let Ok(bytes_read) = stream.read(&mut buffer) {
@@ -22,11 +23,10 @@ fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Resu
 
         let data = &buffer[..bytes_read];
         let message = format!("{}Datos recibidos: {:?}", signature, data);
-        log_message(&tx, &message)?;
+        log_message(&tx, &message);
     }
 
-    let message = format!("{}Conexión terminada", signature);
-    log_message(&tx, &message)?;
+    log_client_disconnection(&tx, &signature);
     Ok(())
 }
 
