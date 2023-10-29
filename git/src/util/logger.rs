@@ -1,11 +1,10 @@
 use std::net::TcpStream;
 use std::sync::mpsc::Receiver;
 use std::sync::{Mutex, Arc, mpsc::Sender};
-use std::fs::{OpenOptions, File};
 use std::io::Write;
 use crate::errors::GitError;
 
-use super::log_file::LogFile;
+use super::log_output::LogOutput;
 
 
 /// Envía un mensaje a través del canal con un transmisor protegido por Mutex.
@@ -52,9 +51,19 @@ pub fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) {
     };
 }
 
-
+/// Maneja el archivo de registro, escribiendo los datos recibidos del canal en el archivo de registro indicado.
+///
+/// # Argumentos
+///
+/// * `log_path` - La ruta del archivo de registro.
+/// * `rx` - El receptor que recibe los datos que se escribirán en el archivo.
+///
+/// # Errores
+///
+/// Devuelve un error si ocurre algún problema al operar con el archivo de registro.
+///
 pub fn handle_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), GitError> {
-    let mut file = LogFile::new(log_path)?;
+    let mut file = LogOutput::new(log_path)?;
 
     // Creamos un bucle para recibir datos del canal y escribirlos en el archivo.
     for received_data in rx {
@@ -72,6 +81,14 @@ pub fn handle_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), GitEr
 }
 
 
+/// Registra el evento de conexión de un cliente.
+/// Si la obtención de la dirección del cliente tiene éxito, se registra un mensaje con el formato "Conexión establecida con [dirección]". Si hay un error al obtener la dirección del cliente, se registra un mensaje indicando "Cliente desconocido conectado".
+///
+/// # Argumentos
+///
+/// * `stream` - El stream del cliente del que se obtendrá la dirección.
+/// * `tx` - Arc Mutex del transmisor del canal para escribir mensajes de registro.
+///
 pub fn log_client_connect(
     stream: &TcpStream,
     tx: &Arc<Mutex<Sender<String>>>,
@@ -87,6 +104,18 @@ pub fn log_client_connect(
     };
 }
 
+/// Obtiene la firma del cliente conectado, incluyendo su dirección si está disponible.
+///
+/// Si la obtención de la dirección del cliente tiene éxito, devuelve un `Result` con un `String` que contiene la firma del cliente en el formato "Client [dirección] => ". Si hay un error al obtener la dirección del cliente, se devuelve una firma "Cliente desconocido => ".
+///
+/// # Argumentos
+///
+/// * `stream` - El stream del cliente del que se obtendrá la dirección.
+///
+/// # Errores
+///
+/// Devuelve un error si no se puede obtener la dirección del cliente o si ocurre algún problema.
+///
 pub fn get_client_signature(stream: &TcpStream) -> Result<String, GitError> {
     match stream.peer_addr() {
         Ok(addr) => Ok(format!("Client {} => ", addr)),
@@ -94,6 +123,13 @@ pub fn get_client_signature(stream: &TcpStream) -> Result<String, GitError> {
     }
 }
 
+/// Registra la desconexión del cliente y envía un mensaje al logger con la firma del cliente y el evento de desconexión.
+///
+/// # Argumentos
+///
+/// * `tx` - El transmisor para enviar mensajes al logger.
+/// * `signature` - La firma del cliente conectado. Se espera que contenga la identificación del cliente y esté formateada como "Client [dirección] => ".
+///
 pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada", signature);
     log_message(&tx, &message)

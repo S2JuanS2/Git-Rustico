@@ -57,4 +57,4 @@ pub mod objects;
 
 pub mod logger;
 
-pub mod log_file;
+pub mod log_output;
