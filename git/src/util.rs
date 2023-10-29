@@ -56,3 +56,5 @@ pub mod packfile;
 pub mod objects;
 
 pub mod logger;
+
+pub mod log_file;

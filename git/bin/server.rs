@@ -1,7 +1,7 @@
 use git::config::Config;
 use git::errors::GitError;
 use git::util::connections::start_server;
-use git::util::logger::{log_message, write_log_file, log_client_connect, get_client_signature, log_client_disconnection};
+use git::util::logger::{log_message, handle_log_file, log_client_connect, get_client_signature, log_client_disconnection};
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{self, Sender};
@@ -43,7 +43,7 @@ fn main() -> Result<(), GitError> {
     let (tx, rx) = mpsc::channel();
 
     let log: JoinHandle<()> = thread::spawn(move || {
-        let _ = write_log_file(&config.path_log, rx);
+        let _ = handle_log_file(&config.path_log, rx);
     });
 
     let clients = thread::spawn(move || {
