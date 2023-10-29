@@ -16,7 +16,11 @@ fn send_message_channel(
     }
 }
 pub fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) -> Result<(), GitError> {
-    send_message_channel(tx, message, GitError::GenericError)?;
+    match send_message_channel(tx, message, GitError::GenericError)
+    {
+        Ok(_) => (),
+        Err(_) => eprintln!("Fallo al escribir en el logger: {}", message),
+    };
     Ok(())
 }
 
