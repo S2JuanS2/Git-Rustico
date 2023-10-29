@@ -4,6 +4,8 @@ use gtk::prelude::*;
 use std::rc::Rc;
 
 const DIV: &str = "-----------------------------------------";
+
+#[derive(Clone)]
 pub struct View {
     controller: Controller,
     window: gtk::Window,
@@ -18,9 +20,7 @@ impl View {
         if gtk::init().is_err() {
             return Err(GitError::GtkFailedInitiliaze);
         }
-
         let glade_src = include_str!("git_ppal.glade");
-
         let builder = gtk::Builder::from_string(glade_src);
 
         let window: gtk::Window = match builder.object("window1") {
@@ -29,32 +29,14 @@ impl View {
                 return Err(GitError::ObjectBuildFailed);
             }
         };
-        let button_clear: gtk::Button = match builder.object("button_clear") {
-            Some(button_clear) => button_clear,
-            None => {
-                return Err(GitError::ObjectBuildFailed);
-            }
-        };
-        let button_send: gtk::Button = match builder.object("button_send") {
-            Some(button_send) => button_send,
-            None => {
-                return Err(GitError::ObjectBuildFailed);
-            }
-        };
-        let entry: gtk::Entry = match builder.object("entry_console") {
-            Some(entry) => entry,
-            None => {
-                return Err(GitError::ObjectBuildFailed);
-            }
-        };
-
-        let response: Rc<gtk::TextView> = Rc::new(match builder.object("console") {
-            Some(response) => response,
-            None => {
-                return Err(GitError::ObjectBuildFailed);
-            }
-        });
-
+        let button_clear: gtk::Button = builder.object("button_clear").ok_or(GitError::ObjectBuildFailed)?;        
+        let button_send: gtk::Button = builder.object("button_send").ok_or(GitError::ObjectBuildFailed)?;
+        let entry: gtk::Entry = builder.object("entry_console").ok_or(GitError::ObjectBuildFailed)?;
+        let response: Rc<gtk::TextView> = Rc::new(
+            builder
+                .object("console")
+                .ok_or(GitError::ObjectBuildFailed)?,
+        );
         Ok(View {
             controller,
             window,
@@ -64,8 +46,8 @@ impl View {
             response,
         })
     }
+    fn connect_buttons(self){
 
-    pub fn start_view(self) -> Result<(), GitError> {
         let response_for_button_send = Rc::clone(&self.response);
 
         self.button_send.connect_clicked(move |_| {
@@ -78,7 +60,7 @@ impl View {
                 let mut end_iter = buffer.end_iter();
                 match result {
                     Ok(response) => {
-                        let response_format = format!("\n{}\n{}", DIV, response);
+                        let response_format = format!("\n{}\n{}",DIV,response);
                         buffer.insert(&mut end_iter, &response_format);
                     }
                     Err(e) => {
@@ -93,15 +75,22 @@ impl View {
                 }
             }
         });
-
         self.button_clear.connect_clicked(move |_| {
             if let Some(buffer) = self.response.buffer() {
                 buffer.set_text("");
             };
         });
+    }
+    
+    pub fn start_view(self) -> Result<(), GitError> {
+        let this = self.clone();
+        this.connect_buttons();
+
+        self.window.connect_destroy(|_| {
+            gtk::main_quit();
+        });
 
         self.window.show_all();
-
         gtk::main();
 
         Ok(())
