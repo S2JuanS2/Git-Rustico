@@ -56,13 +56,10 @@ fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Resu
         let data = &buffer[..bytes_read];
         let message = format!("{}Datos recibidos: {:?}", client_description, data);
         log_message(&tx, &message)?;
-        // let data = &buffer[..bytes_read];
-        // if let Ok(string_data) = std::str::from_utf8(data) {
-        //     println!("Datos recibidos como String: {}", string_data);
-        // } else {
-        //     println!("Los datos recibidos no son una cadena UTF-8 válida.");
-        // }
     }
+
+    let message = format!("{}Conexión terminada", client_description);
+    log_message(&tx, &message)?;
     Ok(())
 }
 
