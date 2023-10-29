@@ -1,9 +1,7 @@
 use crate::errors::GitError;
 use crate::models::client::Client;
-use std::path::Path;
-
-const GIT_DIR: &str = "/.git";
-const BRANCH_DIR: &str = "refs/heads/";
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 
 /// Esta función se encarga de llamar al comando log con los parametros necesarios
@@ -22,26 +20,25 @@ pub fn handle_log(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 /// ###Parametros:
 /// 'directory': directorio del repositorio local 
 pub fn git_log(directory: &str) -> Result<(), GitError> {
-    let log = String::new();
-    let commit = String::new();
-    let author = String::new();
-    let date = String::new();
-    let message = String::new();
-    let file = String::new();
-    let line = String::new();
-    let line_number = String::new();
-    let line_count = String::new();
-    let directory_git = format!("{}{}", directory, GIT_DIR);
-    let _branch_dir = Path::new(&directory_git).join(BRANCH_DIR);
-    println!("{}", log);
-    println!("{}", commit);
-    println!("{}", author);
-    println!("{}", date);
-    println!("{}", message);
-    println!("{}", file);
-    println!("{}", line);
-    println!("{}", line_number);
-    println!("{}", line_count);
+    let logs_path = format!("{}logs/refs/heads", directory);
+
+    let entries = match std::fs::read_dir(logs_path.clone()){
+        Ok(entries) => entries,
+        Err(_) => return Err(GitError::ReadDirError),
+    };
+
+    for entry in entries.flatten() {
+        if let Some(name) = entry.file_name().to_str() {
+            let commit_file = format!("{}/{}", logs_path, name);
+            if let Ok(file) = File::open(&commit_file){
+                let reader = BufReader::new(file);                    
+                for line in reader.lines().flatten() {
+                        println!("{}", line);
+                }
+                println!("----------------------");
+            }
+        }
+    }
     Ok(())
 
 }
