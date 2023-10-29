@@ -1,51 +1,18 @@
 use git::config::Config;
 use git::errors::GitError;
 use git::util::connections::start_server;
-use std::fs::OpenOptions;
+use git::util::logger::{log_message, write_log_file, new_client_logger, get_client_signature};
 use std::io::Read;
-use std::io::Write;
 use std::net::{TcpListener, TcpStream};
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
-fn send_message_log(
-    tx: &Arc<Mutex<Sender<String>>>,
-    message: &str,
-    error: GitError,
-) -> Result<(), GitError> {
-    match tx.lock().unwrap().send(message.to_string()) {
-        Ok(_) => Ok(()),
-        Err(_) => Err(error),
-    }
-}
-fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) -> Result<(), GitError> {
-    send_message_log(tx, message, GitError::GenericError)?;
-    Ok(())
-}
-
-fn init_new_client(
-    stream: &TcpStream,
-    tx: &Arc<Mutex<Sender<String>>>,
-) -> Result<String, GitError> {
-    // Leer datos del cliente
-    let client_description = match stream.peer_addr() {
-        Ok(addr) => {
-            let message = format!("Conexión establecida con {}", addr);
-            log_message(tx, &message)?;
-            format!("Client {} => ", addr)
-        }
-        Err(_) => {
-            log_message(tx, "Cliente desconocido conectado")?;
-            "Cliente desconocido => ".to_string()
-        }
-    };
-    Ok(client_description)
-}
 
 fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
-    let client_description = init_new_client(stream, &tx)?;
+    new_client_logger(stream, &tx);
+    let signature = get_client_signature(&stream)?;
     let mut buffer = [0; 2048]; // Buffer de lectura
 
     while let Ok(bytes_read) = stream.read(&mut buffer) {
@@ -54,11 +21,11 @@ fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Resu
         }
 
         let data = &buffer[..bytes_read];
-        let message = format!("{}Datos recibidos: {:?}", client_description, data);
+        let message = format!("{}Datos recibidos: {:?}", signature, data);
         log_message(&tx, &message)?;
     }
 
-    let message = format!("{}Conexión terminada", client_description);
+    let message = format!("{}Conexión terminada", signature);
     log_message(&tx, &message)?;
     Ok(())
 }
@@ -110,21 +77,4 @@ fn receive_client(
         }
     }
     Ok(handles)
-}
-
-fn write_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), std::io::Error> {
-    // Intentamos abrir el archivo en modo append o crearlo si no existe.
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)?;
-
-    // Creamos un bucle para recibir datos del canal y escribirlos en el archivo.
-    for received_data in rx {
-        writeln!(file, "{}", received_data)?;
-    }
-
-    // Cerramos el archivo al finalizar.
-    file.sync_all()?;
-    Ok(())
 }
