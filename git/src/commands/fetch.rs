@@ -1,7 +1,7 @@
-use std::fs;
-use std::path::Path;
 use crate::consts::*;
 use crate::errors::GitError;
+use std::fs;
+use std::path::Path;
 
 use super::cat_file::git_cat_file;
 use crate::models::client::Client;

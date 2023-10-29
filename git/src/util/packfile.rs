@@ -1,7 +1,5 @@
 use crate::{
-    consts::PACK_SIGNATURE,
-    errors::GitError,
-    util::objects::read_type_and_length_from_vec,
+    consts::PACK_SIGNATURE, errors::GitError, util::objects::read_type_and_length_from_vec,
 };
 use flate2::read::ZlibDecoder;
 use std::io::Read;
@@ -43,8 +41,7 @@ fn read_object_data(data: &[u8], offset: &mut usize) -> Result<usize, GitError> 
 
     let mut zlib_decoder: ZlibDecoder<&[u8]> = ZlibDecoder::new(&data[*offset..]);
     let n = zlib_decoder.read_to_end(&mut decompressed_data).unwrap();
-    if n == 0
-    {
+    if n == 0 {
         return Err(GitError::PackObjectReadError);
     }
     let bytes_read = zlib_decoder.total_in();

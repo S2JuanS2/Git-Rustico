@@ -1,5 +1,5 @@
-use crate::errors::GitError;
 use crate::consts::*;
+use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file, create_directory};
 use crate::util::formats::{compressor_object, hash_generate};
@@ -7,7 +7,6 @@ use std::path::Path;
 use std::fs::OpenOptions;
 use std::{fs::File, io::Read, io::Write};
 use std::fs;
-
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
@@ -73,7 +72,8 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     let hash_object = hash_generate(&store);
 
-    let git_dir = format!("{}/{}",directory, GIT_DIR);
+    let git_dir = format!("{}{}", directory, GIT_DIR);
+
     let objects_dir = format!(
         "{}/{}/{}/{}",
         &git_dir,

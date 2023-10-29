@@ -1,6 +1,6 @@
-use crate::util::formats::decompression_object;
-use crate::models::client::Client;
 use crate::consts::*;
+use crate::models::client::Client;
+use crate::util::formats::decompression_object;
 
 use crate::errors::GitError;
 
@@ -30,7 +30,7 @@ pub fn git_cat_file(directory: &str, object_hash: &str) -> Result<String, GitErr
     }
 
     //Lee los primeros 2 digitos del hash contenidos en el nombre de la carpeta.
-    let path = format!("{}{}/objects/{}",directory, GIT_DIR, &object_hash[..2]);
+    let path = format!("{}{}/objects/{}", directory, GIT_DIR, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
 
@@ -42,10 +42,10 @@ pub fn git_cat_file(directory: &str, object_hash: &str) -> Result<String, GitErr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::formats::compressor_object;
     use std::fs;
     use std::fs::File;
     use std::path::Path;
-    use crate::util::formats::compressor_object;
 
     const TEST_DIRECTORY: &str = "./test_repo";
 

@@ -1,5 +1,5 @@
-use crate::errors::GitError;
 use crate::consts::*;
+use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::formats::hash_generate;
 use std::fs::{self, File};

@@ -1,7 +1,7 @@
-use crate::errors::GitError;
-use crate::consts::*;
 use super::branch::get_branch;
 use super::branch::git_branch_create;
+use crate::consts::*;
+use crate::errors::GitError;
 
 use crate::models::client::Client;
 use std::fs::OpenOptions;
