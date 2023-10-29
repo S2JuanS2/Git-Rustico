@@ -55,4 +55,8 @@ pub mod packfile;
 
 pub mod objects;
 
+pub mod logger;
+
+pub mod log_output;
+
 pub mod files;

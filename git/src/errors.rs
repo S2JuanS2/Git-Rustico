@@ -80,6 +80,8 @@ pub enum GitError {
     InvalidArgumentCountRemoteError,
     InvalidArgumentCountRmError,
     PackObjectReadError,
+    LogOutputOpenError,
+    LogOutputSyncError,
 }
 
 impl GitError {
@@ -169,6 +171,8 @@ impl GitError {
             GitError::InvalidArgumentCountRemoteError => "Número de argumentos inválido para el comando remote.\nUsar: git remote <flag> <remote name> <url>",
             GitError::InvalidArgumentCountRmError => "Número de argumentos inválido para el comando rm.\nUsar: git rm <file name>",
             GitError::PackObjectReadError => "No se pudo leer el objeto del packfile",
+            GitError::LogOutputOpenError => "No se pudo abrir el archivo de log",
+            GitError::LogOutputSyncError => "Error al sincronizar los datos al archivo de registro",
         }
     }
 }
