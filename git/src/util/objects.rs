@@ -55,10 +55,51 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
     })
 }
 
+pub fn read_type_and_length_from_vec(
+    data: &[u8],
+    offset: &mut usize,
+) -> Result<ObjectEntry, GitError> {
+    let byte = data[*offset];
+    *offset += 1;
+    let obj_type: ObjectType = create_object_bits(byte)?;
+    let length = read_size_encoded_length_from_vec(data, byte, offset)?;
+
+    Ok(ObjectEntry {
+        obj_type,
+        obj_length: length,
+    })
+}
+
+fn read_size_encoded_length_from_vec(
+    data: &[u8],
+    byte: u8,
+    offset: &mut usize,
+) -> Result<usize, GitError> {
+    let mut length_bits = (byte & 0b00001111) as usize;
+    if (byte & 0b10000000) == 0 {
+        return Ok(length_bits); // Se gasto un bit para el tipo
+    }
+    let mut shift: usize = 4;
+
+    loop {
+        let byte = data[*offset];
+        *offset += 1;
+
+        let seven_bits = (byte & 0b01111111) as usize;
+        length_bits |= seven_bits << shift;
+        if (byte & 0x80) == 0 {
+            break;
+        }
+
+        shift += 7;
+    }
+    Ok(length_bits)
+}
+
 fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, GitError> {
     let mut length_bits = (byte & 0b00001111) as usize;
     if (byte & 0b10000000) == 0 {
-        return Ok(length_bits);
+        return Ok(length_bits); // Se gasto un bit para el tipo
     }
 
     println!("(MSB)Length firts: {:?}", length_bits);
@@ -72,7 +113,7 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
         println!("(MSB)Buffer: {:?}", byte);
 
         let seven_bits = (byte[0] & 0b01111111) as usize;
-        print_u8_bits(byte[0] & 0b01111111);
+        // print_u8_bits(byte[0] & 0b01111111);
         println!(
             "(MSB)Unire:length seven: {:?} y length_bits: {}",
             seven_bits, length_bits
@@ -114,15 +155,6 @@ fn create_object(byte: u8) -> Result<ObjectType, GitError> {
         7 => Ok(ObjectType::RefDelta),
         _ => Err(GitError::InvalidObjectType),
     }
-}
-
-fn print_u8_bits(value: u8) {
-    print!("bits: ");
-    for i in (0..8).rev() {
-        let bit = (value >> i) & 1;
-        print!("{}", bit);
-    }
-    println!(); // Salto de línea después de imprimir los bits
 }
 
 #[cfg(test)]

@@ -15,8 +15,8 @@ const OBJECTS_DIR: &str = "objects";
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_status(args: Vec<&str>, client: Client) -> Result<(), GitError> {
-    if args.is_empty() {
+pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+    if args.len() > 0 {
         return Err(GitError::InvalidArgumentCountStatusError);
     }
     let directory = client.get_directory_path();
@@ -55,14 +55,13 @@ fn get_head_branch(directory: &str) -> Result<String, GitError> {
 /// Muestra por pantalla el nombre de la rama actual.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn print_head(directory: &str) -> Result<(), GitError> {
+pub fn print_head(directory: &str) -> Result<String, GitError> {
     let head_branch_name = get_head_branch(directory);
     let head_branch_name = match head_branch_name {
         Ok(name) => name,
         Err(_) => return Err(GitError::HeadBranchError),
     };
-    println!("On branch {}", head_branch_name);
-    Ok(())
+    Ok(head_branch_name)
 }
 
 /// Compara los hashes de los archivos del directorio de trabajo con los de objects e imprime el estado
@@ -70,53 +69,55 @@ pub fn print_head(directory: &str) -> Result<(), GitError> {
 /// fueron agregados al staging area.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn git_status(directory: &str) -> Result<(), GitError> {
+pub fn git_status(directory: &str) -> Result<String, GitError> {
     // "directory/.git"
     let directory_git = format!("{}{}", directory, GIT_DIR);
 
     let working_directory_hash_list = match get_hashes_working_directory(directory) {
         Ok(value) => value,
-        Err(value) => return value,
+        Err(value) => return Err(value),
     };
 
     let objects_hash_list = match get_hashes_objects(directory_git) {
         Ok(value) => value,
-        Err(value) => return value,
+        Err(value) => return Err(value),
     };
 
     let updated_files_list = compare_hash_lists(working_directory_hash_list, objects_hash_list);
 
-    if let Some(value) = print_changes(updated_files_list, directory) {
-        return value;
-    }
-    Ok(())
+    let value = print_changes(updated_files_list, directory)?;
+
+    Ok(value)
 }
 
 /// Imprime los cambios que se realizaron en el repositorio local y no estan en el staging area.
 /// ###Parámetros:
 /// 'updated_files_list': vector con los nombres de los archivos que se modificaron.
 /// 'directory': directorio del repositorio local.
-fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Option<Result<(), GitError>> {
+fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Result<String, GitError> {
+    let mut formatted_result = String::new();
     // Si el vector de archivos modificados esta vacio, significa que no hay cambios
     if updated_files_list.is_empty() {
         let head_branch_name = get_head_branch(directory);
         let head_branch_name = match head_branch_name {
             Ok(name) => name,
-            Err(_) => return Some(Err(GitError::HeadBranchError)),
+            Err(_) => return Err(GitError::HeadBranchError),
         };
-        println!(
-            "Your branch is up to date with 'origin/{}'.",
+        formatted_result.push_str(&format!(
+            "Your branch is up to date with 'origin/{}'.\n",
             head_branch_name
-        );
+        ));
     } else {
-        println!("Changes not staged for commit:");
-        println!("  (use \"git add <file>...\" to update what will be committed)");
-        println!("  (use \"git reset HEAD <file>...\" to unstage)");
+        formatted_result.push_str("Changes not staged for commit:\n");
+        formatted_result
+            .push_str("  (use \"git add <file>...\" to update what will be committed)\n");
+        formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
+
         for file in updated_files_list {
-            println!("\tmodified:   {}", file);
+            formatted_result.push_str(&format!("\tmodified:   {}\n", file));
         }
     }
-    None
+    Ok(formatted_result)
 }
 
 /// Compara los hashes de los archivos del directorio de trabajo con los de objects y devuelve un vector
@@ -141,13 +142,13 @@ fn compare_hash_lists(
 /// Devuelve un vector con los hashes de los archivos en objects.
 /// ###Parámetros:
 /// 'directory_git': directorio del repositorio local.
-fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, Result<(), GitError>> {
+fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, GitError> {
     let objects_dir = Path::new(&directory_git).join(OBJECTS_DIR);
     let mut objects_hash_list: Vec<String> = Vec::new();
     let visit_objects = visit_dirs(&objects_dir, &mut objects_hash_list);
     match visit_objects {
         Ok(file) => file,
-        Err(_) => return Err(Err(GitError::VisitDirectoryError)),
+        Err(_) => return Err(GitError::VisitDirectoryError),
     };
     Ok(objects_hash_list)
 }
@@ -155,16 +156,14 @@ fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, Result<(), G
 /// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-fn get_hashes_working_directory(
-    directory: &str,
-) -> Result<HashMap<String, String>, Result<(), GitError>> {
+fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
-    let working_directory = format!("{}{}", directory, "/git/src");
+    let working_directory = format!("{}", directory);
     let visit_working_directory =
         calculate_directory_hashes(&working_directory, &mut working_directory_hash_list);
     match visit_working_directory {
         Ok(file) => file,
-        Err(_) => return Err(Err(GitError::VisitDirectoryError)),
+        Err(_) => return Err(GitError::VisitDirectoryError),
     };
     Ok(working_directory_hash_list)
 }

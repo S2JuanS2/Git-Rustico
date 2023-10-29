@@ -1,5 +1,6 @@
 use crate::errors::GitError;
-use flate2::read::GzDecoder;
+extern crate flate2;
+use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use sha1::{Digest, Sha1};
@@ -43,19 +44,23 @@ pub fn compressor_object(store: String, mut file_object: File) -> Result<(), Git
     Ok(())
 }
 
-/// Dado un contenido lo descomprime y lo guarda
+/// Dado un directorio lo descomprime y lo guarda
 /// ###Parametros:
-/// 'content': contenido comprimido a descomprimir
-pub fn decompression_object(compressed_data: &[u8]) -> Result<String, GitError> {
-    let mut decompression = GzDecoder::new(compressed_data);
-    let mut content_string = String::new();
-
-    match decompression.read_to_string(&mut content_string) {
-        Ok(content_string) => content_string,
-        Err(_) => return Err(GitError::DecompressionFailed),
+/// 'content': directorio del archivo comprimido a descomprimir
+pub fn decompression_object(path: &str) -> Result<String, GitError> {
+    let file = match File::open(&path) {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::OpenFileError),
     };
 
-    Ok(content_string)
+    let mut reader = ZlibDecoder::new(file);
+
+    let mut uncompressed_content = String::new();
+    if let Err(_) = reader.read_to_string(&mut uncompressed_content) {
+        return Err(GitError::ReadFileError);
+    };
+
+    Ok(uncompressed_content)
 }
 
 #[cfg(test)]
@@ -73,23 +78,33 @@ mod tests {
         assert_eq!(result_hash.len(), 40);
     }
 
-    /*
     #[test]
-    fn decompression_test() {
-        // Datos comprimidos
-        let mut compressed_data: Vec<u8> = vec![
-            0x1F, 0x8B, 0x08, 0x08, 0xAB, 0xC4, 0x5A, 0x5A, 0x00, 0x03, 0x74, 0x65, 0x73, 0x74,
-            0x00, 0x8B, 0xC8, 0xCE, 0xC9, 0xC9, 0x07, 0x00, 0x22, 0x10, 0x04, 0x03, 0x00, 0x00,
-            0xFF, 0xFF, 0x0A, 0x00, 0x00, 0x00,
-        ];
+    fn test_compressor_and_decompression_objects() {
+        // Contenido de prueba
+        let test_content = "Hola, este es un contenido de prueba";
+        // Nombre de archivo de prueba
+        let test_file = "test_file";
 
-        let result = decompression_object(&mut compressed_data);
-
-        // verifico que el contenido descomprimido es el esperado
-        let content_string = String::from_utf8_lossy(&compressed_data);
-        assert_eq!(content_string, "test");
-
-        assert!(result.is_ok());
+        // Llamar a la función de compresión
+        let file_for_compression =
+            File::create(test_file).expect("Falló al crear el archivo de prueba");
+        match compressor_object(test_content.to_string(), file_for_compression) {
+            Ok(_) => (),
+            Err(err) => {
+                panic!("Falló la compresión: {:?}", err);
+            }
+        }
+        // Llamar a la función de descompresión
+        match decompression_object(test_file) {
+            Ok(result) => {
+                // El contenido descomprimido debe ser igual al contenido original
+                assert_eq!(result, test_content);
+            }
+            Err(err) => {
+                panic!("Falló en la descompresión: {:?}", err);
+            }
+        }
+        // Se borra el archivo de prueba
+        std::fs::remove_file(test_file).expect("Falló al remover el archivo de prueba");
     }
-    */
 }
