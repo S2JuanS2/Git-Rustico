@@ -134,3 +134,20 @@ pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str
     let message = format!("{}Conexión terminada", signature);
     log_message(&tx, &message)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::mpsc;
+
+    #[test]
+    fn test_log_client_disconnection() {
+        let (tx, rx) = mpsc::channel();
+        let arc = Arc::new(Mutex::new(tx));
+
+        log_client_disconnection(&arc, "Test: ");
+
+        let received_message = rx.recv().unwrap();
+        assert_eq!(received_message, "Test: Conexión terminada");
+    }
+}
