@@ -46,7 +46,7 @@ fn init_new_client(
 
 fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
     let client_description = init_new_client(stream, &tx)?;
-    let mut buffer = [0; 1024]; // Buffer de lectura
+    let mut buffer = [0; 2048]; // Buffer de lectura
 
     while let Ok(bytes_read) = stream.read(&mut buffer) {
         if bytes_read == 0 {
