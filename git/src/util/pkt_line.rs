@@ -94,7 +94,7 @@ pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], GitError> {
     if bytes.len() < 4 {
         return Err(GitError::InvalidPacketLineError);
     }
-    let len = match u32::from_str_radix(&String::from_utf8_lossy(&bytes[0..4]).trim(), 16)
+    let len = match u32::from_str_radix(String::from_utf8_lossy(&bytes[0..4]).trim(), 16)
     {
         Ok(l) => l as usize,
         Err(_) => return Err(GitError::InvalidPacketLineError),

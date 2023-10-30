@@ -41,15 +41,15 @@ impl RequestCommand {
 
 
 pub struct GitRequest {
-    request_command: RequestCommand,
-    pathname: String,
-    host_parameter: Option<String>,
-    extra_parameters: Vec<String>,
+    pub request_command: RequestCommand,
+    pub pathname: String,
+    pub host_parameter: Option<String>,
+    pub extra_parameters: Vec<String>,
 }
 
 impl GitRequest {
     pub fn read_git_proto_request(data: &[u8]) -> Result<GitRequest, GitError> {
-        
+
 
         let mut parts = data.split(|&byte| byte == 0);
         
@@ -64,10 +64,7 @@ impl GitRequest {
             None => return Err(GitError::MissingPathNameRequest),
         };
     
-        let host_parameter = match parts.next()  {
-            Some(host) => Some(host),
-            None => None,
-        };
+        let host_parameter = parts.next().map(|host| host);
         let extra_parameters = parts.collect::<Vec<_>>();
     
         Ok(GitRequest {
