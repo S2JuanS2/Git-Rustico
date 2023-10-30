@@ -5,10 +5,10 @@ use crate::util::formats::hash_generate;
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::fs::OpenOptions;
 
 use crate::commands::branch::get_current_branch;
 
@@ -155,7 +155,6 @@ fn commit_log(directory: &str, content: &str) -> Result<(), GitError> {
         Err(_) => return Err(GitError::WriteFileError),
     };
 
-
     Ok(())
 }
 
@@ -230,7 +229,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
 
     let hash_commit = hash_generate(&store);
     object_commit_save(directory, hash_commit)?;
-    commit_log(directory,&content)?;
+    commit_log(directory, &content)?;
     commit_msg_edit(directory, commit.get_message())?;
 
     //Actualizar las referencias (HEAD) <-- leer la branch

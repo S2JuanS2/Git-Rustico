@@ -1,8 +1,8 @@
-use std::path::Path;
+use crate::consts::*;
+use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::*;
-use crate::errors::GitError;
-use crate::consts::*;
+use std::path::Path;
 
 /// Esta función se encarga de llamar al comando init con los parametros necesarios
 /// ###Parametros:
@@ -38,7 +38,10 @@ pub fn git_init(directory: &str) -> Result<String, GitError> {
     create_file(&head_file, &head_content)?;
     create_file(&index_file, CONTENT_EMPTY)?;
 
-    let result = format!("Repositorio vacío inicializado en la direcección: {}", directory);
+    let result = format!(
+        "Repositorio vacío inicializado en la direcección: {}",
+        directory
+    );
 
     Ok(result)
 }

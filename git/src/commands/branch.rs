@@ -4,8 +4,8 @@ use crate::models::client::Client;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 
 const BRANCH_DIR: &str = "refs/heads/";
 
@@ -146,10 +146,10 @@ pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<String, G
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commands::checkout::git_checkout_switch;
+    use crate::commands::init::git_init;
     use std::fs;
     use std::path::Path;
-    use crate::commands::init::git_init;
-    use crate::commands::checkout::git_checkout_switch;
 
     const TEST_DIRECTORY: &str = "./test_repo";
 
@@ -231,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_current_branch() -> Result<(), GitError>{
+    fn test_get_current_branch() -> Result<(), GitError> {
         git_init(TEST_DIRECTORY)?;
         git_branch_create(TEST_DIRECTORY, "test_branch3", "commit_hash_branch")?;
         git_checkout_switch(TEST_DIRECTORY, "test_branch3")?;

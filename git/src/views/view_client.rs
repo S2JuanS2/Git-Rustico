@@ -31,12 +31,28 @@ impl View {
                 return Err(GitError::ObjectBuildFailed);
             }
         };
-        let button_clear: gtk::Button = builder.object("button_clear").ok_or(GitError::ObjectBuildFailed)?;        
-        let button_send: gtk::Button = builder.object("button_send").ok_or(GitError::ObjectBuildFailed)?;
-        let button_init: gtk::Button = builder.object("button_init").ok_or(GitError::ObjectBuildFailed)?;
-        let button_branch: gtk::Button = builder.object("button_branch").ok_or(GitError::ObjectBuildFailed)?;
-        let entry: Rc<gtk::Entry> = Rc::new(builder.object("entry_console").ok_or(GitError::ObjectBuildFailed)?,);
-        let response: Rc<gtk::TextView> = Rc::new(builder.object("console").ok_or(GitError::ObjectBuildFailed)?,);
+        let button_clear: gtk::Button = builder
+            .object("button_clear")
+            .ok_or(GitError::ObjectBuildFailed)?;
+        let button_send: gtk::Button = builder
+            .object("button_send")
+            .ok_or(GitError::ObjectBuildFailed)?;
+        let button_init: gtk::Button = builder
+            .object("button_init")
+            .ok_or(GitError::ObjectBuildFailed)?;
+        let button_branch: gtk::Button = builder
+            .object("button_branch")
+            .ok_or(GitError::ObjectBuildFailed)?;
+        let entry: Rc<gtk::Entry> = Rc::new(
+            builder
+                .object("entry_console")
+                .ok_or(GitError::ObjectBuildFailed)?,
+        );
+        let response: Rc<gtk::TextView> = Rc::new(
+            builder
+                .object("console")
+                .ok_or(GitError::ObjectBuildFailed)?,
+        );
         Ok(View {
             controller,
             window,
@@ -48,12 +64,12 @@ impl View {
             response,
         })
     }
-    fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>){
+    fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>) {
         if let Some(buffer) = response.buffer() {
             let mut end_iter = buffer.end_iter();
             match result {
                 Ok(response) => {
-                    let response_format = format!("{}\n{}",DIV,response);
+                    let response_format = format!("{}\n{}", DIV, response);
                     buffer.insert(&mut end_iter, &response_format);
                 }
                 Err(e) => {
@@ -67,7 +83,7 @@ impl View {
             }
         }
     }
-    fn connect_button_init (&self) {
+    fn connect_button_init(&self) {
         let controller = self.controller.clone();
         let response = Rc::clone(&self.response);
 
@@ -84,7 +100,7 @@ impl View {
             });
         }
     }
-    fn connect_button_branch(&self){
+    fn connect_button_branch(&self) {
         let controller = self.controller.clone();
         let response = Rc::clone(&self.response);
 
@@ -94,7 +110,7 @@ impl View {
             Self::response_write_buffer(result, Rc::clone(&response));
         });
     }
-    fn connect_button_send(&self){
+    fn connect_button_send(&self) {
         let response = Rc::clone(&self.response);
         let entry = Rc::clone(&self.entry);
         let controller = self.controller.clone();
@@ -106,7 +122,7 @@ impl View {
             Self::response_write_buffer(result, Rc::clone(&response));
         });
     }
-    fn connect_buttons(self){
+    fn connect_buttons(self) {
         self.connect_button_init();
         self.connect_button_clear();
         self.connect_button_send();

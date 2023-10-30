@@ -1,14 +1,16 @@
 use git::config::Config;
 use git::errors::GitError;
 use git::util::connections::start_server;
-use git::util::logger::{log_message, handle_log_file, log_client_connect, get_client_signature, log_client_disconnection};
+use git::util::logger::{
+    get_client_signature, handle_log_file, log_client_connect, log_client_disconnection,
+    log_message,
+};
 use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
-
 
 fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
     log_client_connect(stream, &tx);

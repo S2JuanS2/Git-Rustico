@@ -5,7 +5,6 @@ use std::io::{BufRead, BufReader};
 
 use super::branch::get_current_branch;
 
-
 /// Esta función se encarga de llamar al comando log con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función log
@@ -31,7 +30,10 @@ pub fn git_log(directory: &str) -> Result<(), GitError> {
         let reader = BufReader::new(file);
         let lines: Vec<String> = reader
             .lines()
-            .map(|line| line.map_err(|_| GitError::ReadFileError).unwrap_or_else(|_| String::new()))
+            .map(|line| {
+                line.map_err(|_| GitError::ReadFileError)
+                    .unwrap_or_else(|_| String::new())
+            })
             .collect();
 
         let lines_per_commit = 5;
@@ -61,9 +63,9 @@ pub fn git_log(directory: &str) -> Result<(), GitError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use std::fs::File;
     use std::io::Write;
-    use std::fs;
     use std::path::Path;
 
     #[test]
@@ -96,7 +98,7 @@ mod tests {
         //eliminar head file
         if let Err(err) = fs::remove_file(format!("{}/.git/HEAD", directory)) {
             panic!("Falló al eliminar el archivo temporal: {}", err);
-        }        
+        }
 
         if !Path::new(&log_path).exists() {
             fs::remove_dir_all(log_path).expect("Falló al remover el directorio temporal");

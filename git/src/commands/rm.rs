@@ -43,7 +43,7 @@ fn compare_hash(file_name: &str, directory: &str) -> Result<(), GitError> {
         Err(_) => return Err(GitError::ReadFileError),
     };
 
-    let header = format!("{} {}\0",BLOB, file_content.len());
+    let header = format!("{} {}\0", BLOB, file_content.len());
     let store = header + &file_content;
     let hash_file = hash_generate(&store);
 
