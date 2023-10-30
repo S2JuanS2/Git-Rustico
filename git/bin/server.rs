@@ -14,7 +14,7 @@ use std::{env, thread};
 
 fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
     log_client_connect(stream, &tx);
-    let signature = get_client_signature(&stream)?;
+    let signature = get_client_signature(stream)?;
 
     let mut buffer = [0; 2048]; // Buffer de lectura
 

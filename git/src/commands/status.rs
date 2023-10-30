@@ -13,11 +13,11 @@ use std::path::Path;
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    if args.len() > 0 {
+    if !args.is_empty() {
         return Err(GitError::InvalidArgumentCountStatusError);
     }
     let directory = client.get_directory_path();
-    git_status(&directory)
+    git_status(directory)
 }
 
 /// Devuelve el nombre de la rama actual.
@@ -142,7 +142,7 @@ fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, GitError> {
 /// 'directory': directorio del repositorio local.
 fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
-    let working_directory = format!("{}", directory);
+    let working_directory = directory.to_string();
     calculate_directory_hashes(&working_directory, &mut working_directory_hash_list)?;
     Ok(working_directory_hash_list)
 }

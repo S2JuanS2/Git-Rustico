@@ -18,7 +18,7 @@ pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, GitErr
     }
 
     let directory = client.get_directory_path();
-    git_cat_file(&directory, args[1], args[0])
+    git_cat_file(directory, args[1], args[0])
 }
 
 pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, GitError> {

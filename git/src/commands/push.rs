@@ -14,13 +14,13 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<(), GitError> {
         return Err(GitError::InvalidArgumentCountPushError);
     }
     let directory = client.get_directory_path();
-    let mut socket = start_client(&address)?;
+    let mut socket = start_client(address)?;
     let parts = address.split(':').collect::<Vec<&str>>();
     let ip = parts[0].to_string();
     let port = parts[1].to_string();
     let remote_name = args[0];
     let branch_name = args[1];
-    git_push(&directory, &mut socket, ip, port, remote_name, branch_name)
+    git_push(directory, &mut socket, ip, port, remote_name, branch_name)
 }
 
 /// actualiza el repositorio remoto con los cambios del repositorio local

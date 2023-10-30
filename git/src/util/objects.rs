@@ -169,8 +169,8 @@ fn create_object(byte: u8) -> Result<ObjectType, GitError> {
 /// * `Err(GitError)`: .
 ///
 pub fn read_type(decompressed_data: &[u8]) -> Result<String, GitError> {
-    let content = &decompressed_data[..];
-
+    let content = decompressed_data;
+  
     let mut type_object: Vec<u8> = Vec::new();
     let mut index = 0;
     while index < content.len() && content[index] != SPACE {
@@ -193,8 +193,8 @@ pub fn read_type(decompressed_data: &[u8]) -> Result<String, GitError> {
 /// * `Err(GitError)`: .
 ///
 pub fn read_size(decompressed_data: &[u8]) -> Result<String, GitError> {
-    let content = &decompressed_data[..];
-
+    let content = decompressed_data;
+  
     let mut size: Vec<u8> = Vec::new();
     let mut index = 0;
     while index < content.len() && content[index] != SPACE {
@@ -221,14 +221,14 @@ pub fn read_size(decompressed_data: &[u8]) -> Result<String, GitError> {
 /// * `Err(GitError)`: .
 ///
 pub fn read_tree(decompressed_data: &[u8]) -> Result<String, GitError> {
-    let content = &decompressed_data[..];
+    let content = decompressed_data;
 
     let mut index = 0;
     while index < content.len() && content[index] != NULL {
         index += 1;
     }
     index += 1;
-    let mut result = format!("");
+    let mut result = String::new();
 
     while index < content.len() {
         let mut type_object: Vec<u8> = Vec::new();
@@ -275,7 +275,8 @@ pub fn read_tree(decompressed_data: &[u8]) -> Result<String, GitError> {
 /// * `Err(GitError)`: .
 ///
 pub fn read_commit(decompressed_data: &[u8]) -> Result<String, GitError> {
-    let result_normal = &decompressed_data[..];
+    let result_normal = decompressed_data;
+
     let mut index = 0;
     while index < result_normal.len() && result_normal[index] != NULL {
         index += 1;
@@ -297,7 +298,8 @@ pub fn read_commit(decompressed_data: &[u8]) -> Result<String, GitError> {
 /// * `Err(GitError)`: .
 ///
 pub fn read_blob(decompressed_data: &[u8]) -> Result<String, GitError> {
-    let result_normal = &decompressed_data[..];
+    let result_normal = decompressed_data;
+
     let mut index = 0;
     while index < result_normal.len() && result_normal[index] != NULL {
         index += 1;

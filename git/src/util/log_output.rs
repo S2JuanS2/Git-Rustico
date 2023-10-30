@@ -65,7 +65,7 @@ impl LogOutput {
 fn open_log_file(log_path: &str) -> Result<File, GitError> {
     match OpenOptions::new().create(true).append(true).open(log_path) {
         Ok(file) => Ok(file),
-        Err(_) => return Err(GitError::LogOutputOpenError),
+        Err(_) => Err(GitError::LogOutputOpenError),
     }
 }
 

@@ -14,11 +14,11 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), GitError> {
         return Err(GitError::InvalidArgumentCountPullError);
     }
     let directory = client.get_directory_path();
-    let mut socket = start_client(&address)?;
+    let mut socket = start_client(address)?;
     let parts = address.split(':').collect::<Vec<&str>>();
     let ip = parts[0].to_string();
     let port = parts[1].to_string();
-    git_pull(&directory, &mut socket, ip, port)
+    git_pull(directory, &mut socket, ip, port)
 }
 
 /// actualiza el repositorio local con los cambios del repositorio remoto

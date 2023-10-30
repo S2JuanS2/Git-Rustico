@@ -11,15 +11,11 @@ use std::{fs::File, io::Read};
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_hash_object(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() == 1 {
-        git_hash_object_blob(args[0], client.get_directory_path().as_str())
+        git_hash_object_blob(args[0], client.get_directory_path())
     } else if args.len() == 3 && args[1] == BLOB {
-        git_hash_object_blob(args[2], client.get_directory_path().as_str())
-    } else if args.len() == 3 && args[1] == TREE {
-        //directorio
-        git_hash_object_blob(args[0], client.get_directory_path().as_str())
+        git_hash_object_blob(args[2], client.get_directory_path())
     } else if args.len() == 3 && args[1] == COMMIT {
-        //objeto commit
-        git_hash_object_blob(args[0], client.get_directory_path().as_str())
+        git_hash_object_blob(args[0], client.get_directory_path())
     } else {
         return Err(GitError::InvalidArgumentCountHashObjectError);
     }
@@ -64,7 +60,9 @@ mod tests {
     #[test]
     fn test_git_hash_object() {
         let temp_file_name = "prueba.txt";
-        let path = format!("{}/{}", "test_repo", temp_file_name);
+        let temp_dir = "test_repo";
+        let path = format!("{}/{}", temp_dir, temp_file_name);
+        fs::create_dir_all(&temp_dir).expect("Falló al crear el directorio temporal");
         File::create(&path).expect("Falló al crear el archivo");
 
         fs::write(&path, "Chau mundo").expect("Falló al escribir en el archivo");

@@ -9,10 +9,10 @@ use std::path::Path;
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función init
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    if args.len() > 0 {
+    if !args.is_empty() {
         return Err(GitError::InvalidArgumentCountInitError);
     }
-    let result = git_init(client.get_directory_path().as_str())?;
+    let result = git_init(client.get_directory_path())?;
 
     Ok(result)
 }

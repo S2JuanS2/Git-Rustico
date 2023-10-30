@@ -128,7 +128,7 @@ pub fn get_client_signature(stream: &TcpStream) -> Result<String, GitError> {
 ///
 pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada", signature);
-    log_message(&tx, &message)
+    log_message(tx, &message)
 }
 
 #[cfg(test)]

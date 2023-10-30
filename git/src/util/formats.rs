@@ -48,7 +48,7 @@ pub fn compressor_object(store: String, mut file_object: File) -> Result<(), Git
 /// ###Parametros:
 /// 'content': directorio del archivo comprimido a descomprimir
 pub fn decompression_object(path: &str) -> Result<Vec<u8>, GitError> {
-    let file = match File::open(&path) {
+    let file = match File::open(path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
     };
@@ -56,7 +56,7 @@ pub fn decompression_object(path: &str) -> Result<Vec<u8>, GitError> {
     let mut reader = ZlibDecoder::new(file);
 
     let mut uncompressed_content = Vec::new();
-    if let Err(_) = reader.read_to_end(&mut uncompressed_content) {
+    if reader.read_to_end(&mut uncompressed_content).is_err() {
         return Err(GitError::ReadFileError);
     };
 

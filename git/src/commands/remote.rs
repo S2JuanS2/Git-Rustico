@@ -13,7 +13,7 @@ pub fn handle_remote(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     let action = args[0];
     let remote_name = args[1];
     let remote_url = args[2];
-    git_remote(&directory, action, remote_name, remote_url)
+    git_remote(directory, action, remote_name, remote_url)
 }
 
 /// ejecuta la accion de remote en el repositorio local

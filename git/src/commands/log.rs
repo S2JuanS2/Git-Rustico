@@ -14,7 +14,7 @@ pub fn handle_log(args: Vec<&str>, client: Client) -> Result<(), GitError> {
         return Err(GitError::InvalidArgumentCountLogError);
     }
     let directory = client.get_directory_path();
-    git_log(&directory)
+    git_log(directory)
 }
 
 /// muestra el log de los commits
@@ -45,7 +45,7 @@ pub fn git_log(directory: &str) -> Result<(), GitError> {
 
             println!("Commit:\n");
 
-            for line_number in start_line..end_line {
+            for (line_number, _item) in lines.iter().enumerate().take(end_line).skip(start_line) {
                 if line_number < total_lines {
                     println!("{}", &lines[line_number]);
                 }
@@ -71,7 +71,8 @@ mod tests {
     #[test]
     fn test_git_log() {
         let directory = "./testdir";
-        if let Err(err) = fs::create_dir_all(&directory) {
+        let git_dir = format!("{}/.git/", directory);
+        if let Err(err) = fs::create_dir_all(&git_dir) {
             panic!("Falló al crear el directorio temporal: {}", err);
         }
         //crear head file

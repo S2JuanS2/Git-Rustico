@@ -16,7 +16,7 @@ pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     }
     let directory = client.get_directory_path();
     let file_name = args[0];
-    git_rm(&directory, file_name)
+    git_rm(directory, file_name)
 }
 
 /// Remueve un archivo del working directory y del index.
