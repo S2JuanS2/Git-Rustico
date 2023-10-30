@@ -5,6 +5,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::io::{BufRead, BufReader};
 
 const BRANCH_DIR: &str = "refs/heads/";
 
@@ -23,6 +24,27 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, GitError
     } else {
         return Err(GitError::InvalidArgumentCountBranchError);
     }
+}
+
+pub fn get_current_branch(directory: &str) -> Result<String, GitError> {
+    let head_path = format!("{}/{}/HEAD", directory, GIT_DIR);
+    let head_file = match File::open(head_path) {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::BranchDirectoryOpenError),
+    };
+
+    let reader = BufReader::new(head_file);
+    let mut branch = String::new();
+    for line in reader.lines() {
+        let line = match line {
+            Ok(line) => line,
+            Err(_) => return Err(GitError::BranchFileReadError),
+        };
+        let line_split: Vec<&str> = line.split('/').collect();
+        branch = line_split[line_split.len() - 1].to_string();
+    }
+
+    Ok(branch)
 }
 
 /// Muestra por pantalla las branch existentes.
@@ -71,7 +93,7 @@ pub fn git_branch_create(
 // Devuelve un vector con los nombres de las branchs
 pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
     // "directory/.git/refs/heads"
-    let directory_git = format!("{}{}", directory, GIT_DIR);
+    let directory_git = format!("{}/{}", directory, GIT_DIR);
     let branch_dir = Path::new(&directory_git).join(BRANCH_DIR);
 
     let entries = match fs::read_dir(branch_dir) {
@@ -101,15 +123,18 @@ pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a eliminar.
-pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<String, GitError> {
-    // falta implementar si estas parado en una brac, no la podes eliminar
+pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<(), GitError> {
+    if get_current_branch(directory) == Ok(branch_name.to_string()) {
+        return Err(GitError::DeleteBranchError);
+    }
+
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_name.to_string()) {
         return Err(GitError::BranchNotFoundError);
     }
 
     // Crear un nuevo archivo en .git/refs/heads/ con el nombre de la rama y el contenido es el hash del commit actual.
-    let branch_path = format!("{}{}/{}{}", directory, GIT_DIR, BRANCH_DIR, branch_name);
+    let branch_path = format!("{}/{}/{}{}", directory, GIT_DIR, BRANCH_DIR, branch_name);
 
     if fs::remove_file(branch_path).is_err() {
         return Err(GitError::DeleteBranchError);
@@ -123,6 +148,8 @@ mod tests {
     use super::*;
     use std::fs;
     use std::path::Path;
+    use crate::commands::init::git_init;
+    use crate::commands::checkout::git_checkout_switch;
 
     const TEST_DIRECTORY: &str = "./test_repo";
 
@@ -130,14 +157,14 @@ mod tests {
     fn test_git_branch_list() {
         // Crea una rama ficticia y el directorio
         let branch_name = "test_branch";
-        let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
 
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio temporal: {}", err);
         }
 
         let branch_path_file = format!(
-            "{}{}/{}{}",
+            "{}/{}/{}{}",
             TEST_DIRECTORY, GIT_DIR, BRANCH_DIR, branch_name
         );
         fs::File::create(&branch_path_file)
@@ -157,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_git_branch_create() {
-        let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio temporal: {}", err);
         }
@@ -175,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_git_branch_delete() {
-        let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("alló al crear el directorio temporal: {}", err);
         }
@@ -201,5 +228,20 @@ mod tests {
         if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         }
+    }
+
+    #[test]
+    fn test_get_current_branch() -> Result<(), GitError>{
+        git_init(TEST_DIRECTORY)?;
+        git_branch_create(TEST_DIRECTORY, "test_branch3", "commit_hash_branch")?;
+        git_checkout_switch(TEST_DIRECTORY, "test_branch3")?;
+        let result = get_current_branch(TEST_DIRECTORY);
+        assert_eq!(result, Ok("test_branch3".to_string()));
+
+        // Limpia el archivo de prueba
+        if !Path::new(TEST_DIRECTORY).exists() {
+            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        }
+        Ok(())
     }
 }

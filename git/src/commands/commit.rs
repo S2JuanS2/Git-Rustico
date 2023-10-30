@@ -8,6 +8,9 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::fs::OpenOptions;
+
+use crate::commands::branch::get_current_branch;
 
 const COMMIT_EDITMSG: &str = "COMMIT_EDITMSG";
 
@@ -127,18 +130,32 @@ fn commit_msg_edit(directory: &str, msg: String) -> Result<(), GitError> {
     Ok(())
 }
 
-/// Creará el directorio donde se registran los commits
+/// Creará el directorio donde se registran los commits y escribirá el contenido en el
+/// archivo con el nombre de la branch actual
 /// ###Parametros:
 /// 'directory': Directorio del git
-fn commit_log(directory: &str) -> Result<(), GitError> {
+fn commit_log(directory: &str, content: &str) -> Result<(), GitError> {
     //Registro de commits (logs/)
     let logs_path = format!("{}logs/refs/heads", directory);
     if !Path::new(&logs_path).exists() {
-        match fs::create_dir_all(logs_path) {
+        match fs::create_dir_all(logs_path.clone()) {
             Ok(_) => (),
             Err(_) => return Err(GitError::CreateDirError),
         };
     }
+    //escribir content en el archivo con el nombre de la branch actual
+    let current_branch = get_current_branch(directory)?;
+    let logs_path = format!("{}/{}", logs_path, current_branch);
+    let mut file = match OpenOptions::new().append(true).create(true).open(logs_path) {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::OpenFileError),
+    };
+    match file.write_all(content.as_bytes()) {
+        Ok(_) => (),
+        Err(_) => return Err(GitError::WriteFileError),
+    };
+
+
     Ok(())
 }
 
@@ -213,7 +230,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
 
     let hash_commit = hash_generate(&store);
     object_commit_save(directory, hash_commit)?;
-    commit_log(directory)?;
+    commit_log(directory,&content)?;
     commit_msg_edit(directory, commit.get_message())?;
 
     //Actualizar las referencias (HEAD) <-- leer la branch
