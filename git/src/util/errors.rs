@@ -23,11 +23,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     }
 }
 
-// impl From<UtilError> for CommandsError {
-//     fn from(err: UtilError) -> Self {
-//         CommandsError::CommandsFromUtil(format!("{}", err))
-//     }
-// }
+
 impl From<CommandsError> for UtilError {
     fn from(error: CommandsError) -> Self {
         UtilError::UtilFromCommands(format!("{}", error))

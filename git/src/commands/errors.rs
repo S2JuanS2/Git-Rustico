@@ -10,9 +10,9 @@ pub enum CommandsError {
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
+        CommandsError::CommandsFromUtil(info) => write!(f, "{}", info),
         CommandsError::CloneMissingRepo => write!(f, "CloneMissingRepo: Use: git clone <repositorio>"),
         CommandsError::CloneMissingRepoInfo(info) => write!(f, "{}\nMore info: {}", CommandsError::CloneMissingRepo, info),
-        CommandsError::CommandsFromUtil(info) => write!(f, "{}", info),
         // AGregar más errores aquí
     }
 }
@@ -30,14 +30,12 @@ impl From<UtilError> for CommandsError {
     }
 }
 
-// Esto no se toca
 impl fmt::Display for CommandsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         format_error(self, f)
     }
 }
 
-// Esto no se toca
 impl fmt::Debug for CommandsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         format_error(self, f)
