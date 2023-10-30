@@ -174,19 +174,27 @@
           </packing>
         </child>
         <child>
-          <object class="GtkTextView" id="console">
-            <property name="width_request">666</property>
+          <object class="GtkScrolledWindow" id="scrolledwindow_console">
+            <property name="width_request">653</property>
             <property name="height_request">388</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="events">GDK_STRUCTURE_MASK | GDK_SCROLL_MASK</property>
-            <property name="editable">False</property>
-            <property name="wrap_mode">word-char</property>
-            <property name="left_margin">20</property>
-            <property name="right_margin">20</property>
-            <property name="top_margin">20</property>
-            <property name="bottom_margin">20</property>
-            <property name="input_purpose">terminal</property>
+            <child>
+              <object class="GtkTextView" id="console">
+                <property name="width_request">8000</property>
+                <property name="height_request">5000</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="events">GDK_STRUCTURE_MASK | GDK_SCROLL_MASK</property>
+                <property name="editable">False</property>
+                <property name="wrap_mode">word-char</property>
+                <property name="left_margin">20</property>
+                <property name="right_margin">20</property>
+                <property name="top_margin">20</property>
+                <property name="bottom_margin">20</property>
+                <property name="input_purpose">terminal</property>
+              </object>
+            </child>
           </object>
           <packing>
             <property name="x">265</property>
