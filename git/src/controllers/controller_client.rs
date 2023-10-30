@@ -68,7 +68,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
             "init" => {
                 result = handle_init(rest_of_command, client)?;
             }
-            "cat_file" => {
+            "cat-file" => {
                 result = handle_cat_file(rest_of_command, client)?;
             }
             "add" => {
@@ -80,7 +80,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
             "fetch" => {
                 handle_fetch(rest_of_command, client)?;
             }
-            "hash_object" => {
+            "hash-object" => {
                 result = handle_hash_object(rest_of_command)?;
             }
             "status" => {

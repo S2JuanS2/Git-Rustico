@@ -18,28 +18,46 @@ pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, GitErr
     }
 
     let directory = client.get_directory_path();
-    git_cat_file(&directory, args[1])
+    git_cat_file(&directory, args[1], args[0])
 }
 
+pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, GitError> {
+
+    let mut content = String::new();
+
+    if type_object == BLOB {
+        content = read_blob(&bytes)?;
+    }else if type_object == COMMIT{
+        content = read_commit(&bytes)?;
+    }else if type_object == TREE{
+        content = read_tree(&bytes)?;
+    }
+
+    Ok(content)
+    
+}
 /// Esta función se utiliza para mostrar el contenido o información sobre los objetos (archivos, commits, etc.)
 /// ###Parametros:
 /// 'directory': dirección donde se encuentra inicializado el repositorio.
 /// 'object_hash': Valor hash de 40 caracteres (SHA-1) del objeto a leer.
-pub fn git_cat_file(directory: &str, object_hash: &str) -> Result<String, GitError> {
+pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<String, GitError> {
     if object_hash.len() != 40 {
         return Err(GitError::HashObjectInvalid);
     }
-
     //Lee los primeros 2 digitos del hash contenidos en el nombre de la carpeta.
     let path = format!("{}/{}/objects/{}", directory, GIT_DIR, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
 
     let content = decompression_object(&file_path)?;
-    //prueba 1: 
-    let type_object = read_type(&content)?;
 
-    Ok(type_object)
+    let mut result = read_type(&content)?;
+
+    if flag == "-p"{
+        result = git_cat_file_p(content, result)?;
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -69,7 +87,7 @@ mod tests {
         compressor_object(object_content.to_string(), file).expect("Falló en la compresión");
 
         // Cuando llama a la función git_cat_file
-        let result = git_cat_file(TEST_DIRECTORY, object_hash).expect("Falló el comando");
+        let result = git_cat_file(TEST_DIRECTORY, object_hash, "-t").expect("Falló el comando");
 
         // El contenido original deberia ser igual al descomprimido
         assert_eq!(result, object_content);

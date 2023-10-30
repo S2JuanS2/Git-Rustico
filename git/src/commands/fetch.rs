@@ -72,7 +72,7 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
     }
 
     // Descarga los objetos necesarios desde el repositorio remoto
-    let objects_dir = format!("{}{}", directory, GIT_DIR);
+    let objects_dir = format!("{}/{}", directory, GIT_DIR);
 
     let objects = match fs::read_dir(&objects_dir) {
         Ok(objects) => objects,
@@ -85,7 +85,7 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
                 let file_name = entry.file_name();
                 let object_hash = file_name.to_string_lossy().to_string();
 
-                git_cat_file(directory, &object_hash)?;
+                git_cat_file(directory, &object_hash, "-p")?;
             }
             Err(_) => {
                 return Err(GitError::ReadFileError);
