@@ -90,6 +90,22 @@ fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError> {
     Ok(content)
 }
 
+pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], GitError> {
+    if bytes.len() < 4 {
+        return Err(GitError::InvalidPacketLineError);
+    }
+    let len = match u32::from_str_radix(&String::from_utf8_lossy(&bytes[0..4]).trim(), 16)
+    {
+        Ok(l) => l as usize,
+        Err(_) => return Err(GitError::InvalidPacketLineError),
+    };
+
+    let data: &[u8] = &bytes[4..len];
+    // let data
+
+    Ok(data)
+}
+
 /// Agrega un prefijo de longitud a un mensaje y lo devuelve como una cadena.
 ///
 /// Esta función toma un mensaje y la longitud del mensaje sin el prefijo y agrega un

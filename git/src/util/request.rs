@@ -1,4 +1,5 @@
 use crate::consts::END_OF_STRING;
+use crate::errors::GitError;
 use crate::util::pkt_line::add_length_prefix;
 
 /// Enumeración `RequestCommand` representa los comandos de solicitud en un protocolo Git.
@@ -24,7 +25,84 @@ impl RequestCommand {
             RequestCommand::UploadArchive => "git-upload-archive",
         }
     }
+
+    pub fn from_string(data: &[u8]) -> Result<RequestCommand, GitError> {
+        let binding = String::from_utf8_lossy(data);
+        let command = binding.trim();
+        match command {
+            "git-upload-pack" => Ok(RequestCommand::UploadPack),
+            "git-receive-pack" => Ok(RequestCommand::ReceivePack),
+            "git-upload-archive" => Ok(RequestCommand::UploadArchive),
+            _ => Err(GitError::InvalidRequestCommand),
+        }
+    }
 }
+
+
+
+pub struct GitRequest {
+    request_command: RequestCommand,
+    pathname: String,
+    host_parameter: Option<String>,
+    extra_parameters: Vec<String>,
+}
+
+impl GitRequest {
+    pub fn read_git_proto_request(data: &[u8]) -> Result<GitRequest, GitError> {
+        
+
+        let mut parts = data.split(|&byte| byte == 0);
+        
+        let request_command = match parts.next()
+        {
+            Some(command) => command,
+            None => return Err(GitError::MissingCommandRequest),
+        };
+        let pathname = match parts.next()
+        {
+            Some(path) => path,
+            None => return Err(GitError::MissingPathNameRequest),
+        };
+    
+        let host_parameter = match parts.next()  {
+            Some(host) => Some(host),
+            None => None,
+        };
+        let extra_parameters = parts.collect::<Vec<_>>();
+    
+        Ok(GitRequest {
+            request_command: RequestCommand::from_string(request_command)?,
+            pathname: String::from_utf8_lossy(pathname).trim().to_string(),
+            host_parameter: host_parameter.map(|p| String::from_utf8_lossy(p).trim().to_string()),
+            extra_parameters: extra_parameters
+                .iter()
+                .map(|p| String::from_utf8_lossy(p).trim().to_string())
+                .collect(),
+        })
+    }
+
+    pub fn create_git_request(
+        command: RequestCommand,
+        repo: String,
+        ip: String,
+        port: String,
+    ) -> String {
+        let mut len: usize = 0;
+    
+        let command = format!("{} ", command.to_string());
+        len += command.len();
+    
+        let project = format!("/{}{}", repo, END_OF_STRING);
+        len += project.len(); // El len cuenta el END_OF_STRING
+    
+        let host = format!("host={}:{}{}", ip, port, END_OF_STRING);
+        len += host.len(); // El len cuenta el END_OF_STRING
+    
+        let message = format!("{}{}{}", command, project, host);
+        add_length_prefix(&message, len)
+    }
+}
+
 
 /// Crea una solicitud Git con los datos especificados.
 ///

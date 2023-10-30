@@ -82,6 +82,10 @@ pub enum GitError {
     PackObjectReadError,
     LogOutputOpenError,
     LogOutputSyncError,
+    InvalidRequest,
+    MissingCommandRequest,
+    MissingPathNameRequest,
+    InvalidRequestCommand,
 }
 
 impl GitError {
@@ -173,6 +177,10 @@ impl GitError {
             GitError::PackObjectReadError => "No se pudo leer el objeto del packfile",
             GitError::LogOutputOpenError => "No se pudo abrir el archivo de log",
             GitError::LogOutputSyncError => "Error al sincronizar los datos al archivo de registro",
+            GitError::InvalidRequest => "Se recibio una solicitud invalida",
+            GitError::MissingCommandRequest => "No se recibio el comando de la solicitud",
+            GitError::MissingPathNameRequest => "No se recibio el path de la solicitud",
+            GitError::InvalidRequestCommand => "Comando de solicitud invalido",
         }
     }
 }
