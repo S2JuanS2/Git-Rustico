@@ -1,6 +1,7 @@
 use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::formats::decompression_object;
+use crate::util::objects::*;
 
 use crate::errors::GitError;
 
@@ -30,13 +31,15 @@ pub fn git_cat_file(directory: &str, object_hash: &str) -> Result<String, GitErr
     }
 
     //Lee los primeros 2 digitos del hash contenidos en el nombre de la carpeta.
-    let path = format!("{}{}/objects/{}", directory, GIT_DIR, &object_hash[..2]);
+    let path = format!("{}/{}/objects/{}", directory, GIT_DIR, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
 
     let content = decompression_object(&file_path)?;
+    //prueba 1: 
+    let type_object = read_type(&content)?;
 
-    Ok(content)
+    Ok(type_object)
 }
 
 #[cfg(test)]

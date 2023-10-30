@@ -47,7 +47,7 @@ pub fn compressor_object(store: String, mut file_object: File) -> Result<(), Git
 /// Dado un directorio lo descomprime y lo guarda
 /// ###Parametros:
 /// 'content': directorio del archivo comprimido a descomprimir
-pub fn decompression_object(path: &str) -> Result<String, GitError> {
+pub fn decompression_object(path: &str) -> Result<Vec<u8>, GitError> {
     let file = match File::open(&path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
@@ -55,8 +55,8 @@ pub fn decompression_object(path: &str) -> Result<String, GitError> {
 
     let mut reader = ZlibDecoder::new(file);
 
-    let mut uncompressed_content = String::new();
-    if let Err(_) = reader.read_to_string(&mut uncompressed_content) {
+    let mut uncompressed_content = Vec::new();
+    if let Err(_) = reader.read_to_end(&mut uncompressed_content) {
         return Err(GitError::ReadFileError);
     };
 
@@ -98,7 +98,7 @@ mod tests {
         match decompression_object(test_file) {
             Ok(result) => {
                 // El contenido descomprimido debe ser igual al contenido original
-                assert_eq!(result, test_content);
+                assert_eq!(String::from_utf8_lossy(&result), test_content);
             }
             Err(err) => {
                 panic!("Falló en la descompresión: {:?}", err);
