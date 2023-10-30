@@ -1,3 +1,4 @@
+use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use std::fs::File;
@@ -20,7 +21,7 @@ pub fn handle_log(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 
 /// muestra el log de los commits
 /// ###Parametros:
-/// 'directory': directorio del repositorio local 
+/// 'directory': directorio del repositorio local
 pub fn git_log(directory: &str) -> Result<(), GitError> {
     let logs_path = format!("{}/.git/logs/refs/heads", directory);
 

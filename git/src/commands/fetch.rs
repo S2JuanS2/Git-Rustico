@@ -1,12 +1,11 @@
+use crate::consts::*;
+use crate::errors::GitError;
 use std::fs;
 use std::path::Path;
-
-use crate::errors::GitError;
 
 use super::cat_file::git_cat_file;
 use crate::models::client::Client;
 
-const GIT_DIR: &str = "/.git";
 const REMOTES_DIR: &str = "refs/remotes/";
 
 /// Esta función se encarga de llamar al comando fetch con los parametros necesarios

@@ -1,33 +1,33 @@
 use git::config::Config;
 use git::errors::GitError;
 use git::util::connections::start_server;
-use std::fs::OpenOptions;
+use git::util::logger::{log_message, handle_log_file, log_client_connect, get_client_signature, log_client_disconnection};
 use std::io::Read;
-use std::io::Write;
 use std::net::{TcpListener, TcpStream};
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
-fn handle_client(mut stream: TcpStream, tx: Arc<Mutex<Sender<String>>>) {
-    // Leer datos del cliente
-    let client_description = stream.peer_addr().ok().map_or_else(
-        || "Cliente desconocido conectado".to_string(),
-        |peer_addr| format!("Conexión establecida con {}", peer_addr),
-    );
 
-    {
-        let _ = &tx.lock().unwrap().send(client_description).unwrap();
+fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
+    log_client_connect(stream, &tx);
+    let signature = get_client_signature(&stream)?;
+
+    let mut buffer = [0; 2048]; // Buffer de lectura
+
+    while let Ok(bytes_read) = stream.read(&mut buffer) {
+        if bytes_read == 0 {
+            break;
+        }
+
+        let data = &buffer[..bytes_read];
+        let message = format!("{}Datos recibidos: {:?}", signature, data);
+        log_message(&tx, &message);
     }
 
-    let mut buffer = [0; 1024];
-
-    if let Err(error) = stream.read(&mut buffer) {
-        eprintln!("Error al leer: {}", error);
-        return;
-    }
-    println!("Recibido: {}", String::from_utf8_lossy(&buffer));
+    log_client_disconnection(&tx, &signature);
+    Ok(())
 }
 
 fn main() -> Result<(), GitError> {
@@ -42,8 +42,8 @@ fn main() -> Result<(), GitError> {
 
     let (tx, rx) = mpsc::channel();
 
-    let log = thread::spawn(move || {
-        let _ = write_log_file(&config.path_log, rx);
+    let log: JoinHandle<()> = thread::spawn(move || {
+        let _ = handle_log_file(&config.path_log, rx);
     });
 
     let clients = thread::spawn(move || {
@@ -64,11 +64,11 @@ fn receive_client(
     let mut handles: Vec<JoinHandle<()>> = vec![];
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => {
+            Ok(mut stream) => {
                 let tx = Arc::clone(&shared_tx);
                 println!("Nueva conexión: {:?}", stream.local_addr());
-                handles.push(std::thread::spawn(|| {
-                    handle_client(stream, tx);
+                handles.push(std::thread::spawn(move || {
+                    let _ = handle_client(&mut stream, tx);
                 }));
             }
             Err(e) => {
@@ -77,21 +77,4 @@ fn receive_client(
         }
     }
     Ok(handles)
-}
-
-fn write_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), std::io::Error> {
-    // Intentamos abrir el archivo en modo append o crearlo si no existe.
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)?;
-
-    // Creamos un bucle para recibir datos del canal y escribirlos en el archivo.
-    for received_data in rx {
-        writeln!(file, "{}", received_data)?;
-    }
-
-    // Cerramos el archivo al finalizar.
-    file.sync_all()?;
-    Ok(())
 }

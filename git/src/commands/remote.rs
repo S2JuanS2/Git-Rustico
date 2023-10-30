@@ -1,7 +1,6 @@
 use crate::errors::GitError;
 use crate::models::client::Client;
 
-
 /// Esta función se encarga de llamar al comando remote con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función remote
