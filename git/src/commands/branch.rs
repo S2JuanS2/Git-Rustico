@@ -236,6 +236,11 @@ mod tests {
         git_checkout_switch(TEST_DIRECTORY, "test_branch3")?;
         let result = get_current_branch(TEST_DIRECTORY);
         assert_eq!(result, Ok("test_branch3".to_string()));
+
+        // Limpia el archivo de prueba
+        if !Path::new(TEST_DIRECTORY).exists() {
+            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
+        }
         Ok(())
     }
 }
