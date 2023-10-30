@@ -81,7 +81,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
                 handle_fetch(rest_of_command, client)?;
             }
             "hash-object" => {
-                result = handle_hash_object(rest_of_command)?;
+                result = handle_hash_object(rest_of_command, client)?;
             }
             "status" => {
                 result = handle_status(rest_of_command, client)?;
