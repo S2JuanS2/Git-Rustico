@@ -1,4 +1,3 @@
-use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use std::fs::File;

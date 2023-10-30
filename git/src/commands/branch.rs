@@ -123,7 +123,7 @@ pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a eliminar.
-pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<(), GitError> {
+pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<String, GitError> {
     if get_current_branch(directory) == Ok(branch_name.to_string()) {
         return Err(GitError::DeleteBranchError);
     }

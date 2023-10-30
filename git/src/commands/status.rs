@@ -1,4 +1,5 @@
 use crate::errors::GitError;
+use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::formats::hash_generate;
 use std::collections::HashMap;
@@ -6,10 +7,6 @@ use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-
-const GIT_DIR: &str = "/.git";
-const HEAD_FILE: &str = "HEAD";
-const OBJECTS_DIR: &str = "objects";
 
 /// Esta función se encarga de llamar al comando status con los parametros necesarios
 /// ###Parametros:
@@ -28,8 +25,8 @@ pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, GitError
 /// 'directory': directorio del repositorio local.
 fn get_head_branch(directory: &str) -> Result<String, GitError> {
     // "directory/.git/HEAD"
-    let directory_git = format!("{}{}", directory, GIT_DIR);
-    let head_file_path = Path::new(&directory_git).join(HEAD_FILE);
+    let directory_git = format!("{}/{}", directory, GIT_DIR);
+    let head_file_path = Path::new(&directory_git).join(HEAD);
 
     let head_file = File::open(head_file_path);
     let mut head_file = match head_file {
@@ -71,17 +68,11 @@ pub fn print_head(directory: &str) -> Result<String, GitError> {
 /// 'directory': directorio del repositorio local.
 pub fn git_status(directory: &str) -> Result<String, GitError> {
     // "directory/.git"
-    let directory_git = format!("{}{}", directory, GIT_DIR);
+    let directory_git = format!("{}/{}", directory, GIT_DIR);
 
-    let working_directory_hash_list = match get_hashes_working_directory(directory) {
-        Ok(value) => value,
-        Err(value) => return Err(value),
-    };
+    let working_directory_hash_list = get_hashes_working_directory(directory)?;
 
-    let objects_hash_list = match get_hashes_objects(directory_git) {
-        Ok(value) => value,
-        Err(value) => return Err(value),
-    };
+    let objects_hash_list = get_hashes_objects(directory_git)?;
 
     let updated_files_list = compare_hash_lists(working_directory_hash_list, objects_hash_list);
 
@@ -96,22 +87,19 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
 /// 'directory': directorio del repositorio local.
 fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Result<String, GitError> {
     let mut formatted_result = String::new();
+    let head_branch_name = get_head_branch(directory)?;
     // Si el vector de archivos modificados esta vacio, significa que no hay cambios
     if updated_files_list.is_empty() {
-        let head_branch_name = get_head_branch(directory);
-        let head_branch_name = match head_branch_name {
-            Ok(name) => name,
-            Err(_) => return Err(GitError::HeadBranchError),
-        };
         formatted_result.push_str(&format!(
             "Your branch is up to date with 'origin/{}'.\n",
             head_branch_name
         ));
     } else {
-        formatted_result.push_str("Changes not staged for commit:\n");
+        formatted_result.push_str("On branch ");
+        formatted_result.push_str(&head_branch_name);
+        formatted_result.push_str("\nChanges not staged for commit:\n");
         formatted_result
             .push_str("  (use \"git add <file>...\" to update what will be committed)\n");
-        formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
 
         for file in updated_files_list {
             formatted_result.push_str(&format!("\tmodified:   {}\n", file));
@@ -143,13 +131,9 @@ fn compare_hash_lists(
 /// ###Parámetros:
 /// 'directory_git': directorio del repositorio local.
 fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, GitError> {
-    let objects_dir = Path::new(&directory_git).join(OBJECTS_DIR);
+    let objects_dir = Path::new(&directory_git).join(DIR_OBJECTS);
     let mut objects_hash_list: Vec<String> = Vec::new();
-    let visit_objects = visit_dirs(&objects_dir, &mut objects_hash_list);
-    match visit_objects {
-        Ok(file) => file,
-        Err(_) => return Err(GitError::VisitDirectoryError),
-    };
+    visit_dirs(&objects_dir, &mut objects_hash_list)?;
     Ok(objects_hash_list)
 }
 
@@ -159,12 +143,7 @@ fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, GitError> {
 fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = format!("{}", directory);
-    let visit_working_directory =
-        calculate_directory_hashes(&working_directory, &mut working_directory_hash_list);
-    match visit_working_directory {
-        Ok(file) => file,
-        Err(_) => return Err(GitError::VisitDirectoryError),
-    };
+    calculate_directory_hashes(&working_directory, &mut working_directory_hash_list)?;
     Ok(working_directory_hash_list)
 }
 
@@ -287,10 +266,15 @@ mod tests {
             panic!("Falló al crear el repo de test: {}", err);
         }
 
-        let repo_path = format!("{}{}", dir_path, "/git/src");
+        
+        let repo_path = format!("{}{}", dir_path, "/.git/src");
         if let Err(err) = fs::create_dir_all(&repo_path) {
             panic!("Falló al crear la carpeta 'git': {}", err);
         }
+        
+        let head_path = format!("{}/{}/{}",TEST_DIRECTORY, ".git", HEAD);
+        let mut file = fs::File::create(head_path).expect("Falló al crear el HEAD");
+        file.write_all(b"ref: refs/heads/master").expect("Error al escribir en el archivo");
 
         // El hash de este archivo es: 48124d6dc3b2e693a207667c32ac672414913994
         let file_path1 = format!("{}/main.rs", repo_path);
@@ -321,8 +305,6 @@ mod tests {
         assert!(git_status(TEST_DIRECTORY).is_ok());
 
         // Elimina el directorio de prueba
-        if fs::remove_dir_all(TEST_DIRECTORY).is_err() {
-            eprintln!("Error al intentar eliminar el directorio temporal");
-        }
+        fs::remove_dir_all(TEST_DIRECTORY).expect("Error al intentar remover el directorio");
     }
 }
