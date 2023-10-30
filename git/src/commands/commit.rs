@@ -231,6 +231,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
     let store = header + &content;
 
     let hash_commit = hash_generate(&store);
+
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}/{}{}", directory, GIT_DIR, BRANCH_DIR, current_branch);
     if current_branch == INITIAL_BRANCH && fs::metadata(&branch_current_path).is_err() {
@@ -253,6 +254,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
     }
 
     object_commit_save(directory, hash_commit, store)?;
+  
     commit_log(directory, &content)?;
     commit_msg_edit(directory, commit.get_message())?;
 
