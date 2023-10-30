@@ -12,6 +12,7 @@ pub struct View {
     button_clear: gtk::Button,
     button_send: gtk::Button,
     button_init: gtk::Button,
+    button_branch: gtk::Button,
     entry: Rc<gtk::Entry>,
     response: Rc<gtk::TextView>,
 }
@@ -33,6 +34,7 @@ impl View {
         let button_clear: gtk::Button = builder.object("button_clear").ok_or(GitError::ObjectBuildFailed)?;        
         let button_send: gtk::Button = builder.object("button_send").ok_or(GitError::ObjectBuildFailed)?;
         let button_init: gtk::Button = builder.object("button_init").ok_or(GitError::ObjectBuildFailed)?;
+        let button_branch: gtk::Button = builder.object("button_branch").ok_or(GitError::ObjectBuildFailed)?;
         let entry: Rc<gtk::Entry> = Rc::new(builder.object("entry_console").ok_or(GitError::ObjectBuildFailed)?,);
         let response: Rc<gtk::TextView> = Rc::new(builder.object("console").ok_or(GitError::ObjectBuildFailed)?,);
         Ok(View {
@@ -41,6 +43,7 @@ impl View {
             button_clear,
             button_send,
             button_init,
+            button_branch,
             entry,
             response,
         })
@@ -65,7 +68,7 @@ impl View {
         }
     }
     fn connect_button_init (&self) {
-        let controller = self.controller.clone();  // Clonar para tener una copia propiedad
+        let controller = self.controller.clone();
         let response = Rc::clone(&self.response);
 
         self.button_init.connect_clicked(move |_| {
@@ -81,25 +84,33 @@ impl View {
             });
         }
     }
+    fn connect_button_branch(&self){
+        let controller = self.controller.clone();
+        let response = Rc::clone(&self.response);
+
+        self.button_branch.connect_clicked(move |_| {
+            let result = controller.send_command("git branch");
+
+            Self::response_write_buffer(result, Rc::clone(&response));
+        });
+    }
     fn connect_button_send(&self){
-        let command = self.entry.text().to_string();
         let response = Rc::clone(&self.response);
         let entry = Rc::clone(&self.entry);
         let controller = self.controller.clone();
 
         self.button_send.connect_clicked(move |_| {
+            let command = entry.text().to_string();
             entry.set_text("");
             let result = controller.send_command(&command);
             Self::response_write_buffer(result, Rc::clone(&response));
         });
     }
     fn connect_buttons(self){
-        
         self.connect_button_init();
         self.connect_button_clear();
         self.connect_button_send();
-
-
+        self.connect_button_branch();
     }
     pub fn start_view(self) -> Result<(), GitError> {
         let this = self.clone();
