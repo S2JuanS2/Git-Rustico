@@ -1,5 +1,5 @@
-use crate::errors::GitError;
 use crate::consts::*;
+use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::formats::hash_generate;
 use std::collections::HashMap;
@@ -266,15 +266,15 @@ mod tests {
             panic!("Falló al crear el repo de test: {}", err);
         }
 
-        
         let repo_path = format!("{}{}", dir_path, "/.git/src");
         if let Err(err) = fs::create_dir_all(&repo_path) {
             panic!("Falló al crear la carpeta 'git': {}", err);
         }
-        
-        let head_path = format!("{}/{}/{}",TEST_DIRECTORY, ".git", HEAD);
+
+        let head_path = format!("{}/{}/{}", TEST_DIRECTORY, ".git", HEAD);
         let mut file = fs::File::create(head_path).expect("Falló al crear el HEAD");
-        file.write_all(b"ref: refs/heads/master").expect("Error al escribir en el archivo");
+        file.write_all(b"ref: refs/heads/master")
+            .expect("Error al escribir en el archivo");
 
         // El hash de este archivo es: 48124d6dc3b2e693a207667c32ac672414913994
         let file_path1 = format!("{}/main.rs", repo_path);

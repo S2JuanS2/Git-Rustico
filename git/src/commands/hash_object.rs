@@ -1,7 +1,7 @@
-use crate::errors::GitError;
-use crate::util::formats::hash_generate;
-use crate::models::client::Client;
 use crate::consts::*;
+use crate::errors::GitError;
+use crate::models::client::Client;
+use crate::util::formats::hash_generate;
 
 use std::{fs::File, io::Read};
 
@@ -12,11 +12,13 @@ use std::{fs::File, io::Read};
 pub fn handle_hash_object(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() == 1 {
         git_hash_object_blob(args[0], client.get_directory_path().as_str())
-    }else if args.len() == 3 && args[1] == BLOB{
+    } else if args.len() == 3 && args[1] == BLOB {
         git_hash_object_blob(args[2], client.get_directory_path().as_str())
-    }else if args.len() == 3 && args[1] == TREE {  //directorio
+    } else if args.len() == 3 && args[1] == TREE {
+        //directorio
         git_hash_object_blob(args[0], client.get_directory_path().as_str())
-    }else if args.len() == 3 && args[1] == COMMIT { //objeto commit
+    } else if args.len() == 3 && args[1] == COMMIT {
+        //objeto commit
         git_hash_object_blob(args[0], client.get_directory_path().as_str())
     } else {
         return Err(GitError::InvalidArgumentCountHashObjectError);
@@ -29,7 +31,7 @@ pub fn handle_hash_object(args: Vec<&str>, client: Client) -> Result<String, Git
 /// 'file_name': Nombre del archivo del cual se leera el contenido para generar el hash
 pub fn git_hash_object_blob(file_name: &str, directory: &str) -> Result<String, GitError> {
     let path = format!("{}/{}", directory, file_name);
-    
+
     let mut file = match File::open(path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
