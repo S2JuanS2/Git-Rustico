@@ -15,11 +15,11 @@ use std::path::Path;
 pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     let directory = client.get_directory_path();
     if args.len() == 1 {
-        git_checkout_switch(&directory, args[0])?;
+        git_checkout_switch(directory, args[0])?;
     } else if args.len() == 2 {
         if args[0] == "-b" {
-            git_branch_create(directory.as_str(), args[1], "1234567")?;
-            git_checkout_switch(&directory, args[1])?;
+            git_branch_create(directory, args[1])?;
+            git_checkout_switch(directory, args[1])?;
         } else {
             return Err(GitError::FlagCheckoutNotRecognisedError);
         }
@@ -95,7 +95,7 @@ mod tests {
             panic!("Falló al crear el directorio: {}", err);
         }
         let _ = git_branch_delete(TEST_DIRECTORY, "test_branch_switch2");
-        git_branch_create(TEST_DIRECTORY, "test_branch_switch2", "commit_hash_branch")
+        git_branch_create(TEST_DIRECTORY, "test_branch_switch2")
             .expect("Falló en la creación de la branch");
         // Cuando ejecuto la función
         let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch2");

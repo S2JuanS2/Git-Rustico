@@ -12,7 +12,7 @@ use crate::util::request::{create_git_request, RequestCommand};
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función clone
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<(), GitError> {
-    let address: String = client.get_ip();
+    let address: String = client.get_ip().to_string();
     if args.len() != 1 {
         return Err(GitError::CloneMissingRepoError);
     }

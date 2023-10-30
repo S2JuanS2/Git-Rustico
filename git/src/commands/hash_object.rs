@@ -1,7 +1,7 @@
-use crate::errors::GitError;
-use crate::util::formats::hash_generate;
-use crate::models::client::Client;
 use crate::consts::*;
+use crate::errors::GitError;
+use crate::models::client::Client;
+use crate::util::formats::hash_generate;
 
 use std::{fs::File, io::Read};
 
@@ -11,13 +11,11 @@ use std::{fs::File, io::Read};
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_hash_object(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() == 1 {
-        git_hash_object_blob(args[0], client.get_directory_path().as_str())
-    }else if args.len() == 3 && args[1] == BLOB{
-        git_hash_object_blob(args[2], client.get_directory_path().as_str())
-    }else if args.len() == 3 && args[1] == TREE {  //directorio
-        git_hash_object_blob(args[0], client.get_directory_path().as_str())
-    }else if args.len() == 3 && args[1] == COMMIT { //objeto commit
-        git_hash_object_blob(args[0], client.get_directory_path().as_str())
+        git_hash_object_blob(args[0], client.get_directory_path())
+    } else if args.len() == 3 && args[1] == BLOB {
+        git_hash_object_blob(args[2], client.get_directory_path())
+    } else if args.len() == 3 && args[1] == COMMIT {
+        git_hash_object_blob(args[0], client.get_directory_path())
     } else {
         return Err(GitError::InvalidArgumentCountHashObjectError);
     }
@@ -29,7 +27,7 @@ pub fn handle_hash_object(args: Vec<&str>, client: Client) -> Result<String, Git
 /// 'file_name': Nombre del archivo del cual se leera el contenido para generar el hash
 pub fn git_hash_object_blob(file_name: &str, directory: &str) -> Result<String, GitError> {
     let path = format!("{}/{}", directory, file_name);
-    
+
     let mut file = match File::open(path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
@@ -62,7 +60,9 @@ mod tests {
     #[test]
     fn test_git_hash_object() {
         let temp_file_name = "prueba.txt";
-        let path = format!("{}/{}", "test_repo", temp_file_name);
+        let temp_dir = "test_repo";
+        let path = format!("{}/{}", temp_dir, temp_file_name);
+        fs::create_dir_all(&temp_dir).expect("Falló al crear el directorio temporal");
         File::create(&path).expect("Falló al crear el archivo");
 
         fs::write(&path, "Chau mundo").expect("Falló al escribir en el archivo");

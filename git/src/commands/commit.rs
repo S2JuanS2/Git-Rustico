@@ -1,18 +1,20 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::formats::hash_generate;
+use crate::util::files::*;
+use crate::util::formats::{compressor_object, hash_generate};
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::fs::OpenOptions;
 
 use crate::commands::branch::get_current_branch;
 
 const COMMIT_EDITMSG: &str = "COMMIT_EDITMSG";
+const BRANCH_DIR: &str = "refs/heads/";
 
 #[derive(Clone)]
 pub struct Commit {
@@ -91,7 +93,7 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     if args.len() != 2 {
         return Err(GitError::InvalidArgumentCountCommitError);
     }
-    if args[1] != "-m" {
+    if args[0] != "-m" {
         return Err(GitError::FlagCommitNotRecognizedError);
     }
     let directory = client.get_directory_path();
@@ -100,15 +102,15 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 
     let test_commit = Commit::new(
         message.to_string(),
-        "Juan".to_string(),
-        "jdr@fi.uba.ar".to_string(),
-        "Juan".to_string(),
-        "jdr@fi.uba.ar".to_string(),
+        client.get_name().to_string(),
+        client.get_email().to_string(),
+        client.get_name().to_string(),
+        client.get_email().to_string(),
         "01234567".to_string(),
         "ABCDEF1234".to_string(),
     );
 
-    git_commit(&directory, test_commit)
+    git_commit(directory, test_commit)
 }
 
 /// Creará el archivo donde se guarda el mensaje del commit
@@ -117,7 +119,7 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 /// 'msg': mensaje del commit
 fn commit_msg_edit(directory: &str, msg: String) -> Result<(), GitError> {
     //Archivo COMMIT_EDITMSG, con el ultimo mensaje del commit
-    let commit_msg_path = format!("{}{}", directory, COMMIT_EDITMSG);
+    let commit_msg_path = format!("{}/{}/{}", directory, GIT_DIR, COMMIT_EDITMSG);
     let mut file = match fs::File::create(commit_msg_path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::CreateFileError),
@@ -136,7 +138,7 @@ fn commit_msg_edit(directory: &str, msg: String) -> Result<(), GitError> {
 /// 'directory': Directorio del git
 fn commit_log(directory: &str, content: &str) -> Result<(), GitError> {
     //Registro de commits (logs/)
-    let logs_path = format!("{}logs/refs/heads", directory);
+    let logs_path = format!("{}/{}/logs/refs/heads", directory, GIT_DIR);
     if !Path::new(&logs_path).exists() {
         match fs::create_dir_all(logs_path.clone()) {
             Ok(_) => (),
@@ -155,7 +157,6 @@ fn commit_log(directory: &str, content: &str) -> Result<(), GitError> {
         Err(_) => return Err(GitError::WriteFileError),
     };
 
-
     Ok(())
 }
 
@@ -164,9 +165,9 @@ fn commit_log(directory: &str, content: &str) -> Result<(), GitError> {
 /// ###Parametros:
 /// 'directory': Directorio del git
 /// 'hash_commit': hash del objeto commit previamente generado
-fn object_commit_save(directory: &str, hash_commit: String) -> Result<(), GitError> {
+fn object_commit_save(directory: &str, hash_commit: String, store: String) -> Result<(), GitError> {
     //Crear el objeto commit
-    let object_commit_path = format!("{}{}/objects/{}", directory, GIT_DIR, &hash_commit[..2]);
+    let object_commit_path = format!("{}/{}/objects/{}", directory, GIT_DIR, &hash_commit[..2]);
     match fs::create_dir_all(object_commit_path) {
         Ok(_) => (),
         Err(_) => return Err(GitError::CreateDirError),
@@ -178,11 +179,12 @@ fn object_commit_save(directory: &str, hash_commit: String) -> Result<(), GitErr
         &hash_commit[..2],
         &hash_commit[2..]
     );
-    match File::create(object_commit_path) {
-        Ok(_) => (),
+    let file = match File::create(object_commit_path) {
+        Ok(file_object) => file_object,
         Err(_) => return Err(GitError::CreateFileError),
-    }
-    //Falta comprimir el store y guardarlo en ese archivo.
+    };
+    compressor_object(store, file)?;
+
     Ok(())
 }
 
@@ -229,12 +231,32 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
     let store = header + &content;
 
     let hash_commit = hash_generate(&store);
-    object_commit_save(directory, hash_commit)?;
-    commit_log(directory,&content)?;
+    let current_branch = get_current_branch(directory)?;
+    let branch_current_path = format!("{}/{}/{}{}", directory, GIT_DIR, BRANCH_DIR, current_branch);
+    if current_branch == INITIAL_BRANCH && fs::metadata(&branch_current_path).is_err() {
+        create_file(&branch_current_path, &hash_commit)?;
+    } else {
+        let mut file_current_branch = match OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .open(branch_current_path)
+        {
+            Ok(file_current_branch) => file_current_branch,
+            Err(_) => return Err(GitError::BranchNotFoundError),
+        };
+        if file_current_branch
+            .write_all(hash_commit.as_bytes())
+            .is_err()
+        {
+            return Err(GitError::WriteFileError);
+        }
+    }
+
+    object_commit_save(directory, hash_commit, store)?;
+    commit_log(directory, &content)?;
     commit_msg_edit(directory, commit.get_message())?;
 
-    //Actualizar las referencias (HEAD) <-- leer la branch
-    //Con el hash del objeto commit
+    //Falta crear el tree con el index
     //Actualizar el index
 
     Ok(())
@@ -242,6 +264,8 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
 
 #[cfg(test)]
 mod tests {
+    use crate::commands::init::git_init;
+
     use super::*;
 
     #[test]
@@ -256,12 +280,10 @@ mod tests {
             "ABCDEF1234".to_string(),
         );
 
-        let directory = "./directory_test";
-        let file_test_path = format!("{}{}", directory, COMMIT_EDITMSG);
-
+        let directory = "./test_repo";
+        git_init(directory).expect("Falló en el comando init");
         let result = git_commit(directory, test_commit);
 
-        fs::remove_file(file_test_path).expect("Falló al remover el archivo temporal");
         fs::remove_dir_all(directory).expect("Falló al remover los directorios");
 
         assert!(result.is_ok());

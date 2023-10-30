@@ -18,23 +18,21 @@ pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, GitErr
     }
 
     let directory = client.get_directory_path();
-    git_cat_file(&directory, args[1], args[0])
+    git_cat_file(directory, args[1], args[0])
 }
 
 pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, GitError> {
-
     let mut content = String::new();
 
     if type_object == BLOB {
         content = read_blob(&bytes)?;
-    }else if type_object == COMMIT{
+    } else if type_object == COMMIT {
         content = read_commit(&bytes)?;
-    }else if type_object == TREE{
+    } else if type_object == TREE {
         content = read_tree(&bytes)?;
     }
 
     Ok(content)
-    
 }
 /// Esta función se utiliza para mostrar el contenido o información sobre los objetos (archivos, commits, etc.)
 /// ###Parametros:
@@ -53,7 +51,7 @@ pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<St
 
     let mut result = read_type(&content)?;
 
-    if flag == "-p"{
+    if flag == "-p" {
         result = git_cat_file_p(content, result)?;
     }
 

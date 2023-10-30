@@ -1,5 +1,5 @@
-use crate::errors::GitError;
 use crate::consts::*;
+use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::formats::hash_generate;
 use std::collections::HashMap;
@@ -13,11 +13,11 @@ use std::path::Path;
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    if args.len() > 0 {
+    if !args.is_empty() {
         return Err(GitError::InvalidArgumentCountStatusError);
     }
     let directory = client.get_directory_path();
-    git_status(&directory)
+    git_status(directory)
 }
 
 /// Devuelve el nombre de la rama actual.
@@ -142,7 +142,7 @@ fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, GitError> {
 /// 'directory': directorio del repositorio local.
 fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
-    let working_directory = format!("{}", directory);
+    let working_directory = directory.to_string();
     calculate_directory_hashes(&working_directory, &mut working_directory_hash_list)?;
     Ok(working_directory_hash_list)
 }
@@ -266,15 +266,15 @@ mod tests {
             panic!("Falló al crear el repo de test: {}", err);
         }
 
-        
         let repo_path = format!("{}{}", dir_path, "/.git/src");
         if let Err(err) = fs::create_dir_all(&repo_path) {
             panic!("Falló al crear la carpeta 'git': {}", err);
         }
-        
-        let head_path = format!("{}/{}/{}",TEST_DIRECTORY, ".git", HEAD);
+
+        let head_path = format!("{}/{}/{}", TEST_DIRECTORY, ".git", HEAD);
         let mut file = fs::File::create(head_path).expect("Falló al crear el HEAD");
-        file.write_all(b"ref: refs/heads/master").expect("Error al escribir en el archivo");
+        file.write_all(b"ref: refs/heads/master")
+            .expect("Error al escribir en el archivo");
 
         // El hash de este archivo es: 48124d6dc3b2e693a207667c32ac672414913994
         let file_path1 = format!("{}/main.rs", repo_path);

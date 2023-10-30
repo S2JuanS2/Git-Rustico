@@ -1,12 +1,12 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::{open_file, read_file, create_directory};
+use crate::util::files::{create_directory, open_file, read_file};
 use crate::util::formats::{compressor_object, hash_generate};
-use std::path::Path;
-use std::fs::OpenOptions;
-use std::{fs::File, io::Read, io::Write};
 use std::fs;
+use std::fs::OpenOptions;
+use std::path::Path;
+use std::{fs::File, io::Read, io::Write};
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
@@ -18,10 +18,10 @@ pub fn handle_add(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     }
     let directory = client.get_directory_path();
     let file_name = args[0];
-    if args[0] != ALL{
-        git_add(&directory, file_name)?;
-    }else{
-        git_add_all(&directory)?;
+    if args[0] != ALL {
+        git_add(directory, file_name)?;
+    } else {
+        git_add_all(directory)?;
     }
     Ok(())
 }
@@ -67,7 +67,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     let content = read_file(file)?;
 
-    let header = format!("{} {}\0",BLOB, content.len());
+    let header = format!("{} {}\0", BLOB, content.len());
     let store = header + String::from_utf8_lossy(&content).as_ref();
 
     let hash_object = hash_generate(&store);
@@ -99,11 +99,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
     Ok(())
 }
 
-fn add_to_index(
-    git_dir: String,
-    file_name: &str,
-    hash_object: String,
-) -> Result<(), GitError> {
+fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result<(), GitError> {
     let index_path = format!("{}/{}", &git_dir, INDEX);
 
     // Abre el archivo de índice en modo lectura y escritura.
@@ -159,7 +155,7 @@ fn add_to_index(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn add_test() {
         // Se crea un directorio temporal para objects.

@@ -16,7 +16,7 @@ pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     // Verifica que se haya ingresado un nombre de repositorio remoto
     let directory = client.get_directory_path();
     if args.len() == 1 {
-        git_fetch(&directory, args[0])?;
+        git_fetch(directory, args[0])?;
     } else if args.len() == 2 {
         //fetch para una rama especifica
     } else {

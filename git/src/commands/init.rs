@@ -1,18 +1,18 @@
-use std::path::Path;
+use crate::consts::*;
+use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::*;
-use crate::errors::GitError;
-use crate::consts::*;
+use std::path::Path;
 
 /// Esta función se encarga de llamar al comando init con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función init
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    if args.len() > 0 {
+    if !args.is_empty() {
         return Err(GitError::InvalidArgumentCountInitError);
     }
-    let result = git_init(client.get_directory_path().as_str())?;
+    let result = git_init(client.get_directory_path())?;
 
     Ok(result)
 }
@@ -38,7 +38,10 @@ pub fn git_init(directory: &str) -> Result<String, GitError> {
     create_file(&head_file, &head_content)?;
     create_file(&index_file, CONTENT_EMPTY)?;
 
-    let result = format!("Repositorio vacío inicializado en la direcección: {}", directory);
+    let result = format!(
+        "Repositorio vacío inicializado en la direcección: {}",
+        directory
+    );
 
     Ok(result)
 }

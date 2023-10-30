@@ -16,7 +16,7 @@ pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     }
     let directory = client.get_directory_path();
     let file_name = args[0];
-    git_rm(&directory, file_name)
+    git_rm(directory, file_name)
 }
 
 /// Remueve un archivo del working directory y del index.
@@ -43,7 +43,7 @@ fn compare_hash(file_name: &str, directory: &str) -> Result<(), GitError> {
         Err(_) => return Err(GitError::ReadFileError),
     };
 
-    let header = format!("{} {}\0",BLOB, file_content.len());
+    let header = format!("{} {}\0", BLOB, file_content.len());
     let store = header + &file_content;
     let hash_file = hash_generate(&store);
 
