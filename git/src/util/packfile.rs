@@ -4,6 +4,8 @@ use crate::{
 use flate2::read::ZlibDecoder;
 use std::io::Read;
 
+use super::objects::ObjectEntry;
+
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, GitError> {
     read_signature(reader)?;
     println!("Signature: {}", PACK_SIGNATURE);
@@ -16,7 +18,11 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, GitError> {
     Ok(number_object)
 }
 
-pub fn read_packfile_data(reader: &mut dyn Read, objects: usize) -> Result<(), GitError> {
+pub fn read_packfile_data(
+    reader: &mut dyn Read,
+    objects: usize,
+) -> Result<Vec<(ObjectEntry, Vec<u8>)>, GitError> {
+    let mut information: Vec<(ObjectEntry, Vec<u8>)> = Vec::new();
     let mut buffer: Vec<u8> = Vec::new();
     match reader.read_to_end(&mut buffer) // Necesita refactorizar, si el packfile es muy grande habra problema
     {
@@ -28,26 +34,31 @@ pub fn read_packfile_data(reader: &mut dyn Read, objects: usize) -> Result<(), G
     for _ in 0..objects {
         let object_entry = read_type_and_length_from_vec(&buffer, &mut offset)?;
         println!("Object entry: {:?}", object_entry);
-        let lenght: usize = read_object_data(&buffer, &mut offset)?;
-        if lenght != object_entry.obj_length {
+        let data: Vec<u8> = read_object_data(&buffer, &mut offset)?;
+
+        if data.len() != object_entry.obj_length {
             return Err(GitError::PackObjectReadError);
         }
+        information.push((object_entry, data));
     }
-    Ok(())
+    Ok(information)
 }
 
-fn read_object_data(data: &[u8], offset: &mut usize) -> Result<usize, GitError> {
-    let mut decompressed_data = Vec::new();
+fn read_object_data(data: &[u8], offset: &mut usize) -> Result<Vec<u8>, GitError> {
+    let mut decompressed_data: Vec<u8> = Vec::new();
 
     let mut zlib_decoder: ZlibDecoder<&[u8]> = ZlibDecoder::new(&data[*offset..]);
-    let n = zlib_decoder.read_to_end(&mut decompressed_data).unwrap();
+    let n = match zlib_decoder.read_to_end(&mut decompressed_data) {
+        Ok(n) => n,
+        Err(_) => return Err(GitError::PackObjectReadError),
+    };
+
     if n == 0 {
         return Err(GitError::PackObjectReadError);
     }
     let bytes_read = zlib_decoder.total_in();
     *offset += bytes_read as usize;
-    println!("Decompressed data: {:?}", decompressed_data);
-    Ok(zlib_decoder.total_out() as usize)
+    Ok(decompressed_data)
 }
 
 /// Lee y verifica la firma del encabezado del archivo PACKFILE a partir del lector proporcionado.
