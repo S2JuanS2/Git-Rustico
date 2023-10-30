@@ -254,7 +254,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
     }
 
     object_commit_save(directory, hash_commit, store)?;
-  
+
     commit_log(directory, &content)?;
     commit_msg_edit(directory, commit.get_message())?;
 

@@ -47,7 +47,11 @@ pub fn git_clone(
     packfile_negotiation(socket, advertised)?;
 
     // Packfile Data
-    receive_packfile(socket)?;
+    let content = receive_packfile(socket)?;
+    for (object, data) in content {
+        println!("Object: {:?}\nData: {:?}", object, data);
+        // Manejo los datos de los objetos
+    }
 
     Ok(())
 }
