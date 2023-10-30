@@ -8,8 +8,6 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 
-const HEAD_FILE: &str = "HEAD";
-
 /// Esta función se encarga de llamar al comando checkout con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función checkout
@@ -42,8 +40,8 @@ pub fn git_checkout_switch(directory: &str, branch_name: &str) -> Result<(), Git
         return Err(GitError::BranchDoesntExistError);
     }
 
-    let directory_git = format!("{}{}", directory, GIT_DIR);
-    let head_file_path = Path::new(&directory_git).join(HEAD_FILE);
+    let directory_git = format!("{}/{}", directory, GIT_DIR);
+    let head_file_path = Path::new(&directory_git).join(HEAD);
 
     let mut file = match OpenOptions::new()
         .write(true)
@@ -74,7 +72,7 @@ mod tests {
 
     #[test]
     fn test_git_checkout_switch_error() {
-        let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio: {}", err);
         }
@@ -92,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_git_checkout_switch_ok() {
-        let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio: {}", err);
         }
