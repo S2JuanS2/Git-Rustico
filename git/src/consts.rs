@@ -105,3 +105,7 @@ pub const TREE: &str = "tree";
 pub const COMMIT: &str = "commit";
 
 pub const ALL: &str = ".";
+
+pub const DIRECTORY: &str = "100644";
+
+pub const FILE: &str = "40000";

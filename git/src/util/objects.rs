@@ -1,6 +1,11 @@
 use crate::consts::*;
 use crate::errors::GitError;
+use crate::util::files::create_directory;
+use crate::util::formats::{compressor_object, hash_generate};
+use std::fs;
+use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 
 /// Estructura que representa una entrada de objeto en el sistema de control de versiones Git.
 ///
@@ -157,6 +162,117 @@ fn create_object(byte: u8) -> Result<ObjectType, GitError> {
     }
 }
 
+/// Creará la carpeta con los 2 primeros digitos del hash del objeto commit, y el archivo con los ultimos 38 de nombre.
+fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, GitError> {
+    let objects_dir = format!(
+        "{}/{}/{}/{}",
+        &git_dir,
+        DIR_OBJECTS,
+        &hash_object[..2],
+        &hash_object[2..]
+    );
+
+    let hash_object_path = format!("{}/{}/{}/", &git_dir, DIR_OBJECTS, &hash_object[..2]);
+
+    create_directory(Path::new(&hash_object_path))?;
+
+    let file_object = match File::create(objects_dir) {
+        Ok(file_object) => file_object,
+        Err(_) => return Err(GitError::CreateFileError),
+    };
+
+    Ok(file_object)
+}
+
+/// comprimirá el contenido y lo escribirá en el archivo
+/// ###Parametros:
+/// 'git_dir': Directorio del git
+/// 'content': contenido del archivo a comprimir
+pub fn builder_object_blob(content: Vec<u8>, git_dir: &str) -> Result<String, GitError> {
+    let header = format!("{} {}\0", BLOB, content.len());
+    let store = header + String::from_utf8_lossy(&content).as_ref();
+
+    let hash_blob = hash_generate(&store);
+
+    let file_object = builder_object(git_dir, &hash_blob)?;
+
+    compressor_object(store, file_object)?;
+
+    Ok(hash_blob)
+}
+
+/// comprimirá el contenido y lo escribirá en el archivo
+/// ###Parametros:
+/// 'git_dir': Directorio del git
+/// 'hash_commit': hash del objeto commit previamente generado
+pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, GitError> {
+    let content_bytes = content.as_bytes();
+    let content_size = content_bytes.len().to_string();
+    let header = format!("commit {}\0", content_size);
+
+    let store = header + content;
+
+    let hash_commit = hash_generate(&store);
+
+    let file = builder_object(git_dir, &hash_commit)?;
+    compressor_object(store, file)?;
+
+    Ok(hash_commit)
+}
+
+fn read_index(git_dir: &str) -> Result<String, GitError> {
+    let path_index = format!("{}/{}", git_dir, INDEX);
+
+    let content_bytes = match fs::read(path_index) {
+        Ok(content_bytes) => content_bytes,
+        Err(_) => return Err(GitError::OpenFileError),
+    };
+    let mut format_tree = String::new();
+    let content_index = String::from_utf8_lossy(&content_bytes);
+
+    for line in content_index.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let file_name = parts[0];
+        let mut mode = parts[1];
+        let hash = parts[2];
+
+        if mode == BLOB {
+            mode = FILE;
+        } else if mode == TREE {
+            mode = DIRECTORY;
+        }
+        let bytes = hash
+            .as_bytes()
+            .chunks(2)
+            .filter_map(|chunk| {
+                let hex_str = String::from_utf8_lossy(chunk);
+                u8::from_str_radix(&hex_str, 16).ok()
+            })
+            .collect::<Vec<u8>>();
+
+        let bytes_str = String::from_utf8_lossy(&bytes);
+        let format_line = format!("{} {}\0{}", mode, file_name, bytes_str);
+
+        format_tree = format_tree + &format_line;
+    }
+    Ok(format_tree)
+}
+
+pub fn builder_object_tree(git_dir: &str) -> Result<String, GitError> {
+    let format_tree = read_index(git_dir)?;
+
+    let content_size = format_tree.len().to_string();
+    let header = format!("tree {}\0", content_size);
+    let store = header + &format_tree;
+    let hash_tree = hash_generate(&store);
+
+    let file = builder_object(git_dir, &hash_tree)?;
+
+    compressor_object(store, file)?;
+
+    Ok(hash_tree)
+}
+
 /// Lee desde el contenido descomprimido el tipo de objeto.
 ///
 /// # Argumentos
@@ -243,9 +359,12 @@ pub fn read_tree(decompressed_data: &[u8]) -> Result<String, GitError> {
         }
         let mut hash: Vec<u8> = Vec::new();
         for _i in 0..20 {
-            index += 1;
-            hash.push(content[index]);
+            if index < content.len() {
+                hash.push(content[index]);
+                index += 1;
+            }
         }
+        index -= 1;
         let hex_string = hash
             .iter()
             .map(|byte| format!("{:02x}", byte))
