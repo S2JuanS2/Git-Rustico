@@ -1,9 +1,13 @@
+use crate::consts::*;
 use crate::errors::GitError;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::net::TcpStream;
+use std::path::Path;
 use std::sync::mpsc::Receiver;
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
+use super::files::create_directory;
 use super::log_output::LogOutput;
 
 /// Envía un mensaje a través del canal con un transmisor protegido por Mutex.
@@ -30,6 +34,29 @@ fn send_message_channel(
         Ok(_) => Ok(()),
         Err(_) => Err(error),
     }
+}
+
+pub fn write_client_log(directory: &str, content: String) -> Result<(), GitError> {
+    let dir_path = format!("{}/{}", directory, GIT_DIR);
+    create_directory(Path::new(&dir_path))?;
+    let log_path = format!("{}/{}/client.log", directory, GIT_DIR);
+
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(true)
+        .open(log_path);
+
+    let mut file = match file {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::OpenFileError),
+    };
+
+    if writeln!(file, "Client => {}", content).is_err() {
+        return Err(GitError::WriteFileError);
+    }
+
+    Ok(())
 }
 
 /// Registra un mensaje a través del canal de un transmisor protegido por Mutex.
