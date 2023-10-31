@@ -1,8 +1,8 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::{create_directory, open_file, read_file};
-use crate::util::formats::{compressor_object, hash_generate};
+use crate::util::files::{open_file, read_file};
+use crate::util::objects::builder_object_blob;
 use std::fs;
 use std::fs::OpenOptions;
 use std::path::Path;
@@ -67,31 +67,9 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
 
     let content = read_file(file)?;
 
-    let header = format!("{} {}\0", BLOB, content.len());
-    let store = header + String::from_utf8_lossy(&content).as_ref();
-
-    let hash_object = hash_generate(&store);
-
     let git_dir = format!("{}/{}", directory, GIT_DIR);
 
-    let objects_dir = format!(
-        "{}/{}/{}/{}",
-        &git_dir,
-        DIR_OBJECTS,
-        &hash_object[..2],
-        &hash_object[2..]
-    );
-
-    let hash_object_path = format!("{}/{}/{}/", &git_dir, DIR_OBJECTS, &hash_object[..2]);
-
-    create_directory(Path::new(&hash_object_path))?;
-
-    let file_object = match File::create(objects_dir) {
-        Ok(file_object) => file_object,
-        Err(_) => return Err(GitError::CreateFileError),
-    };
-
-    compressor_object(store, file_object)?;
+    let hash_object = builder_object_blob(content, &git_dir)?;
 
     // Se actualiza el index.
     add_to_index(git_dir, file_name, hash_object)?;
