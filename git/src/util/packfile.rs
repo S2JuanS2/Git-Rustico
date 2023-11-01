@@ -1,12 +1,12 @@
 use crate::{
-    consts::PACK_SIGNATURE, errors::GitError, util::objects::read_type_and_length_from_vec,
+    consts::PACK_SIGNATURE, util::objects::read_type_and_length_from_vec,
 };
 use flate2::read::ZlibDecoder;
 use std::io::Read;
 
-use super::objects::ObjectEntry;
+use super::{objects::ObjectEntry, errors::UtilError};
 
-pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, GitError> {
+pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, UtilError> {
     read_signature(reader)?;
     println!("Signature: {}", PACK_SIGNATURE);
 
@@ -21,13 +21,13 @@ pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, GitError> {
 pub fn read_packfile_data(
     reader: &mut dyn Read,
     objects: usize,
-) -> Result<Vec<(ObjectEntry, Vec<u8>)>, GitError> {
+) -> Result<Vec<(ObjectEntry, Vec<u8>)>, UtilError> {
     let mut information: Vec<(ObjectEntry, Vec<u8>)> = Vec::new();
     let mut buffer: Vec<u8> = Vec::new();
     match reader.read_to_end(&mut buffer) // Necesita refactorizar, si el packfile es muy grande habra problema
     {
         Ok(buffer) => buffer,
-        Err(_) => return Err(GitError::PackObjectReadError),
+        Err(_) => return Err(UtilError::DataPackFiletReadObject),
     };
     let mut offset: usize = 0;
 
@@ -37,24 +37,24 @@ pub fn read_packfile_data(
         let data: Vec<u8> = read_object_data(&buffer, &mut offset)?;
 
         if data.len() != object_entry.obj_length {
-            return Err(GitError::PackObjectReadError);
+            return Err(UtilError::DataPackFiletReadObject);
         }
         information.push((object_entry, data));
     }
     Ok(information)
 }
 
-fn read_object_data(data: &[u8], offset: &mut usize) -> Result<Vec<u8>, GitError> {
+fn read_object_data(data: &[u8], offset: &mut usize) -> Result<Vec<u8>, UtilError> {
     let mut decompressed_data: Vec<u8> = Vec::new();
 
     let mut zlib_decoder: ZlibDecoder<&[u8]> = ZlibDecoder::new(&data[*offset..]);
     let n = match zlib_decoder.read_to_end(&mut decompressed_data) {
         Ok(n) => n,
-        Err(_) => return Err(GitError::PackObjectReadError),
+        Err(_) => return Err(UtilError::ObjectDeserialization),
     };
 
     if n == 0 {
-        return Err(GitError::PackObjectReadError);
+        return Err(UtilError::EmptyDecompressionError);
     }
     let bytes_read = zlib_decoder.total_in();
     *offset += bytes_read as usize;
@@ -74,15 +74,15 @@ fn read_object_data(data: &[u8], offset: &mut usize) -> Result<Vec<u8>, GitError
 /// Esta función no devuelve ningún valor útil en el éxito. En caso de éxito, significa que la
 /// firma del encabezado del archivo PACKFILE se leyó correctamente y coincide con la firma
 /// esperada. Si la firma no coincide o se produce un error de lectura, devuelve un error
-/// `GitError`.
-fn read_signature(reader: &mut dyn Read) -> Result<(), GitError> {
+/// `UtilError`.
+fn read_signature(reader: &mut dyn Read) -> Result<(), UtilError> {
     let mut buffer = [0u8; 4];
     if reader.read_exact(&mut buffer).is_err() {
-        return Err(GitError::HeaderPackFileReadError);
+        return Err(UtilError::HeaderPackFileReadSignature);
     };
 
     if buffer != PACK_SIGNATURE.as_bytes() {
-        return Err(GitError::HeaderPackFileReadError);
+        return Err(UtilError::HeaderPackFileReadSignature);
     }
     Ok(())
 }
@@ -98,16 +98,16 @@ fn read_signature(reader: &mut dyn Read) -> Result<(), GitError> {
 /// # Retorno
 ///
 /// En caso de éxito, devuelve el valor de la versión del archivo PACKFILE leído. Si la versión
-/// no es 2 o 3, o se produce un error de lectura, se devuelve un error `GitError`.
-fn read_version(reader: &mut dyn Read) -> Result<u32, GitError> {
+/// no es 2 o 3, o se produce un error de lectura, se devuelve un error `UtilError`.
+fn read_version(reader: &mut dyn Read) -> Result<u32, UtilError> {
     let mut buffer = [0u8; 4];
     if reader.read_exact(&mut buffer).is_err() {
-        return Err(GitError::HeaderPackFileReadError);
+        return Err(UtilError::HeaderPackFileReadVersion);
     };
 
     let version: u32 = u32::from_be_bytes(buffer);
     if version != 2 && version != 3 {
-        return Err(GitError::HeaderPackFileReadError);
+        return Err(UtilError::HeaderPackFileReadVersion);
     }
 
     Ok(version)
@@ -123,11 +123,11 @@ fn read_version(reader: &mut dyn Read) -> Result<u32, GitError> {
 ///
 /// # Retorno
 ///
-/// En caso de éxito, devuelve el número de objetos contenidos en el archivo PACKFILE leído. En caso de error de lectura, se devuelve un error `GitError`.
-fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, GitError> {
+/// En caso de éxito, devuelve el número de objetos contenidos en el archivo PACKFILE leído. En caso de error de lectura, se devuelve un error `UtilError`.
+fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
     let mut buffer = [0; 4];
     if reader.read_exact(&mut buffer).is_err() {
-        return Err(GitError::HeaderPackFileReadError);
+        return Err(UtilError::HeaderPackFileReadNumberObjects);
     };
 
     let value = u32::from_be_bytes(buffer);
@@ -141,7 +141,7 @@ mod tests {
     use std::io::{self, Cursor};
 
     #[test]
-    fn test_read_signature_valid_signature() -> Result<(), GitError> {
+    fn test_read_signature_valid_signature() -> Result<(), UtilError> {
         let data: [u8; 4] = [b'P', b'A', b'C', b'K']; // Firma válida "PACK"
         let mut cursor = Cursor::new(&data);
         read_signature(&mut cursor)?;
@@ -176,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_version_valid_version_2() -> Result<(), GitError> {
+    fn test_read_version_valid_version_2() -> Result<(), UtilError> {
         let data: [u8; 4] = [0, 0, 0, 2]; // Versión válida 2
         let mut cursor = Cursor::new(&data);
         let version = read_version(&mut cursor)?;
@@ -186,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_version_valid_version_3() -> Result<(), GitError> {
+    fn test_read_version_valid_version_3() -> Result<(), UtilError> {
         let data: [u8; 4] = [0, 0, 0, 3]; // Versión válida 3
         let mut cursor = Cursor::new(&data);
         let version = read_version(&mut cursor)?;
@@ -222,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn test_read_objects_contained_valid() -> Result<(), GitError> {
+    fn test_read_objects_contained_valid() -> Result<(), UtilError> {
         let data: [u8; 4] = [0, 0, 0, 42]; // Número de objetos: 42
         let mut cursor = Cursor::new(&data);
         let num_objects = read_objects_contained(&mut cursor)?;

@@ -1,6 +1,8 @@
 use std::io::Read;
 
-use crate::{consts::LENGTH_PREFIX_SIZE, errors::GitError};
+use crate::consts::LENGTH_PREFIX_SIZE;
+
+use super::errors::UtilError;
 
 /// Lee líneas de paquete del flujo de entrada proporcionado y las devuelve como un vector de vectores de bytes.
 ///
@@ -10,7 +12,7 @@ use crate::{consts::LENGTH_PREFIX_SIZE, errors::GitError};
 /// Cada línea de paquete se lee utilizando la función `read_pkt_line`, que espera que el flujo de entrada
 /// contenga líneas de paquete según el formato de Git.
 ///
-/// Si ocurre un error al leer cualquiera de las líneas de paquete, se devuelve un error `GitError`.
+/// Si ocurre un error al leer cualquiera de las líneas de paquete, se devuelve un error `UtilError`.
 ///
 /// # Argumentos
 ///
@@ -18,10 +20,10 @@ use crate::{consts::LENGTH_PREFIX_SIZE, errors::GitError};
 ///
 /// # Retorno
 ///
-/// - `Result<Vec<Vec<u8>>, GitError>`: Un resultado que contiene un vector de vectores de bytes,
+/// - `Result<Vec<Vec<u8>>, UtilError>`: Un resultado que contiene un vector de vectores de bytes,
 ///   donde cada vector representa una línea de paquete del paquete Git leído.
 ///   Si ocurre un error, se devuelve el error correspondiente.
-pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, GitError> {
+pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, UtilError> {
     let mut lines: Vec<Vec<u8>> = Vec::new();
 
     loop {
@@ -47,7 +49,7 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, GitError> {
 /// 4. Devuelve el contenido de la línea de paquete como un vector de bytes.
 ///
 /// Si ocurre un error al leer la línea de paquete o al convertir la longitud hexadecimal,
-/// se devuelve un error `GitError::InvalidPacketLineError`.
+/// se devuelve un error `UtilError::InvalidPacketLineError`.
 ///
 /// Si la longitud es 0, lo que indica el final del paquete, se devuelve un vector de bytes vacío.
 ///
@@ -57,17 +59,17 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, GitError> {
 ///
 /// # Retorno
 ///
-/// - `Result<Vec<u8>, GitError>`: Un resultado que contiene el contenido de la línea de paquete o un error si ocurre alguno.
-fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError> {
+/// - `Result<Vec<u8>, UtilError>`: Un resultado que contiene el contenido de la línea de paquete o un error si ocurre alguno.
+fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
     let mut length_buf = [0u8; 4];
     if socket.read_exact(&mut length_buf).is_err() {
-        return Err(GitError::InvalidPacketLineError);
+        return Err(UtilError::InvalidPacketLineMissingLength);
     };
 
     let length_hex = String::from_utf8_lossy(&length_buf);
     let length = match u32::from_str_radix(length_hex.trim(), 16) {
         Ok(l) => l,
-        Err(_) => return Err(GitError::InvalidPacketLineError),
+        Err(_) => return Err(UtilError::InvalidPacketLineLength),
     };
 
     if length == 0 {
@@ -78,26 +80,26 @@ fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, GitError> {
     let length = length as usize - LENGTH_PREFIX_SIZE - 1; // 1 por el enter
     let mut content = vec![0u8; length];
     if socket.read_exact(&mut content).is_err() {
-        return Err(GitError::InvalidPacketLineError);
+        return Err(UtilError::InvalidPacketLineReadData);
     };
 
     // Consume the newline character
     let mut newline_buf = [0u8; 1];
     if socket.read_exact(&mut newline_buf).is_err() {
-        return Err(GitError::InvalidPacketLineError);
+        return Err(UtilError::InvalidPacketLineMissingNewline);
     };
 
     Ok(content)
 }
 
-pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], GitError> {
+pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], UtilError> {
     if bytes.len() < 4 {
-        return Err(GitError::InvalidPacketLineError);
+        return Err(UtilError::InvalidPacketLine);
     }
     let len = match u32::from_str_radix(String::from_utf8_lossy(&bytes[0..4]).trim(), 16)
     {
         Ok(l) => l as usize,
-        Err(_) => return Err(GitError::InvalidPacketLineError),
+        Err(_) => return Err(UtilError::InvalidPacketLine),
     };
 
     let data: &[u8] = &bytes[4..len];
