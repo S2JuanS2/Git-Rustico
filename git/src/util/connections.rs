@@ -1,6 +1,5 @@
 use crate::consts::DONE;
 use crate::consts::FLUSH_PKT;
-use crate::errors::GitError;
 use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
@@ -22,7 +21,7 @@ use super::pkt_line;
 ///
 /// # Retorno
 /// Un Result que indica si el servidor se inició con éxito (Ok) y devuelve un TcpListener para
-/// aceptar conexiones entrantes, o si se produjo un error (Err) de GitError, como un error de conexión.
+/// aceptar conexiones entrantes, o si se produjo un error (Err) de UtilError, como un error de conexión.
 pub fn start_server(ip: &str) -> Result<TcpListener, UtilError> {
     match TcpListener::bind(ip) {
         Ok(listener) => Ok(listener),
@@ -37,11 +36,11 @@ pub fn start_server(ip: &str) -> Result<TcpListener, UtilError> {
 ///
 /// # Retorno
 /// Un Result que indica si la conexión de cliente se estableció con éxito (Ok) o si se
-/// produjo un error (Err) de GitError, como un error de conexión.
-pub fn start_client(ip: &str) -> Result<TcpStream, GitError> {
+/// produjo un error (Err) de UtilError, como un error de conexión.
+pub fn start_client(ip: &str) -> Result<TcpStream, UtilError> {
     match TcpStream::connect(ip) {
         Ok(socket) => Ok(socket),
-        Err(_) => Err(GitError::ClientConnectionError),
+        Err(_) => Err(UtilError::ClientConnection),
     }
 }
 
@@ -55,7 +54,7 @@ pub fn start_client(ip: &str) -> Result<TcpStream, GitError> {
 ///
 /// # Retorno
 /// Un Result que contiene un vector de AdvertisedRefs si la operación fue exitosa,
-/// o un error de GitError en caso contrario.
+/// o un error de UtilError en caso contrario.
 pub fn reference_discovery(
     socket: &mut TcpStream,
     message: String,
@@ -74,11 +73,11 @@ pub fn reference_discovery(
 ///
 /// # Retorno
 /// Un Result que indica si la negociación del paquete se realizó con éxito (Ok) o si se
-/// produjo un error (Err) de GitError.
+/// produjo un error (Err) de UtilError.
 pub fn packfile_negotiation(
     socket: &mut TcpStream,
     advertised: Vec<AdvertisedRefs>,
-) -> Result<(), GitError> {
+) -> Result<(), UtilError> {
     upload_request(socket, advertised)?;
     send_done(socket, UtilError::UploadRequestDone)?;
     receive_nack(socket)?;
@@ -104,7 +103,7 @@ pub fn receive_packfile(socket: &mut TcpStream) -> Result<Vec<(ObjectEntry, Vec<
 ///
 /// # Retorno
 ///
-/// - `Result<(), GitError>`: Un resultado que indica si la operación fue exitosa o si se produjo un error.
+/// - `Result<(), UtilError>`: Un resultado que indica si la operación fue exitosa o si se produjo un error.
 ///   Si la operación se realiza con éxito, se devuelve `Ok(())`. Si se produce un error, se devuelve un error pasado por parametro.
 ///
 pub fn send_message(
@@ -136,8 +135,8 @@ pub fn send_message(
 ///
 /// # Retorno
 ///
-/// - `Result<(), GitError>`: Un resultado que indica si la operación fue exitosa o si se produjo un error.
-///   Si la operación se realiza con éxito, se devuelve `Ok(())`. Si se produce un error, se devuelve un error `GitError`.
+/// - `Result<(), UtilError>`: Un resultado que indica si la operación fue exitosa o si se produjo un error.
+///   Si la operación se realiza con éxito, se devuelve `Ok(())`. Si se produce un error, se devuelve un error `UtilError`.
 pub fn send_flush(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilError> {
     send_message(socket, FLUSH_PKT.to_string(), error)
 }
@@ -147,11 +146,11 @@ pub fn send_flush(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilEr
 /// # Argumentos
 /// - `socket`: Un objeto que implementa el trait `Write`, como un socket o un archivo, que
 ///   se utiliza para enviar el mensaje "done" al servidor.
-/// - `error`: Un valor de tipo `GitError` que se utilizará en caso de error durante el envío del mensaje.
+/// - `error`: Un valor de tipo `UtilError` que se utilizará en caso de error durante el envío del mensaje.
 ///
 /// # Retorno
 /// Un Result que indica si el envío del mensaje "done" se realizó con éxito (Ok) o si se
-/// produjo un error (Err) de GitError.
+/// produjo un error (Err) de UtilError.
 pub fn send_done(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilError> {
     send_message(socket, DONE.to_string(), error)
 }

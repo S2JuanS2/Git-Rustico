@@ -33,6 +33,7 @@ pub enum UtilError {
     InvalidObjectType,
     ObjectDeserialization,
     EmptyDecompressionError,
+    PackfileNegotiationReceiveNACK,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -66,6 +67,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidObjectType => write!(f, "InvalidObjectTypeError: Tipo de objeto inválido."),
         UtilError::ObjectDeserialization => write!(f, "ObjectDeserializationError: Error al deserializar el objeto."),
         UtilError::EmptyDecompressionError => write!(f, "EmptyDecompressionError: Error al descomprimir el objeto, me dio un vector vacío."),
+        UtilError::PackfileNegotiationReceiveNACK => write!(f, "PackfileNegotiationReceiveNACKError: Error al recibir el NACK."),
     }
 }
 

@@ -3,7 +3,7 @@ use super::{
     connections::{send_flush, send_message},
     pkt_line, errors::UtilError,
 };
-use crate::{consts::NACK, errors::GitError};
+use crate::consts::NACK;
 use std::{io::Read, net::TcpStream};
 
 /// Realiza una solicitud de carga al servidor Git.
@@ -23,7 +23,7 @@ use std::{io::Read, net::TcpStream};
 /// # Errores
 ///
 /// Esta función devuelve un `Result`. Si ocurre un error al enviar la solicitud
-/// de carga, se devuelve un error de tipo `GitError` específico.
+/// de carga, se devuelve un error de tipo `UtilError` específico.
 ///
 /// En este ejemplo, se inicia una conexión al servidor Git y se envía una solicitud de carga para la referencia dada.
 ///
@@ -50,15 +50,15 @@ pub fn upload_request(
     Ok(())
 }
 
-pub fn receive_nack(stream: &mut dyn Read) -> Result<(), GitError> {
+pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
     let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
     if stream.read_exact(&mut buffer).is_err() {
-        return Err(GitError::PackfileNegotiationNACK);
+        return Err(UtilError::PackfileNegotiationReceiveNACK);
     }
     let response = String::from_utf8_lossy(&buffer);
 
     if response != NACK {
-        return Err(GitError::PackfileNegotiationNACK);
+        return Err(UtilError::PackfileNegotiationReceiveNACK);
     }
     Ok(())
 }
