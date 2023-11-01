@@ -56,8 +56,8 @@ impl AdvertisedRefs {
     ///
     /// - `Ok(Vec<AdvertisedRefs>)`: Si se procesan con éxito todas las líneas del vector de bytes y se generan
     ///   los anuncios apropiados, se devuelve un vector de anuncios de referencias.
-    /// - `Err(GitError)`: Si se produce un error al procesar las líneas o al clasificar las referencias, se devuelve
-    ///   un error `GitError` que indica el problema.
+    /// - `Err(UtilError)`: Si se produce un error al procesar las líneas o al clasificar las referencias, se devuelve
+    ///   un error `UtilError` que indica el problema.
     ///
     pub fn classify_vec(content: &Vec<Vec<u8>>) -> Result<Vec<AdvertisedRefs>, UtilError> {
         let mut result: Vec<AdvertisedRefs> = Vec::new();
@@ -85,7 +85,7 @@ impl AdvertisedRefs {
     ///
     /// - `Ok(vec![AdvertisedRefs::Version(n)])`: Si la versión es 1 o 2, se genera un anuncio de versión con
     ///   el número correspondiente y se devuelve como un vector.
-    /// - `Err(GitError::InvalidVersionNumberError)`: Si la versión no es 1 ni 2, se genera un error `GitError`
+    /// - `Err(UtilError::InvalidVersionNumberError)`: Si la versión no es 1 ni 2, se genera un error `UtilError`
     ///   indicando que el número de versión es inválido.
     ///
     fn create_version(version: &str) -> Result<Vec<AdvertisedRefs>, UtilError> {
@@ -107,7 +107,7 @@ impl AdvertisedRefs {
     ///
     /// - `Ok(vec![AdvertisedRefs::Shallow { obj_id }])`: Si el ID del objeto es válido, se genera un anuncio de
     ///   referencia "shallow" con el ID del objeto proporcionado y se devuelve como un vector.
-    /// - `Err(GitError::InvalidObjectIdError)`: Si el ID del objeto no es válido, se genera un error `GitError`
+    /// - `Err(UtilError::InvalidObjectIdError)`: Si el ID del objeto no es válido, se genera un error `UtilError`
     ///   indicando que el ID del objeto es inválido.
     ///
     fn create_shallow(obj_id: &str) -> Result<Vec<AdvertisedRefs>, UtilError> {
@@ -137,8 +137,8 @@ impl AdvertisedRefs {
     /// - `Ok(vec![AdvertisedRefs::Capabilities(caps), AdvertisedRefs::Ref { obj_id, ref_name }])`: Si el anuncio
     ///   de referencias Git contiene capacidades, se generan anuncios de capacidades seguidos por anuncios de referencias
     ///   con los ID de objeto y nombres de referencia especificados, y se devuelven como un vector.
-    /// - `Err(GitError::InvalidObjectIdError)`: Si el anuncio de referencias Git es inválido o contiene una cantidad incorrecta
-    ///   de partes, se genera un error `GitError` indicando que el ID del objeto es inválido.
+    /// - `Err(UtilError::InvalidObjectIdError)`: Si el anuncio de referencias Git es inválido o contiene una cantidad incorrecta
+    ///   de partes, se genera un error `UtilError` indicando que el ID del objeto es inválido.
     ///
     fn create_ref(input: &str) -> Result<Vec<AdvertisedRefs>, UtilError> {
         if !contains_capacity_list(input) {
@@ -169,8 +169,8 @@ impl AdvertisedRefs {
     ///
     /// - `Ok(vec![Anuncios de referencias])`: Si la entrada se clasifica correctamente y se generan los anuncios
     ///   apropiados, se devuelve un vector de anuncios de referencias.
-    /// - `Err(GitError::InvalidServerReferenceError)`: Si la entrada no se puede clasificar o es inválida, se genera un
-    ///   error `GitError` indicando que la referencia del servidor es inválida.
+    /// - `Err(UtilError::InvalidServerReferenceError)`: Si la entrada no se puede clasificar o es inválida, se genera un
+    ///   error `UtilError` indicando que la referencia del servidor es inválida.
     ///
     fn classify_server_refs(input: &str) -> Result<Vec<AdvertisedRefs>, UtilError> {
         let parts: Vec<&str> = input.split_whitespace().collect();

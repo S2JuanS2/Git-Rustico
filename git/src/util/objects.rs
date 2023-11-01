@@ -7,6 +7,8 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
+use super::errors::UtilError;
+
 /// Estructura que representa una entrada de objeto en el sistema de control de versiones Git.
 ///
 /// Una entrada de objeto almacena información sobre el tipo y la longitud de un objeto Git.
@@ -63,7 +65,7 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
 pub fn read_type_and_length_from_vec(
     data: &[u8],
     offset: &mut usize,
-) -> Result<ObjectEntry, GitError> {
+) -> Result<ObjectEntry, UtilError> {
     let byte = data[*offset];
     *offset += 1;
     let obj_type: ObjectType = create_object_bits(byte)?;
@@ -79,7 +81,7 @@ fn read_size_encoded_length_from_vec(
     data: &[u8],
     byte: u8,
     offset: &mut usize,
-) -> Result<usize, GitError> {
+) -> Result<usize, UtilError> {
     let mut length_bits = (byte & 0b00001111) as usize;
     if (byte & 0b10000000) == 0 {
         return Ok(length_bits); // Se gasto un bit para el tipo
@@ -134,7 +136,7 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
     Ok(length_bits)
 }
 
-fn create_object_bits(byte: u8) -> Result<ObjectType, GitError> {
+fn create_object_bits(byte: u8) -> Result<ObjectType, UtilError> {
     let byte = (byte & 0b01110000) >> 4;
     create_object(byte)
 }
@@ -150,7 +152,7 @@ fn create_object_bits(byte: u8) -> Result<ObjectType, GitError> {
 /// * `Ok(ObjectType)`: Si el valor de `type_bits` corresponde a un tipo de objeto válido.
 /// * `Err(GitError)`: Si el valor de `type_bits` no corresponde a un tipo de objeto válido y genera un error `GitError::InvalidObjectType`.
 ///
-fn create_object(byte: u8) -> Result<ObjectType, GitError> {
+fn create_object(byte: u8) -> Result<ObjectType, UtilError> {
     match byte {
         1 => Ok(ObjectType::Commit),
         2 => Ok(ObjectType::Tree),
@@ -158,7 +160,7 @@ fn create_object(byte: u8) -> Result<ObjectType, GitError> {
         4 => Ok(ObjectType::Tag),
         6 => Ok(ObjectType::OfsDelta),
         7 => Ok(ObjectType::RefDelta),
-        _ => Err(GitError::InvalidObjectType),
+        _ => Err(UtilError::InvalidObjectType),
     }
 }
 
@@ -432,7 +434,6 @@ mod tests {
     use std::io::Cursor;
 
     use super::*;
-    use crate::errors::GitError;
 
     #[test]
     fn test_create_object_commit() {
@@ -473,13 +474,13 @@ mod tests {
     #[test]
     fn test_create_object_invalid_type_5() {
         let object_type = create_object(5); // Tipo inválido
-        assert_eq!(object_type, Err(GitError::InvalidObjectType));
+        assert_eq!(object_type, Err(UtilError::InvalidObjectType));
     }
 
     #[test]
     fn test_create_object_invalid_type_0() {
         let object_type = create_object(0); // Tipo inválido
-        assert_eq!(object_type, Err(GitError::InvalidObjectType));
+        assert_eq!(object_type, Err(UtilError::InvalidObjectType));
     }
 
     #[test]

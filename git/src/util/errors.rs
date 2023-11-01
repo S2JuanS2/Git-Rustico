@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::{errors::GitError, commands::errors::CommandsError};
 
+#[derive(PartialEq, Eq)]
 pub enum UtilError {
     UtilFromCommands(String), // Para tener polimorfismo con CommandsError
     InvalidPacketLine,
@@ -25,6 +26,13 @@ pub enum UtilError {
     InvalidPacketLineLength,
     InvalidPacketLineReadData,
     InvalidPacketLineMissingNewline,
+    HeaderPackFileReadSignature,
+    HeaderPackFileReadVersion,
+    HeaderPackFileReadNumberObjects,
+    DataPackFiletReadObject,
+    InvalidObjectType,
+    ObjectDeserialization,
+    EmptyDecompressionError,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -51,6 +59,13 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidPacketLineMissingLength => write!(f, "InvalidPacketLineMissingLengthError: Falta la longitud de la línea de paquete."),
         UtilError::InvalidPacketLineReadData => write!(f, "InvalidPacketLineReadDataError: Error al leer los datos de la línea de paquete."),
         UtilError::InvalidPacketLineMissingNewline => write!(f, "InvalidPacketLineMissingNewlineError: Falta el carácter de nueva línea de la línea de paquete."),
+        UtilError::HeaderPackFileReadSignature => write!(f, "HeaderPackFileReadSignatureError: Error al leer la firma del encabezado del paquete."),
+        UtilError::HeaderPackFileReadVersion => write!(f, "HeaderPackFileReadVersionError: Error al leer la versión del encabezado del paquete."),
+        UtilError::HeaderPackFileReadNumberObjects => write!(f, "HeaderPackFileReadNumberObjectsError: Error al leer el número de objetos del encabezado del paquete."),
+        UtilError::DataPackFiletReadObject => write!(f, "DataPackFiletReadObjectError: Error al leer el objeto del paquete."),
+        UtilError::InvalidObjectType => write!(f, "InvalidObjectTypeError: Tipo de objeto inválido."),
+        UtilError::ObjectDeserialization => write!(f, "ObjectDeserializationError: Error al deserializar el objeto."),
+        UtilError::EmptyDecompressionError => write!(f, "EmptyDecompressionError: Error al descomprimir el objeto, me dio un vector vacío."),
     }
 }
 

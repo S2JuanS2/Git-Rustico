@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use crate::{consts::LENGTH_PREFIX_SIZE, errors::GitError};
+use crate::consts::LENGTH_PREFIX_SIZE;
 
 use super::errors::UtilError;
 
@@ -12,7 +12,7 @@ use super::errors::UtilError;
 /// Cada línea de paquete se lee utilizando la función `read_pkt_line`, que espera que el flujo de entrada
 /// contenga líneas de paquete según el formato de Git.
 ///
-/// Si ocurre un error al leer cualquiera de las líneas de paquete, se devuelve un error `GitError`.
+/// Si ocurre un error al leer cualquiera de las líneas de paquete, se devuelve un error `UtilError`.
 ///
 /// # Argumentos
 ///
@@ -20,7 +20,7 @@ use super::errors::UtilError;
 ///
 /// # Retorno
 ///
-/// - `Result<Vec<Vec<u8>>, GitError>`: Un resultado que contiene un vector de vectores de bytes,
+/// - `Result<Vec<Vec<u8>>, UtilError>`: Un resultado que contiene un vector de vectores de bytes,
 ///   donde cada vector representa una línea de paquete del paquete Git leído.
 ///   Si ocurre un error, se devuelve el error correspondiente.
 pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, UtilError> {
@@ -49,7 +49,7 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, UtilError> {
 /// 4. Devuelve el contenido de la línea de paquete como un vector de bytes.
 ///
 /// Si ocurre un error al leer la línea de paquete o al convertir la longitud hexadecimal,
-/// se devuelve un error `GitError::InvalidPacketLineError`.
+/// se devuelve un error `UtilError::InvalidPacketLineError`.
 ///
 /// Si la longitud es 0, lo que indica el final del paquete, se devuelve un vector de bytes vacío.
 ///
@@ -59,7 +59,7 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, UtilError> {
 ///
 /// # Retorno
 ///
-/// - `Result<Vec<u8>, GitError>`: Un resultado que contiene el contenido de la línea de paquete o un error si ocurre alguno.
+/// - `Result<Vec<u8>, UtilError>`: Un resultado que contiene el contenido de la línea de paquete o un error si ocurre alguno.
 fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
     let mut length_buf = [0u8; 4];
     if socket.read_exact(&mut length_buf).is_err() {
@@ -92,14 +92,14 @@ fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
     Ok(content)
 }
 
-pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], GitError> {
+pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], UtilError> {
     if bytes.len() < 4 {
-        return Err(GitError::InvalidPacketLineError);
+        return Err(UtilError::InvalidPacketLine);
     }
     let len = match u32::from_str_radix(String::from_utf8_lossy(&bytes[0..4]).trim(), 16)
     {
         Ok(l) => l as usize,
-        Err(_) => return Err(GitError::InvalidPacketLineError),
+        Err(_) => return Err(UtilError::InvalidPacketLine),
     };
 
     let data: &[u8] = &bytes[4..len];

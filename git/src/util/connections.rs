@@ -85,7 +85,7 @@ pub fn packfile_negotiation(
     Ok(())
 }
 
-pub fn receive_packfile(socket: &mut TcpStream) -> Result<Vec<(ObjectEntry, Vec<u8>)>, GitError> {
+pub fn receive_packfile(socket: &mut TcpStream) -> Result<Vec<(ObjectEntry, Vec<u8>)>, UtilError> {
     // read_pack_prueba(socket)?;
     let objects = read_packfile_header(socket)?;
     read_packfile_data(socket, objects as usize)
