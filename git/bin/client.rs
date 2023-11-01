@@ -21,7 +21,7 @@ fn main() -> Result<(), GitError> {
 
     let controller = Controller::new(client.clone());
 
-    let view = View::new(controller.clone())?;
+    let mut view = View::new(controller.clone())?;
 
     view.start_view()?;
 

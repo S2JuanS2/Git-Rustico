@@ -38,6 +38,10 @@ impl Controller {
         };
         Ok(result)
     }
+
+    pub fn get_name_client(& self) -> &str{
+        self.client.get_name()
+    }
 }
 
 /// Esta función se encarga de llamar a al comando adecuado con los parametros necesarios
