@@ -6,6 +6,7 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 
 use super::advertised::AdvertisedRefs;
+use super::errors::UtilError;
 use super::negotiation::receive_nack;
 use super::negotiation::upload_request;
 use super::objects::ObjectEntry;
@@ -23,10 +24,10 @@ use super::pkt_line;
 /// # Retorno
 /// Un Result que indica si el servidor se inició con éxito (Ok) y devuelve un TcpListener para
 /// aceptar conexiones entrantes, o si se produjo un error (Err) de GitError, como un error de conexión.
-pub fn start_server(ip: &str) -> Result<TcpListener, GitError> {
+pub fn start_server(ip: &str) -> Result<TcpListener, UtilError> {
     match TcpListener::bind(ip) {
         Ok(listener) => Ok(listener),
-        Err(_) => Err(GitError::ServerConnectionError),
+        Err(_) => Err(UtilError::ServerConnection),
     }
 }
 

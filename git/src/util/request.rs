@@ -64,7 +64,7 @@ impl GitRequest {
             None => return Err(GitError::MissingPathNameRequest),
         };
     
-        let host_parameter = parts.next().map(|host| host);
+        let host_parameter = parts.next();
         let extra_parameters = parts.collect::<Vec<_>>();
     
         Ok(GitRequest {

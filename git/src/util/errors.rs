@@ -1,7 +1,5 @@
 use std::fmt;
 
-use gtk::gdk::keys::constants::U;
-
 use crate::{errors::GitError, commands::errors::CommandsError};
 
 pub enum UtilError {
@@ -10,6 +8,9 @@ pub enum UtilError {
     InvalidPacketLine,
     ServerConnection,
     ClientConnection,
+    LogOutputSync,
+    LogMessageSend,
+    LogOutputOpen,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -19,6 +20,9 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidPacketLineInfo(info) => write!(f, "{}\nMore info: {}", UtilError::InvalidPacketLine, info),
         UtilError::ServerConnection => write!(f, "ServerConnectionError: Error al iniciar el servidor."),
         UtilError::ClientConnection => write!(f, "ClientConnectionError: Error al iniciar el cliente."),
+        UtilError::LogOutputSync => write!(f, "LogOutputSyncError: Error al sincronizar la salida de registro."),
+        UtilError::LogMessageSend => write!(f, "LogMessageSendError: Error al enviar un mensaje de registro."),
+        UtilError::LogOutputOpen => write!(f, "LogOutputOpenError: Error al abrir la salida de registro."),
         // AGregar más errores aquí
     }
 }

@@ -3,7 +3,7 @@ use std::{
     io::{self, Write},
 };
 
-use crate::errors::GitError;
+use super::errors::UtilError;
 
 /// Enumera los posibles tipos de salida de registro para el programa.
 ///
@@ -26,7 +26,7 @@ impl LogOutput {
     ///
     /// Devuelve un `Result` con `LogOutput` que representa la salida del archivo de registro.
     /// Si el archivo no se pudo abrir devolvera un `LogOutput` que representa la salida estándar de error.
-    pub fn new(path: &str) -> Result<LogOutput, GitError> {
+    pub fn new(path: &str) -> Result<LogOutput, UtilError> {
         match open_log_file(path) {
             Ok(file) => Ok(LogOutput::LogFile(file)),
             Err(_) => Ok(LogOutput::StandardError(io::stderr())),
@@ -38,13 +38,13 @@ impl LogOutput {
     /// # Returns
     ///
     /// Devuelve un `Result` sin valor si la operación se realizó con éxito,
-    /// o un error `GitError` si la sincronización falla.
+    /// o un error `UtilError` si la sincronización falla.
     /// Solo la sincronización del archivo de registro puede fallar si es del tipo `LogFile``.
-    pub fn sync_all(&mut self) -> Result<(), GitError> {
+    pub fn sync_all(&mut self) -> Result<(), UtilError> {
         match self {
             LogOutput::LogFile(file) => {
                 if file.sync_all().is_err() {
-                    return Err(GitError::LogOutputSyncError);
+                    return Err(UtilError::LogOutputSync);
                 };
                 Ok(())
             }
@@ -61,11 +61,11 @@ impl LogOutput {
 ///
 /// # Returns
 ///
-/// Devuelve un `Result` con el archivo si la operación fue exitosa o un error `GitError`.
-fn open_log_file(log_path: &str) -> Result<File, GitError> {
+/// Devuelve un `Result` con el archivo si la operación fue exitosa o un error `UtilError`.
+fn open_log_file(log_path: &str) -> Result<File, UtilError> {
     match OpenOptions::new().create(true).append(true).open(log_path) {
         Ok(file) => Ok(file),
-        Err(_) => Err(GitError::LogOutputOpenError),
+        Err(_) => Err(UtilError::LogOutputOpen),
     }
 }
 
@@ -116,7 +116,7 @@ mod tests {
         // Prueba para abrir un archivo de registro existente
         match open_log_file(log_path) {
             Ok(_) => assert!(true, "Expected a successful file open."),
-            Err(e) => assert!(false, "Unexpected error: {}", e.message()),
+            Err(e) => assert!(false, "Unexpected error: {}", e),
         }
     }
 

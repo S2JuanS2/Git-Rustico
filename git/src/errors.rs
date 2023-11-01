@@ -88,6 +88,11 @@ pub enum GitError {
     MissingCommandRequest,
     MissingPathNameRequest,
     InvalidRequestCommand,
+    GitFromUtilError(String),
+    ViewError(String),
+    GitFromModelsError(String),
+    GitFromControllerError(String),
+    GitFromCommandsError(String),
 }
 
 impl GitError {
@@ -185,6 +190,11 @@ impl GitError {
             GitError::MissingCommandRequest => "No se recibio el comando de la solicitud",
             GitError::MissingPathNameRequest => "No se recibio el path de la solicitud",
             GitError::InvalidRequestCommand => "Comando de solicitud invalido",
+            GitError::GitFromUtilError(msg) => msg,
+            GitError::ViewError(msg) => msg,
+            GitError::GitFromModelsError(msg) => msg,
+            GitError::GitFromControllerError(msg) => msg,
+            GitError::GitFromCommandsError(msg) => msg,
         }
     }
 }
