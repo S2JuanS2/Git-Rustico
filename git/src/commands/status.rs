@@ -1,6 +1,7 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
+use crate::util::files::{open_file, read_file};
 use crate::util::formats::hash_generate;
 use std::collections::HashMap;
 use std::fs;
@@ -17,7 +18,7 @@ pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, GitError
         return Err(GitError::InvalidArgumentCountStatusError);
     }
     let directory = client.get_directory_path();
-    git_status(directory)
+    git_status(&directory)
 }
 
 /// Devuelve el nombre de la rama actual.
@@ -70,41 +71,99 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
     // "directory/.git"
     let directory_git = format!("{}/{}", directory, GIT_DIR);
 
+    let index_content = get_index_content(&directory_git)?;
+
+    // Divide el contenido del índice en líneas.
+    let lines: Vec<String> = index_content.lines().map(String::from).collect();
+    let mut index_files: Vec<String> = Vec::new();
+    if !lines.is_empty() {
+        for line in lines {
+            index_files.push(line);
+        }
+    }
+
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
 
     let objects_hash_list = get_hashes_objects(directory_git)?;
 
-    let updated_files_list = compare_hash_lists(working_directory_hash_list, objects_hash_list);
+    let untracked_files_list = compare_hash_lists(working_directory_hash_list, objects_hash_list);
 
-    let value = print_changes(updated_files_list, directory)?;
+    let value = print_changes(index_files, untracked_files_list, directory)?;
 
+    println!("{}", value);
     Ok(value)
+}
+
+/// Devuelve el contenido del archivo index.
+/// ###Parámetros:
+/// 'directory_git': directorio del repositorio local.
+fn get_index_content(directory_git: &String) -> Result<String, GitError> {
+    let index_path = format!("{}/index", directory_git);
+    let index_file = File::open(index_path);
+    let mut index_file = match index_file {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::OpenFileError),
+    };
+    let mut index_content: String = String::new();
+    let read_index_file = index_file.read_to_string(&mut index_content);
+    let _ = match read_index_file {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::ReadFileError),
+    };
+    Ok(index_content)
 }
 
 /// Imprime los cambios que se realizaron en el repositorio local y no estan en el staging area.
 /// ###Parámetros:
 /// 'updated_files_list': vector con los nombres de los archivos que se modificaron.
 /// 'directory': directorio del repositorio local.
-fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Result<String, GitError> {
+fn print_changes(
+    index_files_list: Vec<String>,
+    untracked_files_list: Vec<(String, String)>,
+    directory: &str,
+) -> Result<String, GitError> {
     let mut formatted_result = String::new();
     let head_branch_name = get_head_branch(directory)?;
     // Si el vector de archivos modificados esta vacio, significa que no hay cambios
-    if updated_files_list.is_empty() {
+    formatted_result.push_str("On branch ");
+    formatted_result.push_str(&head_branch_name);
+    if index_files_list.is_empty() && untracked_files_list.is_empty() {
         formatted_result.push_str(&format!(
             "Your branch is up to date with 'origin/{}'.\n",
             head_branch_name
         ));
-    } else {
-        formatted_result.push_str("On branch ");
-        formatted_result.push_str(&head_branch_name);
+        formatted_result.push_str("\nnothing to commit, working tree clean\n");
+    }
+    if !index_files_list.is_empty() {
+        formatted_result.push_str("\nChanges to be committed:\n");
+        formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
+
+        for file in index_files_list {
+            let file_name: Vec<&str> = file.split(' ').collect();
+            let file_name = match file_name.first() {
+                Some(name) => name,
+                None => return Err(GitError::HeadBranchError), //CAMBIAR ERROR
+            };
+            formatted_result.push_str(&format!("\tmodified:   {}\n", file_name));
+        }
+    }
+    if !untracked_files_list.is_empty() {
         formatted_result.push_str("\nChanges not staged for commit:\n");
         formatted_result
             .push_str("  (use \"git add <file>...\" to update what will be committed)\n");
+        formatted_result.push_str(
+            "  (use \"git checkout -- <file>...\" to discard changes in working directory)\n",
+        );
 
-        for file in updated_files_list {
-            formatted_result.push_str(&format!("\tmodified:   {}\n", file));
+        for file in untracked_files_list {
+            let file_path = match file.0.split('/').last() {
+                Some(name) => name,
+                None => return Err(GitError::HeadBranchError), //CAMBIAR ERROR
+            };
+            formatted_result.push_str(&format!("\t{}\n", file_path));
         }
     }
+
     Ok(formatted_result)
 }
 
@@ -116,12 +175,12 @@ fn print_changes(updated_files_list: Vec<String>, directory: &str) -> Result<Str
 fn compare_hash_lists(
     working_directory_hash_list: HashMap<String, String>,
     objects_hash_list: Vec<String>,
-) -> Vec<String> {
+) -> Vec<(String, String)> {
     // Comparo los hashes de mis archivos con los de objects para crear un vector con los archivos que se modificaron
-    let mut updated_files_list: Vec<String> = Vec::new();
+    let mut updated_files_list: Vec<(String, String)> = Vec::new();
     for hash in &working_directory_hash_list {
         if !objects_hash_list.contains(hash.1) {
-            updated_files_list.push(hash.0.to_string());
+            updated_files_list.push((hash.0.to_string(), hash.1.to_string()));
         }
     }
     updated_files_list
@@ -223,30 +282,35 @@ pub fn calculate_directory_hashes(
         };
         let path = entry.path();
 
+        let file_name = entry.file_name();
+        let entry = match file_name.to_str() {
+            Some(entry) => entry,
+            None => return Err(GitError::PathToStringError),
+        };
+
+        if entry.starts_with('.') {
+            continue;
+        }
+
         if path.is_dir() {
             let direct = match path.to_str() {
                 Some(direct) => direct,
                 None => return Err(GitError::PathToStringError),
             };
-            match calculate_directory_hashes(direct, hash_list) {
-                Ok(_) => {}
-                Err(_) => return Err(GitError::GetHashError),
-            };
+            calculate_directory_hashes(direct, hash_list)?;
         } else {
             let file_name = match path.to_str() {
                 Some(file_name) => file_name,
                 None => return Err(GitError::PathToStringError),
             };
-            let file_content = match fs::read_to_string(&path) {
-                Ok(content) => content,
-                Err(e) => {
-                    println!("Error: {}", e);
-                    continue;
-                }
-            };
+            let file = open_file(file_name)?;
+            let content = read_file(file)?;
 
-            let hash = hash_generate(&file_content);
-            hash_list.insert(file_name.to_string(), hash);
+            let header = format!("{} {}\0", BLOB, content.len());
+            let store = header + String::from_utf8_lossy(&content).as_ref();
+            let hash_object = hash_generate(&store);
+
+            hash_list.insert(file_name.to_string(), hash_object);
         }
     }
     Ok(())
@@ -254,6 +318,8 @@ pub fn calculate_directory_hashes(
 
 #[cfg(test)]
 mod tests {
+    use crate::commands::add::git_add;
+
     use super::*;
     use std::io::Write;
 
@@ -261,50 +327,43 @@ mod tests {
 
     #[test]
     fn test_git_status() {
-        let dir_path = TEST_DIRECTORY.to_string();
-        if let Err(err) = fs::create_dir_all(&dir_path) {
+        if let Err(err) = fs::create_dir_all(&TEST_DIRECTORY) {
             panic!("Falló al crear el repo de test: {}", err);
         }
 
-        let repo_path = format!("{}{}", dir_path, "/.git/src");
-        if let Err(err) = fs::create_dir_all(&repo_path) {
+        let directory_git = format!("{}/{}", TEST_DIRECTORY, GIT_DIR);
+        if let Err(err) = fs::create_dir_all(&directory_git) {
             panic!("Falló al crear la carpeta 'git': {}", err);
         }
 
-        let head_path = format!("{}/{}/{}", TEST_DIRECTORY, ".git", HEAD);
-        let mut file = fs::File::create(head_path).expect("Falló al crear el HEAD");
+        let head_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, HEAD);
+        let mut file = fs::File::create(&head_path).expect("Falló al crear el HEAD");
         file.write_all(b"ref: refs/heads/master")
             .expect("Error al escribir en el archivo");
 
-        // El hash de este archivo es: 48124d6dc3b2e693a207667c32ac672414913994
-        let file_path1 = format!("{}/main.rs", repo_path);
-        let mut file = fs::File::create(&file_path1).expect("Falló al crear el archivo");
-        file.write_all(b"Hola Mundo")
-            .expect("Error al escribir en el archivo");
-
-        let file_path2 = format!("{}/errors.rs", repo_path);
-        let mut file = fs::File::create(&file_path2).expect("Falló al crear el archivo");
-        file.write_all(b"Aca habria errores")
-            .expect("Error al escribir en el archivo");
-
-        let objects_path = format!("{}{}", dir_path, "/.git/objects");
+        let objects_path = format!("{}{}", TEST_DIRECTORY, "/.git/objects");
         if let Err(err) = fs::create_dir_all(&objects_path) {
             panic!("Falló al crear la carpeta 'objects': {}", err);
         }
 
-        // Agrego en la carpeta el hash unicamente del file_path1
-        let folder_path = format!("{}/{}", objects_path, "48");
-        if let Err(err) = fs::create_dir_all(&folder_path) {
-            panic!("Falló al crear la carpeta 'd5': {}", err);
-        }
+        File::create(format!("{}/.git/index", TEST_DIRECTORY)).expect("Error");
 
-        let file_path = format!("{}/124d6dc3b2e693a207667c32ac672414913994", folder_path);
-        let _ = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        let file_path = format!("{}/{}", TEST_DIRECTORY, "testfile.rs");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo")
+            .expect("Error al escribir en el archivo");
 
-        assert!(print_head(TEST_DIRECTORY).is_ok());
+        let file_path2 = format!("{}/{}", TEST_DIRECTORY, "main.rs");
+        let mut file = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file.write_all(b"Chau Mundo")
+            .expect("Error al escribir en el archivo");
+
         assert!(git_status(TEST_DIRECTORY).is_ok());
 
-        // Elimina el directorio de prueba
+        let _ = git_add(TEST_DIRECTORY, "testfile.rs");
+
+        assert!(git_status(TEST_DIRECTORY).is_ok());
+
         fs::remove_dir_all(TEST_DIRECTORY).expect("Error al intentar remover el directorio");
     }
 }
