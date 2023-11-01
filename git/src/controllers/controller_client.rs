@@ -7,11 +7,16 @@ use crate::commands::commit::handle_commit;
 use crate::commands::fetch::handle_fetch;
 use crate::commands::hash_object::handle_hash_object;
 use crate::commands::init::handle_init;
+use crate::commands::log::handle_log;
+use crate::commands::merge::handle_merge;
+use crate::commands::pull::handle_pull;
+use crate::commands::push::handle_push;
+use crate::commands::remote::handle_remote;
+use crate::commands::rm::handle_rm;
 use crate::commands::status::handle_status;
+
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::connections::start_client;
-use std::io::Write;
 
 #[derive(Clone)]
 pub struct Controller {
@@ -22,83 +27,89 @@ impl Controller {
     pub fn new(client: Client) -> Controller {
         Controller { client }
     }
-    pub fn send_command(&self, command: String) -> Result<(), GitError> {
-        let cloned_client = self.client.clone();
+    pub fn send_command(&self, command: &str) -> Result<String, GitError> {
+        let result = handle_command(command.to_string().clone(), self.client.clone())?;
 
-        handle_command(command.clone(), self.client.clone())?;
-
-        match start_client(&cloned_client.get_ip()) {
-            Ok(mut stream) => {
-                let command_bytes = command.trim().as_bytes();
-
-                if stream.write(command_bytes).is_err() {
-                    return Err(GitError::WriteStreamError);
-                }
-                if stream.shutdown(std::net::Shutdown::Both).is_err() {
-                    return Err(GitError::ServerConnectionError);
-                }
-            }
-            Err(_) => return Err(GitError::GtkFailedInitiliaze),
-        };
-
-        Ok(())
+        Ok(result)
     }
 }
 
 /// Esta función se encarga de llamar a al comando adecuado con los parametros necesarios
 /// ###Parametros:
 /// 'buffer': String que contiene el comando que se le pasara al servidor
-fn handle_command(buffer: String, client: Client) -> Result<(), GitError> {
+fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
     let command = buffer.trim();
     let commands = command.split_whitespace().collect::<Vec<&str>>();
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
 
-    if command.is_empty(){
-        return Err(GitError::CommandDoesNotStartWithGitError);
+    let mut result = " ".to_string();
+
+    if command.is_empty() {
+        return Err(GitError::NonGitCommandError);
     }
 
-    if command.split_whitespace().count() == 1{
-        return Err(GitError::CommandDoesNotStartWithGitError);
+    if command.split_whitespace().count() == 1 {
+        return Err(GitError::NonGitCommandError);
     }
 
     if commands[0] == "git" {
         match commands[1] {
             "branch" => {
-                handle_branch(rest_of_command, client)?;
+                result = handle_branch(rest_of_command, client)?;
             }
             "clone" => {
-                handle_clone(rest_of_command, client)?;
+                let result = handle_clone(rest_of_command, client);
+                println!("Result: {:?}", result);
+                //return result;
             }
             "commit" => {
                 handle_commit(rest_of_command, client)?;
             }
             "init" => {
-                handle_init(rest_of_command, client)?;
+                result = handle_init(rest_of_command, client)?;
             }
-            "cat_file" => {
-                handle_cat_file(rest_of_command, client)?;
+            "cat-file" => {
+                result = handle_cat_file(rest_of_command, client)?;
             }
             "add" => {
                 handle_add(rest_of_command, client)?;
             }
             "checkout" => {
-                handle_checkout(rest_of_command, client)?;
+                result = handle_checkout(rest_of_command, client)?;
             }
             "fetch" => {
                 handle_fetch(rest_of_command, client)?;
             }
-            "hash_object" => {
-                handle_hash_object(rest_of_command)?;
+            "hash-object" => {
+                result = handle_hash_object(rest_of_command, client)?;
             }
             "status" => {
-                handle_status(rest_of_command, client)?;
+                result = handle_status(rest_of_command, client)?;
+            }
+            "log" => {
+                handle_log(rest_of_command, client)?;
+            }
+            "pull" => {
+                handle_pull(rest_of_command, client)?;
+            }
+            "push" => {
+                handle_push(rest_of_command, client)?;
+            }
+            "merge" => {
+                handle_merge(rest_of_command, client)?;
+            }
+            "remote" => {
+                handle_remote(rest_of_command, client)?;
+            }
+            "rm" => {
+                handle_rm(rest_of_command, client)?;
             }
             _ => {
                 return Err(GitError::CommandNotRecognizedError);
             }
         }
     } else {
-        return Err(GitError::CommandDoesNotStartWithGitError);
+        return Err(GitError::NonGitCommandError);
     }
-    Ok(())
+    Ok(result)
 }

@@ -13,10 +13,15 @@ pub mod add;
 pub mod branch;
 pub mod cat_file;
 pub mod checkout;
+pub mod clone;
 pub mod commit;
 pub mod fetch;
 pub mod hash_object;
 pub mod init;
-
-pub mod clone;
+pub mod log;
+pub mod merge;
+pub mod pull;
+pub mod push;
+pub mod remote;
+pub mod rm;
 pub mod status;

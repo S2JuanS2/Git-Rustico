@@ -8,6 +8,8 @@ use std::net::TcpStream;
 use super::advertised::AdvertisedRefs;
 use super::negotiation::receive_nack;
 use super::negotiation::upload_request;
+use super::objects::ObjectEntry;
+// use super::packfile::read_pack_prueba;
 use super::packfile::read_packfile_data;
 use super::packfile::read_packfile_header;
 use super::pkt_line;
@@ -83,9 +85,10 @@ pub fn packfile_negotiation(
     Ok(())
 }
 
-pub fn receive_packfile(socket: &mut TcpStream) -> Result<(), GitError> {
-    read_packfile_header(socket)?;
-    read_packfile_data(socket)
+pub fn receive_packfile(socket: &mut TcpStream) -> Result<Vec<(ObjectEntry, Vec<u8>)>, GitError> {
+    // read_pack_prueba(socket)?;
+    let objects = read_packfile_header(socket)?;
+    read_packfile_data(socket, objects as usize)
 }
 
 /// Envía un mensaje a través de un socket a un servidor.

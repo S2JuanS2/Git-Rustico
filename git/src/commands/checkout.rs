@@ -1,32 +1,32 @@
-use crate::errors::GitError;
-
 use super::branch::get_branch;
+use super::branch::git_branch_create;
+use crate::consts::*;
+use crate::errors::GitError;
 
 use crate::models::client::Client;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 
-const GIT_DIR: &str = "/.git";
-const HEAD_FILE: &str = "HEAD";
-
 /// Esta función se encarga de llamar al comando checkout con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función checkout
-pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+/// 'client': Cliente que contiene el directorio del repositorio local.
+pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     let directory = client.get_directory_path();
     if args.len() == 1 {
-        git_checkout_switch(&directory, args[0])?;
+        git_checkout_switch(directory, args[0])?;
     } else if args.len() == 2 {
         if args[0] == "-b" {
-            //git_checkout_create(directory.to_str().unwrap(), args[1])?;
+            git_branch_create(directory, args[1])?;
+            git_checkout_switch(directory, args[1])?;
         } else {
             return Err(GitError::FlagCheckoutNotRecognisedError);
         }
     } else {
         return Err(GitError::InvalidArgumentCountCheckoutError);
     }
-    Ok(())
+    Ok("Rama cambiada con éxito".to_string())
 }
 
 /// Cambia a otra branch existente
@@ -40,8 +40,8 @@ pub fn git_checkout_switch(directory: &str, branch_name: &str) -> Result<(), Git
         return Err(GitError::BranchDoesntExistError);
     }
 
-    let directory_git = format!("{}{}", directory, GIT_DIR);
-    let head_file_path = Path::new(&directory_git).join(HEAD_FILE);
+    let directory_git = format!("{}/{}", directory, GIT_DIR);
+    let head_file_path = Path::new(&directory_git).join(HEAD);
 
     let mut file = match OpenOptions::new()
         .write(true)
@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn test_git_checkout_switch_error() {
-        let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio: {}", err);
         }
@@ -90,12 +90,12 @@ mod tests {
 
     #[test]
     fn test_git_checkout_switch_ok() {
-        let branch_path = format!("{}{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio: {}", err);
         }
         let _ = git_branch_delete(TEST_DIRECTORY, "test_branch_switch2");
-        git_branch_create(TEST_DIRECTORY, "test_branch_switch2", "commit_hash_branch")
+        git_branch_create(TEST_DIRECTORY, "test_branch_switch2")
             .expect("Falló en la creación de la branch");
         // Cuando ejecuto la función
         let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch2");

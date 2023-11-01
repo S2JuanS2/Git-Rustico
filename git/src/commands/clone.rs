@@ -10,25 +10,35 @@ use crate::util::request::{create_git_request, RequestCommand};
 /// Esta función se encarga de llamar a al comando clone con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función clone
+/// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+    let address: String = client.get_ip().to_string();
     if args.len() != 1 {
-        return Err(GitError::InvalidArgumentCountCloneError);
+        return Err(GitError::CloneMissingRepoError);
     }
-    let mut socket = start_client(&client.get_ip())?;
-    git_clone(&mut socket)
+    let mut socket = start_client(&address)?;
+    let parts = address.split(':').collect::<Vec<&str>>();
+    let ip = parts[0].to_string();
+    let port = parts[1].to_string();
+    git_clone(&mut socket, ip, port, args[0].to_string())
 }
 
 /// Esta función se encarga de clonar un repositorio remoto
 /// ###Parametros:
 /// 'socket': Socket que se utiliza para comunicarse con el servidor
-pub fn git_clone(socket: &mut TcpStream) -> Result<(), GitError> {
+/// 'ip': Dirección ip del servidor
+/// 'port': Puerto del servidor
+/// 'repo': Nombre del repositorio que se quiere clonar
+pub fn git_clone(
+    socket: &mut TcpStream,
+    ip: String,
+    port: String,
+    repo: String,
+) -> Result<(), GitError> {
+    println!("Clonando repositorio remoto: {}", repo);
+
     // Prepara la solicitud "git-upload-pack" para el servidor
-    let message = create_git_request(
-        RequestCommand::UploadPack,
-        "sisop_2023a_ricaldi".to_string(),
-        "127.0.0.2".to_string(),
-        "9418".to_string(),
-    );
+    let message = create_git_request(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
     let advertised = reference_discovery(socket, message)?;
@@ -37,7 +47,11 @@ pub fn git_clone(socket: &mut TcpStream) -> Result<(), GitError> {
     packfile_negotiation(socket, advertised)?;
 
     // Packfile Data
-    receive_packfile(socket)?;
+    let content = receive_packfile(socket)?;
+    for (object, data) in content {
+        println!("Object: {:?}\nData: {:?}", object, data);
+        // Manejo los datos de los objetos
+    }
 
     Ok(())
 }

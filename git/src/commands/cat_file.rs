@@ -1,65 +1,69 @@
-//use crate::util::formats::decompression_object;
+use crate::consts::*;
 use crate::models::client::Client;
-use crate::util::formats::hash_generate;
-use std::fs::File;
-use std::io::Read;
+use crate::util::formats::decompression_object;
+use crate::util::objects::*;
 
 use crate::errors::GitError;
 
 /// Esta función se encarga de llamar a al comando cat-file con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función cat-file
-pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+/// 'client': Cliente que contiene la información del cliente que se conectó
+pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() != 2 {
         return Err(GitError::InvalidArgumentCountCatFileError);
     }
-    if args[0] != "-t" || args[0] != "-p" {
+    if args[0] != "-t" && args[0] != "-p" {
         return Err(GitError::FlagCatFileNotRecognizedError);
     }
 
     let directory = client.get_directory_path();
-    let object_hash = hash_generate(args[1]);
-    git_cat_file(&directory, &object_hash)
+    git_cat_file(directory, args[1], args[0])
 }
 
+pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, GitError> {
+    let mut content = String::new();
+
+    if type_object == BLOB {
+        content = read_blob(&bytes)?;
+    } else if type_object == COMMIT {
+        content = read_commit(&bytes)?;
+    } else if type_object == TREE {
+        content = read_tree(&bytes)?;
+    }
+
+    Ok(content)
+}
 /// Esta función se utiliza para mostrar el contenido o información sobre los objetos (archivos, commits, etc.)
 /// ###Parametros:
 /// 'directory': dirección donde se encuentra inicializado el repositorio.
 /// 'object_hash': Valor hash de 40 caracteres (SHA-1) del objeto a leer.
-pub fn git_cat_file(directory: &str, object_hash: &str) -> Result<(), GitError> {
+pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<String, GitError> {
     if object_hash.len() != 40 {
         return Err(GitError::HashObjectInvalid);
     }
-
     //Lee los primeros 2 digitos del hash contenidos en el nombre de la carpeta.
-    let path = format!("{}/.git/objects/{}", directory, &object_hash[..2]);
+    let path = format!("{}/{}/objects/{}", directory, GIT_DIR, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
 
-    let mut file = match File::open(file_path) {
-        Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
-    };
+    let content = decompression_object(&file_path)?;
 
-    let mut compressed_data: Vec<u8> = vec![];
+    let mut result = read_type(&content)?;
 
-    match file.read_to_end(&mut compressed_data) {
-        Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
-    };
+    if flag == "-p" {
+        result = git_cat_file_p(content, result)?;
+    }
 
-    //let content = decompression_object(&mut compressed_data)?;
-
-    //println!("{}", content);
-
-    Ok(())
+    Ok(result)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::formats::compressor_object;
     use std::fs;
-    use std::io::Write;
+    use std::fs::File;
     use std::path::Path;
 
     const TEST_DIRECTORY: &str = "./test_repo";
@@ -76,19 +80,19 @@ mod tests {
 
         let file_path = format!("{}/{}", object_path, &object_hash[2..]);
 
-        let mut file = File::create(&file_path).expect("falló al crear el archivo");
-        file.write_all(object_content.as_bytes())
-            .expect("Falló al escribir en el archivo");
+        let file = File::create(&file_path).expect("falló al crear el archivo");
+
+        compressor_object(object_content.to_string(), file).expect("Falló en la compresión");
 
         // Cuando llama a la función git_cat_file
-        let result = git_cat_file(TEST_DIRECTORY, object_hash);
+        let result = git_cat_file(TEST_DIRECTORY, object_hash, "-t").expect("Falló el comando");
+
+        // El contenido original deberia ser igual al descomprimido
+        assert_eq!(result, object_content);
 
         // Limpia el archivo de prueba
         if !Path::new(TEST_DIRECTORY).exists() {
             fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
         }
-
-        // Deberia no devolver un Error
-        assert!(result.is_ok());
     }
 }

@@ -76,3 +76,36 @@ pub const DONE: &str = "0009done\n";
 pub const NACK: &str = "0008NAK\n";
 
 pub const PACK_SIGNATURE: &str = "PACK";
+
+pub const SPACE: u8 = 32;
+
+pub const NULL: u8 = 0;
+
+// Directorios
+pub const GIT_DIR: &str = ".git";
+
+pub const HEAD: &str = "HEAD";
+
+pub const INITIAL_BRANCH: &str = "main";
+
+pub const INDEX: &str = "index";
+
+pub const HEAD_POINTER_REF: &str = "ref: /refs/heads/";
+
+pub const REF_HEADS: &str = "refs/heads";
+
+pub const DIR_OBJECTS: &str = "objects";
+
+pub const CONTENT_EMPTY: &str = "";
+
+pub const BLOB: &str = "blob";
+
+pub const TREE: &str = "tree";
+
+pub const COMMIT: &str = "commit";
+
+pub const ALL: &str = ".";
+
+pub const DIRECTORY: &str = "100644";
+
+pub const FILE: &str = "40000";

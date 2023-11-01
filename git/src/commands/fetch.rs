@@ -1,22 +1,22 @@
+use crate::consts::*;
+use crate::errors::GitError;
 use std::fs;
 use std::path::Path;
-
-use crate::errors::GitError;
 
 use super::cat_file::git_cat_file;
 use crate::models::client::Client;
 
-const GIT_DIR: &str = "/.git";
 const REMOTES_DIR: &str = "refs/remotes/";
 
 /// Esta función se encarga de llamar al comando fetch con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función fetch
+/// 'client': cliente que contiene el directorio del repositorio local
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     // Verifica que se haya ingresado un nombre de repositorio remoto
     let directory = client.get_directory_path();
     if args.len() == 1 {
-        git_fetch(&directory, args[0])?;
+        git_fetch(directory, args[0])?;
     } else if args.len() == 2 {
         //fetch para una rama especifica
     } else {
@@ -72,7 +72,7 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
     }
 
     // Descarga los objetos necesarios desde el repositorio remoto
-    let objects_dir = format!("{}{}", directory, GIT_DIR);
+    let objects_dir = format!("{}/{}", directory, GIT_DIR);
 
     let objects = match fs::read_dir(&objects_dir) {
         Ok(objects) => objects,
@@ -85,7 +85,7 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
                 let file_name = entry.file_name();
                 let object_hash = file_name.to_string_lossy().to_string();
 
-                git_cat_file(directory, &object_hash)?;
+                git_cat_file(directory, &object_hash, "-p")?;
             }
             Err(_) => {
                 return Err(GitError::ReadFileError);
