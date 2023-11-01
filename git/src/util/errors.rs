@@ -11,6 +11,8 @@ pub enum UtilError {
     LogOutputSync,
     LogMessageSend,
     LogOutputOpen,
+    InvalidRequestCommand,
+    InvalidRequestCommandInfo(String),
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -23,6 +25,8 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::LogOutputSync => write!(f, "LogOutputSyncError: Error al sincronizar la salida de registro."),
         UtilError::LogMessageSend => write!(f, "LogMessageSendError: Error al enviar un mensaje de registro."),
         UtilError::LogOutputOpen => write!(f, "LogOutputOpenError: Error al abrir la salida de registro."),
+        UtilError::InvalidRequestCommand => write!(f, "InvalidRequestCommandError: Comando de solicitud inválido."),
+        UtilError::InvalidRequestCommandInfo(info) => write!(f, "{}\nMore info: {}", UtilError::InvalidRequestCommand, info),
         // AGregar más errores aquí
     }
 }
