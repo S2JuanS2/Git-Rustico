@@ -17,14 +17,14 @@ use super::log_output::LogOutput;
 ///
 /// * `tx`: Un puntero a un canal (`Sender`) envuelto en un Mutex y Arc para enviar mensajes.
 /// * `message`: Un string que contiene el mensaje a enviar a través del canal.
-/// * `error`: El tipo de error (`GitError`) a devolver si hay un fallo al enviar el mensaje.
+/// * `error`: El tipo de error (`UtilError`) a devolver si hay un fallo al enviar el mensaje.
 ///
 /// # Retorno
 ///
 /// Retorna un `Result` indicando si se envió el mensaje correctamente o si ocurrió un error.
 ///
 /// Si el mensaje se envía con éxito, se devuelve `Ok(())`.
-/// Si hay un error al enviar el mensaje, se devuelve un `Err` con el tipo de error (`GitError`).
+/// Si hay un error al enviar el mensaje, se devuelve un `Err` con el tipo de error (`UtilError`).
 ///
 fn send_message_channel(
     tx: &Arc<Mutex<Sender<String>>>,
@@ -140,7 +140,7 @@ pub fn log_client_connect(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>) {
 ///
 /// Devuelve un error si no se puede obtener la dirección del cliente o si ocurre algún problema.
 ///
-pub fn get_client_signature(stream: &TcpStream) -> Result<String, GitError> {
+pub fn get_client_signature(stream: &TcpStream) -> Result<String, UtilError> {
     match stream.peer_addr() {
         Ok(addr) => Ok(format!("Client {} => ", addr)),
         Err(_) => Ok("Cliente desconocido => ".to_string()),

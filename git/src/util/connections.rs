@@ -61,7 +61,7 @@ pub fn reference_discovery(
     socket: &mut TcpStream,
     message: String,
 ) -> Result<Vec<AdvertisedRefs>, GitError> {
-    send_message(socket, message, GitError::GenericError)?;
+    send_message(socket, message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(socket)?;
     AdvertisedRefs::classify_vec(&lines)
 }
@@ -81,7 +81,7 @@ pub fn packfile_negotiation(
     advertised: Vec<AdvertisedRefs>,
 ) -> Result<(), GitError> {
     upload_request(socket, advertised)?;
-    send_done(socket, GitError::UploadRequest)?;
+    send_done(socket, UtilError::UploadRequestInfo("La solicitud fallo por error al enviar el done".to_string()))?;
     receive_nack(socket)?;
     Ok(())
 }
@@ -111,8 +111,8 @@ pub fn receive_packfile(socket: &mut TcpStream) -> Result<Vec<(ObjectEntry, Vec<
 pub fn send_message(
     socket: &mut dyn Write,
     message: String,
-    error: GitError,
-) -> Result<(), GitError> {
+    error: UtilError,
+) -> Result<(), UtilError> {
     if socket.write(message.as_bytes()).is_err() {
         return Err(error);
     };
@@ -139,7 +139,7 @@ pub fn send_message(
 ///
 /// - `Result<(), GitError>`: Un resultado que indica si la operación fue exitosa o si se produjo un error.
 ///   Si la operación se realiza con éxito, se devuelve `Ok(())`. Si se produce un error, se devuelve un error `GitError`.
-pub fn send_flush(socket: &mut dyn Write, error: GitError) -> Result<(), GitError> {
+pub fn send_flush(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilError> {
     send_message(socket, FLUSH_PKT.to_string(), error)
 }
 
@@ -153,7 +153,7 @@ pub fn send_flush(socket: &mut dyn Write, error: GitError) -> Result<(), GitErro
 /// # Retorno
 /// Un Result que indica si el envío del mensaje "done" se realizó con éxito (Ok) o si se
 /// produjo un error (Err) de GitError.
-pub fn send_done(socket: &mut dyn Write, error: GitError) -> Result<(), GitError> {
+pub fn send_done(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilError> {
     send_message(socket, DONE.to_string(), error)
 }
 
@@ -168,7 +168,7 @@ mod tests {
         let mut socket = Cursor::new(vec![]);
 
         let message = "Hello, Git!".to_string();
-        let result = send_message(&mut socket, message.clone(), GitError::GenericError);
+        let result = send_message(&mut socket, message.clone(), UtilError::GenericError);
 
         assert!(result.is_ok());
 
@@ -181,7 +181,7 @@ mod tests {
     fn send_flush_sends_flush_pkt() {
         let mut socket = Cursor::new(vec![]);
 
-        let result = send_flush(&mut socket, GitError::GenericError);
+        let result = send_flush(&mut socket, UtilError::GenericError);
 
         assert!(result.is_ok());
 

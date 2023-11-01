@@ -1,7 +1,7 @@
 use super::{
     advertised::AdvertisedRefs,
     connections::{send_flush, send_message},
-    pkt_line,
+    pkt_line, errors::UtilError,
 };
 use crate::{consts::NACK, errors::GitError};
 use std::{io::Read, net::TcpStream};
@@ -33,7 +33,7 @@ use std::{io::Read, net::TcpStream};
 pub fn upload_request(
     socket: &mut TcpStream,
     advertised: Vec<AdvertisedRefs>,
-) -> Result<(), GitError> {
+) -> Result<(), UtilError> {
     for a in advertised {
         let message = match a {
             AdvertisedRefs::Ref {
@@ -43,10 +43,10 @@ pub fn upload_request(
             _ => continue,
         };
         let message = pkt_line::add_length_prefix(&message, message.len());
-        send_message(socket, message, GitError::UploadRequest)?;
+        send_message(socket, message, UtilError::UploadRequest)?;
     }
     // println!();
-    send_flush(socket, GitError::UploadRequest)?;
+    send_flush(socket, UtilError::UploadRequestInfo("No se pudo tearminar la solicitud por error al enviar el flush".to_string()))?;
     Ok(())
 }
 

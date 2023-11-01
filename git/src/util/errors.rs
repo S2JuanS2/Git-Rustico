@@ -11,6 +11,12 @@ pub enum UtilError {
     LogOutputSync,
     LogMessageSend,
     LogOutputOpen,
+    InvalidRequestCommand,
+    InvalidRequestCommandInfo(String),
+    UploadRequest,
+    UploadRequestInfo(String),
+    GenericError, // Para los tests
+    ReferenceDiscovey,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -23,6 +29,12 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::LogOutputSync => write!(f, "LogOutputSyncError: Error al sincronizar la salida de registro."),
         UtilError::LogMessageSend => write!(f, "LogMessageSendError: Error al enviar un mensaje de registro."),
         UtilError::LogOutputOpen => write!(f, "LogOutputOpenError: Error al abrir la salida de registro."),
+        UtilError::InvalidRequestCommand => write!(f, "InvalidRequestCommandError: Comando de solicitud inválido."),
+        UtilError::InvalidRequestCommandInfo(info) => write!(f, "{}\nMore info: {}", UtilError::InvalidRequestCommand, info),
+        UtilError::UploadRequest => write!(f, "UploadRequestError: Error al enviar una solicitud de carga."),
+        UtilError::UploadRequestInfo(info) => write!(f, "{}\nMore info: {}", UtilError::UploadRequest, info),
+        UtilError::GenericError => write!(f, "GenericError: Error genérico para los tests."),
+        UtilError::ReferenceDiscovey => write!(f, "ReferenceDiscoveyError: Error al realizar el descubrimiento de referencias."),
         // AGregar más errores aquí
     }
 }

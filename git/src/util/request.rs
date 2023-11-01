@@ -1,6 +1,7 @@
 use crate::consts::END_OF_STRING;
-use crate::errors::GitError;
 use crate::util::pkt_line::add_length_prefix;
+
+use super::errors::UtilError;
 
 /// Enumeración `RequestCommand` representa los comandos de solicitud en un protocolo Git.
 ///
@@ -26,14 +27,14 @@ impl RequestCommand {
         }
     }
 
-    pub fn from_string(data: &[u8]) -> Result<RequestCommand, GitError> {
+    pub fn from_string(data: &[u8]) -> Result<RequestCommand, UtilError> {
         let binding = String::from_utf8_lossy(data);
         let command = binding.trim();
         match command {
             "git-upload-pack" => Ok(RequestCommand::UploadPack),
             "git-receive-pack" => Ok(RequestCommand::ReceivePack),
             "git-upload-archive" => Ok(RequestCommand::UploadArchive),
-            _ => Err(GitError::InvalidRequestCommand),
+            _ => Err(UtilError::InvalidRequestCommand),
         }
     }
 }
@@ -48,20 +49,19 @@ pub struct GitRequest {
 }
 
 impl GitRequest {
-    pub fn read_git_proto_request(data: &[u8]) -> Result<GitRequest, GitError> {
-
+    pub fn read_git_proto_request(data: &[u8]) -> Result<GitRequest, UtilError> {
 
         let mut parts = data.split(|&byte| byte == 0);
         
         let request_command = match parts.next()
         {
             Some(command) => command,
-            None => return Err(GitError::MissingCommandRequest),
+            None => return Err(UtilError::InvalidRequestCommandInfo("No se pudo leer el comando de solicitud.".to_string())),
         };
         let pathname = match parts.next()
         {
             Some(path) => path,
-            None => return Err(GitError::MissingPathNameRequest),
+            None => return Err(UtilError::InvalidRequestCommandInfo("No se pudo leer el nombre del repositorio.".to_string())),
         };
     
         let host_parameter = parts.next();
