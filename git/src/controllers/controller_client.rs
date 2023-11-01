@@ -17,6 +17,7 @@ use crate::commands::status::handle_status;
 
 use crate::errors::GitError;
 use crate::models::client::Client;
+use crate::util::logger::write_client_log;
 
 #[derive(Clone)]
 pub struct Controller {
@@ -28,8 +29,13 @@ impl Controller {
         Controller { client }
     }
     pub fn send_command(&self, command: &str) -> Result<String, GitError> {
-        let result = handle_command(command.to_string().clone(), self.client.clone())?;
-
+        let result = match handle_command(command.to_string().clone(), self.client.clone()) {
+            Ok(result) => result,
+            Err(e) => {
+                write_client_log(self.client.get_directory_path(), e.message().to_string())?;
+                return Err(e);
+            }
+        };
         Ok(result)
     }
 }
@@ -39,6 +45,7 @@ impl Controller {
 /// 'buffer': String que contiene el comando que se le pasara al servidor
 fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
     let command = buffer.trim();
+    let directory = client.get_directory_path().to_string();
     let commands = command.split_whitespace().collect::<Vec<&str>>();
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
 
@@ -47,6 +54,8 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
     if command.is_empty() {
         return Err(GitError::NonGitCommandError);
     }
+
+    write_client_log(client.get_directory_path(), command.to_string())?;
 
     if command.split_whitespace().count() == 1 {
         return Err(GitError::NonGitCommandError);
@@ -68,7 +77,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
             "init" => {
                 result = handle_init(rest_of_command, client)?;
             }
-            "cat_file" => {
+            "cat-file" => {
                 result = handle_cat_file(rest_of_command, client)?;
             }
             "add" => {
@@ -80,8 +89,8 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
             "fetch" => {
                 handle_fetch(rest_of_command, client)?;
             }
-            "hash_object" => {
-                result = handle_hash_object(rest_of_command)?;
+            "hash-object" => {
+                result = handle_hash_object(rest_of_command, client)?;
             }
             "status" => {
                 result = handle_status(rest_of_command, client)?;
@@ -111,5 +120,6 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
     } else {
         return Err(GitError::NonGitCommandError);
     }
+    write_client_log(&directory, result.clone())?;
     Ok(result)
 }

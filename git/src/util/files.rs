@@ -1,8 +1,8 @@
 use std::fs;
-use std::io::Write;
-use std::io::Read;
-use std::path::Path;
 use std::fs::File;
+use std::io::Read;
+use std::io::Write;
+use std::path::Path;
 
 use crate::errors::GitError;
 /// Crea un directorio si no existe
@@ -39,11 +39,10 @@ pub fn create_file(file: &str, content: &str) -> Result<(), GitError> {
     Ok(())
 }
 
-/// Abre un archivo 
+/// Abre un archivo
 /// ###Parametros:
 /// 'file': archivo a abrir.
-pub fn open_file(file_path: &str) -> Result<File, GitError>{
-
+pub fn open_file(file_path: &str) -> Result<File, GitError> {
     let file = match File::open(file_path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
@@ -55,8 +54,7 @@ pub fn open_file(file_path: &str) -> Result<File, GitError>{
 /// Lee un archivo y devuelve el contenido del mismo
 /// ###Parametros:
 /// 'file': archivo a leer.
-pub fn read_file(mut file: File) -> Result<Vec<u8>, GitError>{
-
+pub fn read_file(mut file: File) -> Result<Vec<u8>, GitError> {
     let mut content = Vec::new();
 
     match file.read_to_end(&mut content) {

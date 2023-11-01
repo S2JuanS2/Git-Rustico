@@ -1,11 +1,14 @@
-use std::net::TcpStream;
-use std::sync::mpsc::Receiver;
-use std::sync::{Mutex, Arc, mpsc::Sender};
-use std::io::Write;
+use crate::consts::*;
 use crate::errors::GitError;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::net::TcpStream;
+use std::path::Path;
+use std::sync::mpsc::Receiver;
+use std::sync::{mpsc::Sender, Arc, Mutex};
 
+use super::files::create_directory;
 use super::log_output::LogOutput;
-
 
 /// Envía un mensaje a través del canal con un transmisor protegido por Mutex.
 ///
@@ -21,7 +24,7 @@ use super::log_output::LogOutput;
 ///
 /// Si el mensaje se envía con éxito, se devuelve `Ok(())`.
 /// Si hay un error al enviar el mensaje, se devuelve un `Err` con el tipo de error (`GitError`).
-/// 
+///
 fn send_message_channel(
     tx: &Arc<Mutex<Sender<String>>>,
     message: &str,
@@ -33,6 +36,29 @@ fn send_message_channel(
     }
 }
 
+pub fn write_client_log(directory: &str, content: String) -> Result<(), GitError> {
+    let dir_path = format!("{}/{}", directory, GIT_DIR);
+    create_directory(Path::new(&dir_path))?;
+    let log_path = format!("{}/{}/client.log", directory, GIT_DIR);
+
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(true)
+        .open(log_path);
+
+    let mut file = match file {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::OpenFileError),
+    };
+
+    if writeln!(file, "Client => {}", content).is_err() {
+        return Err(GitError::WriteFileError);
+    }
+
+    Ok(())
+}
+
 /// Registra un mensaje a través del canal de un transmisor protegido por Mutex.
 ///
 /// # Argumentos
@@ -42,10 +68,9 @@ fn send_message_channel(
 ///
 /// La función envía el mensaje especificado al logger a través del canal proporcionado.
 /// Si hay un error al enviar el mensaje, se registra un mensaje de error en la consola.
-/// 
+///
 pub fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) {
-    match send_message_channel(tx, message, GitError::GenericError)
-    {
+    match send_message_channel(tx, message, GitError::GenericError) {
         Ok(_) => (),
         Err(_) => eprintln!("Fallo al escribir en el logger: {}", message),
     };
@@ -70,16 +95,17 @@ pub fn handle_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), GitEr
         if writeln!(file, "{}", received_data).is_err() {
             println!("Error al escribir en el logger: {}", received_data);
         }
-        if file.flush().is_err()
-        {
-            eprintln!("Error al sincronizar el archivo de log con el siguiente mensaje: {}", received_data);
+        if file.flush().is_err() {
+            eprintln!(
+                "Error al sincronizar el archivo de log con el siguiente mensaje: {}",
+                received_data
+            );
         }
     }
 
     // Cerramos el archivo al finalizar.
     file.sync_all()
 }
-
 
 /// Registra el evento de conexión de un cliente.
 /// Si la obtención de la dirección del cliente tiene éxito, se registra un mensaje con el formato "Conexión establecida con [dirección]". Si hay un error al obtener la dirección del cliente, se registra un mensaje indicando "Cliente desconocido conectado".
@@ -89,10 +115,7 @@ pub fn handle_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), GitEr
 /// * `stream` - El stream del cliente del que se obtendrá la dirección.
 /// * `tx` - Arc Mutex del transmisor del canal para escribir mensajes de registro.
 ///
-pub fn log_client_connect(
-    stream: &TcpStream,
-    tx: &Arc<Mutex<Sender<String>>>,
-){
+pub fn log_client_connect(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>) {
     match stream.peer_addr() {
         Ok(addr) => {
             let message = format!("Conexión establecida con {}", addr);
@@ -100,7 +123,7 @@ pub fn log_client_connect(
         }
         Err(_) => {
             log_message(tx, "Cliente desconocido conectado");
-        },
+        }
     };
 }
 
@@ -119,7 +142,7 @@ pub fn log_client_connect(
 pub fn get_client_signature(stream: &TcpStream) -> Result<String, GitError> {
     match stream.peer_addr() {
         Ok(addr) => Ok(format!("Client {} => ", addr)),
-        Err(_) => Ok("Cliente desconocido => ".to_string())
+        Err(_) => Ok("Cliente desconocido => ".to_string()),
     }
 }
 
@@ -132,7 +155,7 @@ pub fn get_client_signature(stream: &TcpStream) -> Result<String, GitError> {
 ///
 pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada", signature);
-    log_message(&tx, &message)
+    log_message(tx, &message)
 }
 
 #[cfg(test)]

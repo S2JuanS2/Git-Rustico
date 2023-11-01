@@ -11,7 +11,7 @@ pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     }
     let directory = client.get_directory_path();
     let branch_name = args[0];
-    git_merge(&directory, branch_name)
+    git_merge(directory, branch_name)
 }
 
 /// ejecuta la accion de merge en el repositorio local

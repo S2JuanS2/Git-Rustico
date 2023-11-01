@@ -77,6 +77,10 @@ pub const NACK: &str = "0008NAK\n";
 
 pub const PACK_SIGNATURE: &str = "PACK";
 
+pub const SPACE: u8 = 32;
+
+pub const NULL: u8 = 0;
+
 // Directorios
 pub const GIT_DIR: &str = ".git";
 
@@ -96,4 +100,12 @@ pub const CONTENT_EMPTY: &str = "";
 
 pub const BLOB: &str = "blob";
 
+pub const TREE: &str = "tree";
+
+pub const COMMIT: &str = "commit";
+
 pub const ALL: &str = ".";
+
+pub const DIRECTORY: &str = "100644";
+
+pub const FILE: &str = "40000";

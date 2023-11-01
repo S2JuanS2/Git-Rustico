@@ -1,6 +1,11 @@
-use std::io::Read;
-
+use crate::consts::*;
 use crate::errors::GitError;
+use crate::util::files::create_directory;
+use crate::util::formats::{compressor_object, hash_generate};
+use std::fs;
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
 /// Estructura que representa una entrada de objeto en el sistema de control de versiones Git.
 ///
@@ -157,6 +162,271 @@ fn create_object(byte: u8) -> Result<ObjectType, GitError> {
     }
 }
 
+/// Creará la carpeta con los 2 primeros digitos del hash del objeto commit, y el archivo con los ultimos 38 de nombre.
+fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, GitError> {
+    let objects_dir = format!(
+        "{}/{}/{}/{}",
+        &git_dir,
+        DIR_OBJECTS,
+        &hash_object[..2],
+        &hash_object[2..]
+    );
+
+    let hash_object_path = format!("{}/{}/{}/", &git_dir, DIR_OBJECTS, &hash_object[..2]);
+
+    create_directory(Path::new(&hash_object_path))?;
+
+    let file_object = match File::create(objects_dir) {
+        Ok(file_object) => file_object,
+        Err(_) => return Err(GitError::CreateFileError),
+    };
+
+    Ok(file_object)
+}
+
+/// comprimirá el contenido y lo escribirá en el archivo
+/// ###Parametros:
+/// 'git_dir': Directorio del git
+/// 'content': contenido del archivo a comprimir
+pub fn builder_object_blob(content: Vec<u8>, git_dir: &str) -> Result<String, GitError> {
+    let header = format!("{} {}\0", BLOB, content.len());
+    let store = header + String::from_utf8_lossy(&content).as_ref();
+
+    let hash_blob = hash_generate(&store);
+
+    let file_object = builder_object(git_dir, &hash_blob)?;
+
+    compressor_object(store, file_object)?;
+
+    Ok(hash_blob)
+}
+
+/// comprimirá el contenido y lo escribirá en el archivo
+/// ###Parametros:
+/// 'git_dir': Directorio del git
+/// 'hash_commit': hash del objeto commit previamente generado
+pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, GitError> {
+    let content_bytes = content.as_bytes();
+    let content_size = content_bytes.len().to_string();
+    let header = format!("commit {}\0", content_size);
+
+    let store = header + content;
+
+    let hash_commit = hash_generate(&store);
+
+    let file = builder_object(git_dir, &hash_commit)?;
+    compressor_object(store, file)?;
+
+    Ok(hash_commit)
+}
+
+fn read_index(git_dir: &str) -> Result<String, GitError> {
+    let path_index = format!("{}/{}", git_dir, INDEX);
+
+    let content_bytes = match fs::read(path_index) {
+        Ok(content_bytes) => content_bytes,
+        Err(_) => return Err(GitError::OpenFileError),
+    };
+    let mut format_tree = String::new();
+    let content_index = String::from_utf8_lossy(&content_bytes);
+
+    for line in content_index.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let file_name = parts[0];
+        let mut mode = parts[1];
+        let hash = parts[2];
+
+        if mode == BLOB {
+            mode = FILE;
+        } else if mode == TREE {
+            mode = DIRECTORY;
+        }
+        let bytes = hash
+            .as_bytes()
+            .chunks(2)
+            .filter_map(|chunk| {
+                let hex_str = String::from_utf8_lossy(chunk);
+                u8::from_str_radix(&hex_str, 16).ok()
+            })
+            .collect::<Vec<u8>>();
+
+        let bytes_str = String::from_utf8_lossy(&bytes);
+        let format_line = format!("{} {}\0{}", mode, file_name, bytes_str);
+
+        format_tree = format_tree + &format_line;
+    }
+    Ok(format_tree)
+}
+
+pub fn builder_object_tree(git_dir: &str) -> Result<String, GitError> {
+    let format_tree = read_index(git_dir)?;
+
+    let content_size = format_tree.len().to_string();
+    let header = format!("tree {}\0", content_size);
+    let store = header + &format_tree;
+    let hash_tree = hash_generate(&store);
+
+    let file = builder_object(git_dir, &hash_tree)?;
+
+    compressor_object(store, file)?;
+
+    Ok(hash_tree)
+}
+
+/// Lee desde el contenido descomprimido el tipo de objeto.
+///
+/// # Argumentos
+///
+/// * `decompressed_data`: El contenido de un objeto en bytes que puede ser blob, tree o coomit.
+///
+/// # Retorno
+///
+/// * `Ok(String::from_utf8_lossy(&type_object).to_string())`: Devuelve el tipo de objeto
+/// * `Err(GitError)`: .
+///
+pub fn read_type(decompressed_data: &[u8]) -> Result<String, GitError> {
+    let content = decompressed_data;
+
+    let mut type_object: Vec<u8> = Vec::new();
+    let mut index = 0;
+    while index < content.len() && content[index] != SPACE {
+        type_object.push(content[index]);
+        index += 1;
+    }
+
+    Ok(String::from_utf8_lossy(&type_object).to_string())
+}
+
+/// Lee desde el contenido descomprimido el tipo de objeto.
+///
+/// # Argumentos
+///
+/// * `decompressed_data`: El contenido de un objeto en bytes que puede ser blob, tree o coomit.
+///
+/// # Retorno
+///
+/// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el tamaño del objeto
+/// * `Err(GitError)`: .
+///
+pub fn read_size(decompressed_data: &[u8]) -> Result<String, GitError> {
+    let content = decompressed_data;
+
+    let mut size: Vec<u8> = Vec::new();
+    let mut index = 0;
+    while index < content.len() && content[index] != SPACE {
+        index += 1;
+    }
+    index += 1;
+    while index < content.len() && content[index] != NULL {
+        size.push(content[index]);
+        index += 1;
+    }
+    Ok(String::from_utf8_lossy(&size).to_string())
+}
+
+/// Lee desde el contenido descomprimido el tipo de objeto de tipo tree.
+///
+/// # Argumentos
+///
+/// * `decompressed_data`: El contenido de un objeto en bytes de tipo tree.
+///
+/// # Retorno
+///
+/// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el contenido del objeto (blobs o sub-tree) con el nombre
+///     del archivo y su hash
+/// * `Err(GitError)`: .
+///
+pub fn read_tree(decompressed_data: &[u8]) -> Result<String, GitError> {
+    let content = decompressed_data;
+
+    let mut index = 0;
+    while index < content.len() && content[index] != NULL {
+        index += 1;
+    }
+    index += 1;
+    let mut result = String::new();
+
+    while index < content.len() {
+        let mut type_object: Vec<u8> = Vec::new();
+        while index < content.len() && content[index] != SPACE {
+            type_object.push(content[index]);
+            index += 1;
+        }
+        let mut file_name: Vec<u8> = Vec::new();
+        while index < content.len() && content[index] != NULL {
+            file_name.push(content[index]);
+            index += 1;
+        }
+        let mut hash: Vec<u8> = Vec::new();
+        for _i in 0..20 {
+            if index < content.len() {
+                hash.push(content[index]);
+                index += 1;
+            }
+        }
+        index -= 1;
+        let hex_string = hash
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect::<String>();
+        let object_format = format!(
+            "{} {} {}\n",
+            String::from_utf8_lossy(&type_object),
+            String::from_utf8_lossy(&file_name),
+            hex_string
+        );
+        result = result + &object_format;
+
+        index += 1;
+    }
+    Ok(result)
+}
+
+/// Lee desde el contenido descomprimido el tipo de objeto de tipo commit.
+///
+/// # Argumentos
+///
+/// * `decompressed_data`: El contenido de un objeto en bytes de tipo commit.
+///
+/// # Retorno
+///
+/// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el contenido del objeto
+/// * `Err(GitError)`: .
+///
+pub fn read_commit(decompressed_data: &[u8]) -> Result<String, GitError> {
+    let result_normal = decompressed_data;
+
+    let mut index = 0;
+    while index < result_normal.len() && result_normal[index] != NULL {
+        index += 1;
+    }
+
+    index += 1;
+    Ok(String::from_utf8_lossy(&decompressed_data[index..]).to_string())
+}
+
+/// Lee desde el contenido descomprimido el tipo de objeto de tipo blob.
+///
+/// # Argumentos
+///
+/// * `decompressed_data`: El contenido de un objeto en bytes de tipo blob.
+///
+/// # Retorno
+///
+/// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el contenido del objeto
+/// * `Err(GitError)`: .
+///
+pub fn read_blob(decompressed_data: &[u8]) -> Result<String, GitError> {
+    let result_normal = decompressed_data;
+
+    let mut index = 0;
+    while index < result_normal.len() && result_normal[index] != NULL {
+        index += 1;
+    }
+    index += 1;
+    Ok(String::from_utf8_lossy(&decompressed_data[index..]).to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
@@ -291,5 +561,76 @@ mod tests {
                 obj_length: 1423
             })
         );
+    }
+
+    #[test]
+    fn test_read_type() {
+        let decompressed_data: Vec<u8> = vec![
+            116, 114, 101, 101, 32, 54, 56, 0, 49, 48, 48, 54, 52, 52, 32, 67, 97, 114, 103, 111,
+            46, 108, 111, 99, 107, 0, 231, 136, 208, 79, 233, 187, 237, 87, 61, 50, 240, 176, 36,
+            147, 156, 178, 32, 76, 106, 134, 52, 48, 48, 48, 48, 32, 115, 114, 99, 0, 9, 50, 128,
+            9, 9, 45, 28, 226, 40, 36, 92, 101, 118, 100, 240, 105, 241, 130, 145, 202,
+        ];
+
+        let type_object = read_type(&decompressed_data).expect("Error al leer el tipo");
+
+        assert_eq!(type_object, "tree");
+    }
+    #[test]
+    fn test_read_size() {
+        let decompressed_data: Vec<u8> = vec![
+            116, 114, 101, 101, 32, 54, 56, 0, 49, 48, 48, 54, 52, 52, 32, 67, 97, 114, 103, 111,
+            46, 108, 111, 99, 107, 0, 231, 136, 208, 79, 233, 187, 237, 87, 61, 50, 240, 176, 36,
+            147, 156, 178, 32, 76, 106, 134, 52, 48, 48, 48, 48, 32, 115, 114, 99, 0, 9, 50, 128,
+            9, 9, 45, 28, 226, 40, 36, 92, 101, 118, 100, 240, 105, 241, 130, 145, 202,
+        ];
+
+        let type_object = read_size(&decompressed_data).expect("Error al leer el tipo");
+
+        assert_eq!(type_object, "68");
+    }
+    #[test]
+    fn test_read_tree() {
+        let decompressed_data: Vec<u8> = vec![
+            116, 114, 101, 101, 32, 54, 56, 0, 49, 48, 48, 54, 52, 52, 32, 67, 97, 114, 103, 111,
+            46, 108, 111, 99, 107, 0, 231, 136, 208, 79, 233, 187, 237, 87, 61, 50, 240, 176, 36,
+            147, 156, 178, 32, 76, 106, 134, 52, 48, 48, 48, 48, 32, 115, 114, 99, 0, 9, 50, 128,
+            9, 9, 45, 28, 226, 40, 36, 92, 101, 118, 100, 240, 105, 241, 130, 145, 202,
+        ];
+
+        let tree = read_tree(&decompressed_data).expect("Error al leer el tipo");
+
+        assert_eq!(tree, "100644  Cargo.lock e788d04fe9bbed573d32f0b024939cb2204c6a86\n40000  src 09328009092d1ce228245c657664f069f18291ca\n");
+    }
+    #[test]
+    fn test_read_commit() {
+        let decompressed_data: Vec<u8> = vec![
+            99, 111, 109, 109, 105, 116, 32, 49, 57, 49, 0, 116, 114, 101, 101, 32, 55, 49, 50, 97,
+            48, 55, 56, 97, 102, 48, 100, 50, 54, 97, 98, 48, 52, 50, 48, 101, 53, 48, 52, 55, 100,
+            53, 99, 53, 101, 102, 50, 102, 56, 102, 57, 100, 102, 99, 100, 56, 10, 97, 117, 116,
+            104, 111, 114, 32, 83, 50, 74, 117, 97, 110, 83, 50, 32, 60, 106, 117, 97, 110, 115,
+            100, 101, 108, 114, 105, 111, 64, 104, 111, 116, 109, 97, 105, 108, 46, 99, 111, 109,
+            62, 32, 49, 54, 57, 56, 53, 54, 49, 50, 52, 54, 32, 45, 48, 51, 48, 48, 10, 99, 111,
+            109, 109, 105, 116, 116, 101, 114, 32, 83, 50, 74, 117, 97, 110, 83, 50, 32, 60, 106,
+            117, 97, 110, 115, 100, 101, 108, 114, 105, 111, 64, 104, 111, 116, 109, 97, 105, 108,
+            46, 99, 111, 109, 62, 32, 49, 54, 57, 56, 53, 54, 49, 50, 52, 54, 32, 45, 48, 51, 48,
+            48, 10, 10, 112, 114, 117, 101, 98, 97, 32, 99, 111, 110, 32, 118, 97, 114, 105, 111,
+            115, 32, 116, 114, 101, 101, 10,
+        ];
+
+        let commit = read_commit(&decompressed_data).expect("Error al leer el tipo");
+
+        assert_eq!(commit, "tree 712a078af0d26ab0420e5047d5c5ef2f8f9dfcd8\nauthor S2JuanS2 <juansdelrio@hotmail.com> 1698561246 -0300\ncommitter S2JuanS2 <juansdelrio@hotmail.com> 1698561246 -0300\n\nprueba con varios tree\n");
+    }
+    #[test]
+    fn test_read_blob() {
+        let decompressed_data: Vec<u8> = vec![
+            98, 108, 111, 98, 32, 49, 54, 0, 119, 104, 97, 116, 32, 105, 115, 32, 117, 112, 44, 32,
+            100, 111, 99, 63,
+        ];
+
+        let blob = read_blob(&decompressed_data).expect("Error al leer el tipo");
+
+        assert_eq!(blob, "what is up, doc?");
     }
 }

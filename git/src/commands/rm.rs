@@ -16,7 +16,7 @@ pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     }
     let directory = client.get_directory_path();
     let file_name = args[0];
-    git_rm(&directory, file_name)
+    git_rm(directory, file_name)
 }
 
 /// Remueve un archivo del working directory y del index.
@@ -42,7 +42,10 @@ fn compare_hash(file_name: &str, directory: &str) -> Result<(), GitError> {
         Ok(content) => content,
         Err(_) => return Err(GitError::ReadFileError),
     };
-    let hash_file = hash_generate(&file_content);
+
+    let header = format!("{} {}\0", BLOB, file_content.len());
+    let store = header + &file_content;
+    let hash_file = hash_generate(&store);
 
     match remove_from_index(directory, file_name, hash_file.as_str()) {
         Ok(_) => {}
@@ -60,8 +63,8 @@ fn compare_hash(file_name: &str, directory: &str) -> Result<(), GitError> {
 /// 'hash_file': hash del archivo que se quiere remover del index.
 fn remove_from_index(directory: &str, file_name: &str, hash_file: &str) -> Result<(), GitError> {
     // directory/.git/index
-    let directory_git = format!("{}{}", directory, GIT_DIR);
-    let index_file_path = format!("{}{}", directory_git, "/index");
+    let directory_git = format!("{}/{}", directory, GIT_DIR);
+    let index_file_path = format!("{}/{}", directory_git, INDEX);
     let index_file_path = index_file_path.as_str();
 
     let index_file = File::open(index_file_path);
@@ -90,7 +93,7 @@ fn remove_from_index(directory: &str, file_name: &str, hash_file: &str) -> Resul
             // Se remueve del working directory
             match fs::remove_file(file_path) {
                 Ok(_) => {}
-                Err(_) => return Err(GitError::OpenFileError), // CAMBIAR EL ERROR
+                Err(_) => return Err(GitError::RemoveFileError),
             };
         } else {
             println!("No se puede remover el archivo porque no esta en su version mas reciente.");
@@ -99,7 +102,7 @@ fn remove_from_index(directory: &str, file_name: &str, hash_file: &str) -> Resul
 
     let mut index_file = match File::create(index_file_path) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(GitError::CreateFileError),
     };
 
     // Escribe las líneas restantes en el archivo de índice.
@@ -129,7 +132,7 @@ mod tests {
 
         // Se crea un archivo temporal para el index y se le agregan dos entradas.
         let mut index_file = File::create("a/.git/index").expect("Error");
-        index_file.write_all(b"remove.rs blob 99800b85d3383e3a2fb45eb7d0066a4879a9dad0\nhola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0").expect("Error");
+        index_file.write_all(b"remove.rs blob b8b4a4e2a5db3ebed5f5e02beb3e2d27bca9fc9a\nhola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0").expect("Error");
         let mut index_file = File::open("a/.git/index").expect("Error");
         let mut index_content = String::new();
         index_file
@@ -137,7 +140,7 @@ mod tests {
             .expect("Error");
 
         // Se chequea que el index se haya creado bien.
-        assert_eq!(index_content, "remove.rs blob 99800b85d3383e3a2fb45eb7d0066a4879a9dad0\nhola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0");
+        assert_eq!(index_content, "remove.rs blob b8b4a4e2a5db3ebed5f5e02beb3e2d27bca9fc9a\nhola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0");
 
         let result = git_rm("a/", "remove.rs");
 

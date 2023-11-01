@@ -16,7 +16,7 @@ pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     // Verifica que se haya ingresado un nombre de repositorio remoto
     let directory = client.get_directory_path();
     if args.len() == 1 {
-        git_fetch(&directory, args[0])?;
+        git_fetch(directory, args[0])?;
     } else if args.len() == 2 {
         //fetch para una rama especifica
     } else {
@@ -72,7 +72,7 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
     }
 
     // Descarga los objetos necesarios desde el repositorio remoto
-    let objects_dir = format!("{}{}", directory, GIT_DIR);
+    let objects_dir = format!("{}/{}", directory, GIT_DIR);
 
     let objects = match fs::read_dir(&objects_dir) {
         Ok(objects) => objects,
@@ -85,7 +85,7 @@ pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
                 let file_name = entry.file_name();
                 let object_hash = file_name.to_string_lossy().to_string();
 
-                git_cat_file(directory, &object_hash)?;
+                git_cat_file(directory, &object_hash, "-p")?;
             }
             Err(_) => {
                 return Err(GitError::ReadFileError);
