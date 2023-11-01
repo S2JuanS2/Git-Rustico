@@ -18,7 +18,7 @@ pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, GitError
         return Err(GitError::InvalidArgumentCountStatusError);
     }
     let directory = client.get_directory_path();
-    git_status(&directory)
+    git_status(directory)
 }
 
 /// Devuelve el nombre de la rama actual.
@@ -90,14 +90,13 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
 
     let value = print_changes(index_files, untracked_files_list, directory)?;
 
-    println!("{}", value);
     Ok(value)
 }
 
 /// Devuelve el contenido del archivo index.
 /// ###Parámetros:
 /// 'directory_git': directorio del repositorio local.
-fn get_index_content(directory_git: &String) -> Result<String, GitError> {
+pub fn get_index_content(directory_git: &String) -> Result<String, GitError> {
     let index_path = format!("{}/index", directory_git);
     let index_file = File::open(index_path);
     let mut index_file = match index_file {
