@@ -7,6 +7,7 @@ use std::path::Path;
 use std::sync::mpsc::Receiver;
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
+use super::errors::UtilError;
 use super::files::create_directory;
 use super::log_output::LogOutput;
 
@@ -28,8 +29,8 @@ use super::log_output::LogOutput;
 fn send_message_channel(
     tx: &Arc<Mutex<Sender<String>>>,
     message: &str,
-    error: GitError,
-) -> Result<(), GitError> {
+    error: UtilError,
+) -> Result<(), UtilError> {
     match tx.lock().unwrap().send(message.to_string()) {
         Ok(_) => Ok(()),
         Err(_) => Err(error),
@@ -70,7 +71,7 @@ pub fn write_client_log(directory: &str, content: String) -> Result<(), GitError
 /// Si hay un error al enviar el mensaje, se registra un mensaje de error en la consola.
 ///
 pub fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) {
-    match send_message_channel(tx, message, GitError::GenericError) {
+    match send_message_channel(tx, message, UtilError::LogMessageSend) {
         Ok(_) => (),
         Err(_) => eprintln!("Fallo al escribir en el logger: {}", message),
     };
@@ -87,7 +88,7 @@ pub fn log_message(tx: &Arc<Mutex<Sender<String>>>, message: &str) {
 ///
 /// Devuelve un error si ocurre algún problema al operar con el archivo de registro.
 ///
-pub fn handle_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), GitError> {
+pub fn handle_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), UtilError> {
     let mut file = LogOutput::new(log_path)?;
 
     // Creamos un bucle para recibir datos del canal y escribirlos en el archivo.

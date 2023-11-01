@@ -25,3 +25,4 @@ pub mod push;
 pub mod remote;
 pub mod rm;
 pub mod status;
+pub mod errors;
