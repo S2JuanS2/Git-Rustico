@@ -56,12 +56,12 @@ impl GitRequest {
         let request_command = match parts.next()
         {
             Some(command) => command,
-            None => return Err(UtilError::InvalidRequestCommandInfo("No se pudo leer el comando de solicitud.".to_string())),
+            None => return Err(UtilError::InvalidRequestCommandMissingCommand),
         };
         let pathname = match parts.next()
         {
             Some(path) => path,
-            None => return Err(UtilError::InvalidRequestCommandInfo("No se pudo leer el nombre del repositorio.".to_string())),
+            None => return Err(UtilError::InvalidRequestCommandMissingPathname),
         };
     
         let host_parameter = parts.next();

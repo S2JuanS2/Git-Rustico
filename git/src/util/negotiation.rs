@@ -46,7 +46,7 @@ pub fn upload_request(
         send_message(socket, message, UtilError::UploadRequest)?;
     }
     // println!();
-    send_flush(socket, UtilError::UploadRequestInfo("No se pudo tearminar la solicitud por error al enviar el flush".to_string()))?;
+    send_flush(socket, UtilError::UploadRequestFlush)?;
     Ok(())
 }
 

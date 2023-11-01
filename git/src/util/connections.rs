@@ -10,7 +10,6 @@ use super::errors::UtilError;
 use super::negotiation::receive_nack;
 use super::negotiation::upload_request;
 use super::objects::ObjectEntry;
-// use super::packfile::read_pack_prueba;
 use super::packfile::read_packfile_data;
 use super::packfile::read_packfile_header;
 use super::pkt_line;
@@ -60,7 +59,7 @@ pub fn start_client(ip: &str) -> Result<TcpStream, GitError> {
 pub fn reference_discovery(
     socket: &mut TcpStream,
     message: String,
-) -> Result<Vec<AdvertisedRefs>, GitError> {
+) -> Result<Vec<AdvertisedRefs>, UtilError> {
     send_message(socket, message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(socket)?;
     AdvertisedRefs::classify_vec(&lines)
@@ -81,7 +80,7 @@ pub fn packfile_negotiation(
     advertised: Vec<AdvertisedRefs>,
 ) -> Result<(), GitError> {
     upload_request(socket, advertised)?;
-    send_done(socket, UtilError::UploadRequestInfo("La solicitud fallo por error al enviar el done".to_string()))?;
+    send_done(socket, UtilError::UploadRequestDone)?;
     receive_nack(socket)?;
     Ok(())
 }
