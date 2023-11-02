@@ -252,8 +252,8 @@ fn read_index(git_dir: &str) -> Result<String, GitError> {
             })
             .collect::<Vec<u8>>();
 
-        let bytes_str = String::from_utf8_lossy(&bytes);
-        let format_line = format!("{} {}\0{}", mode, file_name, bytes_str);
+        let hash_string = unsafe { String::from_utf8_unchecked(bytes)};
+        let format_line = format!("{} {}\0{}", mode, file_name, hash_string);
 
         format_tree = format_tree + &format_line;
     }
@@ -359,6 +359,7 @@ pub fn read_tree(decompressed_data: &[u8]) -> Result<String, GitError> {
             file_name.push(content[index]);
             index += 1;
         }
+        index += 1;
         let mut hash: Vec<u8> = Vec::new();
         for _i in 0..20 {
             if index < content.len() {

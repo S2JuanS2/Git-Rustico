@@ -22,6 +22,24 @@ pub fn create_directory(directory: &Path) -> Result<(), GitError> {
 /// ###Parametros:
 /// 'file': archivo a crear.
 /// 'content': contenido que se escribirá en el archivo.
+pub fn create_file_replace(file: &str, content: &str) -> Result<(), GitError> {
+
+    let mut file = match fs::File::create(file) {
+        Ok(file) => file,
+        Err(_) => return Err(GitError::CreateFileError),
+    };
+    match file.write_all(content.as_bytes()) {
+        Ok(_) => (),
+        Err(_) => return Err(GitError::WriteFileError),
+    };
+
+    Ok(())
+}
+
+/// Crea un archivo si no existe.
+/// ###Parametros:
+/// 'file': archivo a crear.
+/// 'content': contenido que se escribirá en el archivo.
 pub fn create_file(file: &str, content: &str) -> Result<(), GitError> {
     if fs::metadata(file).is_ok() {
         return Ok(());
@@ -51,7 +69,21 @@ pub fn open_file(file_path: &str) -> Result<File, GitError> {
     Ok(file)
 }
 
-/// Lee un archivo y devuelve el contenido del mismo
+/// Lee un archivo y devuelve el contenido del mismo en String
+/// ###Parametros:
+/// 'file': archivo a leer.
+pub fn read_file_string(mut file: File) -> Result<String, GitError> {
+    let mut content = String::new();
+
+    match file.read_to_string(&mut content) {
+        Ok(_) => (),
+        Err(_) => return Err(GitError::ReadFileError),
+    }
+
+    Ok(content)
+}
+
+/// Lee un archivo y devuelve el contenido del mismo en un vector
 /// ###Parametros:
 /// 'file': archivo a leer.
 pub fn read_file(mut file: File) -> Result<Vec<u8>, GitError> {

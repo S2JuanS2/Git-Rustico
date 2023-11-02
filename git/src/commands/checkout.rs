@@ -1,9 +1,14 @@
 use super::branch::get_branch;
 use super::branch::git_branch_create;
+use super::cat_file::git_cat_file;
 use crate::consts::*;
 use crate::errors::GitError;
 
 use crate::models::client::Client;
+use crate::util::files::create_directory;
+use crate::util::files::create_file_replace;
+use crate::util::files::open_file;
+use crate::util::files::read_file_string;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
@@ -27,6 +32,55 @@ pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, GitErr
         return Err(GitError::InvalidArgumentCountCheckoutError);
     }
     Ok("Rama cambiada con éxito".to_string())
+}
+
+fn get_tree_hash(contenido: &str) -> Option<&str> {
+
+    if let Some(pos) = contenido.find("tree ") {
+        let start = pos + "tree ".len();
+
+        if let Some(end) = contenido[start..].find(char::is_whitespace) {
+            return Some(&contenido[start..start + end]);
+        }
+    }
+
+    // Devolver None si no se encuentra ninguna coincidencia
+    None
+}
+
+fn load_files_tree(directory: &str, branch_name: &str) -> Result<(),GitError>{
+
+    let branch = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
+
+    let file = open_file(&branch)?;
+    let hash_commit = read_file_string(file)?;
+
+    let commit = git_cat_file(directory, &hash_commit, "-p")?;
+
+    if let Some(tree_hash) = get_tree_hash(&commit){
+
+        let tree = git_cat_file(directory, &tree_hash, "-p")?;
+
+        for line in tree.lines() {
+
+            let parts: Vec<&str> = line.split_whitespace().collect();
+
+            let path_file = parts[1];
+            let hash_blob = parts[2];
+
+            let path_file_format = format!("{}/{}", directory, path_file);
+            let content_file = git_cat_file(directory, hash_blob, "-p")?;
+
+            let path = Path::new(&path_file_format);
+
+            if let Some(parent) = path.parent(){
+                create_directory(parent)?;
+
+            }
+            create_file_replace(&path_file_format, &content_file)?;
+        }
+    };
+    Ok(())
 }
 
 /// Cambia a otra branch existente
@@ -57,6 +111,8 @@ pub fn git_checkout_switch(directory: &str, branch_name: &str) -> Result<(), Git
     if file.write_all(content.as_bytes()).is_err() {
         return Err(GitError::BranchFileWriteError);
     }
+
+    load_files_tree(directory, branch_name)?;
 
     Ok(())
 }

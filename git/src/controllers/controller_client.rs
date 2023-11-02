@@ -96,7 +96,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
                 result = handle_status(rest_of_command, client)?;
             }
             "log" => {
-                handle_log(rest_of_command, client)?;
+                result = handle_log(rest_of_command, client)?;
             }
             "pull" => {
                 handle_pull(rest_of_command, client)?;

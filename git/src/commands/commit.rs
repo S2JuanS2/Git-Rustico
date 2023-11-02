@@ -2,13 +2,15 @@ use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::*;
-use crate::util::objects::builder_object_commit;
+use crate::util::objects::{builder_object_commit, builder_object_tree};
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::fs::File;
+use std::io::Read;
 
 use crate::commands::branch::get_current_branch;
 
@@ -146,15 +148,16 @@ fn builder_commit_log(directory: &str, content: &str) -> Result<(), GitError> {
 ///
 /// ###Parametros:
 /// 'commit': Estructura que contiene la información del commit
-fn commit_content_format(commit: &Commit, tree_hash: &str) -> String {
+fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) -> String {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Time error")
         .as_secs();
 
     let content = format!(
-        "tree {}\nauthor {} <{}> {}\ncommitter {} <{}> {}\n\n{}",
+        "tree {}\nparent {}\nauthor {} <{}> {}\ncommitter {} <{}> {}\n\n{}\n",
         tree_hash,
+        parent_hash,
         commit.get_author_name(),
         commit.get_author_email(),
         timestamp,
@@ -172,15 +175,32 @@ fn commit_content_format(commit: &Commit, tree_hash: &str) -> String {
 /// 'commit': Estructura que contiene la información del commit
 pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
     let git_dir = format!("{}/{}", directory, GIT_DIR);
-    //Falta crear el tree con el index
-
-    let content = commit_content_format(&commit, "12345678");
+    let current_branch = get_current_branch(directory)?;
+    let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
+    
+    let mut parent_hash = String::new();
+    let mut contents = String::new();
+    if fs::metadata(&branch_current_path).is_ok(){
+        let mut file = match File::open(&branch_current_path){
+            Ok(file) => file,
+            Err(_) => return Err(GitError::OpenFileError),
+        };
+        if file.read_to_string(&mut contents).is_err(){
+            return Err(GitError::ReadFileError);
+        };
+    }else {
+        if contents.is_empty() {
+            parent_hash = "0000000000000000000000000000000000000000".to_string();
+        }else{
+            parent_hash = contents;
+        }; 
+    }
+    let tree_hash = builder_object_tree(&git_dir)?;
+    let content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&content, &git_dir)?;
     builder_commit_log(directory, &content)?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
-    let current_branch = get_current_branch(directory)?;
-    let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
     if current_branch == INITIAL_BRANCH && fs::metadata(&branch_current_path).is_err() {
         create_file(&branch_current_path, &hash_commit)?;
     } else {
