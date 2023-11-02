@@ -37,6 +37,7 @@ pub enum UtilError {
     PackfileNegotiationReceiveNACK,
     InvalidPacketLineRequest,
     RequestInvalidHostFormat,
+    InvalidRequestFlush,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -74,6 +75,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::PackfileNegotiationReceiveNACK => write!(f, "PackfileNegotiationReceiveNACKError: Error al recibir el NACK."),
         UtilError::InvalidPacketLineRequest => write!(f, "InvalidPacketLineRequestError: Error al leer la solicitud de línea de paquete. No cumple con el formato establecido"),
         UtilError::RequestInvalidHostFormat => write!(f, "RequestInvalidHostFormatError: Error al leer la solicitud de línea de paquete. El formato del host es inválido"),
+        UtilError::InvalidRequestFlush => write!(f, "InvalidRequestFlushError: Error al leer la solicitud de línea de paquete. La solicitud de flush es inválida"),
     }
 }
 

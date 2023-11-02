@@ -61,6 +61,7 @@ pub struct GitRequest {
     pub pathname: String,
     pub extra_parameters: Vec<String>,
 }
+
 impl fmt::Display for GitRequest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -72,6 +73,7 @@ impl fmt::Display for GitRequest {
 }
 
 impl GitRequest {
+
     /// Lee y procesa una solicitud de Git a partir de datos leídos de un flujo de lectura.
     /// Se utiliza para leer y procesar la solicitud de un cliente Git desde un flujo de lectura.
     /// Se espera que la solicitud se reciba como un paquete de líneas de Git y, por lo tanto,
@@ -86,18 +88,51 @@ impl GitRequest {
     /// Devuelve un `Result` que contiene un `GitRequest` si la solicitud se procesa correctamente,
     /// o bien un error de tipo `UtilError` si la solicitud es inválida o no puede procesarse.
     ///
-    pub fn read_git_request(listener: &mut dyn Read) -> Result<GitRequest, UtilError> {
-        let data = read_pkt_line(listener)?;
-
+    pub fn read_git_request(reader: &mut dyn Read) -> Result<GitRequest, UtilError> {
+        let data = read_pkt_line(reader)?;
+        if data.is_empty() {
+            return Err(UtilError::InvalidRequestFlush);
+        }
         process_request_data(&data)
     }
 
+    /// Crea una solicitud Git a partir de datos en bytes leídos, los bytes leidos
+    /// deben tener formato pkt.
+    /// Se utiliza para convertir datos de una solicitud en bytes a una estructura `GitRequest`.
+    /// Está destinada a manejar los datos de solicitud ya formateados en bytes.
+    ///
+    /// # Argumentos
+    ///
+    /// * `bytes` - Datos de la solicitud Git formateados como bytes.
+    ///
+    /// # Retorno
+    ///
+    /// Devuelve un `Result` que contiene un `GitRequest` si la solicitud se procesa correctamente,
+    /// o bien un error de tipo `UtilError` si la solicitud es inválida o no puede procesarse.
+    ///
     pub fn create_from_bytes(bytes: &[u8]) -> Result<GitRequest, UtilError> {
         let data = read_line_from_bytes(bytes)?;
-
+        if data.is_empty() {
+            return Err(UtilError::InvalidRequestFlush);
+        }
         process_request_data(data)
     }
     
+    /// Crea una solicitud Git a partir de información detallada proporcionada.
+    /// Se utiliza para construir una solicitud Git con información específica como el comando,
+    /// la dirección del repositorio, la IP y el puerto del host.
+    ///
+    /// # Argumentos
+    ///
+    /// * `command` - Comando de solicitud de Git (RequestCommand).
+    /// * `repo` - Nombre del repositorio.
+    /// * `ip` - Dirección IP del host.
+    /// * `port` - Puerto del host.
+    ///
+    /// # Retorno
+    ///
+    /// Devuelve una cadena de texto que representa la solicitud Git con la información proporcionada.
+    ///
     pub fn create_from_command(
         command: RequestCommand,
         repo: String,
@@ -120,6 +155,18 @@ impl GitRequest {
     }
 }
 
+/// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.
+/// Esta función toma los datos de la solicitud Git y los divide en comandos y argumentos.
+///
+/// # Argumentos
+///
+/// * `data` - Los datos de la solicitud Git que se van a procesar.
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene un `GitRequest` si la solicitud se procesa correctamente,
+/// o bien un error de tipo `UtilError` si la solicitud es inválida o no puede procesarse.
+///
 fn process_request_data(data: &[u8]) -> Result<GitRequest, UtilError> {
     let (first_part, second_part) = if let Some(idx) = data.iter().position(|&byte| byte == b' ') {
         let (first, second) = data.split_at(idx);
@@ -191,13 +238,19 @@ pub fn create_git_request(
     add_length_prefix(&message, len)
 }
 
-// fn get_data_pkt(bytes: &[u8]) -> Result<&[u8], UtilError> {
-//     match read_line_from_bytes(&bytes) {
-//         Ok(data) => Ok(data),
-//         Err(_) => Err(UtilError::InvalidPacketLineRequest),
-//     }
-// }
-
+/// Obtiene los componentes de una solicitud Git y los retorna como tupla.
+/// Toma los bytes de una solicitud Git y los separa en sus diferentes componentes,
+/// devolviendo una tupla que contiene el pathname y los parámetros adicionales.
+///
+/// # Argumentos
+///
+/// * `bytes` - Bytes de la solicitud Git que se van a dividir en componentes.
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene una tupla con los componentes si la solicitud se procesa correctamente,
+/// o bien un error de tipo `UtilError` si la solicitud es inválida o no puede procesarse.
+///
 fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilError> {
     let mut components = bytes.split(|&byte| byte == 0);
 

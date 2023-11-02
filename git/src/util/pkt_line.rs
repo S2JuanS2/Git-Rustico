@@ -106,7 +106,7 @@ pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], UtilError> {
     if bytes.len() != len {
         return Err(UtilError::InvalidPacketLine);
     }
-    let data: &[u8] = &bytes[LENGTH_PREFIX_SIZE..len - 1]; // No quiero el \n
+    let data: &[u8] = &bytes[LENGTH_PREFIX_SIZE..len - 1]; // No quiero el \n o \0 del final
     Ok(data)
 }
 

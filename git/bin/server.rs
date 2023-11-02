@@ -15,7 +15,7 @@ use std::{env, thread};
 
 fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Sender<String>>>) -> Result<GitRequest, GitError>
 {
-    let request = GitRequest::create_from_bytes(stream);
+    let request = GitRequest::read_git_request(stream);
     match request {
         Ok(request) => {
             let message = format!("{}{:?}", signature, request);
