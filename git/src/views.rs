@@ -8,3 +8,7 @@
 
 /// Importa submódulos específicos para las vistas de Git.
 pub mod view_client;
+
+pub mod buttons;
+
+pub mod entries;
