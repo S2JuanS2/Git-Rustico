@@ -1,10 +1,8 @@
-use crate::{
-    consts::PACK_SIGNATURE, util::objects::read_type_and_length_from_vec,
-};
+use crate::{consts::PACK_SIGNATURE, util::objects::read_type_and_length_from_vec};
 use flate2::read::ZlibDecoder;
 use std::io::Read;
 
-use super::{objects::ObjectEntry, errors::UtilError};
+use super::{errors::UtilError, objects::ObjectEntry};
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, UtilError> {
     read_signature(reader)?;

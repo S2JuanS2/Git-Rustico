@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{errors::GitError, commands::errors::CommandsError};
+use crate::{commands::errors::CommandsError, errors::GitError};
 
 #[derive(PartialEq, Eq)]
 pub enum UtilError {
@@ -22,6 +22,7 @@ pub enum UtilError {
     UploadRequestDone,
     InvalidRequestCommandMissingCommand,
     InvalidRequestCommandMissingPathname,
+    InvalidRequestCommandMissingHost,
     InvalidPacketLineMissingLength,
     InvalidPacketLineLength,
     InvalidPacketLineReadData,
@@ -34,6 +35,9 @@ pub enum UtilError {
     ObjectDeserialization,
     EmptyDecompressionError,
     PackfileNegotiationReceiveNACK,
+    InvalidPacketLineRequest,
+    RequestInvalidHostFormat,
+    InvalidRequestFlush,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -54,8 +58,9 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidServerReference => write!(f, "InvalidServerReferenceError: Error al leer la referencia del servidor."),
         UtilError::UploadRequestFlush => write!(f, "UploadRequestFlushError: Error al enviar el flush."),
         UtilError::UploadRequestDone => write!(f, "UploadRequestDoneError: Error al enviar el done."),
-        UtilError::InvalidRequestCommandMissingCommand => write!(f, "InvalidRequestCommandCommandError: Comando de solicitud inválido."),
-        UtilError::InvalidRequestCommandMissingPathname => write!(f, "InvalidRequestCommandPathnameError: Nombre de ruta de archivo inválido."),
+        UtilError::InvalidRequestCommandMissingCommand => write!(f, "InvalidRequestCommandCommandError: Solicitud sin comando"),
+        UtilError::InvalidRequestCommandMissingPathname => write!(f, "InvalidRequestCommandPathnameError: No se encontro ruta de archivo para la solicitud."),
+        UtilError::InvalidRequestCommandMissingHost => write!(f, "InvalidRequestCommandHostError: No se encontro nombre de host para la solicitud"),
         UtilError::InvalidPacketLineLength => write!(f, "InvalidPacketLineLengthError: Longitud de línea de paquete inválida."),
         UtilError::InvalidPacketLineMissingLength => write!(f, "InvalidPacketLineMissingLengthError: Falta la longitud de la línea de paquete."),
         UtilError::InvalidPacketLineReadData => write!(f, "InvalidPacketLineReadDataError: Error al leer los datos de la línea de paquete."),
@@ -68,9 +73,11 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::ObjectDeserialization => write!(f, "ObjectDeserializationError: Error al deserializar el objeto."),
         UtilError::EmptyDecompressionError => write!(f, "EmptyDecompressionError: Error al descomprimir el objeto, me dio un vector vacío."),
         UtilError::PackfileNegotiationReceiveNACK => write!(f, "PackfileNegotiationReceiveNACKError: Error al recibir el NACK."),
+        UtilError::InvalidPacketLineRequest => write!(f, "InvalidPacketLineRequestError: Error al leer la solicitud de línea de paquete. No cumple con el formato establecido"),
+        UtilError::RequestInvalidHostFormat => write!(f, "RequestInvalidHostFormatError: Error al leer la solicitud de línea de paquete. El formato del host es inválido"),
+        UtilError::InvalidRequestFlush => write!(f, "InvalidRequestFlushError: Error al leer la solicitud de línea de paquete. La solicitud de flush es inválida"),
     }
 }
-
 
 impl From<CommandsError> for UtilError {
     fn from(error: CommandsError) -> Self {
