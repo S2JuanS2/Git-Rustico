@@ -31,23 +31,13 @@ fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Send
     }
 }
 
-fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, signature: &String, request: GitRequest) -> Result<(), GitError>
-{
-    let request = GitRequest::read_git_request(stream);
-    match request {
-        Ok(request) => {
-            let message = format!("{}{:?}", signature, request);
-            log_message(&tx, &message);
-            Ok(())
-        }
-        Err(e) => {
-            let message = format!("{}Error al procesar la petición: {}", signature, e);
-            log_message(&tx, &message);
-            log_client_disconnection_error(&tx, &signature);
-            Err(e.into())
-        }
-    }
-}
+// fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, signature: &String, request: GitRequest) -> Result<(), GitError>
+// {
+//     match request.execute()
+//     {
+
+//     }
+// }
 
 fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
     log_client_connect(stream, &tx);
