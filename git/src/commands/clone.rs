@@ -5,7 +5,8 @@ use crate::models::client::Client;
 use crate::util::connections::{
     packfile_negotiation, receive_packfile, reference_discovery, start_client,
 };
-use crate::util::request::{create_git_request, RequestCommand};
+use crate::util::git_request::GitRequest;
+use crate::util::request_command::RequestCommand;
 
 /// Esta función se encarga de llamar a al comando clone con los parametros necesarios
 /// ###Parametros:
@@ -38,7 +39,7 @@ pub fn git_clone(
     println!("Clonando repositorio remoto: {}", repo);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
-    let message = create_git_request(RequestCommand::UploadPack, repo, ip, port);
+    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
     let advertised = reference_discovery(socket, message)?;
