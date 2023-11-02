@@ -37,13 +37,13 @@ fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, sign
     {
         Ok(()) => {
             let message = format!("{}Request exitosa", signature);
-            log_message(&tx, &message);
+            log_message(tx, &message);
             Ok(())
         }
         Err(e) => {
             let message: String = format!("{}Error al procesar la petición: {}", signature, e);
-            log_message(&tx, &message);
-            log_client_disconnection_error(&tx, &signature);
+            log_message(tx, &message);
+            log_client_disconnection_error(tx, signature);
             Err(e.into())
         }
     }
