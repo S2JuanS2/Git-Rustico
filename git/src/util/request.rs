@@ -1,11 +1,12 @@
 
+use std::fmt;
 use std::io::Read;
 
 use crate::consts::END_OF_STRING;
 use crate::util::pkt_line::add_length_prefix;
 
 use super::errors::UtilError;
-use super::pkt_line::read_pkt_line;
+use super::pkt_line::{read_pkt_line, read_line_from_bytes};
 
 /// Enumeración `RequestCommand` representa los comandos de solicitud en un protocolo Git.
 ///
@@ -20,6 +21,17 @@ pub enum RequestCommand {
     UploadPack,
     ReceivePack,
     UploadArchive,
+}
+
+impl fmt::Display for RequestCommand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let command = match self {
+            RequestCommand::UploadPack => "Upload Pack",
+            RequestCommand::ReceivePack => "Receive Pack",
+            RequestCommand::UploadArchive => "Upload Archive",
+        };
+        write!(f, "{}", command)
+    }
 }
 
 impl RequestCommand {
@@ -49,28 +61,43 @@ pub struct GitRequest {
     pub pathname: String,
     pub extra_parameters: Vec<String>,
 }
+impl fmt::Display for GitRequest {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Request Command: {}\nPathname: {}\nExtra Parameters: {:?}",
+            self.request_command, self.pathname, self.extra_parameters
+        )
+    }
+}
 
 impl GitRequest {
-    pub fn create_from_bytes(listener: &mut dyn Read) -> Result<GitRequest, UtilError> {
+    /// Lee y procesa una solicitud de Git a partir de datos leídos de un flujo de lectura.
+    /// Se utiliza para leer y procesar la solicitud de un cliente Git desde un flujo de lectura.
+    /// Se espera que la solicitud se reciba como un paquete de líneas de Git y, por lo tanto,
+    /// se utiliza la función `read_pkt_line` para extraer los datos.
+    ///
+    /// # Argumentos
+    ///
+    /// * `listener` - Un flujo de lectura que se utiliza para obtener datos de una solicitud Git.
+    ///
+    /// # Retorno
+    ///
+    /// Devuelve un `Result` que contiene un `GitRequest` si la solicitud se procesa correctamente,
+    /// o bien un error de tipo `UtilError` si la solicitud es inválida o no puede procesarse.
+    ///
+    pub fn read_git_request(listener: &mut dyn Read) -> Result<GitRequest, UtilError> {
         let data = read_pkt_line(listener)?;
 
-        let (first_part, second_part) = if let Some(idx) = data.iter().position(|&byte| byte == b' ') {
-            let (first, second) = data.split_at(idx);
-            (first, &second[1..])
-        } else {
-            return Err(UtilError::InvalidRequestCommand);
-        };
-
-        let request_command = RequestCommand::from_string(first_part)?;
-
-        get_components_request(second_part)
-            .map(|(pathname, extra_parameters)| GitRequest {
-                request_command,
-                pathname: String::from_utf8_lossy(pathname).trim().to_string(),
-                extra_parameters,
-            })
+        process_request_data(&data)
     }
 
+    pub fn create_from_bytes(bytes: &[u8]) -> Result<GitRequest, UtilError> {
+        let data = read_line_from_bytes(bytes)?;
+
+        process_request_data(data)
+    }
+    
     pub fn create_from_command(
         command: RequestCommand,
         repo: String,
@@ -91,6 +118,24 @@ impl GitRequest {
         let message = format!("{}{}{}", command, project, host);
         add_length_prefix(&message, len)
     }
+}
+
+fn process_request_data(data: &[u8]) -> Result<GitRequest, UtilError> {
+    let (first_part, second_part) = if let Some(idx) = data.iter().position(|&byte| byte == b' ') {
+        let (first, second) = data.split_at(idx);
+        (first, &second[1..])
+    } else {
+        return Err(UtilError::InvalidRequestCommand);
+    };
+
+    let request_command = RequestCommand::from_string(first_part)?;
+
+    get_components_request(second_part)
+        .map(|(pathname, extra_parameters)| GitRequest {
+            request_command,
+            pathname: String::from_utf8_lossy(pathname).trim().to_string(),
+            extra_parameters,
+        })
 }
 
 /// Crea una solicitud Git con los datos especificados.
@@ -219,36 +264,36 @@ mod tests {
         );
     }
 
-        // #[test]
-        // fn test_git_request_new_with_valid_format() {
-        //     // Datos de entrada válidos con un espacio
-        //     let input = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
-        //     let result = GitRequest::create_from_bytes(input);
-        //     assert!(result.is_ok()); // Comprobar que el resultado es Ok
-        // }
+        #[test]
+        fn test_git_request_new_with_valid_format() {
+            // Datos de entrada válidos con un espacio
+            let input = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
+            let result = GitRequest::create_from_bytes(input);
+            assert!(result.is_ok()); // Comprobar que el resultado es Ok
+        }
 
-        // #[test]
-        // fn test_git_request_new_with_invalid_format() {
-        //     // Datos de entrada sin espacio entre command y pathname
-        //     let input_no_space = b"003agit-upload-pack/schacon/gitbook.git\0host=example.com\0";
-        //     let result_no_space = GitRequest::create_from_bytes(input_no_space);
-        //     assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
-        // }
+        #[test]
+        fn test_git_request_new_with_invalid_format() {
+            // Datos de entrada sin espacio entre command y pathname
+            let input_no_space = b"003agit-upload-pack/schacon/gitbook.git\0host=example.com\0";
+            let result_no_space = GitRequest::create_from_bytes(input_no_space);
+            assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
+        }
 
-        // #[test]
-        // fn test_git_request_new_with_invalid_lenght() {
-        //     let input_no_space = b"013agit-upload-pack/schacon/gitbook.git\0host=example.com\0";
-        //     let result_no_space = GitRequest::create_from_bytes(input_no_space);
-        //     assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
-        // }
-        // #[test]
-        // fn test_git_request_new_with_valid_data() -> Result<(), UtilError>{
-        //     // Datos de entrada con un comando no válido
-        //     let input_invalid_command = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
-        //     let request = GitRequest::create_from_bytes(input_invalid_command)?;
-        //     assert!(request.request_command == RequestCommand::UploadPack);
-        //     assert!(request.pathname == "/schacon/gitbook.git");
-        //     assert!(vec![String::from("host=example.com")].eq(&request.extra_parameters));
-        //     Ok(())
-        // }
+        #[test]
+        fn test_git_request_new_with_invalid_lenght() {
+            let input_no_space = b"013agit-upload-pack/schacon/gitbook.git\0host=example.com\0";
+            let result_no_space = GitRequest::create_from_bytes(input_no_space);
+            assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
+        }
+        #[test]
+        fn test_git_request_new_with_valid_data() -> Result<(), UtilError>{
+            // Datos de entrada con un comando no válido
+            let input_invalid_command = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
+            let request = GitRequest::create_from_bytes(input_invalid_command)?;
+            assert!(request.request_command == RequestCommand::UploadPack);
+            assert!(request.pathname == "/schacon/gitbook.git");
+            assert!(vec![String::from("host=example.com")].eq(&request.extra_parameters));
+            Ok(())
+        }
 }
