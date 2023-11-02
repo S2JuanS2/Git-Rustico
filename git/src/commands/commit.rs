@@ -14,6 +14,9 @@ use std::io::Read;
 
 use crate::commands::branch::get_current_branch;
 
+use super::errors::CommandsError;
+use super::status::get_index_content;
+
 const COMMIT_EDITMSG: &str = "COMMIT_EDITMSG";
 const BRANCH_DIR: &str = "refs/heads/";
 
@@ -76,7 +79,7 @@ impl Commit {
 /// ###Parametros:
 /// 'args': Vector de Strings que contiene los parametros que se le pasaran al comando commit
 /// 'client': Cliente que contiene el directorio del repositorio local
-pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() != 2 {
         return Err(GitError::InvalidArgumentCountCommitError);
     }
@@ -120,7 +123,7 @@ fn builder_commit_msg_edit(directory: &str, msg: String) -> Result<(), GitError>
 /// archivo con el nombre de la branch actual
 /// ###Parametros:
 /// 'directory': Directorio del git
-fn builder_commit_log(directory: &str, content: &str) -> Result<(), GitError> {
+fn builder_commit_log(directory: &str, content: &str, hash_commit: &str) -> Result<(), GitError> {
     let logs_path = format!("{}/{}/logs/refs/heads", directory, GIT_DIR);
     if !Path::new(&logs_path).exists() {
         match fs::create_dir_all(logs_path.clone()) {
@@ -128,13 +131,18 @@ fn builder_commit_log(directory: &str, content: &str) -> Result<(), GitError> {
             Err(_) => return Err(GitError::CreateDirError),
         };
     }
+    let mut lines: Vec<&str> = content.lines().collect();
+    if let Some(first_line) = lines.first_mut(){
+        *first_line = hash_commit;
+    }
+    let content_mod = lines.join("\n");
     let current_branch = get_current_branch(directory)?;
     let logs_path = format!("{}/{}", logs_path, current_branch);
     let mut file = match OpenOptions::new().append(true).create(true).open(logs_path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
     };
-    match file.write_all(content.as_bytes()) {
+    match file.write_all(content_mod.as_bytes()) {
         Ok(_) => (),
         Err(_) => return Err(GitError::WriteFileError),
     };
@@ -173,8 +181,14 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
 /// ###Parametros:
 /// 'directory': Directorio del git
 /// 'commit': Estructura que contiene la información del commit
-pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
+pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
+
     let git_dir = format!("{}/{}", directory, GIT_DIR);
+    let index_content = get_index_content(&git_dir)?;
+    if index_content.trim().is_empty() {
+        return Err(CommandsError::CommitEmptyIndex.into());
+    }
+
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
     
@@ -198,7 +212,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
     let tree_hash = builder_object_tree(&git_dir)?;
     let content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&content, &git_dir)?;
-    builder_commit_log(directory, &content)?;
+    builder_commit_log(directory, &content, &hash_commit)?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
     if current_branch == INITIAL_BRANCH && fs::metadata(&branch_current_path).is_err() {
@@ -234,7 +248,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<(), GitError> {
         Err(_) => return Err(GitError::WriteFileError),
     };
 
-    Ok(())
+    Ok("Commit exitoso!".to_string())
 }
 
 #[cfg(test)]

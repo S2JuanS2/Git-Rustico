@@ -10,7 +10,7 @@ use std::io::Write;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función rm
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() != 1 {
         return Err(GitError::InvalidArgumentCountRmError);
     }
@@ -23,13 +23,13 @@ pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 /// ###Parametros
 /// 'directory': directorio del repositorio local.
 /// 'file_name': nombre del archivo a remover.
-pub fn git_rm(directory: &str, file_name: &str) -> Result<(), GitError> {
+pub fn git_rm(directory: &str, file_name: &str) -> Result<String, GitError> {
     match compare_hash(file_name, directory) {
         Ok(can_rm) => can_rm,
         Err(_) => return Err(GitError::ReadFileError),
     };
 
-    Ok(())
+    Ok("Archivo removido con éxito!".to_string())
 }
 
 /// Compara el hash del archivo que se quiere remover con el hash de ese archivo que esta en el index.
