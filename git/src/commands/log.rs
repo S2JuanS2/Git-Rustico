@@ -9,7 +9,7 @@ use super::branch::get_current_branch;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función log
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_log(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+pub fn handle_log(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() > 1 {
         return Err(GitError::InvalidArgumentCountLogError);
     }
@@ -20,7 +20,10 @@ pub fn handle_log(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 /// muestra el log de los commits
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
-pub fn git_log(directory: &str) -> Result<(), GitError> {
+pub fn git_log(directory: &str) -> Result<String, GitError> {
+
+    let mut formatted_result = String::new();
+
     let logs_path = format!("{}/.git/logs/refs/heads", directory);
 
     let current_branch = get_current_branch(directory)?;
@@ -36,28 +39,26 @@ pub fn git_log(directory: &str) -> Result<(), GitError> {
             })
             .collect();
 
-        let lines_per_commit = 5;
-        let total_lines = lines.len();
-        let mut end_line = total_lines;
-
-        while end_line > 0 {
-            let start_line = end_line - lines_per_commit;
-
-            println!("Commit:\n");
-
-            for (line_number, _item) in lines.iter().enumerate().take(end_line).skip(start_line) {
-                if line_number < total_lines {
-                    println!("{}", &lines[line_number]);
-                }
+        let mut count_line = 0;
+        for line in lines{
+            if count_line == 0{
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                formatted_result.push_str(&format!("Commit: {}\n", parts[1]));
+            }else if count_line == 2{
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
+            }else if count_line == 5{
+                formatted_result.push_str(&format!("{}",line));
+            }
+            count_line += 1;
+            if count_line == 6{
+                count_line = 0;
             }
 
-            println!("----------------------\n");
-
-            end_line = start_line;
         }
     }
 
-    Ok(())
+    Ok(formatted_result)
 }
 
 #[cfg(test)]
