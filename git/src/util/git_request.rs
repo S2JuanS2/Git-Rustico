@@ -7,54 +7,8 @@ use crate::util::pkt_line::add_length_prefix;
 
 use super::errors::UtilError;
 use super::pkt_line::{read_pkt_line, read_line_from_bytes};
+use super::request_command::RequestCommand;
 
-/// Enumeración `RequestCommand` representa los comandos de solicitud en un protocolo Git.
-///
-/// Esta enumeración define tres comandos utilizados en las operaciones de Git.
-///
-/// - `UploadPack`: Comando para solicitar una transferencia de paquetes a través de "git-upload-pack".
-/// - `ReceivePack`: Comando para solicitar una recepción de paquetes a través de "git-receive-pack".
-/// - `UploadArchive`: Comando para solicitar la carga de un archivo de almacenamiento a través de "git-upload-archive".
-///
-#[derive(Debug, PartialEq, Eq)]
-pub enum RequestCommand {
-    UploadPack,
-    ReceivePack,
-    UploadArchive,
-}
-
-impl fmt::Display for RequestCommand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let command = match self {
-            RequestCommand::UploadPack => "Upload Pack",
-            RequestCommand::ReceivePack => "Receive Pack",
-            RequestCommand::UploadArchive => "Upload Archive",
-        };
-        write!(f, "{}", command)
-    }
-}
-
-impl RequestCommand {
-    /// Convierte un valor de `RequestCommand` en su representación de cadena.
-    fn to_string(&self) -> &str {
-        match self {
-            RequestCommand::UploadPack => "git-upload-pack",
-            RequestCommand::ReceivePack => "git-receive-pack",
-            RequestCommand::UploadArchive => "git-upload-archive",
-        }
-    }
-
-    pub fn from_string(data: &[u8]) -> Result<RequestCommand, UtilError> {
-        let binding = String::from_utf8_lossy(data);
-        let command = binding.trim();
-        match command {
-            "git-upload-pack" => Ok(RequestCommand::UploadPack),
-            "git-receive-pack" => Ok(RequestCommand::ReceivePack),
-            "git-upload-archive" => Ok(RequestCommand::UploadArchive),
-            _ => Err(UtilError::InvalidRequestCommand),
-        }
-    }
-}
 
 /// # `GitRequest`
 ///
@@ -169,6 +123,60 @@ impl GitRequest {
         let message = format!("{}{}{}", command, project, host);
         add_length_prefix(&message, len)
     }
+
+    /// Crea una solicitud Git con los datos especificados.
+    ///
+    /// Esta función genera una solicitud Git formateada como una cadena, basada en el comando de solicitud,
+    /// el repositorio, la dirección IP y el puerto proporcionados como argumentos. La solicitud incluye
+    /// información sobre el comando, el proyecto (repositorio) y el host (IP y puerto).
+    ///
+    /// ## Argumentos
+    ///
+    /// - `command`: El comando de solicitud Git (`RequestCommand`) que se utilizará.
+    /// - `repo`: El nombre del repositorio en el que se realizará la solicitud.
+    /// - `ip`: La dirección IP del host al que se enviará la solicitud.
+    /// - `port`: El puerto en el que se realizará la conexión con el host.
+    ///
+    /// ## Ejemplo
+    ///
+    /// ```
+    /// use git::util::git_request::GitRequest;
+    /// use git::util::request_command::RequestCommand;
+    ///
+    /// let command = RequestCommand::UploadPack;
+    /// let repo = "mi-repositorio".to_string();
+    /// let ip = "127.0.0.1".to_string();
+    /// let port = "22".to_string();
+    ///
+    /// let git_request = GitRequest::generate_request_string(command, repo, ip, port);
+    ///
+    /// // Verificar el resultado esperado
+    /// assert_eq!(git_request, "0036git-upload-pack /mi-repositorio\0host=127.0.0.1:22\0");
+    /// ```
+    /// 
+    /// ## Retorno
+    ///
+    /// Una line pkt que representa la solicitud Git formateada.
+    pub fn generate_request_string(
+        command: RequestCommand,
+        repo: String,
+        ip: String,
+        port: String,
+    ) -> String {
+        let mut len: usize = 0;
+
+        let command = format!("{} ", command.to_string());
+        len += command.len();
+
+        let project = format!("/{}{}", repo, END_OF_STRING);
+        len += project.len(); // El len cuenta el END_OF_STRING
+
+        let host = format!("host={}:{}{}", ip, port, END_OF_STRING);
+        len += host.len(); // El len cuenta el END_OF_STRING
+
+        let message = format!("{}{}{}", command, project, host);
+        add_length_prefix(&message, len)
+    }
 }
 
 /// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.
@@ -201,58 +209,7 @@ fn process_request_data(data: &[u8]) -> Result<GitRequest, UtilError> {
         })
 }
 
-/// Crea una solicitud Git con los datos especificados.
-///
-/// Esta función genera una solicitud Git formateada como una cadena, basada en el comando de solicitud,
-/// el repositorio, la dirección IP y el puerto proporcionados como argumentos. La solicitud incluye
-/// información sobre el comando, el proyecto (repositorio) y el host (IP y puerto).
-///
-/// ## Argumentos
-///
-/// - `command`: El comando de solicitud Git (`RequestCommand`) que se utilizará.
-/// - `repo`: El nombre del repositorio en el que se realizará la solicitud.
-/// - `ip`: La dirección IP del host al que se enviará la solicitud.
-/// - `port`: El puerto en el que se realizará la conexión con el host.
-///
-/// ## Ejemplo
-///
-/// ```
-/// use git::util::request::{create_git_request, RequestCommand};
-///
-/// let command = RequestCommand::UploadPack;
-/// let repo = "mi-repositorio".to_string();
-/// let ip = "127.0.0.1".to_string();
-/// let port = "22".to_string();
-///
-/// let git_request = create_git_request(command, repo, ip, port);
-///
-/// // Verificar el resultado esperado
-/// assert_eq!(git_request, "0036git-upload-pack /mi-repositorio\0host=127.0.0.1:22\0");
-/// ```
-///
-/// ## Retorno
-///
-/// Una line pkt que representa la solicitud Git formateada.
-pub fn create_git_request(
-    command: RequestCommand,
-    repo: String,
-    ip: String,
-    port: String,
-) -> String {
-    let mut len: usize = 0;
 
-    let command = format!("{} ", command.to_string());
-    len += command.len();
-
-    let project = format!("/{}{}", repo, END_OF_STRING);
-    len += project.len(); // El len cuenta el END_OF_STRING
-
-    let host = format!("host={}:{}{}", ip, port, END_OF_STRING);
-    len += host.len(); // El len cuenta el END_OF_STRING
-
-    let message = format!("{}{}{}", command, project, host);
-    add_length_prefix(&message, len)
-}
 
 /// Obtiene los componentes de una solicitud Git y los retorna como tupla.
 /// Toma los bytes de una solicitud Git y los separa en sus diferentes componentes,
@@ -292,8 +249,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_create_git_request_upload_pack() {
-        let message = create_git_request(
+    fn test_generate_request_string_upload_pack() {
+        let message = GitRequest::generate_request_string(
             RequestCommand::UploadPack,
             "project.git".to_string(),
             "myserver.com".to_string(),
@@ -306,8 +263,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_git_request_receive_pack() {
-        let message = create_git_request(
+    fn test_generate_request_string_receive_pack() {
+        let message = GitRequest::generate_request_string(
             RequestCommand::ReceivePack,
             "project.git".to_string(),
             "127.0.0.2".to_string(),
@@ -320,8 +277,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_git_request_upload_archive() {
-        let message = create_git_request(
+    fn test_generate_request_string_upload_archive() {
+        let message = GitRequest::generate_request_string(
             RequestCommand::UploadArchive,
             "project.git".to_string(),
             "250.250.250.250".to_string(),

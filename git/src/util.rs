@@ -41,7 +41,7 @@ pub mod validation;
 
 pub mod connections;
 
-pub mod request;
+pub mod git_request;
 
 pub mod pkt_line;
 
@@ -62,3 +62,5 @@ pub mod log_output;
 pub mod files;
 
 pub mod errors;
+
+pub mod request_command;
