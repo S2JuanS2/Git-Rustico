@@ -159,6 +159,16 @@ pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str
     log_message(tx, &message)
 }
 
+pub fn log_client_disconnection_error(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
+    let message = format!("{}Conexión terminada por error", signature);
+    log_message(tx, &message)
+}
+
+pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
+    let message = format!("{}Conexión terminada", signature);
+    log_message(tx, &message)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -92,6 +92,27 @@ pub fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
     Ok(content)
 }
 
+/// # `read_line_from_bytes`
+///
+/// Extrae una línea de bytes de un slice de bytes y verifica su validez, asegurándose de que tenga un formato correcto.
+///
+/// La función intenta extraer y verificar la línea de bytes a partir de la representación UTF-8 de un slice de bytes. Verifica si el tamaño
+/// de la línea es válido según la convención del protocolo Git, extrae la línea de bytes, y devuelve un resultado, señalando posibles errores.
+///
+/// ## Parámetros
+///
+/// - `bytes`: El slice de bytes del cual se extraerá la línea.
+///
+/// ## Errores
+///
+/// Retorna un error `UtilError::InvalidPacketLine` en los siguientes casos:
+/// - Si la longitud del slice `bytes` es menor que `LENGTH_PREFIX_SIZE`.
+/// - Si el tamaño de la línea extraída no coincide con la longitud especificada en el prefijo del slice `bytes`.
+///
+/// ## Retorno
+///
+/// Devuelve un `Result<&[u8], UtilError>`. Si la línea es válida y no hay errores, se devuelve la línea de bytes extraída.
+///
 pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], UtilError> {
     if bytes.len() < LENGTH_PREFIX_SIZE {
         return Err(UtilError::InvalidPacketLine);
@@ -106,6 +127,11 @@ pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], UtilError> {
     if bytes.len() != len {
         return Err(UtilError::InvalidPacketLine);
     }
+
+    if len == 0 {
+        return Ok(&[]);
+    }
+
     let data: &[u8] = &bytes[LENGTH_PREFIX_SIZE..len - 1]; // No quiero el \n o \0 del final
     Ok(data)
 }

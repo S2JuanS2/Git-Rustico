@@ -55,6 +55,22 @@ impl RequestCommand {
         }
     }
 }
+
+/// # `GitRequest`
+///
+/// Estructura que representa una solicitud de Git, que contiene un comando, una ruta y parámetros adicionales.
+///
+/// `GitRequest` encapsula los componentes de una solicitud Git, incluyendo el comando de la solicitud, la ruta del repositorio
+/// y los parámetros adicionales.
+///
+/// ## Miembros
+///
+/// - `request_command`: Comando de la solicitud Git, representado por un tipo `RequestCommand`.
+///
+/// - `pathname`: Ruta del repositorio solicitado en la solicitud Git.
+///
+/// - `extra_parameters`: Parámetros adicionales proporcionados en la solicitud Git.
+///
 #[derive(Debug, PartialEq, Eq)]
 pub struct GitRequest {
     pub request_command: RequestCommand,

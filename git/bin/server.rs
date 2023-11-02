@@ -2,8 +2,8 @@ use git::config::Config;
 use git::errors::GitError;
 use git::util::connections::start_server;
 use git::util::logger::{
-    get_client_signature, handle_log_file, log_client_connect, log_client_disconnection,
-    log_message,
+    get_client_signature, handle_log_file, log_client_connect,
+    log_message, log_client_disconnection_error, log_client_disconnection_success,
 };
 use git::util::request::GitRequest;
 use std::net::{TcpListener, TcpStream};
@@ -25,7 +25,7 @@ fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Send
         Err(e) => {
             let message = format!("{}Error al procesar la petición: {}", signature, e);
             log_message(&tx, &message);
-            log_client_disconnection(&tx, &signature);
+            log_client_disconnection_error(&tx, &signature);
             Err(e.into())
         }
     }
@@ -40,7 +40,7 @@ fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Resu
 
     // process_request(stream, &tx, &signature)?;
 
-    log_client_disconnection(&tx, &signature);
+    log_client_disconnection_success(&tx, &signature);
     Ok(())
 }
 
