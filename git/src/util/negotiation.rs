@@ -1,7 +1,8 @@
 use super::{
     advertised::AdvertisedRefs,
     connections::{send_flush, send_message},
-    pkt_line, errors::UtilError,
+    errors::UtilError,
+    pkt_line,
 };
 use crate::consts::NACK;
 use std::{io::Read, net::TcpStream};
