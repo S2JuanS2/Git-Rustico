@@ -5,28 +5,40 @@ use git::util::logger::{
     get_client_signature, handle_log_file, log_client_connect, log_client_disconnection,
     log_message,
 };
-use std::io::Read;
+use git::util::request::GitRequest;
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
+
+fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Sender<String>>>) -> Result<GitRequest, GitError>
+{
+    let request = GitRequest::create_from_bytes(stream);
+    match request {
+        Ok(request) => {
+            let message = format!("{}{:?}", signature, request);
+            log_message(&tx, &message);
+            Ok(request)
+        }
+        Err(e) => {
+            let message = format!("{}Error al procesar la petición: {}", signature, e);
+            log_message(&tx, &message);
+            log_client_disconnection(&tx, &signature);
+            Err(e.into())
+        }
+    }
+}
+
 fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
     log_client_connect(stream, &tx);
     let signature = get_client_signature(stream)?;
 
-    let mut buffer = [0; 2048]; // Buffer de lectura
+    let _ = receive_request(stream, signature.clone(), tx.clone())?;
+    
 
-    while let Ok(bytes_read) = stream.read(&mut buffer) {
-        if bytes_read == 0 {
-            break;
-        }
-
-        let data = &buffer[..bytes_read];
-        let message = format!("{}Datos recibidos: {:?}", signature, data);
-        log_message(&tx, &message);
-    }
+    // process_request(stream, &tx, &signature)?;
 
     log_client_disconnection(&tx, &signature);
     Ok(())

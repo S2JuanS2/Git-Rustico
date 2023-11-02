@@ -155,6 +155,7 @@ pub fn send_done(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilErr
     send_message(socket, DONE.to_string(), error)
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;

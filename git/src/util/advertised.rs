@@ -1,4 +1,4 @@
-use super::{validation::is_valid_obj_id, errors::UtilError};
+use super::{errors::UtilError, validation::is_valid_obj_id};
 use std::{fmt, vec};
 
 /// `AdvertisedRefs` es una enumeración que representa anuncios de referencias en el contexto de Git.

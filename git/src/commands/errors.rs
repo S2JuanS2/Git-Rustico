@@ -11,12 +11,18 @@ pub enum CommandsError {
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
         CommandsError::CommandsFromUtil(info) => write!(f, "{}", info),
-        CommandsError::CloneMissingRepo => write!(f, "CloneMissingRepo: Use: git clone <repositorio>"),
-        CommandsError::CloneMissingRepoInfo(info) => write!(f, "{}\nMore info: {}", CommandsError::CloneMissingRepo, info),
+        CommandsError::CloneMissingRepo => {
+            write!(f, "CloneMissingRepo: Use: git clone <repositorio>")
+        }
+        CommandsError::CloneMissingRepoInfo(info) => write!(
+            f,
+            "{}\nMore info: {}",
+            CommandsError::CloneMissingRepo,
+            info
+        ),
         // AGregar más errores aquí
     }
 }
-
 
 impl From<CommandsError> for GitError {
     fn from(err: CommandsError) -> Self {

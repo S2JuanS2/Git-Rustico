@@ -60,7 +60,7 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, UtilError> {
 /// # Retorno
 ///
 /// - `Result<Vec<u8>, UtilError>`: Un resultado que contiene el contenido de la línea de paquete o un error si ocurre alguno.
-fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
+pub fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
     let mut length_buf = [0u8; 4];
     if socket.read_exact(&mut length_buf).is_err() {
         return Err(UtilError::InvalidPacketLineMissingLength);
@@ -93,18 +93,20 @@ fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
 }
 
 pub fn read_line_from_bytes(bytes: &[u8]) -> Result<&[u8], UtilError> {
-    if bytes.len() < 4 {
+    if bytes.len() < LENGTH_PREFIX_SIZE {
         return Err(UtilError::InvalidPacketLine);
     }
-    let len = match u32::from_str_radix(String::from_utf8_lossy(&bytes[0..4]).trim(), 16)
-    {
+    let len = match u32::from_str_radix(
+        String::from_utf8_lossy(&bytes[..LENGTH_PREFIX_SIZE]).trim(),
+        16,
+    ) {
         Ok(l) => l as usize,
         Err(_) => return Err(UtilError::InvalidPacketLine),
     };
-
-    let data: &[u8] = &bytes[4..len];
-    // let data
-
+    if bytes.len() != len {
+        return Err(UtilError::InvalidPacketLine);
+    }
+    let data: &[u8] = &bytes[LENGTH_PREFIX_SIZE..len - 1]; // No quiero el \n
     Ok(data)
 }
 
