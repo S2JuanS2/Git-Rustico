@@ -41,18 +41,20 @@ pub fn git_log(directory: &str) -> Result<String, GitError> {
 
         let mut count_line = 0;
         for line in lines{
-            if count_line == 0{
+            if count_line == 1{
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 formatted_result.push_str(&format!("Commit: {}\n", parts[0]));
-            }else if count_line == 2{
+            }else if count_line == 3{
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
-            }else if count_line == 5{
-                formatted_result.push_str(&format!("{}",line));
+            }else if count_line == 6{
+                formatted_result.push_str(&format!("\n"));
+                formatted_result.push_str(&format!("{}\n",line));
             }
             count_line += 1;
-            if count_line == 6{
-                count_line = 0;
+            if count_line == 7{
+                count_line = 1;
+                formatted_result.push_str(&format!("\n"));
             }
 
         }

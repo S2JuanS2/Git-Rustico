@@ -136,13 +136,14 @@ fn builder_commit_log(directory: &str, content: &str, hash_commit: &str) -> Resu
         *first_line = hash_commit;
     }
     let content_mod = lines.join("\n");
+    let content_mod_with_newline = format!("\n{}", content_mod);
     let current_branch = get_current_branch(directory)?;
     let logs_path = format!("{}/{}", logs_path, current_branch);
     let mut file = match OpenOptions::new().append(true).create(true).open(logs_path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
     };
-    match file.write_all(content_mod.as_bytes()) {
+    match file.write_all(content_mod_with_newline.as_bytes()) {
         Ok(_) => (),
         Err(_) => return Err(GitError::WriteFileError),
     };
@@ -175,6 +176,7 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
         commit.get_message()
     );
 
+    println!("{}",content);
     content
 }
 /// Esta función genera y crea el objeto commit
@@ -192,7 +194,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
     
-    let mut parent_hash = String::new();
+    let parent_hash;
     let mut contents = String::new();
     if fs::metadata(&branch_current_path).is_ok(){
         let mut file = match File::open(&branch_current_path){
@@ -202,13 +204,13 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
         if file.read_to_string(&mut contents).is_err(){
             return Err(GitError::ReadFileError);
         };
-    }else {
-        if contents.is_empty() {
-            parent_hash = "0000000000000000000000000000000000000000".to_string();
-        }else{
-            parent_hash = contents;
-        }; 
     }
+    if contents.is_empty() {
+        parent_hash = "0000000000000000000000000000000000000000".to_string();
+    }else{
+        parent_hash = contents;
+    }; 
+
     let tree_hash = builder_object_tree(&git_dir)?;
     let content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&content, &git_dir)?;
