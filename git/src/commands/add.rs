@@ -12,24 +12,25 @@ use std::{fs::File, io::Read, io::Write};
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_add(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+    let result;
     if args.len() != 1 {
         return Err(GitError::InvalidArgumentCountAddError);
     }
     let directory = client.get_directory_path();
     let file_name = args[0];
     if args[0] != ALL {
-        git_add(directory, file_name)?;
+        result = git_add(directory, file_name)?;
     } else {
-        git_add_all(directory)?;
+        result = git_add_all(directory)?;
     }
-    Ok(())
+    Ok(result)
 }
 
 /// Esta función crea todos los objetos y los guarda
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
-pub fn git_add_all(directory: &str) -> Result<(), GitError> {
+pub fn git_add_all(directory: &str) -> Result<String, GitError> {
     let directory_path = Path::new(directory);
 
     if directory_path.is_dir() {
@@ -53,14 +54,14 @@ pub fn git_add_all(directory: &str) -> Result<(), GitError> {
         return Err(GitError::DirEntryError);
     }
 
-    Ok(())
+    Ok("Archivos agregados con exito!".to_string())
 }
 
 /// Esta función crea el objeto y lo guarda
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
 /// 'file_name': Nombre del archivo del cual se leera el contenido para luego comprimirlo y generar el objeto
-pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
+pub fn git_add(directory: &str, file_name: &str) -> Result<String, GitError> {
     let file_path = format!("{}/{}", directory, file_name);
 
     let file = open_file(&file_path)?;
@@ -74,7 +75,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<(), GitError> {
     // Se actualiza el index.
     add_to_index(git_dir, file_name, hash_object)?;
 
-    Ok(())
+    Ok("Archivo agregado con exito!".to_string())
 }
 
 fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result<(), GitError> {

@@ -43,7 +43,7 @@ pub fn git_log(directory: &str) -> Result<String, GitError> {
         for line in lines{
             if count_line == 0{
                 let parts: Vec<&str> = line.split_whitespace().collect();
-                formatted_result.push_str(&format!("Commit: {}\n", parts[1]));
+                formatted_result.push_str(&format!("Commit: {}\n", parts[0]));
             }else if count_line == 2{
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
