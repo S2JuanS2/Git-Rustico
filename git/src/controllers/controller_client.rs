@@ -38,6 +38,10 @@ impl Controller {
         };
         Ok(result)
     }
+
+    pub fn get_name_client(& self) -> &str{
+        self.client.get_name()
+    }
 }
 
 /// Esta función se encarga de llamar a al comando adecuado con los parametros necesarios
@@ -72,7 +76,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
                 //return result;
             }
             "commit" => {
-                handle_commit(rest_of_command, client)?;
+                result = handle_commit(rest_of_command, client)?;
             }
             "init" => {
                 result = handle_init(rest_of_command, client)?;
@@ -81,7 +85,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
                 result = handle_cat_file(rest_of_command, client)?;
             }
             "add" => {
-                handle_add(rest_of_command, client)?;
+                result = handle_add(rest_of_command, client)?;
             }
             "checkout" => {
                 result = handle_checkout(rest_of_command, client)?;
@@ -111,7 +115,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
                 handle_remote(rest_of_command, client)?;
             }
             "rm" => {
-                handle_rm(rest_of_command, client)?;
+                result = handle_rm(rest_of_command, client)?;
             }
             _ => {
                 return Err(GitError::CommandNotRecognizedError);

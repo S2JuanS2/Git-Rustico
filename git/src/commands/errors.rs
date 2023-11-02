@@ -6,6 +6,7 @@ pub enum CommandsError {
     CommandsFromUtil(String), // Para tener polimofismo con UtilError
     CloneMissingRepoInfo(String),
     CloneMissingRepo,
+    CommitEmptyIndex,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -20,7 +21,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
             CommandsError::CloneMissingRepo,
             info
         ),
-        // AGregar más errores aquí
+        CommandsError::CommitEmptyIndex => write!(f, "Nada al que hacer Commit"),
     }
 }
 
