@@ -16,7 +16,7 @@ fn main() -> Result<(), GitError> {
         config.name,
         config.email,
         address,
-        "./test_repo".to_string(),
+        config.src,
     );
 
     let controller = Controller::new(client.clone());

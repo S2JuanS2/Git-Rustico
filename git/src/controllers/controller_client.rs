@@ -71,9 +71,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
                 result = handle_branch(rest_of_command, client)?;
             }
             "clone" => {
-                let result = handle_clone(rest_of_command, client);
-                println!("Result: {:?}", result);
-                //return result;
+                result = handle_clone(rest_of_command, client)?;
             }
             "commit" => {
                 result = handle_commit(rest_of_command, client)?;

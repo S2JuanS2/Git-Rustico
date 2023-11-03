@@ -43,6 +43,30 @@ pub fn start_client(ip: &str) -> Result<TcpStream, UtilError> {
     }
 }
 
+/// Realiza un proceso de descubrimiento de referencias (refs) enviando un mensaje al servidor
+/// a través del socket proporcionado, y luego procesa las líneas recibidas para clasificarlas
+/// en una lista de AdvertisedRefs.
+///
+/// # Argumentos
+/// - `socket`: Un TcpStream que representa la conexión con el servidor.
+/// - `message`: Un mensaje que se enviará al servidor.
+///
+/// # Retorno
+/// Un Result que contiene un vector de AdvertisedRefs si la operación fue exitosa,
+/// o un error de UtilError en caso contrario.
+pub fn reference_discovery(
+    socket: &mut TcpStream,
+    message: String,
+) -> Result<(Vec<AdvertisedRefs>, Vec<Vec<u8>>), UtilError> {
+    send_message(socket, message, UtilError::ReferenceDiscovey)?;
+    let lines = pkt_line::read(socket)?;
+
+    let refs = AdvertisedRefs::classify_vec(&lines)?;
+    let filtered_lines: Vec<Vec<u8>> = lines.into_iter().skip(1).collect();
+
+    Ok((refs, filtered_lines))
+}
+
 /// Realiza la negociación del paquete (packfile) enviando una solicitud al servidor con las
 /// referencias anunciadas y los datos de capacidad, y luego procesa las respuestas del servidor.
 ///
