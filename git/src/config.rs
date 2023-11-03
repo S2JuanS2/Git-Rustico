@@ -44,8 +44,8 @@ impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "Config:{{Name: {}, Email: {}, Log Path: {}, Ip: {}, Port: {}}}",
-            self.name, self.email, self.path_log, self.ip, self.port
+            "Config:{{Name: {}, Email: {}, Log Path: {}, Ip: {}, Port: {}, Src: {}}}",
+            self.name, self.email, self.path_log, self.ip, self.port, self.src
         )
     }
 }
