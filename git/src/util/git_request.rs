@@ -4,10 +4,12 @@ use std::io::Read;
 
 use crate::consts::END_OF_STRING;
 use crate::util::pkt_line::add_length_prefix;
+use crate::util::references::list_references;
 
 use super::errors::UtilError;
 use super::pkt_line::{read_pkt_line, read_line_from_bytes};
 use super::request_command::RequestCommand;
+use super::validation::is_subdirectory;
 
 
 /// # `GitRequest`
@@ -178,9 +180,15 @@ impl GitRequest {
         add_length_prefix(&message, len)
     }
     
-    pub fn execute(&self) -> Result<(), UtilError> {
+    pub fn execute(&self, _reader: &mut dyn Read, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
+                if !contains_repository(root, &self.pathname)
+                {
+                    return Err(UtilError::RepoNotFoundError(self.pathname.to_string().clone()));
+                }
+                let _refs = list_references(format!("{}/{}", root, self.pathname).as_str())?;
+                // println!("Refs: {:?}", refs);
                 println!("UploadPack");
                 Ok(())
             }
@@ -261,6 +269,9 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
     ))
 }
 
+fn contains_repository(root: &str, pathname: &str) -> bool {
+    is_subdirectory(root, pathname)
+}
 
 
 #[cfg(test)]

@@ -452,6 +452,45 @@ pub fn valid_directory_src(path: &str) -> Result<String, GitError>
     }
 }
 
+/// Verifica si un directorio contiene un subdirectorio con un nombre dado.
+///
+/// # Argumentos
+///
+/// * `parent_path` - La ruta del directorio padre a verificar.
+/// * `child_name` - El nombre del posible subdirectorio.
+///
+/// # Ejemplo
+///
+/// ```rust
+/// use git::util::validation::is_subdirectory;
+/// 
+/// let result = is_subdirectory("../", "commands");
+/// assert!(result);
+/// ```
+/// 
+/// # Retorno
+///
+/// Devuelve `true` si el directorio `parent_path` contiene un subdirectorio con el nombre `child_name`,
+/// de lo contrario, devuelve `false`.
+///
+pub fn is_subdirectory(parent_path: &str, child_name: &str) -> bool {
+    if let Ok(entries) = std::fs::read_dir(parent_path) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                if let Some(name) = entry.file_name().to_str() {
+                    if name == child_name {
+                        if let Ok(metadata) = entry.metadata() {
+                            if metadata.is_dir() {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    false
+}
 
 #[cfg(test)]
 mod tests {
@@ -709,5 +748,23 @@ mod tests {
     fn test_nonexistent_parent_directory() {
         let non_existent_path = "/nonexistent_directory/file.txt";
         assert!(!is_valid_file_directory(non_existent_path));
+    }
+
+    #[test]
+    fn test_is_subdirectory_when_child_exists() {
+        let parent_directory = "../../";
+        let child_directory = "src";
+
+        std::fs::create_dir_all(format!("{}/{}", parent_directory, child_directory)).unwrap();
+
+        assert!(is_subdirectory(parent_directory, child_directory));
+    }
+
+    #[test]
+    fn test_is_subdirectory_when_child_does_not_exist() {
+        let parent_directory = "./";
+        let child_directory = "files.rs";
+        
+        assert!(!is_subdirectory(parent_directory, child_directory));
     }
 }

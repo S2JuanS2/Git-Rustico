@@ -11,7 +11,6 @@ use super::negotiation::upload_request;
 use super::objects::ObjectEntry;
 use super::packfile::read_packfile_data;
 use super::packfile::read_packfile_header;
-use super::pkt_line;
 
 /// Inicia un servidor en la dirección IP y puerto proporcionados.
 ///
@@ -42,26 +41,6 @@ pub fn start_client(ip: &str) -> Result<TcpStream, UtilError> {
         Ok(socket) => Ok(socket),
         Err(_) => Err(UtilError::ClientConnection),
     }
-}
-
-/// Realiza un proceso de descubrimiento de referencias (refs) enviando un mensaje al servidor
-/// a través del socket proporcionado, y luego procesa las líneas recibidas para clasificarlas
-/// en una lista de AdvertisedRefs.
-///
-/// # Argumentos
-/// - `socket`: Un TcpStream que representa la conexión con el servidor.
-/// - `message`: Un mensaje que se enviará al servidor.
-///
-/// # Retorno
-/// Un Result que contiene un vector de AdvertisedRefs si la operación fue exitosa,
-/// o un error de UtilError en caso contrario.
-pub fn reference_discovery(
-    socket: &mut TcpStream,
-    message: String,
-) -> Result<Vec<AdvertisedRefs>, UtilError> {
-    send_message(socket, message, UtilError::ReferenceDiscovey)?;
-    let lines = pkt_line::read(socket)?;
-    AdvertisedRefs::classify_vec(&lines)
 }
 
 /// Realiza la negociación del paquete (packfile) enviando una solicitud al servidor con las
