@@ -62,7 +62,7 @@ impl Config {
             path_log: LOG_PATH_DEFAULT.to_string(),
             ip: IP_DEFAULT.to_string(),
             port: GIT_DAEMON_PORT.to_string(),
-            src: String::new(),
+            src: SRC_DEFAULT.to_string(),
         };
 
         read_input(&path, &mut config, process_line)?;
