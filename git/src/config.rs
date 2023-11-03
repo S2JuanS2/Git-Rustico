@@ -21,7 +21,7 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use crate::{errors::GitError, util::validation::valid_path};
+use crate::{errors::GitError, util::validation::{valid_path, valid_path_log, valid_directory_src}};
 use crate::{
     consts::*,
     util::validation::{valid_email, valid_ip, valid_port},
@@ -123,10 +123,10 @@ pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
     match key {
         "name" => config.name = value.to_string(),
         "email" => config.email = valid_email(value)?,
-        "path_log" => config.path_log = valid_path(value)?,
+        "path_log" => config.path_log = valid_path_log(value)?,
         "ip" => config.ip = valid_ip(value)?,
         "port" => config.port = valid_port(value)?,
-
+        "src" => config.src = valid_directory_src(value)?,
         _ => return Err(GitError::InvalidConfigurationValueError),
     }
     Ok(())

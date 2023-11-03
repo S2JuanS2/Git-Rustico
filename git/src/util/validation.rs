@@ -140,13 +140,13 @@ pub fn valid_path(input: &str) -> Result<String, GitError> {
         Err(GitError::InvalidLogDirectoryError)
     }
 }
-pub fn is_valid_directory(path: &str) -> bool {
+fn is_valid_directory(path: &str) -> bool {
     fs::metadata(path)
         .map(|metadata| metadata.is_dir())
         .unwrap_or(false)
 }
 
-pub fn is_valid_file_directory(path: &str) -> bool {
+fn is_valid_file_directory(path: &str) -> bool {
     if is_valid_directory(path)
     {
         return false;
@@ -392,6 +392,26 @@ fn is_valid_domain_part(domain_part: &str) -> bool {
     }
     true
 }
+
+pub fn valid_path_log(path: &str) -> Result<String, GitError>
+{
+    match is_valid_file_directory(path)
+    {
+        true => Ok(path.to_string()),
+        false => Err(GitError::InvalidLogDirectoryError),
+    }
+}
+
+pub fn valid_directory_src(path: &str) -> Result<String, GitError>
+{
+    match is_valid_directory(path)
+    {
+        true => Ok(path.to_string()),
+        false => Err(GitError::InvalidSrcDirectoryError),
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
