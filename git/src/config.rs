@@ -21,7 +21,7 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use crate::{errors::GitError, util::validation::{valid_path, valid_path_log, valid_directory_src}};
+use crate::{errors::GitError, util::validation::{valid_path_log, valid_directory_src}};
 use crate::{
     consts::*,
     util::validation::{valid_email, valid_ip, valid_port},

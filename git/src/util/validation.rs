@@ -140,12 +140,33 @@ pub fn valid_path(input: &str) -> Result<String, GitError> {
         Err(GitError::InvalidLogDirectoryError)
     }
 }
+
+/// Verifica si la ruta especificada es un directorio existente.
+///
+/// # Argumentos
+///
+/// * `path` - Ruta del directorio a verificar.
+///
+/// # Retorno
+///
+/// Devuelve `true` si la ruta es un directorio existente, de lo contrario, devuelve `false`.
+/// 
 fn is_valid_directory(path: &str) -> bool {
     fs::metadata(path)
         .map(|metadata| metadata.is_dir())
         .unwrap_or(false)
 }
 
+/// Verifica si la ruta especificada es un archivo o si el directorio padre es válido para permitir la creación del archivo.
+///
+/// # Argumentos
+///
+/// * `path` - Ruta del archivo a verificar.
+///
+/// # Retorno
+///
+/// Devuelve `true` si el archivo no existe y su directorio padre es válido, de lo contrario, devuelve `false`.
+/// 
 fn is_valid_file_directory(path: &str) -> bool {
     if is_valid_directory(path)
     {
@@ -393,6 +414,16 @@ fn is_valid_domain_part(domain_part: &str) -> bool {
     true
 }
 
+/// Valida si la ruta proporcionada es un archivo o si el directorio padre es válido para permitir la creación del archivo de registro.
+///
+/// # Argumentos
+///
+/// * `path` - Ruta del archivo de registro a verificar.
+///
+/// # Retorno
+///
+/// Devuelve `Ok(path.to_string())` si el archivo no existe y su directorio padre es válido. En caso contrario, devuelve un error `Err(GitError::InvalidLogDirectoryError)`.
+/// 
 pub fn valid_path_log(path: &str) -> Result<String, GitError>
 {
     match is_valid_file_directory(path)
@@ -402,6 +433,16 @@ pub fn valid_path_log(path: &str) -> Result<String, GitError>
     }
 }
 
+/// Valida si la ruta proporcionada es un directorio existente.
+///
+/// # Argumentos
+///
+/// * `path` - Ruta del directorio a verificar.
+///
+/// # Retorno
+///
+/// Devuelve `Ok(path.to_string())` si la ruta es un directorio existente. En caso contrario, devuelve un error `Err(GitError::InvalidSrcDirectoryError)`.
+/// 
 pub fn valid_directory_src(path: &str) -> Result<String, GitError>
 {
     match is_valid_directory(path)
