@@ -128,7 +128,7 @@ fn print_changes(
     formatted_result.push_str(&head_branch_name);
     if index_files_list.is_empty() && untracked_files_list.is_empty() {
         formatted_result.push_str(&format!(
-            "Your branch is up to date with 'origin/{}'.\n",
+            "\nYour branch is up to date with 'origin/{}'.\n",
             head_branch_name
         ));
         formatted_result.push_str("\nnothing to commit, working tree clean\n");
