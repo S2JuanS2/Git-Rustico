@@ -8,6 +8,7 @@ use crate::util::pkt_line::add_length_prefix;
 use super::errors::UtilError;
 use super::pkt_line::{read_pkt_line, read_line_from_bytes};
 use super::request_command::RequestCommand;
+use super::validation::is_subdirectory;
 
 
 /// # `GitRequest`
@@ -178,10 +179,13 @@ impl GitRequest {
         add_length_prefix(&message, len)
     }
     
-    pub fn execute(&self, reader: &mut dyn Read) -> Result<(), UtilError> {
+    pub fn execute(&self, _reader: &mut dyn Read, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
-                // Clone
+                if !contains_repository(root, &self.pathname)
+                {
+                    return Err(UtilError::RepoNotFoundError(self.pathname.to_string().clone()));
+                }
                 println!("UploadPack");
                 Ok(())
             }
@@ -262,6 +266,9 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
     ))
 }
 
+fn contains_repository(root: &str, pathname: &str) -> bool {
+    is_subdirectory(root, pathname)
+}
 
 
 #[cfg(test)]

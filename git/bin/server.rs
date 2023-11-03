@@ -33,7 +33,7 @@ fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Send
 
 fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, signature: &String, request: &GitRequest, root_directory: &str) -> Result<(), GitError>
 {
-    match request.execute(stream)
+    match request.execute(stream, root_directory)
     {
         Ok(()) => {
             let message = format!("{}Request exitosa", signature);

@@ -462,9 +462,9 @@ pub fn valid_directory_src(path: &str) -> Result<String, GitError>
 /// # Ejemplo
 ///
 /// ```rust
-/// use git::util::validation::directory_contains_child;
+/// use git::util::validation::is_subdirectory;
 /// 
-/// let result = directory_contains_child("../", "commands");
+/// let result = is_subdirectory("../", "commands");
 /// assert!(result);
 /// ```
 /// 
@@ -473,7 +473,7 @@ pub fn valid_directory_src(path: &str) -> Result<String, GitError>
 /// Devuelve `true` si el directorio `parent_path` contiene un subdirectorio con el nombre `child_name`,
 /// de lo contrario, devuelve `false`.
 ///
-pub fn directory_contains_child(parent_path: &str, child_name: &str) -> bool {
+pub fn is_subdirectory(parent_path: &str, child_name: &str) -> bool {
     if let Ok(entries) = std::fs::read_dir(parent_path) {
         for entry in entries {
             if let Ok(entry) = entry {
@@ -751,20 +751,20 @@ mod tests {
     }
 
     #[test]
-    fn test_directory_contains_child_when_child_exists() {
+    fn test_is_subdirectory_when_child_exists() {
         let parent_directory = "../../";
         let child_directory = "src";
 
         std::fs::create_dir_all(format!("{}/{}", parent_directory, child_directory)).unwrap();
 
-        assert!(directory_contains_child(parent_directory, child_directory));
+        assert!(is_subdirectory(parent_directory, child_directory));
     }
 
     #[test]
-    fn test_directory_contains_child_when_child_does_not_exist() {
+    fn test_is_subdirectory_when_child_does_not_exist() {
         let parent_directory = "./";
         let child_directory = "files.rs";
         
-        assert!(!directory_contains_child(parent_directory, child_directory));
+        assert!(!is_subdirectory(parent_directory, child_directory));
     }
 }
