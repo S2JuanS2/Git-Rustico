@@ -3,9 +3,10 @@ use std::net::TcpStream;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::connections::{
-    packfile_negotiation, receive_packfile, reference_discovery, start_client,
+    packfile_negotiation, receive_packfile, start_client,
 };
 use crate::util::git_request::GitRequest;
+use crate::util::references::reference_discovery;
 use crate::util::request_command::RequestCommand;
 
 /// Esta función se encarga de llamar a al comando clone con los parametros necesarios

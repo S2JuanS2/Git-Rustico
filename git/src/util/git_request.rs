@@ -178,9 +178,10 @@ impl GitRequest {
         add_length_prefix(&message, len)
     }
     
-    pub fn execute(&self) -> Result<(), UtilError> {
+    pub fn execute(&self, reader: &mut dyn Read) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
+                // Clone
                 println!("UploadPack");
                 Ok(())
             }

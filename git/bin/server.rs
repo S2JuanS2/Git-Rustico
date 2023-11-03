@@ -31,23 +31,23 @@ fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Send
     }
 }
 
-// fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, signature: &String, request: &GitRequest) -> Result<(), GitError>
-// {
-//     match request.execute()
-//     {
-//         Ok(()) => {
-//             let message = format!("{}Request exitosa", signature);
-//             log_message(tx, &message);
-//             Ok(())
-//         }
-//         Err(e) => {
-//             let message: String = format!("{}Error al procesar la petición: {}", signature, e);
-//             log_message(tx, &message);
-//             log_client_disconnection_error(tx, signature);
-//             Err(e.into())
-//         }
-//     }
-// }
+fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, signature: &String, request: &GitRequest) -> Result<(), GitError>
+{
+    match request.execute(stream)
+    {
+        Ok(()) => {
+            let message = format!("{}Request exitosa", signature);
+            log_message(tx, &message);
+            Ok(())
+        }
+        Err(e) => {
+            let message: String = format!("{}Error al procesar la petición: {}", signature, e);
+            log_message(tx, &message);
+            log_client_disconnection_error(tx, signature);
+            Err(e.into())
+        }
+    }
+}
 
 fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
     log_client_connect(stream, &tx);
@@ -55,7 +55,7 @@ fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Resu
 
     let request = receive_request(stream, signature.clone(), tx.clone())?;
 
-    // process_request(stream, &tx, &signature, &request)?;
+    process_request(stream, &tx, &signature, &request)?;
 
     log_client_disconnection_success(&tx, &signature);
     Ok(())
