@@ -31,7 +31,7 @@ fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Send
     }
 }
 
-fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, signature: &String, request: &GitRequest) -> Result<(), GitError>
+fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, signature: &String, request: &GitRequest, root_directory: &str) -> Result<(), GitError>
 {
     match request.execute(stream)
     {
@@ -49,13 +49,13 @@ fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, sign
     }
 }
 
-fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>) -> Result<(), GitError> {
+fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>, root_directory: String) -> Result<(), GitError> {
     log_client_connect(stream, &tx);
     let signature = get_client_signature(stream)?;
 
     let request = receive_request(stream, signature.clone(), tx.clone())?;
 
-    process_request(stream, &tx, &signature, &request)?;
+    process_request(stream, &tx, &signature, &request, &root_directory)?;
 
     log_client_disconnection_success(&tx, &signature);
     Ok(())
@@ -78,7 +78,7 @@ fn main() -> Result<(), GitError> {
     });
 
     let clients = thread::spawn(move || {
-        let _ = receive_client(&listener, tx);
+        let _ = receive_client(&listener, tx, &config.src);
     });
 
     clients.join().expect("No hay clientes");
@@ -90,6 +90,7 @@ fn main() -> Result<(), GitError> {
 fn receive_client(
     listener: &TcpListener,
     tx: Sender<String>,
+    src: &str,
 ) -> Result<Vec<JoinHandle<()>>, GitError> {
     let shared_tx = Arc::new(Mutex::new(tx));
     let mut handles: Vec<JoinHandle<()>> = vec![];
@@ -98,8 +99,9 @@ fn receive_client(
             Ok(mut stream) => {
                 let tx = Arc::clone(&shared_tx);
                 println!("Nueva conexión: {:?}", stream.local_addr());
+                let root_directory = src.to_string().clone();
                 handles.push(std::thread::spawn(move || {
-                    let _ = handle_client(&mut stream, tx);
+                    let _ = handle_client(&mut stream, tx, root_directory);
                 }));
             }
             Err(e) => {
