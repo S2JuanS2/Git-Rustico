@@ -21,10 +21,10 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use crate::errors::GitError;
+use crate::{errors::GitError, util::validation::{valid_path_log, valid_directory_src}};
 use crate::{
     consts::*,
-    util::validation::{valid_email, valid_ip, valid_path_log, valid_port},
+    util::validation::{valid_email, valid_ip, valid_port},
 };
 
 type Operacion = fn(&str, &mut Config) -> Result<(), GitError>;
@@ -37,14 +37,15 @@ pub struct Config {
     pub path_log: String,
     pub ip: String,
     pub port: String,
+    pub src: String,
 }
 
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "Config:{{Name: {}, Email: {}, Log Path: {}, Ip: {}, Port: {}}}",
-            self.name, self.email, self.path_log, self.ip, self.port
+            "Config:{{Name: {}, Email: {}, Log Path: {}, Ip: {}, Port: {}, Src: {}}}",
+            self.name, self.email, self.path_log, self.ip, self.port, self.src
         )
     }
 }
@@ -61,6 +62,7 @@ impl Config {
             path_log: LOG_PATH_DEFAULT.to_string(),
             ip: IP_DEFAULT.to_string(),
             port: GIT_DAEMON_PORT.to_string(),
+            src: SRC_DEFAULT.to_string(),
         };
 
         read_input(&path, &mut config, process_line)?;
@@ -124,6 +126,7 @@ pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
         "path_log" => config.path_log = valid_path_log(value)?,
         "ip" => config.ip = valid_ip(value)?,
         "port" => config.port = valid_port(value)?,
+        "src" => config.src = valid_directory_src(value)?,
         _ => return Err(GitError::InvalidConfigurationValueError),
     }
     Ok(())

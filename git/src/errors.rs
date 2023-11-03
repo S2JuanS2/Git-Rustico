@@ -77,6 +77,7 @@ pub enum GitError {
     GitFromModelsError(String),
     GitFromControllerError(String),
     GitFromCommandsError(String),
+    InvalidSrcDirectoryError,
 }
 
 impl GitError {
@@ -100,7 +101,8 @@ impl GitError {
             GitError::InvalidUserNameError => "Nombre de usuario inválido, revise su archivo de configuración.",
             GitError::InvalidUserMailError => "Correo de usuario inválido, revise su archivo de configuración.",
             GitError::InvalidPortError => "Puerto inválido, revise su archivo de configuración.",
-            GitError::InvalidLogDirectoryError => "Directorio de logs inválido, revise su archivo de configuración.",
+            GitError::InvalidSrcDirectoryError => "Directorio de código fuente inválido, revise su archivo de configuración.",
+            GitError::InvalidLogDirectoryError => "Path de log inválido, revise su archivo de configuración.",
             GitError::InvalidIpError => "Dirección IP inválida, revise su archivo de configuración.",
             GitError::GenericError => "Error generico.",
             GitError::ObjectBuildFailed => "No se pudo obtener el objeto del constructor.",

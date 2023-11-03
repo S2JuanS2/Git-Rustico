@@ -177,6 +177,25 @@ impl GitRequest {
         let message = format!("{}{}{}", command, project, host);
         add_length_prefix(&message, len)
     }
+    
+    pub fn execute(&self) -> Result<(), UtilError> {
+        match self.request_command {
+            RequestCommand::UploadPack => {
+                println!("UploadPack");
+                Ok(())
+            }
+            RequestCommand::ReceivePack => {
+                println!("ReceivePack");
+                println!("Funcion aun no implementada");
+                Ok(())
+            }
+            RequestCommand::UploadArchive => {
+                println!("Funcion aun no implementada");
+                println!("UploadArchive");
+                Ok(())
+            }
+        }
+    }
 }
 
 /// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.
@@ -290,36 +309,36 @@ mod tests {
         );
     }
 
-        #[test]
-        fn test_git_request_new_with_valid_format() {
-            // Datos de entrada válidos con un espacio
-            let input = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
-            let result = GitRequest::create_from_bytes(input);
-            assert!(result.is_ok()); // Comprobar que el resultado es Ok
-        }
+    #[test]
+    fn test_git_request_new_with_valid_format() {
+        // Datos de entrada válidos con un espacio
+        let input = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
+        let result = GitRequest::create_from_bytes(input);
+        assert!(result.is_ok()); // Comprobar que el resultado es Ok
+    }
 
-        #[test]
-        fn test_git_request_new_with_invalid_format() {
-            // Datos de entrada sin espacio entre command y pathname
-            let input_no_space = b"003agit-upload-pack/schacon/gitbook.git\0host=example.com\0";
-            let result_no_space = GitRequest::create_from_bytes(input_no_space);
-            assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
-        }
+    #[test]
+    fn test_git_request_new_with_invalid_format() {
+        // Datos de entrada sin espacio entre command y pathname
+        let input_no_space = b"003agit-upload-pack/schacon/gitbook.git\0host=example.com\0";
+        let result_no_space = GitRequest::create_from_bytes(input_no_space);
+        assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
+    }
 
-        #[test]
-        fn test_git_request_new_with_invalid_lenght() {
-            let input_no_space = b"013agit-upload-pack/schacon/gitbook.git\0host=example.com\0";
-            let result_no_space = GitRequest::create_from_bytes(input_no_space);
-            assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
-        }
-        #[test]
-        fn test_git_request_new_with_valid_data() -> Result<(), UtilError>{
-            // Datos de entrada con un comando no válido
-            let input_invalid_command = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
-            let request = GitRequest::create_from_bytes(input_invalid_command)?;
-            assert!(request.request_command == RequestCommand::UploadPack);
-            assert!(request.pathname == "/schacon/gitbook.git");
-            assert!(vec![String::from("host=example.com")].eq(&request.extra_parameters));
-            Ok(())
-        }
+    #[test]
+    fn test_git_request_new_with_invalid_lenght() {
+        let input_no_space = b"013agit-upload-pack/schacon/gitbook.git\0host=example.com\0";
+        let result_no_space = GitRequest::create_from_bytes(input_no_space);
+        assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
+    }
+    #[test]
+    fn test_git_request_new_with_valid_data() -> Result<(), UtilError>{
+        // Datos de entrada con un comando no válido
+        let input_invalid_command = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
+        let request = GitRequest::create_from_bytes(input_invalid_command)?;
+        assert!(request.request_command == RequestCommand::UploadPack);
+        assert!(request.pathname == "/schacon/gitbook.git");
+        assert!(vec![String::from("host=example.com")].eq(&request.extra_parameters));
+        Ok(())
+    }
 }
