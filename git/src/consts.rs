@@ -25,7 +25,7 @@ pub const CONFIG_PATH_ARG_INDEX: usize = 1;
 pub const LOG_PATH_DEFAULT: &str = "./default.log";
 
 // Path por defecto del src
-pub const SRC_DEFAULT: &str = "../test_repo/";
+pub const SRC_DEFAULT: &str = "test_repo/";
 
 // IP por default
 pub const IP_DEFAULT: &str = "127.0.0.1";
@@ -89,7 +89,7 @@ pub const GIT_DIR: &str = ".git";
 
 pub const HEAD: &str = "HEAD";
 
-pub const INITIAL_BRANCH: &str = "main";
+pub const INITIAL_BRANCH: &str = "master";
 
 pub const INDEX: &str = "index";
 

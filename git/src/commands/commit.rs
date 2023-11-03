@@ -123,7 +123,7 @@ fn builder_commit_msg_edit(directory: &str, msg: String) -> Result<(), GitError>
 /// archivo con el nombre de la branch actual
 /// ###Parametros:
 /// 'directory': Directorio del git
-fn builder_commit_log(directory: &str, content: &str, hash_commit: &str) -> Result<(), GitError> {
+pub fn builder_commit_log(directory: &str, content: &str, hash_commit: &str) -> Result<(), GitError> {
     let logs_path = format!("{}/{}/logs/refs/heads", directory, GIT_DIR);
     if !Path::new(&logs_path).exists() {
         match fs::create_dir_all(logs_path.clone()) {

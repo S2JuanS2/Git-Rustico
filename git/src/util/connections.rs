@@ -58,10 +58,14 @@ pub fn start_client(ip: &str) -> Result<TcpStream, UtilError> {
 pub fn reference_discovery(
     socket: &mut TcpStream,
     message: String,
-) -> Result<Vec<AdvertisedRefs>, UtilError> {
+) -> Result<(Vec<AdvertisedRefs>, Vec<Vec<u8>>), UtilError> {
     send_message(socket, message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(socket)?;
-    AdvertisedRefs::classify_vec(&lines)
+
+    let refs = AdvertisedRefs::classify_vec(&lines)?;
+    let filtered_lines: Vec<Vec<u8>> = lines.into_iter().skip(1).collect();
+
+    Ok((refs, filtered_lines))
 }
 
 /// Realiza la negociación del paquete (packfile) enviando una solicitud al servidor con las
