@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, fs};
 
 use crate::{consts::*, errors::GitError};
 
@@ -106,10 +106,10 @@ pub fn valid_port(input: &str) -> Result<String, GitError> {
 /// # Ejemplo
 ///
 /// ```
-/// use git::util::validation::valid_path_log;
+/// use git::util::validation::valid_path;
 /// use git::errors::GitError;
 ///
-/// match valid_path_log("/var/log/myapp.log") {
+/// match valid_path("/var/log/myapp.log") {
 ///     Ok(path) => println!("El path del archivo de registro es válido: {}", path),
 ///     Err(e) => println!("{}", e.message()),
 /// }
@@ -128,7 +128,7 @@ pub fn valid_port(input: &str) -> Result<String, GitError> {
 ///
 /// Solo devuelve `GitError::InvalidLogDirectoryError`.
 ///
-pub fn valid_path_log(input: &str) -> Result<String, GitError> {
+pub fn valid_path(input: &str) -> Result<String, GitError> {
     // Obtener el directorio padre del path del archivo
     if let Some(parent_dir) = Path::new(input).parent() {
         if parent_dir.exists() && parent_dir.is_dir() {
@@ -139,6 +139,26 @@ pub fn valid_path_log(input: &str) -> Result<String, GitError> {
     } else {
         Err(GitError::InvalidLogDirectoryError)
     }
+}
+pub fn is_valid_directory(path: &str) -> bool {
+    fs::metadata(path)
+        .map(|metadata| metadata.is_dir())
+        .unwrap_or(false)
+}
+
+pub fn is_valid_file_directory(path: &str) -> bool {
+    if is_valid_directory(path)
+    {
+        return false;
+    }
+
+    let file = Path::new(path);
+    let parent_dir = match file.parent()
+    {
+        Some(dir) => dir,
+        None => return false,
+    };
+    parent_dir.exists() && parent_dir.is_dir()
 }
 
 /// Valida una dirección de correo electrónico.
@@ -433,33 +453,33 @@ mod tests {
     }
 
     #[test]
-    fn test_valid_path_log() {
-        let valid_path = "./archivo.log";
-        let result = valid_path_log(valid_path);
+    fn test_valid_path() {
+        let path = "./archivo.log";
+        let result = valid_path(path);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), valid_path);
+        assert_eq!(result.unwrap(), path);
     }
 
     #[test]
-    fn test_invalid_path_log_non_existent_directory() {
-        let invalid_path_nonexistent = "./no_existe/archivo_inexistente.txt";
-        let result = valid_path_log(invalid_path_nonexistent);
+    fn test_invalid_path_non_existent_directory() {
+        let invalid_path_nonexistent: &str = "./no_existe/archivo_inexistente.txt";
+        let result = valid_path(invalid_path_nonexistent);
         assert!(result.is_err());
         assert_eq!(result.err(), Some(GitError::InvalidLogDirectoryError));
     }
 
     #[test]
-    fn test_invalid_path_log_path_file_instead() {
+    fn test_invalid_path_path_file_instead() {
         let invalid_path_file = "validation.rs";
-        let result = valid_path_log(invalid_path_file);
+        let result = valid_path(invalid_path_file);
         assert!(result.is_err());
         assert_eq!(result.err(), Some(GitError::InvalidLogDirectoryError));
     }
 
     #[test]
-    fn test_invalid_path_log_empty_string() {
+    fn test_invalid_path_empty_string() {
         let invalid_path_empty = "";
-        let result = valid_path_log(invalid_path_empty);
+        let result = valid_path(invalid_path_empty);
         assert!(result.is_err());
         assert_eq!(result.err(), Some(GitError::InvalidLogDirectoryError));
     }
@@ -587,5 +607,46 @@ mod tests {
         assert!(!is_valid_domain_part("-example")); // Domain part starting with a hyphen
         assert!(!is_valid_domain_part("example-")); // Domain part ending with a hyphen
         assert!(!is_valid_domain_part("ex@mple")); // Domain part with special characters
+    }
+
+    #[test]
+    fn test_valid_directory() {
+        let path = ".";
+
+        assert!(is_valid_directory(path));
+    }
+
+    #[test]
+    fn test_invalid_directory() {
+        let path_file = "./errors.rs";
+
+        assert!(!is_valid_directory(path_file));
+    }
+
+    #[test]
+    fn test_nonexistent_directory() {
+        let non_existent_path = "/path/to/nonexistent/directory";
+
+        assert!(!is_valid_directory(non_existent_path));
+    }
+
+    #[test]
+    fn test_valid_file_directory() {
+        let path = "./errors.rs";
+
+        assert!(is_valid_file_directory(path));
+    }
+
+    #[test]
+    fn test_invalid_file_directory() {
+        let path = "./";
+
+        assert!(!is_valid_file_directory(path));
+    }
+
+    #[test]
+    fn test_nonexistent_parent_directory() {
+        let non_existent_path = "/nonexistent_directory/file.txt";
+        assert!(!is_valid_file_directory(non_existent_path));
     }
 }
