@@ -175,8 +175,6 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
         timestamp,
         commit.get_message()
     );
-
-    println!("{}",content);
     content
 }
 /// Esta función genera y crea el objeto commit

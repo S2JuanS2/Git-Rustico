@@ -43,11 +43,59 @@ fn get_tree_hash(contenido: &str) -> Option<&str> {
             return Some(&contenido[start..start + end]);
         }
     }
-
-    // Devolver None si no se encuentra ninguna coincidencia
     None
 }
 
+fn load_files(directory: &str, tree_hash: &str) -> Result<(),GitError> {
+
+    let tree = git_cat_file(directory, &tree_hash, "-p")?;
+
+    for line in tree.lines() {
+
+        let parts: Vec<&str> = line.split_whitespace().collect();
+
+        let path_file = parts[1];
+        let hash_blob = parts[2];
+
+        let path_file_format = format!("{}/{}", directory, path_file);
+        let content_file = git_cat_file(directory, hash_blob, "-p")?;
+
+        let path = Path::new(&path_file_format);
+
+        if let Some(parent) = path.parent(){
+            create_directory(parent)?;
+
+        }
+        create_file_replace(&path_file_format, &content_file)?;
+    }
+    Ok(())
+}
+
+fn extract_parent_hash(commit: &str) -> Option<&str> {
+    for line in commit.lines() {
+        if line.starts_with("parent") {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            return words.get(1).map(|&x| x);
+        }
+    }
+    None
+}
+
+fn read_parent_commit(directory: &str, hash_commit: &str) -> Result<(), GitError>{
+    let commit = git_cat_file(directory, &hash_commit, "-p")?;
+
+    if let Some(parent_hash) = extract_parent_hash(&commit) {
+        if !(parent_hash == "0000000000000000000000000000000000000000") {
+            read_parent_commit(directory, parent_hash)?;
+        }
+        if let Some(tree_hash) = get_tree_hash(&commit){
+            load_files(directory, tree_hash)?;
+        };    
+    } else {
+        return Err(GitError::GetHashError);
+    }
+    Ok(())
+}
 fn load_files_tree(directory: &str, branch_name: &str) -> Result<(),GitError>{
 
     let branch = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
@@ -55,31 +103,8 @@ fn load_files_tree(directory: &str, branch_name: &str) -> Result<(),GitError>{
     let file = open_file(&branch)?;
     let hash_commit = read_file_string(file)?;
 
-    let commit = git_cat_file(directory, &hash_commit, "-p")?;
-
-    if let Some(tree_hash) = get_tree_hash(&commit){
-
-        let tree = git_cat_file(directory, &tree_hash, "-p")?;
-
-        for line in tree.lines() {
-
-            let parts: Vec<&str> = line.split_whitespace().collect();
-
-            let path_file = parts[1];
-            let hash_blob = parts[2];
-
-            let path_file_format = format!("{}/{}", directory, path_file);
-            let content_file = git_cat_file(directory, hash_blob, "-p")?;
-
-            let path = Path::new(&path_file_format);
-
-            if let Some(parent) = path.parent(){
-                create_directory(parent)?;
-
-            }
-            create_file_replace(&path_file_format, &content_file)?;
-        }
-    };
+    read_parent_commit(directory, &hash_commit)?;
+    
     Ok(())
 }
 
