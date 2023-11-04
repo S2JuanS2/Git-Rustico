@@ -1,25 +1,52 @@
+use crate::consts::VERSION_DEFAULT;
+
 use super::{errors::UtilError, validation::is_valid_obj_id, references::Reference};
 use std::{fmt, vec};
 
 
 
-// pub struct AdvertisedRefs {
-//     pub version: u8,
-//     pub capabilities: Vec<String>,
-//     pub shallow: Vec<String>,
-//     pub references: Vec<Reference>,
-// }
+pub struct AdvertisedRefs {
+    pub version: u8,
+    pub capabilities: Vec<String>,
+    pub shallow: Vec<String>,
+    pub references: Vec<Reference>,
+}
 
-// impl AdvertisedRefs {
-//     pub fn new() -> AdvertisedRefs {
-//         AdvertisedRefs {
-//             version: 0,
-//             capabilities: Vec::new(),
-//             shallow: Vec::new(),
-//             references: Vec::new(),
-//         }
-//     }
-// }
+impl AdvertisedRefs {
+    pub fn new(content: &Vec<Vec<u8>>) -> Result<AdvertisedRefs, UtilError> {
+        let classified = AdvertisedRefLine::classify_vec(content)?;
+        Ok(AdvertisedRefs::from_classified(classified))
+    }
+
+    fn from_classified(classified: Vec<AdvertisedRefLine>) -> AdvertisedRefs {
+        let mut version: u8 = VERSION_DEFAULT;
+        let mut capabilities: Vec<String> = Vec::new();
+        let mut shallow: Vec<String> = Vec::new();
+        let mut references: Vec<Reference> = Vec::new();
+
+        for line in classified {
+            match line {
+                AdvertisedRefLine::Version(v) => version = v,
+                AdvertisedRefLine::Capabilities(c) => capabilities = c,
+                AdvertisedRefLine::Shallow { obj_id } => shallow.push(obj_id),
+                AdvertisedRefLine::Ref { obj_id, ref_name } => {
+                    references.push(Reference::new(obj_id, ref_name))
+                }
+            }
+        }
+
+        AdvertisedRefs {
+            version,
+            capabilities,
+            shallow,
+            references,
+        }
+    }
+
+    pub fn get_references(&self) -> &Vec<Reference> {
+        &self.references
+    }
+}
 
 // pub struct Refere
 

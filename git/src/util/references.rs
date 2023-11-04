@@ -4,8 +4,17 @@ use super::{advertised::AdvertisedRefLine, errors::UtilError, connections::send_
 
 
 pub struct Reference {
-    name: String,
     hash: String,
+    name: String,
+}
+
+impl Reference {
+    pub fn new(hash: String, name: String) -> Reference {
+        Reference {
+            hash,
+            name,
+        }
+    }
 }
 
 /// Realiza un proceso de descubrimiento de referencias (refs) enviando un mensaje al servidor
