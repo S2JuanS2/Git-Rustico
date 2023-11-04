@@ -184,7 +184,6 @@ impl GitRequest {
             RequestCommand::UploadPack => {
                 println!("root: {}", root);
                 println!("pathname: {}", self.pathname);
-                // let path_repo = format!("{}/{}", root, self.pathname);
                 if !contains_repository(root, &self.pathname)
                 {
                     return Err(UtilError::RepoNotFoundError(self.pathname.to_string().clone()));
