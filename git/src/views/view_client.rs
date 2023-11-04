@@ -4,6 +4,7 @@ use crate::views::buttons::*;
 use crate::views::entries::*;
 use gtk::prelude::*;
 use std::rc::Rc;
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 
@@ -11,7 +12,7 @@ const DIV: &str = "\nResponse: ";
 
 #[derive(Clone)]
 pub struct View {
-    controller: Rc<Controller>,
+    controller: Rc<RefCell<Controller>>,
     window: gtk::Window,
     window_dialog_clone: gtk::Window,
     window_dialog_cat_file: gtk::Window,
@@ -65,7 +66,7 @@ impl View {
                 .object("user")
                 .ok_or(GitError::ObjectBuildFailed)?;
 
-        let controller = Rc::new(controller);
+        let controller = Rc::new(RefCell::new(controller));
         Ok(View {
             controller,
             window,
@@ -80,8 +81,11 @@ impl View {
 
     }
     
-    fn set_label_user(&mut self, name: &str){
-        self.label_user.set_text(name);
+    fn set_label_user(&mut self){
+        let controller = Rc::clone(&self.controller);
+        let binding = controller.borrow_mut();
+        let user_name = binding.get_name_client();
+        self.label_user.set_text(user_name);
     }
 
     fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>) {
@@ -103,7 +107,7 @@ impl View {
             }
         }
     }
-    fn connect_button_cmd(&self, entry_cmd: &str, button_cmd: &str, git_cmd: String, window: gtk::Window){
+    fn connect_button_cmd(&mut self, entry_cmd: &str, button_cmd: &str, git_cmd: String, window: gtk::Window){
         let controller = Rc::clone(&self.controller);
         let response = Rc::clone(&self.response);
         if let Some(entry) = self.entries.get(entry_cmd){
@@ -113,7 +117,7 @@ impl View {
                     window.hide();
                     let entry_format = format!("{} {}", git_cmd, entry_clone.text().to_string());
                     entry_clone.set_text("");
-                    let result = controller.send_command(&entry_format);
+                    let result = controller.borrow_mut().send_command(&entry_format);
                     Self::response_write_buffer(result, Rc::clone(&response));
                 });
             }   
@@ -156,7 +160,7 @@ impl View {
                 button.connect_clicked(move |_| {
                     let command = entry_send.text().to_string();
                     entry_send.set_text("");
-                    let result = controller.send_command(&command);
+                    let result = controller.borrow_mut().send_command(&command);
                     Self::response_write_buffer(result, Rc::clone(&response));
                 });
             }
@@ -180,7 +184,7 @@ impl View {
                 button.connect_clicked(move |_| {
                     let entry_format = format!("{} {}", git_cmd, entry_branch.text().to_string());
                     entry_branch.set_text("");
-                    let result = controller.send_command(&entry_format);
+                    let result = controller.borrow_mut().send_command(&entry_format);
                     Self::response_write_buffer(result, Rc::clone(&response));
                 });
             }
@@ -192,12 +196,12 @@ impl View {
 
         if let Some(button) = self.buttons.get(button_cmd){
             button.connect_clicked(move |_| {
-                let result = controller.send_command(&git_cmd);
+                let result = controller.borrow_mut().send_command(&git_cmd);
                 Self::response_write_buffer(result, Rc::clone(&response));
             });
         }
     }
-    fn connect_buttons(self) {
+    fn connect_buttons(&mut self) {
         self.connect_button_with_entry(ENTRY_CHECKOUT, BUTTON_CHECKOUT, "git checkout".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_ADD, "git add".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_RM, "git rm".to_string());
@@ -235,17 +239,15 @@ impl View {
 
     }
     pub fn start_view(&mut self) -> Result<(), GitError> {
-        let this = self.clone();
-        this.connect_buttons();
+
+        self.connect_buttons();
 
         self.window.connect_destroy(|_| {
             gtk::main_quit();
         });
 
-        let controller = Rc::clone(&self.controller);
-        let user_name = controller.get_name_client();
-        self.set_label_user(user_name);
-
+        self.set_label_user();
+        
         self.window.show_all();
         gtk::main();
 

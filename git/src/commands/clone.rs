@@ -2,7 +2,7 @@ use std::net::TcpStream;
 use std::path::Path;
 use crate::commands::commit::builder_commit_log;
 use crate::commands::init::git_init;
-use crate::consts::{GIT_DIR, REF_HEADS, DIRECTORY, FILE};
+use crate::consts::{GIT_DIR, REF_HEADS, DIRECTORY, FILE, PARENT_INITIAL};
 use crate::git_transport::git_request::GitRequest;
 use crate::git_transport::references::reference_discovery;
 use crate::git_transport::request_command::RequestCommand;
@@ -47,7 +47,7 @@ pub fn git_clone(
     println!("Clonando repositorio remoto: {}", repo);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
-    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
+    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo.clone(), ip, port);
 
     // Reference Discovery
     let advertised = reference_discovery(socket, message)?;
@@ -63,9 +63,9 @@ pub fn git_clone(
     let count_objects = content.len();
 
     // ARREGLAR EL CONFIG PARA OBTENER EL PATH
-    let path_dir_cloned = Path::new("test_repo");
-    git_init("test_repo")?;
-    let git_dir = format!("{}/{}", "test_repo", GIT_DIR);
+    let path_dir_cloned = Path::new(&repo);
+    git_init(&repo)?;
+    let git_dir = format!("{}/{}", repo, GIT_DIR);
 
     // let references = advertised.get_references();
 
@@ -74,22 +74,19 @@ pub fn git_clone(
         
         if content[i].0.obj_type == ObjectType::Commit {
             let commit_content = read_commit_content(&content[i].1)?;
+            let commit_result = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
             builder_object_commit(&commit_content, &git_dir)?;
 
-            if let Some(refs) = advertised.get_reference(i){
+            if let Some(refs) = advertised.get_reference(i+1){
 
-                // let line_str = String::from_utf8_lossy(line);
-                // let parts: Vec<&str> = line_str.split_whitespace().collect();
-                // let hash: &str = parts[0];
-                // let branch = parts[1];
                 let hash = refs.get_hash();
                 let branch = refs.get_name();
 
                 if let Some(current_branch) = branch.rsplitn(2,'/').next(){
-                    let branch_dir = format!("{}/{}/{}/{}", "test_repo", GIT_DIR, REF_HEADS, current_branch);
+                    let branch_dir = format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
                     create_file(&branch_dir, hash)?;
                 }
-                builder_commit_log("test_repo", &commit_content, hash)?;
+                builder_commit_log(&repo, &commit_result, hash)?;
             }
             i += 1;
     
@@ -136,4 +133,22 @@ fn recovery_tree(tree_content: String,
     }
     Ok(i)
 
+}
+
+fn insert_line_between_lines(original_string: &str, line_number_1: usize, new_line: &str) -> String {
+    let mut result = String::new();
+
+    let lines = original_string.lines();
+
+    for (index, line) in lines.enumerate() {
+        result.push_str(line);
+        result.push('\n');
+        if index + 1 == line_number_1 {
+            let parent_format = format!("parent {}", new_line);
+            result.push_str(&parent_format);
+            result.push('\n');
+        }
+    }
+
+    result
 }

@@ -204,7 +204,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
         };
     }
     if contents.is_empty() {
-        parent_hash = "0000000000000000000000000000000000000000".to_string();
+        parent_hash = PARENT_INITIAL.to_string();
     }else{
         parent_hash = contents;
     }; 

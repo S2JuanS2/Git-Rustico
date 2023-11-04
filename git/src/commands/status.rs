@@ -155,7 +155,7 @@ fn print_changes(
         );
 
         for file in untracked_files_list {
-            let file_path = &file.0[directory.len()..];
+            let file_path = &file.0[directory.len()+1..];
             formatted_result.push_str(&format!("\t{}\n", file_path));
         }
     }
