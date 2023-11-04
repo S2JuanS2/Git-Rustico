@@ -22,7 +22,7 @@ pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args[0] != ALL {
         result = git_add(directory, file_name)?;
     } else {
-        result = git_add_all(directory)?;
+        result = git_add_all(Path::new(directory))?;
     }
     Ok(result)
 }
@@ -30,30 +30,46 @@ pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, GitError> {
 /// Esta función crea todos los objetos y los guarda
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
-pub fn git_add_all(directory: &str) -> Result<String, GitError> {
-    let directory_path = Path::new(directory);
+pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
+    
+    let entries = match fs::read_dir(directory){
+        Ok(entries) => entries,
+        Err(_) => return Err(GitError::ReadDirError),
+    };
 
-    if directory_path.is_dir() {
-        let entries = match fs::read_dir(directory_path) {
-            Ok(entries) => entries,
+    for entry in entries {
+        let entry = match entry{
+            Ok(entry) => entry,
             Err(_) => return Err(GitError::DirEntryError),
         };
 
-        for entry in entries {
-            let entry = entry.map_err(|_| GitError::DirEntryError)?;
-            let path = entry.path();
-
-            if path.is_file() {
-                git_add(directory, &path.to_string_lossy())?;
-            } else if path.is_dir() {
-                let new_directory = directory_path.join(path);
-                git_add_all(&new_directory.to_string_lossy())?;
+        let file_name = entry.file_name();
+        let full_path = entry.path();
+        
+        if full_path.is_file() {
+            let full_path_str = full_path.to_str().ok_or(GitError::PathToStringError)?;
+            let parts: Vec<&str> = full_path_str.split('/').collect();
+            let directory = format!("{}/", parts[0]);
+            if parts.len() >= 3 {
+                let mut dir_format = format!("");
+                for i in 1..parts.len()-1 {
+                    let dir_format_parts = format!("{}/", parts[i]);
+                    dir_format = dir_format + &dir_format_parts;
+                }
+                let file_name_str = file_name.to_string_lossy().to_string();
+                let file_result = format!("{}{}", dir_format, file_name_str);
+                git_add(&directory, &file_result)?;
+            }else{
+                let file_name_str = file_name.to_string_lossy().to_string();
+                git_add(&directory, &file_name_str)?;
+            }
+        }else if full_path.is_dir() {
+            let path_str = file_name.to_str().ok_or(GitError::PathToStringError)?;
+            if !path_str.starts_with("."){
+                git_add_all(&full_path)?;
             }
         }
-    } else {
-        return Err(GitError::DirEntryError);
     }
-
     Ok("Archivos agregados con exito!".to_string())
 }
 
