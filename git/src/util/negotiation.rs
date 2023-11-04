@@ -1,5 +1,5 @@
 use super::{
-    advertised::AdvertisedRefs,
+    advertised::AdvertisedRefLine,
     connections::{send_flush, send_message},
     errors::UtilError,
     pkt_line,
@@ -9,7 +9,7 @@ use std::{io::Read, net::TcpStream};
 
 /// Realiza una solicitud de carga al servidor Git.
 ///
-/// Esta función toma un socket `TcpStream` y una lista de `AdvertisedRefs` que
+/// Esta función toma un socket `TcpStream` y una lista de `AdvertisedRefLine` que
 /// han sido anunciadas por el servidor. Examina cada referencia y, en caso de que
 /// sea una referencia, crea y envía un mensaje "want" al servidor. Estos mensajes "want"
 /// le indican al servidor qué objetos específicos necesita el cliente para completar
@@ -18,7 +18,7 @@ use std::{io::Read, net::TcpStream};
 /// # Argumentos
 ///
 /// - `socket`: Un `TcpStream` abierto para comunicarse con el servidor Git.
-/// - `advertised`: Un vector de `AdvertisedRefs` que contiene las referencias
+/// - `advertised`: Un vector de `AdvertisedRefLine` que contiene las referencias
 /// anunciadas por el servidor.
 ///
 /// # Errores
@@ -33,11 +33,11 @@ use std::{io::Read, net::TcpStream};
 /// Esta función no devuelve ningún valor. Si se completa con éxito, indica que las solicitudes "want" se han enviado al servidor correctamente.
 pub fn upload_request(
     socket: &mut TcpStream,
-    advertised: Vec<AdvertisedRefs>,
+    advertised: Vec<AdvertisedRefLine>,
 ) -> Result<(), UtilError> {
     for a in advertised {
         let message = match a {
-            AdvertisedRefs::Ref {
+            AdvertisedRefLine::Ref {
                 obj_id,
                 ref_name: _,
             } => format!("want {}\n", obj_id),

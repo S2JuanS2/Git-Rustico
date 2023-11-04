@@ -1,26 +1,32 @@
 use std::{net::TcpStream, fs};
 
-use super::{advertised::AdvertisedRefs, errors::UtilError, connections::send_message, pkt_line};
+use super::{advertised::AdvertisedRefLine, errors::UtilError, connections::send_message, pkt_line};
+
+
+pub struct Reference {
+    name: String,
+    hash: String,
+}
 
 /// Realiza un proceso de descubrimiento de referencias (refs) enviando un mensaje al servidor
 /// a través del socket proporcionado, y luego procesa las líneas recibidas para clasificarlas
-/// en una lista de AdvertisedRefs.
+/// en una lista de AdvertisedRefLine.
 ///
 /// # Argumentos
 /// - `socket`: Un TcpStream que representa la conexión con el servidor.
 /// - `message`: Un mensaje que se enviará al servidor.
 ///
 /// # Retorno
-/// Un Result que contiene un vector de AdvertisedRefs si la operación fue exitosa,
+/// Un Result que contiene un vector de AdvertisedRefLine si la operación fue exitosa,
 /// o un error de UtilError en caso contrario.
 pub fn reference_discovery(
     socket: &mut TcpStream,
     message: String,
-) -> Result<(Vec<AdvertisedRefs>, Vec<Vec<u8>>), UtilError> {
+) -> Result<(Vec<AdvertisedRefLine>, Vec<Vec<u8>>), UtilError> {
     send_message(socket, message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(socket)?;
-
-    let refs = AdvertisedRefs::classify_vec(&lines)?;
+    println!("lines: {:?}", lines);
+    let refs = AdvertisedRefLine::classify_vec(&lines)?;
     let filtered_lines: Vec<Vec<u8>> = lines.into_iter().skip(1).collect();
 
     Ok((refs, filtered_lines))
