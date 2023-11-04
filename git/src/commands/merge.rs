@@ -1,21 +1,20 @@
-use crate::commands::cat_file::git_cat_file;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::create_file_replace;
 use std::fs::File;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Read;
 
 use super::branch::get_current_branch;
 use super::checkout::git_checkout_switch;
-// use super::cat_file::git_cat_file;
+use super::cat_file::git_cat_file;
 use super::log::git_log;
 
 /// Esta función se encarga de llamar al comando merge con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función merge
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() != 1 {
         return Err(GitError::InvalidArgumentCountMergeError);
     }
@@ -28,7 +27,7 @@ pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
-pub fn git_merge(directory: &str, branch_name: &str) -> Result<(), GitError> {
+pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError> {
     let current_branch = get_current_branch(directory)?;
 
     let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
@@ -54,9 +53,10 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<(), GitError> {
         Err(_) => return Err(GitError::ReadFileError),
     };
 
+    let mut formatted_result = String::new();
     if current_branch_hash == branch_to_merge_hash || current_branch_hash == branch_name{
-        println!("Already up to date.");
-        return Ok(());
+        formatted_result.push_str("Already up to date.");
+        return Ok(formatted_result);
     }
 
     else {
@@ -71,8 +71,8 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<(), GitError> {
         for commit in log_current_branch.iter() {
             if let Some(last_hash_merge_branch) = log_merge_branch.last() {
                 if commit == last_hash_merge_branch.as_str() {
-                    println!("Already up to date.");
-                    return Ok(());
+                    formatted_result.push_str("Already up to date.");
+                    return Ok(formatted_result);
                 }
             }
         }
@@ -100,14 +100,14 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<(), GitError> {
             // recursive strategy
         }
         else {
-            fast_forward(path_current_branch, branch_to_merge_hash, current_branch_hash, log_merge_branch, directory, branch_name)?;
+            fast_forward(path_current_branch, branch_to_merge_hash, current_branch_hash, log_merge_branch, directory, branch_name, &mut formatted_result)?;
         }
     }
 
-    Ok(())
+    Ok(formatted_result)
 }
 
-fn fast_forward(path_current_branch: String, branch_to_merge_hash: String, current_branch_hash: String, log_merge_branch: Vec<String>, directory: &str, branch_to_merge: &str) -> Result<(), GitError> {
+fn fast_forward(path_current_branch: String, branch_to_merge_hash: String, current_branch_hash: String, log_merge_branch: Vec<String>, directory: &str, branch_to_merge: &str, formatted_result: &mut String) -> Result<(), GitError> {
     for commit in log_merge_branch {
         let content_commit = git_cat_file(directory, &commit, "-p")?;
 
@@ -127,27 +127,20 @@ fn fast_forward(path_current_branch: String, branch_to_merge_hash: String, curre
             let path_file_format = format!("{}/{}", directory, file);
             if let Ok(metadata) = fs::metadata(&path_file_format) {
                 if metadata.is_file() {
-                    compare_files(&path_file_format, &content_file, branch_to_merge)?;
+                    compare_files(&path_file_format, &content_file, branch_to_merge, formatted_result)?;
                 }
             } else {
                 create_file_replace(&path_file_format, &content_file)?;
             };
         }
     }
-    let mut file_current_branch = match File::create(&path_current_branch){
-        Ok(file) => file,
-        Err(_) => return Err(GitError::CreateFileError),
-    };
-    match file_current_branch.write_all(branch_to_merge_hash.as_bytes()) {
-        Ok(_) => (),
-        Err(_) => return Err(GitError::WriteFileError),
-    };
-    println!("Updating {}..{}", current_branch_hash, branch_to_merge_hash);
-    println!("Fast-forward");
+    create_file_replace(&path_current_branch, &branch_to_merge_hash)?;
+    formatted_result.push_str(format!("Updating {}..{}\n", current_branch_hash, branch_to_merge_hash).as_str());
+    formatted_result.push_str("Fast-forward\n");
     Ok(())
 }
 
-fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &str) -> Result<(), GitError> {
+fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &str, formatted_result: &mut String) -> Result<(), GitError> {
     let mut file = match File::open(&path_file_format){
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
@@ -160,9 +153,9 @@ fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &s
     if content_file_local != content_file {
         // CONFLICTO
         check_each_line(path_file_format, content_file_local, content_file, branch_to_merge)?;
-        println!("Auto-merging {}\n", path_file_format);
-        println!("CONFLICT (content): Merge conflict in {}\n", path_file_format);
-        println!("Automatic merge failed; fix conflicts and then commit the result.\n");
+        formatted_result.push_str(format!("Auto-merging {}\n", path_file_format).as_str());
+        formatted_result.push_str(format!("CONFLICT (content): Merge conflict in {}\n", path_file_format).as_str());
+        formatted_result.push_str("Automatic merge failed; fix conflicts and then commit the result.\n");
         return Ok(());
     }
     create_file_replace(path_file_format, content_file)?;
@@ -308,11 +301,11 @@ mod tests {
 
         git_checkout_switch(directory, "main").expect("Error al cambiar de rama");
 
-        git_merge(directory, "new_branch").expect("Error al mergear");
+        let result = git_merge(directory, "new_branch");
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
-        // assert_eq!(branch, "main");
+        assert!(result.is_ok());
     }
 
 }
