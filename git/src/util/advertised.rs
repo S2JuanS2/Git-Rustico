@@ -16,10 +16,10 @@ pub struct AdvertisedRefs {
 impl AdvertisedRefs {
     pub fn new(content: &Vec<Vec<u8>>) -> Result<AdvertisedRefs, UtilError> {
         let classified = AdvertisedRefLine::classify_vec(content)?;
-        Ok(AdvertisedRefs::from_classified(classified))
+        AdvertisedRefs::from_classified(classified)
     }
 
-    fn from_classified(classified: Vec<AdvertisedRefLine>) -> AdvertisedRefs {
+    fn from_classified(classified: Vec<AdvertisedRefLine>) -> Result<AdvertisedRefs, UtilError> {
         let mut version: u8 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
@@ -31,17 +31,17 @@ impl AdvertisedRefs {
                 AdvertisedRefLine::Capabilities(c) => capabilities = c,
                 AdvertisedRefLine::Shallow { obj_id } => shallow.push(obj_id),
                 AdvertisedRefLine::Ref { obj_id, ref_name } => {
-                    references.push(Reference::new(obj_id, ref_name))
+                    references.push(Reference::new(obj_id, ref_name)?)
                 }
             }
         }
 
-        AdvertisedRefs {
+        Ok(AdvertisedRefs {
             version,
             capabilities,
             shallow,
             references,
-        }
+        })
     }
 
     pub fn get_references(&self) -> &Vec<Reference> {

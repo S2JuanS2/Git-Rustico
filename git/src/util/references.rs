@@ -4,27 +4,45 @@ use crate::util::advertised::AdvertisedRefs;
 
 use super::{errors::UtilError, connections::send_message, pkt_line};
 
-
 #[derive(Debug)]
-pub struct Reference {
-    hash: String,
-    name: String,
+pub enum Reference {
+    Tag { hash: String, refname: String },
+    Branch { hash: String, refname: String },
+    Remote { hash: String, refname: String },
+    Head { hash: String, refname: String },
 }
 
 impl Reference {
-    pub fn new(hash: String, name: String) -> Reference {
-        Reference {
-            hash,
-            name,
+    pub fn new(hash: String, name: String) -> Result<Reference, UtilError> {
+        if name == "HEAD" {
+            Ok(Reference::Head { hash, refname: name })
+        } else if name.starts_with("refs/tags/") {
+            Ok(Reference::Tag { hash, refname: name })
+        } else if name.starts_with("refs/heads/") {
+            Ok(Reference::Branch { hash, refname: name })
+        } else if name.starts_with("refs/remotes/") {
+            Ok(Reference::Remote { hash, refname: name })
+        } else {
+            return Err(UtilError::TypeInvalideference);
         }
     }
 
     pub fn get_hash(&self) -> &String {
-        &self.hash
+        match self {
+            Reference::Tag { hash, .. } => hash,
+            Reference::Branch { hash, .. } => hash,
+            Reference::Remote { hash, .. } => hash,
+            Reference::Head { hash, .. } => hash,
+        }
     }
 
     pub fn get_name(&self) -> &String {
-        &self.name
+        match self {
+            Reference::Tag { refname, .. } => refname,
+            Reference::Branch { refname, .. } => refname,
+            Reference::Remote { refname, .. } => refname,
+            Reference::Head { refname, .. } => refname,
+        }
     }
 }
 
@@ -47,8 +65,6 @@ pub fn reference_discovery(
     let lines = pkt_line::read(socket)?;
     println!("lines: {:?}", lines);
     AdvertisedRefs::new(&lines)
-    // let filtered_lines: Vec<Vec<u8>> = lines.into_iter().skip(1).collect();
-    // Ok((refs, filtered_lines))
 }
 
 // A mejorar

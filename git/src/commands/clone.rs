@@ -50,7 +50,7 @@ pub fn git_clone(
     let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
-    let advertised: crate::util::advertised::AdvertisedRefs = reference_discovery(socket, message)?;
+    let advertised = reference_discovery(socket, message)?;
     println!("advertised: {:?}", advertised);
 
     // Packfile Negotiation

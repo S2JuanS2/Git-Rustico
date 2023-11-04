@@ -39,6 +39,7 @@ pub enum UtilError {
     RequestInvalidHostFormat,
     InvalidRequestFlush,
     RepoNotFoundError(String),
+    TypeInvalideference,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -78,6 +79,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::RequestInvalidHostFormat => write!(f, "RequestInvalidHostFormatError: Error al leer la solicitud de línea de paquete. El formato del host es inválido"),
         UtilError::InvalidRequestFlush => write!(f, "InvalidRequestFlushError: Error al leer la solicitud de línea de paquete. La solicitud de flush es inválida"),
         UtilError::RepoNotFoundError(repo) => write!(f, "RepoNotFoundError: No se encontró el repositorio {}", repo),
+        UtilError::TypeInvalideference => write!(f, "TypeInvalideferenceError: Tipo de referencia inválido."),
     }
 }
 
