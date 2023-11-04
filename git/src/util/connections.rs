@@ -4,7 +4,7 @@ use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
 
-use super::advertised::AdvertisedRefLine;
+use super::advertised::AdvertisedRefs;
 use super::errors::UtilError;
 use super::negotiation::receive_nack;
 use super::negotiation::upload_request;
@@ -55,7 +55,7 @@ pub fn start_client(ip: &str) -> Result<TcpStream, UtilError> {
 /// produjo un error (Err) de UtilError.
 pub fn packfile_negotiation(
     socket: &mut TcpStream,
-    advertised: Vec<AdvertisedRefLine>,
+    advertised: &AdvertisedRefs,
 ) -> Result<(), UtilError> {
     upload_request(socket, advertised)?;
     send_done(socket, UtilError::UploadRequestDone)?;

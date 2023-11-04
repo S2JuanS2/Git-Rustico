@@ -1,8 +1,11 @@
 use std::{net::TcpStream, fs};
 
-use super::{advertised::AdvertisedRefLine, errors::UtilError, connections::send_message, pkt_line};
+use crate::util::advertised::AdvertisedRefs;
+
+use super::{errors::UtilError, connections::send_message, pkt_line};
 
 
+#[derive(Debug)]
 pub struct Reference {
     hash: String,
     name: String,
@@ -14,6 +17,14 @@ impl Reference {
             hash,
             name,
         }
+    }
+
+    pub fn get_hash(&self) -> &String {
+        &self.hash
+    }
+
+    pub fn get_name(&self) -> &String {
+        &self.name
     }
 }
 
@@ -31,14 +42,13 @@ impl Reference {
 pub fn reference_discovery(
     socket: &mut TcpStream,
     message: String,
-) -> Result<(Vec<AdvertisedRefLine>, Vec<Vec<u8>>), UtilError> {
+) -> Result<AdvertisedRefs, UtilError> {
     send_message(socket, message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(socket)?;
     println!("lines: {:?}", lines);
-    let refs = AdvertisedRefLine::classify_vec(&lines)?;
-    let filtered_lines: Vec<Vec<u8>> = lines.into_iter().skip(1).collect();
-
-    Ok((refs, filtered_lines))
+    AdvertisedRefs::new(&lines)
+    // let filtered_lines: Vec<Vec<u8>> = lines.into_iter().skip(1).collect();
+    // Ok((refs, filtered_lines))
 }
 
 // A mejorar

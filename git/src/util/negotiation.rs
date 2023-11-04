@@ -1,5 +1,5 @@
 use super::{
-    advertised::AdvertisedRefLine,
+    advertised::AdvertisedRefs,
     connections::{send_flush, send_message},
     errors::UtilError,
     pkt_line,
@@ -33,16 +33,17 @@ use std::{io::Read, net::TcpStream};
 /// Esta función no devuelve ningún valor. Si se completa con éxito, indica que las solicitudes "want" se han enviado al servidor correctamente.
 pub fn upload_request(
     socket: &mut TcpStream,
-    advertised: Vec<AdvertisedRefLine>,
+    advertised: &AdvertisedRefs,
 ) -> Result<(), UtilError> {
-    for a in advertised {
-        let message = match a {
-            AdvertisedRefLine::Ref {
-                obj_id,
-                ref_name: _,
-            } => format!("want {}\n", obj_id),
-            _ => continue,
-        };
+    for refs in advertised.get_references() {
+        // let message = match a {
+        //     AdvertisedRefLine::Ref {
+        //         obj_id,
+        //         ref_name: _,
+        //     } => format!("want {}\n", obj_id),
+        //     _ => continue,
+        // };
+        let message = format!("want {}\n", refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
         send_message(socket, message, UtilError::UploadRequest)?;
     }

@@ -5,6 +5,7 @@ use std::{fmt, vec};
 
 
 
+#[derive(Debug)]
 pub struct AdvertisedRefs {
     pub version: u8,
     pub capabilities: Vec<String>,
@@ -45,6 +46,10 @@ impl AdvertisedRefs {
 
     pub fn get_references(&self) -> &Vec<Reference> {
         &self.references
+    }
+
+    pub fn get_reference(&self, index: usize) -> Option<&Reference> {
+        self.references.get(index)
     }
 }
 
