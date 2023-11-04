@@ -1,6 +1,6 @@
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::create_file_replace;
+use crate::util::files::{create_file_replace, open_file, read_file_string};
 use std::fs::File;
 use std::fs;
 use std::io::Read;
@@ -29,32 +29,16 @@ pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, GitError>
 /// 'branch_name': nombre de la rama a mergear
 pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError> {
     let current_branch = get_current_branch(directory)?;
-
     let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
     let path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
 
-    let mut current_branch_file = match File::open(&path_current_branch){
-        Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
-    };
-    let mut current_branch_hash: String = String::new();
-    match current_branch_file.read_to_string(&mut current_branch_hash){
-        Ok(file) => file,
-        Err(_) => return Err(GitError::ReadFileError),
-    };
-
-    let mut merge_branch_file = match File::open(path_branch_to_merge){
-        Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
-    };
-    let mut branch_to_merge_hash: String = String::new();
-    match merge_branch_file.read_to_string(&mut branch_to_merge_hash){
-        Ok(file) => file,
-        Err(_) => return Err(GitError::ReadFileError),
-    };
+    let current_branch_file = open_file(&path_current_branch)?;
+    let current_branch_hash = read_file_string(current_branch_file)?;
+    let merge_branch_file = open_file(&path_branch_to_merge)?;
+    let branch_to_merge_hash = read_file_string(merge_branch_file)?;
 
     let mut formatted_result = String::new();
-    if current_branch_hash == branch_to_merge_hash || current_branch_hash == branch_name{
+    if current_branch_hash == branch_to_merge_hash || current_branch_hash == branch_name {
         formatted_result.push_str("Already up to date.");
         return Ok(formatted_result);
     }
@@ -65,57 +49,75 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
         git_checkout_switch(directory, branch_name)?;
         let log_merge_branch = git_log(directory)?;
         let log_merge_branch = get_commits_from_log(log_merge_branch);
-        
         git_checkout_switch(directory, &current_branch)?;
         
-        for commit in log_current_branch.iter() {
-            if let Some(last_hash_merge_branch) = log_merge_branch.last() {
-                if commit == last_hash_merge_branch.as_str() {
-                    formatted_result.push_str("Already up to date.");
-                    return Ok(formatted_result);
-                }
-            }
-        }
+        check_if_current_is_up_to_date(&log_current_branch, &log_merge_branch, &mut formatted_result);
         let first_commit_current_branch = &log_current_branch[0];
         let first_commit_merge_branch = &log_merge_branch[0];
         let root_parent_current_branch = git_cat_file(directory, first_commit_current_branch, "-p")?;
         let root_parent_merge_branch = git_cat_file(directory, first_commit_merge_branch, "-p")?;
-        let mut hash_parent_current = "0000000000000000000000000000000000000000";
-        let mut hash_parent_merge = "0000000000000000000000000000000000000000";
-        for line in root_parent_current_branch.lines() {
-            if line.starts_with("parent ") {
-                if let Some(hash) = line.strip_prefix("parent ") {
-                    hash_parent_current = hash;
-                }
-            }
-        }
-        for line in root_parent_merge_branch.lines() {
-            if line.starts_with("parent ") {
-                if let Some(hash) = line.strip_prefix("parent ") {
-                    hash_parent_merge = hash;
-                }
-            }
-        }
-        let strategy = merge_branches(hash_parent_current, hash_parent_merge, log_merge_branch, directory, branch_name)?;
-        if strategy.1 == "conflict" {
-            formatted_result.push_str(format!("Auto-merging {}\n", path_current_branch).as_str());
-            formatted_result.push_str(format!("CONFLICT (content): Merge conflict in {}\n", path_current_branch).as_str());
-            formatted_result.push_str("Automatic merge failed; fix conflicts and then commit the result.\n");
-        }
-        else if strategy.0 == "fast-forward" {
-            formatted_result.push_str(format!("Updating {}..{}\n", current_branch_hash, branch_to_merge_hash).as_str());
-            formatted_result.push_str("Fast-forward\n");
-            create_file_replace(&path_current_branch, &branch_to_merge_hash)?;
-        }
-        else {
-            formatted_result.push_str("Merge made by the 'recursive' strategy.");
-        }
+        let (hash_parent_current, hash_parent_merge) = get_parent_hashes(root_parent_current_branch, root_parent_merge_branch);
+        let strategy = merge_depending_on_strategy(&hash_parent_current, &hash_parent_merge, log_merge_branch, directory, branch_name)?;
+        get_result_depending_on_strategy(strategy, &mut formatted_result, current_branch_hash, branch_to_merge_hash, path_current_branch)?;
     }
 
     Ok(formatted_result)
 }
 
-fn merge_branches(hash_parent_current: &str, hash_parent_merge: &str, log_merge_branch: Vec<String>, directory: &str, branch_to_merge: &str) -> Result<(String, String), GitError> {
+fn get_result_depending_on_strategy(strategy: (String, String), formatted_result: &mut String, current_branch_hash: String, branch_to_merge_hash: String, path_current_branch: String) -> Result<(), GitError> {
+    Ok(if strategy.0 == "recursive" && strategy.1 == "ok" {
+        formatted_result.push_str("Merge made by the 'recursive' strategy.");
+    }
+    else if strategy.0 == "fast-forward" {
+        formatted_result.push_str(format!("Updating {}..{}\n", current_branch_hash, branch_to_merge_hash).as_str());
+        formatted_result.push_str("Fast-forward\n");
+        create_file_replace(&path_current_branch, &branch_to_merge_hash)?;
+    }
+    else {
+        formatted_result.push_str(format!("Auto-merging {}\n", path_current_branch).as_str());
+        formatted_result.push_str(format!("CONFLICT (content): Merge conflict in {}\n", path_current_branch).as_str());
+        formatted_result.push_str("Automatic merge failed; fix conflicts and then commit the result.\n");
+        formatted_result.push_str(format!("Conflict in file:{}\n", strategy.1).as_str());
+    })
+}
+
+fn get_parent_hashes(root_parent_current_branch: String, root_parent_merge_branch: String) -> (String, String) {
+    let mut hash_parent_current = "0000000000000000000000000000000000000000";
+    let mut hash_parent_merge = "0000000000000000000000000000000000000000";
+    for line in root_parent_current_branch.lines() {
+        if line.starts_with("parent ") {
+            if let Some(hash) = line.strip_prefix("parent ") {
+                hash_parent_current = hash;
+            }
+        }
+    }
+    for line in root_parent_merge_branch.lines() {
+        if line.starts_with("parent ") {
+            if let Some(hash) = line.strip_prefix("parent ") {
+                hash_parent_merge = hash;
+            }
+        }
+    }
+    (hash_parent_current.to_string(), hash_parent_merge.to_string())
+}
+
+/// Chequea si la rama actual tiene como commit al ultimo commit de la rama a mergear. En caso de tenerlo,
+/// la rama actual esta mas avanzada que la rama a mergear entonces estaria actualizada.
+/// ###Parametros:
+/// 'log_current_branch': Vector de strings que contiene los commits de la rama actual.
+/// 'log_merge_branch': Vector de strings que contiene los commits de la rama a mergear.
+/// 'formatted_result': String que contiene el resultado formateado del merge.
+fn check_if_current_is_up_to_date(log_current_branch: &Vec<String>, log_merge_branch: &Vec<String>, formatted_result: &mut String) {
+    for commit in log_current_branch.iter() {
+        if let Some(last_hash_merge_branch) = log_merge_branch.last() {
+            if commit == last_hash_merge_branch.as_str() {
+                formatted_result.push_str("Already up to date.");
+            }
+        }
+    }
+}
+
+fn merge_depending_on_strategy(hash_parent_current: &str, hash_parent_merge: &str, log_merge_branch: Vec<String>, directory: &str, branch_to_merge: &str) -> Result<(String, String), GitError> {
     let mut strategy: (String, String) = ("".to_string(), "".to_string());
     for commit in log_merge_branch {
         let content_commit = git_cat_file(directory, &commit, "-p")?;
@@ -169,9 +171,9 @@ fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &s
     };
     if content_file_local != content_file {
         // CONFLICTO
-        check_each_line(path_file_format, content_file_local, content_file, branch_to_merge)?;
+        let path_conflict = check_each_line(path_file_format, content_file_local, content_file, branch_to_merge)?;
         strategy.0 = "recursive".to_string();
-        strategy.1 = "conflict".to_string();
+        strategy.1 = path_conflict;
     } 
     else {
         // NO CONFLICTO
@@ -198,7 +200,7 @@ fn get_commits_from_log(log: String) -> Vec<String> {
     commit_hashes
 }
 
-fn check_each_line(path_file_format: &str, content_file_local: String, content_file: &str, branch_to_merge: &str) -> Result<(), GitError> {
+fn check_each_line(path_file_format: &str, content_file_local: String, content_file: &str, branch_to_merge: &str) -> Result<String, GitError> {
     let mut content_file_local_lines = content_file_local.lines();
     let mut content_file_lines = content_file.lines();
     let mut line_local = content_file_local_lines.next();
@@ -230,7 +232,7 @@ fn check_each_line(path_file_format: &str, content_file_local: String, content_f
         line = content_file_lines.next();
     }
     create_file_replace(path_file_format, &new_content_file)?;
-    Ok(())
+    Ok(path_file_format.to_string())
 }
 
 #[cfg(test)]
@@ -319,7 +321,98 @@ mod tests {
         );
         git_commit(directory, test_commit2).expect("Error al commitear");
 
-        git_checkout_switch(directory, "main").expect("Error al cambiar de rama");
+        git_checkout_switch(directory, "master").expect("Error al cambiar de rama");
+
+        let result = git_merge(directory, "new_branch");
+
+        fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn git_merge_recursive_test(){
+        let directory = "./repo_test_recursive";
+        git_init(directory).expect("Error al iniciar el repositorio");
+
+        let file_path = format!("{}/{}", directory, "tocommitinmaster.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "tocommitinnew1.txt");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2.write_all(b"Otro archivo a commitear")
+            .expect("Error al escribir en el archivo");
+
+        let file_path3 = format!("{}/{}", directory, "tocommitinnew2.txt");
+        let mut file = fs::File::create(&file_path3).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear 2")
+            .expect("Error al escribir en el archivo");
+
+        let file_path4 = format!("{}/{}", directory, "tocommitinotra.txt");
+        let mut file = fs::File::create(&file_path4).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear 3")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "tocommitinmaster.txt").expect("Error al agregar el archivo");
+
+        let test_commit1 = Commit::new(
+            "prueba".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+        git_commit(directory, test_commit1).expect("Error al commitear");
+
+        git_branch_create(directory, "new_branch").expect("Error al crear la rama");
+
+        git_branch_create(directory, "otra_mas").expect("Error al crear la rama");
+        
+        git_checkout_switch(directory, "new_branch").expect("Error al cambiar de rama");
+
+        git_add(directory, "tocommitinnew1.txt").expect("Error al agregar el archivo");
+
+        let test_commit3 = Commit::new(
+            "aa".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit3).expect("Error al commitear");
+
+        git_add(directory, "tocommitinnew2.txt").expect("Error al agregar el archivo");
+
+        let test_commit5 = Commit::new(
+            "bb".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit5).expect("Error al commitear");
+
+        git_checkout_switch(directory, "otra_mas").expect("Error al cambiar de rama");
+
+        let file_path4 = format!("{}/{}", directory, "tocommitinnew2.txt");
+        let mut file = fs::File::create(&file_path4).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear 232")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "tocommitinnew2.txt").expect("Error al agregar el archivo");
+
+        let test_commit2 = Commit::new(
+            "prueba otra".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+        git_commit(directory, test_commit2).expect("Error al commitear");
 
         let result = git_merge(directory, "new_branch");
 
