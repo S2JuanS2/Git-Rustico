@@ -30,4 +30,7 @@ impl Client {
     pub fn get_directory_path(&self) -> &str {
         &self.directory_path
     }
+    pub fn set_directory_path(&mut self, new_path: String) {
+        self.directory_path = new_path;
+    }
 }

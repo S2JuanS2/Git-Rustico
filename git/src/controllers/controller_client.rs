@@ -28,8 +28,8 @@ impl Controller {
     pub fn new(client: Client) -> Controller {
         Controller { client }
     }
-    pub fn send_command(&self, command: &str) -> Result<String, GitError> {
-        let result = match handle_command(command.to_string().clone(), self.client.clone()) {
+    pub fn send_command(&mut self, command: &str) -> Result<String, GitError> {
+        let result = match handle_command(command.to_string().clone(), &mut self.client) {
             Ok(result) => result,
             Err(e) => {
                 write_client_log(self.client.get_directory_path(), e.message().to_string())?;
@@ -47,9 +47,8 @@ impl Controller {
 /// Esta función se encarga de llamar a al comando adecuado con los parametros necesarios
 /// ###Parametros:
 /// 'buffer': String que contiene el comando que se le pasara al servidor
-fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
+fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitError> {
     let command = buffer.trim();
-    let directory = client.get_directory_path().to_string();
     let commands = command.split_whitespace().collect::<Vec<&str>>();
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
 
@@ -59,8 +58,6 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
         return Err(GitError::NonGitCommandError);
     }
 
-    write_client_log(client.get_directory_path(), command.to_string())?;
-
     if command.split_whitespace().count() == 1 {
         return Err(GitError::NonGitCommandError);
     }
@@ -68,52 +65,55 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
     if commands[0] == "git" {
         match commands[1] {
             "branch" => {
-                result = handle_branch(rest_of_command, client)?;
+                result = handle_branch(rest_of_command, client.clone())?;
             }
             "clone" => {
-                result = handle_clone(rest_of_command, client)?;
+                if let Some(path_clone) = rest_of_command.get(0){
+                    client.set_directory_path(path_clone.to_string());
+                }
+                result = handle_clone(rest_of_command, client.clone())?;
             }
             "commit" => {
-                result = handle_commit(rest_of_command, client)?;
+                result = handle_commit(rest_of_command, client.clone())?;
             }
             "init" => {
-                result = handle_init(rest_of_command, client)?;
+                result = handle_init(rest_of_command, client.clone())?;
             }
             "cat-file" => {
-                result = handle_cat_file(rest_of_command, client)?;
+                result = handle_cat_file(rest_of_command, client.clone())?;
             }
             "add" => {
-                result = handle_add(rest_of_command, client)?;
+                result = handle_add(rest_of_command, client.clone())?;
             }
             "checkout" => {
-                result = handle_checkout(rest_of_command, client)?;
+                result = handle_checkout(rest_of_command, client.clone())?;
             }
             "fetch" => {
-                handle_fetch(rest_of_command, client)?;
+                handle_fetch(rest_of_command, client.clone())?;
             }
             "hash-object" => {
-                result = handle_hash_object(rest_of_command, client)?;
+                result = handle_hash_object(rest_of_command, client.clone())?;
             }
             "status" => {
-                result = handle_status(rest_of_command, client)?;
+                result = handle_status(rest_of_command, client.clone())?;
             }
             "log" => {
-                result = handle_log(rest_of_command, client)?;
+                result = handle_log(rest_of_command, client.clone())?;
             }
             "pull" => {
-                handle_pull(rest_of_command, client)?;
+                handle_pull(rest_of_command, client.clone())?;
             }
             "push" => {
-                handle_push(rest_of_command, client)?;
+                handle_push(rest_of_command, client.clone())?;
             }
             "merge" => {
-                result = handle_merge(rest_of_command, client)?;
+                result = handle_merge(rest_of_command, client.clone())?;
             }
             "remote" => {
-                handle_remote(rest_of_command, client)?;
+                handle_remote(rest_of_command, client.clone())?;
             }
             "rm" => {
-                result = handle_rm(rest_of_command, client)?;
+                result = handle_rm(rest_of_command, client.clone())?;
             }
             _ => {
                 return Err(GitError::CommandNotRecognizedError);
@@ -122,6 +122,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
     } else {
         return Err(GitError::NonGitCommandError);
     }
-    write_client_log(&directory, result.clone())?;
+    write_client_log(client.get_directory_path(), command.to_string())?;
+    write_client_log(&client.get_directory_path().to_string(), result.clone())?;
     Ok(result)
 }

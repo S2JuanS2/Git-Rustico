@@ -313,6 +313,7 @@
                 <property name="label" translatable="yes">Pull</property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
@@ -329,6 +330,7 @@
                 <property name="label" translatable="yes">Push</property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
@@ -345,6 +347,7 @@
                 <property name="label" translatable="yes">Fetch</property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
@@ -392,6 +395,7 @@
                 <property name="label" translatable="yes">Remote</property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>

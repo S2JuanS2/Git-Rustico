@@ -85,14 +85,18 @@ fn read_parent_commit(directory: &str, hash_commit: &str) -> Result<(), GitError
     let commit = git_cat_file(directory, &hash_commit, "-p")?;
 
     if let Some(parent_hash) = extract_parent_hash(&commit) {
-        if !(parent_hash == "0000000000000000000000000000000000000000") {
+        if !(parent_hash == PARENT_INITIAL) {
             read_parent_commit(directory, parent_hash)?;
         }
         if let Some(tree_hash) = get_tree_hash(&commit){
             load_files(directory, tree_hash)?;
         };    
     } else {
-        return Err(GitError::GetHashError);
+        if let Some(tree_hash) = get_tree_hash(&commit){
+            load_files(directory, tree_hash)?;
+        }else{
+            return Err(GitError::GetHashError);
+        }; 
     }
     Ok(())
 }

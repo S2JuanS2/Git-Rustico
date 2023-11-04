@@ -25,7 +25,7 @@ pub const CONFIG_PATH_ARG_INDEX: usize = 1;
 pub const LOG_PATH_DEFAULT: &str = "./default.log";
 
 // Path por defecto del src
-pub const SRC_DEFAULT: &str = "test_repo/";
+pub const SRC_DEFAULT: &str = "Repository";
 
 // IP por default
 pub const IP_DEFAULT: &str = "127.0.0.1";
@@ -112,5 +112,7 @@ pub const ALL: &str = ".";
 pub const DIRECTORY: &str = "40000";
 
 pub const FILE: &str = "100644";
+
+pub const PARENT_INITIAL: &str = "0000000000000000000000000000000000000000";
 
 pub const VERSION_DEFAULT: u8 = 1;
