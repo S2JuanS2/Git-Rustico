@@ -1,15 +1,15 @@
 
 use std::fmt;
 use std::io::Read;
+use std::path::Path;
 
 use crate::consts::END_OF_STRING;
-use crate::util::pkt_line::add_length_prefix;
-use crate::util::references::list_references;
+use crate::git_transport::references::Reference;
+use crate::util::errors::UtilError;
+use crate::util::pkt_line::{add_length_prefix, read_pkt_line, read_line_from_bytes};
+use crate::util::validation::join_paths_correctly;
 
-use super::errors::UtilError;
-use super::pkt_line::{read_pkt_line, read_line_from_bytes};
 use super::request_command::RequestCommand;
-use super::validation::is_subdirectory;
 
 
 /// # `GitRequest`
@@ -183,12 +183,16 @@ impl GitRequest {
     pub fn execute(&self, _reader: &mut dyn Read, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
-                if !contains_repository(root, &self.pathname)
+                println!("root: {}", root);
+                println!("pathname: {}", self.pathname);
+                let path_repo = get_path_repository(root, self.pathname.as_str())?;
+                println!("Si tengo el repo!");
+                let references = match Reference::extract_references_from_git(path_repo.as_str())
                 {
-                    return Err(UtilError::RepoNotFoundError(self.pathname.to_string().clone()));
-                }
-                let _refs = list_references(format!("{}/{}", root, self.pathname).as_str())?;
-                // println!("Refs: {:?}", refs);
+                    Ok(references) => references,
+                    Err(_) => return Err(UtilError::ReferencesObtaining)
+                };
+                println!("References: {:?}", references);
                 println!("UploadPack");
                 Ok(())
             }
@@ -269,8 +273,22 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
     ))
 }
 
-fn contains_repository(root: &str, pathname: &str) -> bool {
-    is_subdirectory(root, pathname)
+fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> {
+    let path_repo = join_paths_correctly(root, pathname);
+    let path = Path::new(&path_repo);
+    if !(path.exists() && path.is_dir())
+    {
+        return Err(UtilError::RepoNotFoundError(pathname.to_string()));
+    }
+
+    // Valido si es un repo git
+    let path_git = join_paths_correctly(&path_repo, ".git");
+    let path = Path::new(&path_git);
+    if !(path.exists() && path.is_dir())
+    {
+        return Err(UtilError::RepoNotFoundError(pathname.to_string()));
+    }
+    Ok(path_repo)
 }
 
 

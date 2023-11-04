@@ -474,22 +474,41 @@ pub fn valid_directory_src(path: &str) -> Result<String, GitError>
 /// de lo contrario, devuelve `false`.
 ///
 pub fn is_subdirectory(parent_path: &str, child_name: &str) -> bool {
-    if let Ok(entries) = std::fs::read_dir(parent_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                if let Some(name) = entry.file_name().to_str() {
-                    if name == child_name {
-                        if let Ok(metadata) = entry.metadata() {
-                            if metadata.is_dir() {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    false
+    let parent_path = Path::new(parent_path);
+    let child_path = parent_path.join(child_name);
+    child_path.exists() && child_path.is_dir()
+}
+
+
+/// Combina dos rutas de manera que se asegura la correcta unión de las mismas, eliminando
+/// barras innecesarias o faltantes.
+///
+/// # Argumentos
+///
+/// * `first_path` - La primera parte de la ruta.
+/// * `second_path` - La segunda parte de la ruta que se une a la primera.
+///
+/// # Ejemplo
+///
+/// ```
+/// use git::util::validation::join_paths_correctly;
+/// let joined_path = join_paths_correctly("/path/to/", "file.txt");
+/// assert_eq!(joined_path, "/path/to/file.txt");
+/// ```
+///
+/// # Retorno
+///
+/// Un `String` que representa la combinación de ambas rutas asegurando una correcta unión,
+/// eliminando barras innecesarias o faltantes.
+pub fn join_paths_correctly(first_path: &str, second_path: &str) -> String {
+
+    let second_path = second_path.trim().trim_start_matches('/');
+    let first_path = match first_path.trim().ends_with('/')
+    {
+        true => first_path.to_string(),
+        false => format!("{}{}", first_path, "/"),
+    };
+    format!("{}{}", first_path, second_path)
 }
 
 #[cfg(test)]
@@ -766,5 +785,37 @@ mod tests {
         let child_directory = "files.rs";
         
         assert!(!is_subdirectory(parent_directory, child_directory));
+    }
+
+    #[test]
+    fn test_is_subdirectory_format_double() {
+        let parent_directory = "../";
+        let child_directory = "commands";
+        
+        assert!(is_subdirectory(parent_directory, child_directory));
+    }
+
+    #[test]
+    fn test_join_paths_when_both_have_slashes() {
+        let result = join_paths_correctly("/path/to/", "/file.txt");
+        assert_eq!(result, "/path/to/file.txt".to_string());
+    }
+
+    #[test]
+    fn test_join_paths_when_second_has_slash() {
+        let result = join_paths_correctly("/path/to", "/file.txt");
+        assert_eq!(result, "/path/to/file.txt".to_string());
+    }
+
+    #[test]
+    fn test_join_paths_when_first_has_slash() {
+        let result = join_paths_correctly("/path/to/", "file.txt");
+        assert_eq!(result, "/path/to/file.txt".to_string());
+    }
+
+    #[test]
+    fn test_join_paths_when_neither_have_slashes() {
+        let result = join_paths_correctly("/path/to", "file.txt");
+        assert_eq!(result, "/path/to/file.txt".to_string());
     }
 }

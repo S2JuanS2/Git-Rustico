@@ -1,11 +1,8 @@
-use super::{
-    advertised::AdvertisedRefs,
-    connections::{send_flush, send_message},
-    errors::UtilError,
-    pkt_line,
-};
-use crate::consts::NACK;
+
+use crate::{consts::NACK, util::{errors::UtilError, pkt_line, connections::{send_message, send_flush}}};
 use std::{io::Read, net::TcpStream};
+
+use super::advertised::AdvertisedRefs;
 
 /// Realiza una solicitud de carga al servidor Git.
 ///
