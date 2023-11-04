@@ -30,11 +30,39 @@ pub struct AdvertisedRefs {
 }
 
 impl AdvertisedRefs {
+    /// Crea una nueva estructura `AdvertisedRefs` a partir del contenido proporcionado.
+    ///
+    /// # Descripción
+    /// Esta función toma un vector de vectores de bytes (`content`) y lo clasifica en líneas
+    /// de referencia anunciadas (`AdvertisedRefLine`). Luego, crea una nueva estructura `AdvertisedRefs`
+    /// llamando al método `from_classified`.
+    ///
+    /// # Argumentos
+    /// * `content` - Un vector de vectores de bytes que representan las referencias anunciadas.
+    ///
+    /// # Retorno
+    /// Devuelve un `Result` que contiene la estructura `AdvertisedRefs` si la operación es exitosa,
+    /// o un error de `UtilError` si ocurre algún problema durante el proceso.
+    /// 
     pub fn new(content: &Vec<Vec<u8>>) -> Result<AdvertisedRefs, UtilError> {
         let classified = AdvertisedRefLine::classify_vec(content)?;
         AdvertisedRefs::from_classified(classified)
     }
 
+    /// Construye una estructura `AdvertisedRefs` a partir de líneas de referencia clasificadas.
+    ///
+    /// # Descripción
+    /// Esta función toma un vector de líneas de referencia clasificadas (`classified`) y extrae
+    /// información para construir una instancia de `AdvertisedRefs`. Se asignan los valores de la
+    /// versión, capacidades, referencias superficiales y referencias del conjunto de líneas clasificadas.
+    ///
+    /// # Argumentos
+    /// * `classified` - Vector de líneas de referencia clasificadas a partir del contenido recibido.
+    ///
+    /// # Retorno
+    /// Devuelve un `Result` que contiene la estructura `AdvertisedRefs` si la operación es exitosa,
+    /// o un error de `UtilError` si ocurre algún problema durante el proceso.
+    /// 
     fn from_classified(classified: Vec<AdvertisedRefLine>) -> Result<AdvertisedRefs, UtilError> {
         let mut version: u8 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
@@ -60,10 +88,31 @@ impl AdvertisedRefs {
         })
     }
 
+    /// Obtiene una referencia a la lista de referencias disponibles en `AdvertisedRefs`.
+    ///
+    /// # Descripción
+    /// Devuelve una referencia al vector que contiene las referencias disponibles.
+    ///
+    /// # Retorno
+    /// Devuelve una referencia al vector que contiene las referencias disponibles.
+    /// 
     pub fn get_references(&self) -> &Vec<Reference> {
         &self.references
     }
 
+    /// Obtiene una referencia a una referencia específica en la lista por su índice.
+    ///
+    /// # Descripción
+    /// Toma un índice como argumento y devuelve una referencia a la referencia en esa posición
+    /// dentro del vector de referencias. Devuelve `None` si el índice está fuera de rango.
+    ///
+    /// # Argumentos
+    /// * `index` - Índice de la referencia que se quiere obtener.
+    ///
+    /// # Retorno
+    /// Devuelve una referencia a la referencia en la posición especificada si existe,
+    /// de lo contrario, devuelve `None`.
+    /// 
     pub fn get_reference(&self, index: usize) -> Option<&Reference> {
         self.references.get(index)
     }
