@@ -48,14 +48,14 @@ pub fn start_client(ip: &str) -> Result<TcpStream, UtilError> {
 ///
 /// # Argumentos
 /// - `socket`: Un TcpStream que representa la conexión con el servidor.
-/// - `advertised`: Un vector de AdvertisedRefs que contiene las referencias anunciadas por el servidor.
+/// - `advertised`: Un vector de AdvertisedRefLine que contiene las referencias anunciadas por el servidor.
 ///
 /// # Retorno
 /// Un Result que indica si la negociación del paquete se realizó con éxito (Ok) o si se
 /// produjo un error (Err) de UtilError.
 pub fn packfile_negotiation(
     socket: &mut TcpStream,
-    advertised: Vec<AdvertisedRefs>,
+    advertised: &AdvertisedRefs,
 ) -> Result<(), UtilError> {
     upload_request(socket, advertised)?;
     send_done(socket, UtilError::UploadRequestDone)?;

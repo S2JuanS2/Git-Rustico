@@ -50,10 +50,11 @@ pub fn git_clone(
     let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
-    let advertised = reference_discovery(socket, message)?;
+    let advertised: crate::util::advertised::AdvertisedRefs = reference_discovery(socket, message)?;
+    println!("advertised: {:?}", advertised);
 
     // Packfile Negotiation
-    packfile_negotiation(socket, advertised.0)?;
+    packfile_negotiation(socket, &advertised)?;
 
     // Packfile Data
     let content = receive_packfile(socket)?;
@@ -66,6 +67,8 @@ pub fn git_clone(
     git_init("test_repo")?;
     let git_dir = format!("{}/{}", "test_repo", GIT_DIR);
 
+    // let references = advertised.get_references();
+
     let mut i = 0;
     while i < count_objects {
         
@@ -73,12 +76,14 @@ pub fn git_clone(
             let commit_content = read_commit_content(&content[i].1)?;
             builder_object_commit(&commit_content, &git_dir)?;
 
-            if let Some(line) = advertised.1.get(i){
+            if let Some(refs) = advertised.get_reference(i){
 
-                let line_str = String::from_utf8_lossy(line);
-                let parts: Vec<&str> = line_str.split_whitespace().collect();
-                let hash = parts[0];
-                let branch = parts[1];
+                // let line_str = String::from_utf8_lossy(line);
+                // let parts: Vec<&str> = line_str.split_whitespace().collect();
+                // let hash: &str = parts[0];
+                // let branch = parts[1];
+                let hash = refs.get_hash();
+                let branch = refs.get_name();
 
                 if let Some(current_branch) = branch.rsplitn(2,'/').next(){
                     let branch_dir = format!("{}/{}/{}/{}", "test_repo", GIT_DIR, REF_HEADS, current_branch);

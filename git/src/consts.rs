@@ -112,3 +112,5 @@ pub const ALL: &str = ".";
 pub const DIRECTORY: &str = "40000";
 
 pub const FILE: &str = "100644";
+
+pub const VERSION_DEFAULT: u8 = 1;
