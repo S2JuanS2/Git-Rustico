@@ -1,6 +1,6 @@
 use std::{net::TcpStream, fs, path::Path, io};
 
-use crate::util::{errors::UtilError, connections::send_message, pkt_line};
+use crate::util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly};
 
 use super::advertised::AdvertisedRefs;
 
@@ -53,8 +53,9 @@ impl Reference {
 
 
     pub fn extract_references_from_git(path: &str) -> Result<Vec<(String, String)>, io::Error> {
+        let path = join_paths_correctly(path, ".git");
         let mut references: Vec<(String, String)> = Vec::new();
-        let refs = Path::new(path).join("refs");
+        let refs = Path::new(&path).join("refs");
         let refs_branch = refs.join("heads");
         let _refs_tag = refs.join("tags");
         let _refs_remote = refs.join("remotes");

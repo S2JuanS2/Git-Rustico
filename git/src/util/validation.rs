@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, fs};
+use std::{path::Path, fs};
 
 use crate::{consts::*, errors::GitError};
 
