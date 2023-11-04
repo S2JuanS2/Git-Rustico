@@ -1,4 +1,4 @@
-use std::{net::TcpStream, fs};
+use std::{net::TcpStream, fs, path::Path, io};
 
 use crate::util::{errors::UtilError, connections::send_message, pkt_line};
 
@@ -51,6 +51,29 @@ impl Reference {
         }
     }
 
+
+    pub fn extract_references_from_git(path: &str) -> Result<Vec<(String, String)>, io::Error> {
+        let mut references: Vec<(String, String)> = Vec::new();
+        let refs = Path::new(path).join("refs");
+        let refs_branch = refs.join("heads");
+        let _refs_tag = refs.join("tags");
+        let _refs_remote = refs.join("remotes");
+        
+        for entry in fs::read_dir(refs_branch)? {
+            if let Ok(entry) = entry {
+                let entry_path = entry.path();
+                if !entry_path.is_file() {
+                    continue;
+                }
+                let name = entry_path.as_path().display().to_string();
+                if let Ok(hash) = fs::read_to_string(entry_path) {
+                    references.push((hash.trim().to_string(), name));
+                }
+            }
+        }
+        Ok(references)
+    }
+
     pub fn get_hash(&self) -> &String {
         &self.hash
     }
@@ -88,25 +111,25 @@ pub fn reference_discovery(
 
 // A mejorar
 // El packet-ref deberia eliminar esto
-pub fn list_references(repo_path: &str) -> Result<Vec<String>, UtilError> {
-    let mut references: Vec<String> = Vec::new();
+// pub fn list_references(repo_path: &str) -> Result<Vec<String>, UtilError> {
+//     let mut references: Vec<String> = Vec::new();
 
-    let refs_dir = format!("{}/.git/refs", repo_path);
+//     let refs_dir = format!("{}/.git/refs", repo_path);
 
-    if let Ok(entries) = fs::read_dir(refs_dir) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                if let Some(file_name) = entry.file_name().to_str() {
-                    if file_name.starts_with("heads/") || file_name.starts_with("tags/") {
-                        references.push(file_name.to_string());
-                    }
-                }
-            }
-        }
-    }
+//     if let Ok(entries) = fs::read_dir(refs_dir) {
+//         for entry in entries {
+//             if let Ok(entry) = entry {
+//                 if let Some(file_name) = entry.file_name().to_str() {
+//                     if file_name.starts_with("heads/") || file_name.starts_with("tags/") {
+//                         references.push(file_name.to_string());
+//                     }
+//                 }
+//             }
+//         }
+//     }
 
-    Ok(references)
-}
+//     Ok(references)
+// }
 
 #[cfg(test)]
 mod tests {

@@ -1,11 +1,11 @@
 use git::config::Config;
 use git::errors::GitError;
+use git::git_transport::git_request::GitRequest;
 use git::util::connections::start_server;
 use git::util::logger::{
     get_client_signature, handle_log_file, log_client_connect,
     log_message, log_client_disconnection_error, log_client_disconnection_success,
 };
-use git::util::git_request::GitRequest;
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};

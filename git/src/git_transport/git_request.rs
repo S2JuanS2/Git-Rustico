@@ -3,7 +3,7 @@ use std::fmt;
 use std::io::Read;
 
 use crate::consts::END_OF_STRING;
-use crate::git_transport::references::list_references;
+use crate::git_transport::references::Reference;
 use crate::util::errors::UtilError;
 use crate::util::pkt_line::{add_length_prefix, read_pkt_line, read_line_from_bytes};
 use crate::util::validation::is_subdirectory;
@@ -182,12 +182,20 @@ impl GitRequest {
     pub fn execute(&self, _reader: &mut dyn Read, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
+                println!("root: {}", root);
+                println!("pathname: {}", self.pathname);
+                // let path_repo = format!("{}/{}", root, self.pathname);
                 if !contains_repository(root, &self.pathname)
                 {
                     return Err(UtilError::RepoNotFoundError(self.pathname.to_string().clone()));
                 }
-                let _refs = list_references(format!("{}/{}", root, self.pathname).as_str())?;
-                // println!("Refs: {:?}", refs);
+                println!("Si tengo el repo!");
+                let references = match Reference::extract_references_from_git(format!("{}/{}", root, self.pathname).as_str())
+                {
+                    Ok(references) => references,
+                    Err(_) => return Err(UtilError::ReferencesObtaining)
+                };
+                println!("References: {:?}", references);
                 println!("UploadPack");
                 Ok(())
             }

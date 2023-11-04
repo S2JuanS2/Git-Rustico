@@ -40,6 +40,7 @@ pub enum UtilError {
     InvalidRequestFlush,
     RepoNotFoundError(String),
     TypeInvalideference,
+    ReferencesObtaining,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -80,6 +81,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidRequestFlush => write!(f, "InvalidRequestFlushError: Error al leer la solicitud de línea de paquete. La solicitud de flush es inválida"),
         UtilError::RepoNotFoundError(repo) => write!(f, "RepoNotFoundError: No se encontró el repositorio {}", repo),
         UtilError::TypeInvalideference => write!(f, "TypeInvalideferenceError: Tipo de referencia inválido."),
+        UtilError::ReferencesObtaining => write!(f, "ReferencesObtainingError: Error al obtener las referencias del repositorio."),
     }
 }
 

@@ -474,22 +474,25 @@ pub fn valid_directory_src(path: &str) -> Result<String, GitError>
 /// de lo contrario, devuelve `false`.
 ///
 pub fn is_subdirectory(parent_path: &str, child_name: &str) -> bool {
-    if let Ok(entries) = std::fs::read_dir(parent_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                if let Some(name) = entry.file_name().to_str() {
-                    if name == child_name {
-                        if let Ok(metadata) = entry.metadata() {
-                            if metadata.is_dir() {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    false
+    let parent_path = Path::new(parent_path);
+    let child_path = parent_path.join(child_name);
+    child_path.exists() && child_path.is_dir()
+    // if let Ok(entries) = std::fs::read_dir(parent_path) {
+    //     for entry in entries {
+    //         if let Ok(entry) = entry {
+    //             if let Some(name) = entry.file_name().to_str() {
+    //                 if name == child_name {
+    //                     if let Ok(metadata) = entry.metadata() {
+    //                         if metadata.is_dir() {
+    //                             return true;
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    // false
 }
 
 #[cfg(test)]
