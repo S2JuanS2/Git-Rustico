@@ -3,6 +3,9 @@ use std::path::Path;
 use crate::commands::commit::builder_commit_log;
 use crate::commands::init::git_init;
 use crate::consts::{GIT_DIR, REF_HEADS, DIRECTORY, FILE, PARENT_INITIAL};
+use crate::git_transport::git_request::GitRequest;
+use crate::git_transport::references::reference_discovery;
+use crate::git_transport::request_command::RequestCommand;
 use crate::util::files::{create_directory, create_file_replace, create_file};
 use crate::util::objects::{read_tree_content, read_blob_content, 
     read_commit_content, builder_object_blob, builder_object_commit, builder_object_tree_clone};
@@ -12,9 +15,6 @@ use crate::models::client::Client;
 use crate::util::connections::{
     packfile_negotiation, receive_packfile, start_client,
 };
-use crate::util::git_request::GitRequest;
-use crate::util::references::reference_discovery;
-use crate::util::request_command::RequestCommand;
 
 /// Esta función se encarga de llamar a al comando clone con los parametros necesarios
 /// ###Parametros:
@@ -50,7 +50,7 @@ pub fn git_clone(
     let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo.clone(), ip, port);
 
     // Reference Discovery
-    let advertised: crate::util::advertised::AdvertisedRefs = reference_discovery(socket, message)?;
+    let advertised = reference_discovery(socket, message)?;
     println!("advertised: {:?}", advertised);
 
     // Packfile Negotiation

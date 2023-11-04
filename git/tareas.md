@@ -11,3 +11,6 @@
 ## commands
 
 - Corregir nombres de errores.
+
+## No aceptamos aun
+- Ref Tag y remotes
