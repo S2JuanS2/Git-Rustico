@@ -23,7 +23,7 @@ pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, GitError>
     git_merge(directory, branch_name)
 }
 
-/// ejecuta la accion de merge en el repositorio local
+/// Ejecuta la accion de merge en el repositorio local
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
@@ -96,18 +96,27 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
                 }
             }
         }
-        if hash_parent_current == hash_parent_merge {
-            // recursive strategy
+        let strategy = merge_branches(hash_parent_current, hash_parent_merge, log_merge_branch, directory, branch_name)?;
+        if strategy.1 == "conflict" {
+            formatted_result.push_str(format!("Auto-merging {}\n", path_current_branch).as_str());
+            formatted_result.push_str(format!("CONFLICT (content): Merge conflict in {}\n", path_current_branch).as_str());
+            formatted_result.push_str("Automatic merge failed; fix conflicts and then commit the result.\n");
+        }
+        else if strategy.0 == "fast-forward" {
+            formatted_result.push_str(format!("Updating {}..{}\n", current_branch_hash, branch_to_merge_hash).as_str());
+            formatted_result.push_str("Fast-forward\n");
+            create_file_replace(&path_current_branch, &branch_to_merge_hash)?;
         }
         else {
-            fast_forward(path_current_branch, branch_to_merge_hash, current_branch_hash, log_merge_branch, directory, branch_name, &mut formatted_result)?;
+            formatted_result.push_str("Merge made by the 'recursive' strategy.");
         }
     }
 
     Ok(formatted_result)
 }
 
-fn fast_forward(path_current_branch: String, branch_to_merge_hash: String, current_branch_hash: String, log_merge_branch: Vec<String>, directory: &str, branch_to_merge: &str, formatted_result: &mut String) -> Result<(), GitError> {
+fn merge_branches(hash_parent_current: &str, hash_parent_merge: &str, log_merge_branch: Vec<String>, directory: &str, branch_to_merge: &str) -> Result<(String, String), GitError> {
+    let mut strategy: (String, String) = ("".to_string(), "".to_string());
     for commit in log_merge_branch {
         let content_commit = git_cat_file(directory, &commit, "-p")?;
 
@@ -125,22 +134,30 @@ fn fast_forward(path_current_branch: String, branch_to_merge_hash: String, curre
             let hash_blob = line.split_whitespace().skip(2).take(1).collect::<String>();
             let content_file = git_cat_file(directory, &hash_blob, "-p")?;
             let path_file_format = format!("{}/{}", directory, file);
-            if let Ok(metadata) = fs::metadata(&path_file_format) {
-                if metadata.is_file() {
-                    compare_files(&path_file_format, &content_file, branch_to_merge, formatted_result)?;
-                }
-            } else {
+            if hash_parent_current == hash_parent_merge {
+                // RECURSIVE STRATEGY: me falta hacer el merge commit
+                if let Ok(metadata) = fs::metadata(&path_file_format) {
+                    if metadata.is_file() {
+                        compare_files(&path_file_format, &content_file, branch_to_merge, &mut strategy)?;
+                    }
+                } else {
+                    create_file_replace(&path_file_format, &content_file)?;
+                    strategy.0 = "recursive".to_string();
+                    strategy.1 = "ok".to_string();
+                };
+            }
+            else {
+                // FAST-FORWARD STRATEGY
                 create_file_replace(&path_file_format, &content_file)?;
-            };
+                strategy.0 = "fast-forward".to_string();
+                strategy.1 = "ok".to_string();
+            }
         }
     }
-    create_file_replace(&path_current_branch, &branch_to_merge_hash)?;
-    formatted_result.push_str(format!("Updating {}..{}\n", current_branch_hash, branch_to_merge_hash).as_str());
-    formatted_result.push_str("Fast-forward\n");
-    Ok(())
+    Ok(strategy)
 }
 
-fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &str, formatted_result: &mut String) -> Result<(), GitError> {
+fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &str, strategy: &mut (String, String)) -> Result<(), GitError> {
     let mut file = match File::open(&path_file_format){
         Ok(file) => file,
         Err(_) => return Err(GitError::OpenFileError),
@@ -153,12 +170,15 @@ fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &s
     if content_file_local != content_file {
         // CONFLICTO
         check_each_line(path_file_format, content_file_local, content_file, branch_to_merge)?;
-        formatted_result.push_str(format!("Auto-merging {}\n", path_file_format).as_str());
-        formatted_result.push_str(format!("CONFLICT (content): Merge conflict in {}\n", path_file_format).as_str());
-        formatted_result.push_str("Automatic merge failed; fix conflicts and then commit the result.\n");
-        return Ok(());
+        strategy.0 = "recursive".to_string();
+        strategy.1 = "conflict".to_string();
+    } 
+    else {
+        // NO CONFLICTO
+        create_file_replace(path_file_format, content_file)?;
+        strategy.0 = "recursive".to_string();
+        strategy.1 = "ok".to_string();
     }
-    create_file_replace(path_file_format, content_file)?;
     Ok(())
 }
 
