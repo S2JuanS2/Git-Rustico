@@ -107,7 +107,7 @@ fn handle_command(buffer: String, client: Client) -> Result<String, GitError> {
                 handle_push(rest_of_command, client)?;
             }
             "merge" => {
-                handle_merge(rest_of_command, client)?;
+                result = handle_merge(rest_of_command, client)?;
             }
             "remote" => {
                 handle_remote(rest_of_command, client)?;
