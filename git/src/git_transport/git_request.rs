@@ -3,13 +3,12 @@ use std::fmt;
 use std::io::Read;
 
 use crate::consts::END_OF_STRING;
-use crate::util::pkt_line::add_length_prefix;
-use crate::util::references::list_references;
+use crate::git_transport::references::list_references;
+use crate::util::errors::UtilError;
+use crate::util::pkt_line::{add_length_prefix, read_pkt_line, read_line_from_bytes};
+use crate::util::validation::is_subdirectory;
 
-use super::errors::UtilError;
-use super::pkt_line::{read_pkt_line, read_line_from_bytes};
 use super::request_command::RequestCommand;
-use super::validation::is_subdirectory;
 
 
 /// # `GitRequest`

@@ -1,8 +1,9 @@
 use std::{net::TcpStream, fs};
 
-use crate::util::advertised::AdvertisedRefs;
+use crate::util::{errors::UtilError, connections::send_message, pkt_line};
 
-use super::{errors::UtilError, connections::send_message, pkt_line};
+use super::advertised::AdvertisedRefs;
+
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ReferenceType {

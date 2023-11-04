@@ -1,6 +1,7 @@
 use std::fmt;
 
-use super::errors::UtilError;
+use crate::util::errors::UtilError;
+
 
 /// Enumeración `RequestCommand` representa los comandos de solicitud en un protocolo Git.
 ///

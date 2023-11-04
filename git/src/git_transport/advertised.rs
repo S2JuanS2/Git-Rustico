@@ -1,10 +1,26 @@
-use crate::consts::VERSION_DEFAULT;
+use crate::{consts::VERSION_DEFAULT, util::{errors::UtilError, validation::is_valid_obj_id}};
 
-use super::{errors::UtilError, validation::is_valid_obj_id, references::Reference};
 use std::{fmt, vec};
 
+use super::references::Reference;
 
 
+
+/// Representa las referencias anunciadas recibidas durante una operación de fetch/push en Git.
+///
+/// Esta estructura encapsula la información sobre las referencias anunciadas por un servidor Git
+/// en respuesta a operaciones de fetch o push. Proporciona detalles sobre las capacidades soportadas,
+/// las referencias superficiales y las referencias disponibles en el repositorio en el servidor.
+///
+/// Esto es particularmente útil en el contexto de una implementación de servidor Git que utiliza
+/// el protocolo de transporte de Git, donde el servidor responde con referencias anunciadas durante
+/// las solicitudes de los clientes, como las operaciones de fetch o push.
+/// Explicacion de los miembros
+/// - `version`: La versión del protocolo Git que el servidor admite.
+/// - `capabilities`: Una lista de capacidades soportadas por el servidor.
+/// - `shallow`: Una lista de referencias superficiales.
+/// - `references`: Una lista de referencias disponibles en el repositorio del servidor.
+/// 
 #[derive(Debug)]
 pub struct AdvertisedRefs {
     pub version: u8,
