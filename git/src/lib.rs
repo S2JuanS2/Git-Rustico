@@ -13,3 +13,5 @@ pub mod views;
 pub mod controllers;
 
 pub mod models;
+
+pub mod git_transport;

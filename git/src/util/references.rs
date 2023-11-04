@@ -4,47 +4,65 @@ use crate::util::advertised::AdvertisedRefs;
 
 use super::{errors::UtilError, connections::send_message, pkt_line};
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum ReferenceType {
+    Tag,
+    Branch,
+    Remote,
+    Head,
+}
+
 #[derive(Debug)]
-pub enum Reference {
-    Tag { hash: String, refname: String },
-    Branch { hash: String, refname: String },
-    Remote { hash: String, refname: String },
-    Head { hash: String, refname: String },
+pub struct Reference {
+    hash: String,
+    refname: String,
+    reference_type: ReferenceType,
 }
 
 impl Reference {
     pub fn new(hash: String, name: String) -> Result<Reference, UtilError> {
         if name == "HEAD" {
-            Ok(Reference::Head { hash, refname: name })
+            Ok(Reference {
+                hash,
+                refname: name,
+                reference_type: ReferenceType::Head,
+            })
         } else if name.starts_with("refs/tags/") {
-            Ok(Reference::Tag { hash, refname: name })
+            Ok(Reference {
+                hash,
+                refname: name,
+                reference_type: ReferenceType::Tag,
+            })
         } else if name.starts_with("refs/heads/") {
-            Ok(Reference::Branch { hash, refname: name })
+            Ok(Reference {
+                hash,
+                refname: name,
+                reference_type: ReferenceType::Branch,
+            })
         } else if name.starts_with("refs/remotes/") {
-            Ok(Reference::Remote { hash, refname: name })
+            Ok(Reference {
+                hash,
+                refname: name,
+                reference_type: ReferenceType::Remote,
+            })
         } else {
             return Err(UtilError::TypeInvalideference);
         }
     }
 
     pub fn get_hash(&self) -> &String {
-        match self {
-            Reference::Tag { hash, .. } => hash,
-            Reference::Branch { hash, .. } => hash,
-            Reference::Remote { hash, .. } => hash,
-            Reference::Head { hash, .. } => hash,
-        }
+        &self.hash
     }
 
     pub fn get_name(&self) -> &String {
-        match self {
-            Reference::Tag { refname, .. } => refname,
-            Reference::Branch { refname, .. } => refname,
-            Reference::Remote { refname, .. } => refname,
-            Reference::Head { refname, .. } => refname,
-        }
+        &self.refname
+    }
+
+    pub fn get_type(&self) -> &ReferenceType {
+        &self.reference_type
     }
 }
+
 
 /// Realiza un proceso de descubrimiento de referencias (refs) enviando un mensaje al servidor
 /// a través del socket proporcionado, y luego procesa las líneas recibidas para clasificarlas
@@ -87,4 +105,90 @@ pub fn list_references(repo_path: &str) -> Result<Vec<String>, UtilError> {
     }
 
     Ok(references)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_head_reference() {
+        let result = Reference::new("some_hash".to_string(), "HEAD".to_string());
+        assert!(result.is_ok());
+
+        if let Ok(reference) = result {
+            assert_eq!(reference.get_name(), &"HEAD".to_string());
+            assert_eq!(*reference.get_type(), ReferenceType::Head);
+        }
+    }
+
+    #[test]
+    fn test_create_tag_reference() {
+        let result = Reference::new("some_hash".to_string(), "refs/tags/version-1.0".to_string());
+        assert!(result.is_ok());
+
+        if let Ok(reference) = result {
+            assert_eq!(reference.get_name(), &"refs/tags/version-1.0".to_string());
+            assert_eq!(*reference.get_type(), ReferenceType::Tag);
+        }
+    }
+
+    #[test]
+    fn test_create_branch_reference() {
+        let result = Reference::new("some_hash".to_string(), "refs/heads/main".to_string());
+        assert!(result.is_ok());
+
+        if let Ok(reference) = result {
+            assert_eq!(reference.get_name(), &"refs/heads/main".to_string());
+            assert_eq!(*reference.get_type(), ReferenceType::Branch);
+        }
+    }
+
+    #[test]
+    fn test_create_remote_reference() {
+        let result = Reference::new("some_hash".to_string(), "refs/remotes/origin/main".to_string());
+        assert!(result.is_ok());
+
+        if let Ok(reference) = result {
+            assert_eq!(reference.get_name(), &"refs/remotes/origin/main".to_string());
+            assert_eq!(*reference.get_type(), ReferenceType::Remote);
+        }
+    }
+
+    #[test]
+    fn test_create_invalid_reference() {
+        let result = Reference::new("some_hash".to_string(), "invalid_reference".to_string());
+        assert!(result.is_err());
+    }
+
+
+    #[test]
+    fn test_get_hash() {
+        let reference = Reference {
+            hash: "some_hash".to_string(),
+            refname: "refs/heads/main".to_string(),
+            reference_type: ReferenceType::Branch,
+        };
+        assert_eq!(*reference.get_hash(), "some_hash".to_string());
+    }
+
+    #[test]
+    fn test_get_name() {
+        let reference = Reference {
+            hash: "some_hash".to_string(),
+            refname: "refs/tags/version-1.0".to_string(),
+            reference_type: ReferenceType::Tag,
+        };
+        assert_eq!(*reference.get_name(), "refs/tags/version-1.0".to_string());
+    }
+
+    #[test]
+    fn test_get_type() {
+        let reference = Reference {
+            hash: "some_hash".to_string(),
+            refname: "refs/remotes/origin/main".to_string(),
+            reference_type: ReferenceType::Remote,
+        };
+        assert_eq!(*reference.get_type(), ReferenceType::Remote);
+    }
 }
