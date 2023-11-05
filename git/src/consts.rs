@@ -74,15 +74,22 @@ pub const LENGTH_PREFIX_SIZE: usize = 4;
 //
 pub const FLUSH_PKT: &str = "0000";
 
-pub const DONE: &str = "0009done\n";
+pub const PKT_DONE: &str = "0009done\n";
 
-pub const NACK: &str = "0008NAK\n";
+pub const DONE: &str = "done";
+
+pub const PKT_NACK: &str = "0008NAK\n";
 
 pub const PACK_SIGNATURE: &str = "PACK";
 
 pub const SPACE: u8 = 32;
 
 pub const NULL: u8 = 0;
+
+// const MY_STR_ARRAY: [&'static str; 4] = ["HOLA", "CHAU", "COMO", "ESTAS"];
+
+pub const CAPABILITIES_SERVER: [&'static str; 0] = [];
+
 
 // Directorios
 pub const GIT_DIR: &str = ".git";
@@ -96,6 +103,16 @@ pub const INDEX: &str = "index";
 pub const HEAD_POINTER_REF: &str = "ref: /refs/heads/";
 
 pub const REF_HEADS: &str = "refs/heads";
+
+pub const REFS: &str = "refs";
+
+pub const REFS_HEADS: &str = "refs/heads";
+
+pub const REFS_REMOTES: &str = "refs/remotes";
+
+pub const REFS_TAGS: &str = "refs/tags";
+
+pub const DIR_REFS: &str = "refs";
 
 pub const DIR_OBJECTS: &str = "objects";
 

@@ -41,6 +41,14 @@ pub enum UtilError {
     RepoNotFoundError(String),
     TypeInvalideference,
     ReferencesObtaining,
+    HeadFolderNotFound,
+    InvalidHeadReferenceFormat,
+    HeadHashNotFound,
+    FlushNotSentDiscoveryReferences,
+    VersionNotSentDiscoveryReferences,
+    UnexpectedRequestNotWant,
+    InvalidRequestFormat(String),
+    NegociacionExpectedDone,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -82,6 +90,14 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::RepoNotFoundError(repo) => write!(f, "RepoNotFoundError: No se encontró el repositorio {}", repo),
         UtilError::TypeInvalideference => write!(f, "TypeInvalideferenceError: Tipo de referencia inválido."),
         UtilError::ReferencesObtaining => write!(f, "ReferencesObtainingError: Error al obtener las referencias del repositorio."),
+        UtilError::HeadFolderNotFound => write!(f, "HeadFolderNotFoundError: No se encontró el directorio HEAD."),
+        UtilError::InvalidHeadReferenceFormat => write!(f, "InvalidHeadReferenceFormatError: Formato de referencia HEAD inválido."),
+        UtilError::HeadHashNotFound => write!(f, "HeadHashNotFoundError: No se encontró el hash del HEAD."),
+        UtilError::FlushNotSentDiscoveryReferences => write!(f, "FlushNotSentDiscoveryReferencesError: No se envió el flush para la solicitud de descubrimiento de referencias."),
+        UtilError::VersionNotSentDiscoveryReferences => write!(f, "VersionNotSentDiscoveryReferencesError: No se envió la versión para la solicitud de descubrimiento de referencias."),
+        UtilError::UnexpectedRequestNotWant => write!(f, "UnexpectedRequestNotWantError: Se recibió una solicitud inesperada que no es want."),
+        UtilError::InvalidRequestFormat(request) => write!(f, "InvalidRequestFormatError: Formato de solicitud inválido: {}", request),
+        UtilError::NegociacionExpectedDone => write!(f, "NegociacionExpectedDoneError: Se esperaba un done en la negociación."),
     }
 }
 

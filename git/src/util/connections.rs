@@ -1,8 +1,9 @@
-use crate::consts::DONE;
+use crate::consts::PKT_DONE;
 use crate::consts::FLUSH_PKT;
 use crate::git_transport::advertised::AdvertisedRefs;
 use crate::git_transport::negotiation::receive_nack;
 use crate::git_transport::negotiation::upload_request;
+use std::io::Read;
 use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
@@ -131,14 +132,26 @@ pub fn send_flush(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilEr
 /// Un Result que indica si el envío del mensaje "done" se realizó con éxito (Ok) o si se
 /// produjo un error (Err) de UtilError.
 pub fn send_done(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilError> {
-    send_message(socket, DONE.to_string(), error)
+    send_message(socket, PKT_DONE.to_string(), error)
 }
 
+pub fn received_message(stream: &mut dyn Read, message: &str, error: UtilError) -> Result<(), UtilError> {
+    let mut buffer = vec![0u8; message.len()];
+    if stream.read_exact(&mut buffer).is_err() {
+        return Err(UtilError::PackfileNegotiationReceiveNACK);
+    }
+    let response = String::from_utf8_lossy(&buffer);
+
+    if response != message {
+        return Err(error);
+    }
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::consts::FLUSH_PKT;
+    use crate::consts::{FLUSH_PKT, PKT_NACK};
     use std::io::Cursor;
 
     #[test]
@@ -166,5 +179,33 @@ mod tests {
         let written_data = socket.into_inner();
         let received_flush_pkt = String::from_utf8_lossy(&written_data);
         assert_eq!(received_flush_pkt, FLUSH_PKT);
+    }
+
+    #[test]
+    fn test_received_message_success() {
+        let message = PKT_NACK;
+        let mut stream = Cursor::new(message.as_bytes().to_vec());
+
+        let result = received_message(&mut stream, message, UtilError::GenericError);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_received_message_fail_response() {
+        let message = "Test message";
+        let response = "Different message";
+        let mut stream = Cursor::new(response.as_bytes().to_vec());
+
+        let result = received_message(&mut stream, message, UtilError::GenericError);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_received_message_fail_buffer_read() {
+        let message = "Test message";
+        let mut stream = Cursor::new(vec![]); // Simulate an empty stream
+
+        let result = received_message(&mut stream, message, UtilError::GenericError);
+        assert!(result.is_err());
     }
 }

@@ -1,6 +1,6 @@
-use crate::{consts::VERSION_DEFAULT, util::{errors::UtilError, validation::is_valid_obj_id}};
+use crate::{consts::VERSION_DEFAULT, util::{errors::UtilError, validation::is_valid_obj_id, connections::{send_flush, send_message}, pkt_line}};
 
-use std::{fmt, vec};
+use std::{fmt, vec, io::Write};
 
 use super::references::Reference;
 
@@ -115,6 +115,39 @@ impl AdvertisedRefs {
     /// 
     pub fn get_reference(&self, index: usize) -> Option<&Reference> {
         self.references.get(index)
+    }
+
+    pub fn create_from_path(path_repo: &str, version: u8, capabilities: Vec<String>) -> Result<AdvertisedRefs, UtilError>
+    {
+        let references = Reference::extract_references_from_git(path_repo)?;
+        Ok(AdvertisedRefs { version, capabilities, shallow: Vec::new(), references })
+    }
+
+    pub fn send_references(&self, writer: &mut dyn Write) -> Result<(), UtilError>
+    {
+        // Send version
+        let version = format!("version {}\n", self.version);
+        let version = pkt_line::add_length_prefix(&version, version.len());
+        send_message(writer, version, UtilError::VersionNotSentDiscoveryReferences)?;
+
+        // Send references
+        // HEAD lo inserte 1ero en el vector
+        for reference in &self.references {
+            let reference = format!("{} {}\n", reference.get_hash(), reference.get_name());
+            let reference = pkt_line::add_length_prefix(&reference, reference.len());
+            println!("Sending reference: {}", reference);
+            send_message(writer, reference, UtilError::ReferencesObtaining)?;
+        }
+
+        // Send shallow
+        // for shallow in &self.shallow {
+        //     let shallow = format!("shallow {}\n", shallow);
+        //     let shallow = pkt_line::add_length_prefix(&shallow, shallow.len());
+        //     send_message(writer, shallow, UtilError::ReferencesObtaining)?;
+        // }
+
+        send_flush(writer, UtilError::FlushNotSentDiscoveryReferences)?;
+        Ok(())
     }
 }
 

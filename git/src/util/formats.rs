@@ -7,7 +7,19 @@ use sha1::{Digest, Sha1};
 use std::fs::File;
 use std::io::{Read, Write};
 
-/// Dado un contenido, genera el valor hash
+/// Dado un contenido en bytes, genera el valor hash
+/// ###Parametros:
+/// 'content': contenido del que se creará el hash
+pub fn hash_generate_with_bytes(content: Vec<u8>) -> String {
+    let mut hasher = Sha1::new();
+    hasher.update(content);
+    let result = hasher.finalize();
+    let hash_commit = format!("{:x}", result);
+
+    hash_commit
+}
+
+/// Dado un contenido en caracteres, genera el valor hash
 /// ###Parametros:
 /// 'content': contenido del que se creará el hash
 pub fn hash_generate(content: &str) -> String {
@@ -17,6 +29,31 @@ pub fn hash_generate(content: &str) -> String {
     let hash_commit = format!("{:x}", result);
 
     hash_commit
+}
+
+/// Dado un contenido lo comprime y lo guarda en un archivo
+/// ###Parametros:
+/// 'store': contenido que se comprimirá
+/// 'file_object': archivo donde se guardará el contenido comprimido
+pub fn compressor_object_with_bytes(store: Vec<u8>, mut file_object: File) -> Result<(), GitError> {
+    let mut compressor = ZlibEncoder::new(Vec::new(), Compression::default());
+
+    match compressor.write_all(&store) {
+        Ok(_) => (),
+        Err(_) => return Err(GitError::ReadFileError),
+    }
+
+    let compressed_bytes = match compressor.finish() {
+        Ok(compressed_bytes) => compressed_bytes,
+        Err(_) => return Err(GitError::ReadFileError),
+    };
+
+    match file_object.write_all(&compressed_bytes) {
+        Ok(_) => (),
+        Err(_) => return Err(GitError::ReadFileError),
+    }
+
+    Ok(())
 }
 
 /// Dado un contenido lo comprime y lo guarda en un archivo

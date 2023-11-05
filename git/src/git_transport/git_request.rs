@@ -1,10 +1,11 @@
 
 use std::fmt;
 use std::io::Read;
+use std::net::TcpStream;
 use std::path::Path;
 
-use crate::consts::END_OF_STRING;
-use crate::git_transport::references::Reference;
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
+use crate::git_transport::advertised::AdvertisedRefs;
 use crate::util::errors::UtilError;
 use crate::util::pkt_line::{add_length_prefix, read_pkt_line, read_line_from_bytes};
 use crate::util::validation::join_paths_correctly;
@@ -180,20 +181,17 @@ impl GitRequest {
         add_length_prefix(&message, len)
     }
     
-    pub fn execute(&self, _reader: &mut dyn Read, root: &str) -> Result<(), UtilError> {
+    pub fn execute(&self, stream: &mut TcpStream, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
-                println!("root: {}", root);
-                println!("pathname: {}", self.pathname);
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
-                println!("Si tengo el repo!");
-                let references = match Reference::extract_references_from_git(path_repo.as_str())
-                {
-                    Ok(references) => references,
-                    Err(_) => return Err(UtilError::ReferencesObtaining)
-                };
-                println!("References: {:?}", references);
-                println!("UploadPack");
+                
+                let advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
+                println!("advertised: {:?}", advertised);
+                advertised.send_references(stream)?;
+                
+                // receive_request(stream, &advertised)?;
+                println!("Fin UploadPack");
                 Ok(())
             }
             RequestCommand::ReceivePack => {
@@ -273,14 +271,27 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
     ))
 }
 
+
+/// Obtiene la ruta del repositorio dado un directorio raíz y un nombre de ruta.
+///
+/// # Argumentos
+///
+/// * `root` - Ruta del directorio raíz.
+/// * `pathname` - Nombre de la ruta del repositorio.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene la ruta del repositorio si la operación es exitosa.
+/// En caso de error, retorna un error de tipo UtilError indicando la no existencia del repositorio.
+/// 
 fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> {
     let path_repo = join_paths_correctly(root, pathname);
     let path = Path::new(&path_repo);
+    println!("{:?}", path);
     if !(path.exists() && path.is_dir())
     {
         return Err(UtilError::RepoNotFoundError(pathname.to_string()));
     }
-
     // Valido si es un repo git
     let path_git = join_paths_correctly(&path_repo, ".git");
     let path = Path::new(&path_git);
