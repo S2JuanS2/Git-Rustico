@@ -138,7 +138,7 @@ pub fn send_packfile(writer: &mut dyn Write, advertised: &AdvertisedRefs) -> Res
     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
 
     // Envio version
-    send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
+    send_bytes(writer, &advertised.version.to_be_bytes(), UtilError::SendSignaturePackfile)?;
     
     
     // 
