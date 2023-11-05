@@ -37,7 +37,6 @@ pub fn upload_request(
         let message = pkt_line::add_length_prefix(&message, message.len());
         send_message(socket, message, UtilError::UploadRequest)?;
     }
-    // println!();
     send_flush(socket, UtilError::UploadRequestFlush)?;
     Ok(())
 }
@@ -71,7 +70,6 @@ fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<St
 
     // Want and capabilities
     let (hash, capacilities) = extraction_capabilities(&lines[0])?;
-    println!("Se extrajo las capacidades correctamente");
     request.push(hash);
 
     // Want
@@ -168,21 +166,22 @@ mod tests {
 
     #[test]
     fn test_extraction_capabilities_valid() {
-        let line = b"want example_hash capability1 capability2 capability3\n".to_vec();
+        let line = b"want 74730d410fcb6603ace96f1dc55ea6196122532d capability1 capability2 capability3\n".to_vec();
         let result = extraction_capabilities(&line);
         assert!(result.is_ok());
         let (hash, capabilities) = result.unwrap();
-        assert_eq!(hash, "example_hash");
+        assert_eq!(hash, "74730d410fcb6603ace96f1dc55ea6196122532d");
         assert_eq!(capabilities, vec!["capability1", "capability2", "capability3"]);
     }
 
     #[test]
     fn test_extraction_capabilities_empty() {
-        let line = b"want example_hash\n".to_vec();
+        let line = b"want 74730d410fcb6603ace96f1dc55ea6196122532d\n".to_vec();
         let result = extraction_capabilities(&line);
+        println!("result: {:?}", result);
         assert!(result.is_ok());
         let (hash, capabilities) = result.unwrap();
-        assert_eq!(hash, "example_hash");
+        assert_eq!(hash, "74730d410fcb6603ace96f1dc55ea6196122532d");
         assert_eq!(capabilities.len(), 0);
     }
 
@@ -195,7 +194,6 @@ mod tests {
         lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
         
         let result = process_received_requests(lines);
-        println!("{:?}", result);
         assert!(result.is_ok());
         let (capabilities, request) = result.unwrap();
 
