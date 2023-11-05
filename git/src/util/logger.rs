@@ -37,10 +37,10 @@ fn send_message_channel(
     }
 }
 
-pub fn write_client_log(directory: &str, content: String) -> Result<(), GitError> {
+pub fn write_client_log(directory: &str, content: String, path_log: &str) -> Result<(), GitError> {
     let dir_path = format!("{}/{}", directory, GIT_DIR);
     create_directory(Path::new(&dir_path))?;
-    let log_path = format!("{}/{}/client.log", directory, GIT_DIR);
+    let log_path = format!("{}/{}/{}", directory, GIT_DIR, path_log);
 
     let file = OpenOptions::new()
         .create(true)

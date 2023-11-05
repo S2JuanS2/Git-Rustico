@@ -18,6 +18,7 @@ fn main() -> Result<(), GitError> {
         config.email,
         address,
         config.src,
+        config.path_log,
     );
 
     let current_src = "./";
