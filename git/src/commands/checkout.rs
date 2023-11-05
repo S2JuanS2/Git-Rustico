@@ -34,7 +34,7 @@ pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, GitErr
     Ok("Rama cambiada con éxito".to_string())
 }
 
-fn get_tree_hash(contenido: &str) -> Option<&str> {
+pub fn get_tree_hash(contenido: &str) -> Option<&str> {
 
     if let Some(pos) = contenido.find("tree ") {
         let start = pos + "tree ".len();
