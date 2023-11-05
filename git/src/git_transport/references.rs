@@ -10,7 +10,7 @@ use crate::{util::{errors::UtilError, connections::send_message, pkt_line, valid
 use super::advertised::AdvertisedRefs;
 
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ReferenceType {
     Tag,
     Branch,
@@ -18,7 +18,7 @@ pub enum ReferenceType {
     Head,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Reference {
     hash: String,
     refname: String,

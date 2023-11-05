@@ -149,7 +149,31 @@ impl AdvertisedRefs {
         send_flush(writer, UtilError::FlushNotSentDiscoveryReferences)?;
         Ok(())
     }
+
+    pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>)
+    {
+        self.capabilities = common_values(self.capabilities.clone(), capabilities);
+        self.references = filtrar_por_refname(self.references.clone(), &references);
+    }
+
 }
+
+fn filtrar_por_refname(references: Vec<Reference>, refnames: &Vec<String>) -> Vec<Reference> {
+    references.into_iter().filter(|reference| refnames.contains(&reference.get_name())).collect()
+}
+
+fn common_values(vec1: Vec<String>, vec2: Vec<String>) -> Vec<String> {
+    let set1: std::collections::HashSet<_> = vec1.into_iter().collect();
+    let set2: std::collections::HashSet<_> = vec2.into_iter().collect();
+
+    set1.intersection(&set2).cloned().collect()
+}
+
+// fn filter_references(advertised, references)
+// {
+
+// }
+
 
 // pub struct Refere
 

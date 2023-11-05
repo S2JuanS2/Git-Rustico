@@ -6,6 +6,7 @@ use std::path::Path;
 
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
 use crate::git_transport::advertised::AdvertisedRefs;
+use crate::git_transport::negotiation::receive_request;
 use crate::util::errors::UtilError;
 use crate::util::pkt_line::{add_length_prefix, read_pkt_line, read_line_from_bytes};
 use crate::util::validation::join_paths_correctly;
@@ -186,11 +187,12 @@ impl GitRequest {
             RequestCommand::UploadPack => {
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
                 
-                let advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
+                let mut advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
                 println!("advertised: {:?}", advertised);
                 advertised.send_references(stream)?;
-                
-                // receive_request(stream, &advertised)?;
+                let (capabilities, references) =  receive_request(stream)?;
+                advertised.update_data(capabilities, references);
+                println!("advertised filter: {:?}", advertised);
                 println!("Fin UploadPack");
                 Ok(())
             }
