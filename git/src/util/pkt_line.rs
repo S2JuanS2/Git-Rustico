@@ -7,7 +7,7 @@ use super::errors::UtilError;
 /// Lee líneas de paquete del flujo de entrada proporcionado y las devuelve como un vector de vectores de bytes.
 ///
 /// Esta función continúa leyendo líneas de paquete del flujo hasta encontrar una línea de paquete vacía,
-/// que indica el final del paquete.
+/// que indica el final del paquete o un done que avisa que la peticion ya termino.
 ///
 /// Cada línea de paquete se lee utilizando la función `read_pkt_line`, que espera que el flujo de entrada
 /// contenga líneas de paquete según el formato de Git.
@@ -29,7 +29,13 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, UtilError> {
     loop {
         match read_pkt_line(stream) {
             Ok(line) => {
+                // FLUSH
                 if line.is_empty() {
+                    return Ok(lines);
+                }
+                // DONE
+                if line == b"done\n" {
+                    lines.push(line);
                     return Ok(lines);
                 }
                 lines.push(line);

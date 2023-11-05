@@ -1,4 +1,4 @@
-use crate::consts::DONE;
+use crate::consts::PKT_DONE;
 use crate::consts::FLUSH_PKT;
 use crate::git_transport::advertised::AdvertisedRefs;
 use crate::git_transport::negotiation::receive_nack;
@@ -131,7 +131,7 @@ pub fn send_flush(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilEr
 /// Un Result que indica si el envío del mensaje "done" se realizó con éxito (Ok) o si se
 /// produjo un error (Err) de UtilError.
 pub fn send_done(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilError> {
-    send_message(socket, DONE.to_string(), error)
+    send_message(socket, PKT_DONE.to_string(), error)
 }
 
 
