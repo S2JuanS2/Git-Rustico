@@ -1,4 +1,4 @@
-use std::{net::TcpStream, fs, path::Path, io};
+use std::{net::TcpStream, fs, path::{Path, PathBuf}};
 
 use crate::util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly};
 
@@ -52,28 +52,36 @@ impl Reference {
     }
 
 
-    pub fn extract_references_from_git(path: &str) -> Result<Vec<(String, String)>, io::Error> {
-        let path = join_paths_correctly(path, ".git");
-        let mut references: Vec<(String, String)> = Vec::new();
-        let refs = Path::new(&path).join("refs");
-        let refs_branch = refs.join("heads");
-        let _refs_tag = refs.join("tags");
-        let _refs_remote = refs.join("remotes");
+    pub fn extract_references_from_git(root: &str) -> Result<Vec<Reference>, UtilError> {
+        println!("extract_references_from_git");
+        let path_git = join_paths_correctly(root, ".git");
         
-        for entry in fs::read_dir(refs_branch)? {
-            if let Ok(entry) = entry {
-                let entry_path = entry.path();
-                if !entry_path.is_file() {
-                    continue;
-                }
-                let name = entry_path.as_path().display().to_string();
-                if let Ok(hash) = fs::read_to_string(entry_path) {
-                    references.push((hash.trim().to_string(), name));
-                }
-            }
+        let path = Path::new(&path_git).join("refs");
+        let refs_branch = extract_references_from_path(Path::new(path.as_os_str()).join("heads"), "refs/heads")?;
+        let refs_tag = extract_references_from_path(Path::new(path.as_os_str()).join("tags"), "refs/tags")?;
+        let refs_remote = extract_references_from_path(Path::new(path.as_os_str()).join("remotes"), "refs/remotes")?;
+        
+        let mut refs = Vec::new();
+        refs.extend(refs_branch);
+        refs.extend(refs_tag);
+        refs.extend(refs_remote);
+
+        println!("Buscare Head");
+        let path_head = Path::new(&path_git).join("HEAD");
+        println!("Path head: {:?}", path_head);
+        if let Ok(hash) = fs::read_to_string(path_head)
+        {
+            let head = match extract_reference_head(&hash)
+            {
+                Some(h) => h,
+                None => return Ok(refs),
+            };
+            println!("HEAD - hash: {}", head);
         }
-        Ok(references)
+        Ok(refs)
     }
+
+
 
     pub fn get_hash(&self) -> &String {
         &self.hash
@@ -110,27 +118,52 @@ pub fn reference_discovery(
     AdvertisedRefs::new(&lines)
 }
 
-// A mejorar
-// El packet-ref deberia eliminar esto
-// pub fn list_references(repo_path: &str) -> Result<Vec<String>, UtilError> {
-//     let mut references: Vec<String> = Vec::new();
 
-//     let refs_dir = format!("{}/.git/refs", repo_path);
+fn extract_references_from_path(path_root: PathBuf, path_relative: &str) -> Result<Vec<Reference>, UtilError>
+{
+    let mut references = Vec::new();
+    let names_refs = get_files_in_directory(&path_root);
+    for name in names_refs {
+        let path = Path::new(&path_root).join(&name);
+        if let Ok(hash) = fs::read_to_string(path) {
+            let name_ref = format!("{}/{}", path_relative, name);
+            let refs = Reference::new(hash.trim().to_string(), name_ref)?;
+            println!("Refs: {:?}", refs);
+            references.push(refs);
+        }
+    }
+    Ok(references)
+}
 
-//     if let Ok(entries) = fs::read_dir(refs_dir) {
-//         for entry in entries {
-//             if let Ok(entry) = entry {
-//                 if let Some(file_name) = entry.file_name().to_str() {
-//                     if file_name.starts_with("heads/") || file_name.starts_with("tags/") {
-//                         references.push(file_name.to_string());
-//                     }
-//                 }
-//             }
-//         }
-//     }
+fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
+    let mut files: Vec<String> = Vec::new();
 
-//     Ok(references)
-// }
+    if let Ok(entries) = fs::read_dir(directory_path) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(file_name) = path.file_name() {
+                        if let Some(name) = file_name.to_str() {
+                            files.push(name.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    files
+}
+
+fn extract_reference_head(line: &str) -> Option<&str> {
+    let trimmed_line = line.trim();
+    if let Some(reference) = trimmed_line.splitn(2, ' ').nth(1) {
+        Some(reference)
+    } else {
+        None
+    }
+}
 
 #[cfg(test)]
 mod tests {
