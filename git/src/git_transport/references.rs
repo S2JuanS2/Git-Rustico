@@ -1,8 +1,11 @@
 use std::{net::TcpStream, fs, path::Path, io};
 
+use crate::commands::checkout::get_tree_hash;
+use crate::errors::GitError;
 use crate::util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly};
 use crate::commands::branch::get_current_branch;
-use crate::util::files::{open_file, read_file_string};
+use crate::commands::cat_file::git_cat_file;
+use crate::util::files::{open_file, read_file, read_file_string};
 use crate::consts::{GIT_DIR, REF_HEADS};
 use super::advertised::AdvertisedRefs;
 
@@ -88,6 +91,43 @@ impl Reference {
     pub fn get_type(&self) -> &ReferenceType {
         &self.reference_type
     }
+}
+
+fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError> {
+
+    let path_object = format!("{}/{}/objects/{}/{}", directory, GIT_DIR, &hash_object[..2], &hash_object[2..]);
+    let file_object = open_file(&path_object).expect("Error");
+    let content_object = read_file(file_object).expect("Error");
+
+    Ok(content_object)
+}
+
+fn get_objects(directory: &str) -> Result<Vec<Vec<u8>>, GitError> {
+
+    let mut objects: Vec<Vec<u8>> = vec![];
+
+    let current_branch = get_current_branch(directory)?;
+    let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, current_branch);
+    let file_current_branch = open_file(&branch_current_path)?;
+    let hash_commit_current_branch = read_file_string(file_current_branch)?;
+
+    objects.push(get_content(directory, &hash_commit_current_branch)?);
+
+    let content_commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
+    let tree_hash = get_tree_hash(&content_commit).expect("Error");
+
+    objects.push(get_content(directory, tree_hash)?);
+    
+    let tree_content = git_cat_file(directory, tree_hash, "-p")?;
+
+    for line in tree_content.lines() {
+
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let hash_blob = parts[2];
+        objects.push(get_content(directory, hash_blob)?);
+    }
+ 
+    Ok(objects)
 }
 
 fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
@@ -229,5 +269,10 @@ mod tests {
             reference_type: ReferenceType::Remote,
         };
         assert_eq!(*reference.get_type(), ReferenceType::Remote);
+    }
+
+    #[test]
+    fn test(){
+        get_objects("Repository").expect("Error");
     }
 }
