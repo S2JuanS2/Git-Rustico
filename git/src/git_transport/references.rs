@@ -4,7 +4,7 @@ use crate::errors::GitError;
 use crate::commands::branch::get_current_branch;
 use crate::commands::cat_file::git_cat_file;
 use crate::util::files::{open_file, read_file, read_file_string};
-
+use crate::util::objects::ObjectType;
 use crate::{util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly}, consts::{GIT_DIR, REF_HEADS, REFS_REMOTES, REFS_TAGS, HEAD}};
 
 use super::advertised::AdvertisedRefs;
@@ -110,31 +110,41 @@ fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError>
     Ok(content_object)
 }
 
-fn get_objects(directory: &str) -> Result<Vec<Vec<u8>>, GitError> {
+fn get_objects(directory: &str, references: Vec<Reference>) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
 
-    let mut objects: Vec<Vec<u8>> = vec![];
-
-    let current_branch = get_current_branch(directory)?;
-    let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, current_branch);
-    let file_current_branch = open_file(&branch_current_path)?;
-    let hash_commit_current_branch = read_file_string(file_current_branch)?;
-
-    objects.push(get_content(directory, &hash_commit_current_branch)?);
-
-    let content_commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
-    let tree_hash = get_tree_hash(&content_commit).expect("Error");
-
-    objects.push(get_content(directory, tree_hash)?);
+    let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
     
-    let tree_content = git_cat_file(directory, tree_hash, "-p")?;
+    for reference in references.iter(){
+        let parts: Vec<&str> = reference.get_name().split('/').collect();
+        let branch = parts.last().map_or("", |&x| x);
+        let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
+        let file_current_branch = open_file(&branch_current_path)?;
+        let hash_commit_current_branch = read_file_string(file_current_branch)?;
+        
+        let mut object_commit:(ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
+        object_commit.1 = get_content(directory, &hash_commit_current_branch)?;
 
-    for line in tree_content.lines() {
+        objects.push(object_commit);
+    
+        let content_commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
+        if let Some(tree_hash) = get_tree_hash(&content_commit){
 
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        let hash_blob = parts[2];
-        objects.push(get_content(directory, hash_blob)?);
+            let mut object_tree:(ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+            object_tree.1 = get_content(directory, &tree_hash)?;
+    
+            objects.push(object_tree);
+            
+            let tree_content = git_cat_file(directory, tree_hash, "-p")?;
+            for line in tree_content.lines() {
+        
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                let hash_blob = parts[2];
+                let mut object_blob:(ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
+                object_blob.1 = get_content(directory, &hash_blob)?;
+                objects.push(object_blob);
+            }         
+        };
     }
- 
     Ok(objects)
 }
 
@@ -401,7 +411,10 @@ mod tests {
     }
 
     #[test]
-    fn test(){
-        get_objects("Repository").expect("Error");
+    fn test_get_object(){
+        let references = vec![Reference::new("123123".to_string(), "refs/heads/master".to_string()).expect("Error")];
+        let result = get_objects("Repository", references);
+
+        assert!(result.is_ok());
     }
 }
