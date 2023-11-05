@@ -101,7 +101,11 @@ pub fn get_index_content(directory_git: &String) -> Result<String, GitError> {
 /// 'updated_files_list': vector con los nombres de los archivos que se modificaron.
 /// 'untracked_files_list': vector con los nombres de los archivos que no estan en el staging area.
 /// 'directory': directorio del repositorio local.
-fn print_changes(index_files_list: Vec<String>, untracked_files_list: Vec<(String, String)>, directory: &str) -> Result<String, GitError> {
+fn print_changes(
+    index_files_list: Vec<String>,
+    untracked_files_list: Vec<(String, String)>,
+    directory: &str,
+) -> Result<String, GitError> {
     let mut formatted_result = String::new();
     let head_branch_name = get_head_branch(directory)?;
 
@@ -125,16 +129,19 @@ fn print_changes(index_files_list: Vec<String>, untracked_files_list: Vec<(Strin
 /// 'formatted_result': string con el resultado del status formateado.
 /// 'untracked_files_list': vector con los nombres de los archivos que no estan en el staging area.
 /// 'directory': directorio del repositorio local.
-fn branch_with_untracked_files(formatted_result: &mut String, untracked_files_list: Vec<(String, String)>, directory: &str) {
+fn branch_with_untracked_files(
+    formatted_result: &mut String,
+    untracked_files_list: Vec<(String, String)>,
+    directory: &str,
+) {
     formatted_result.push_str("\nChanges not staged for commit:\n");
-    formatted_result
-        .push_str("  (use \"git add <file>...\" to update what will be committed)\n");
+    formatted_result.push_str("  (use \"git add <file>...\" to update what will be committed)\n");
     formatted_result.push_str(
         "  (use \"git checkout -- <file>...\" to discard changes in working directory)\n",
     );
 
     for file in untracked_files_list {
-        let file_path = &file.0[directory.len()+1..];
+        let file_path = &file.0[directory.len() + 1..];
         formatted_result.push_str(&format!("\t{}\n", file_path));
     }
 }
@@ -143,7 +150,10 @@ fn branch_with_untracked_files(formatted_result: &mut String, untracked_files_li
 /// ###Parámetros:
 /// 'formatted_result': string con el resultado del status formateado.
 /// 'index_files_list': vector con los nombres de los archivos que estan en el staging area
-fn branch_missing_commits(formatted_result: &mut String, index_files_list: Vec<String>) -> Result<(), GitError> {
+fn branch_missing_commits(
+    formatted_result: &mut String,
+    index_files_list: Vec<String>,
+) -> Result<(), GitError> {
     formatted_result.push_str("\nChanges to be committed:\n");
     formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
 
@@ -243,15 +253,15 @@ fn visit_objects_dir(dir: &Path, hash_list: &mut Vec<String>) -> Result<(), GitE
 /// 'path': path de la entrada en objects.
 fn get_full_hash_in_objects(directory: &Path, path: PathBuf) -> String {
     let mut hash_first_part = "";
-    if let Some(hash_first) = directory.file_name(){
-        if let Some(name_str) = hash_first.to_str(){
+    if let Some(hash_first) = directory.file_name() {
+        if let Some(name_str) = hash_first.to_str() {
             hash_first_part = name_str;
         };
     };
 
     let mut hash_second_part = "";
-    if let Some(hash_second) = path.file_name(){
-        if let Some(name_str) = hash_second.to_str(){
+    if let Some(hash_second) = path.file_name() {
+        if let Some(name_str) = hash_second.to_str() {
             hash_second_part = name_str;
         };
     };
@@ -265,7 +275,10 @@ fn get_full_hash_in_objects(directory: &Path, path: PathBuf) -> String {
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
-pub fn calculate_directory_hashes(directory: &str, hash_list: &mut HashMap<String, String>) -> Result<(), GitError> {
+pub fn calculate_directory_hashes(
+    directory: &str,
+    hash_list: &mut HashMap<String, String>,
+) -> Result<(), GitError> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
         Err(_) => return Err(GitError::ReadDirError),
@@ -294,20 +307,22 @@ pub fn calculate_directory_hashes(directory: &str, hash_list: &mut HashMap<Strin
 /// ###Parámetros:
 /// 'path': path del archivo.
 /// 'hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
-fn create_hash_working_dir(path: PathBuf, hash_list: &mut HashMap<String, String>) -> Result<(), GitError> {
+fn create_hash_working_dir(
+    path: PathBuf,
+    hash_list: &mut HashMap<String, String>,
+) -> Result<(), GitError> {
     if path.is_dir() {
         if let Some(path_str) = path.to_str() {
             calculate_directory_hashes(path_str, hash_list)?;
         }
-    } 
-    else if let Some(file_name_str) = path.to_str() {
+    } else if let Some(file_name_str) = path.to_str() {
         let file = open_file(file_name_str)?;
         let content = read_file(file)?;
-         
+
         let header = format!("{} {}\0", BLOB, content.len());
         let store = header + String::from_utf8_lossy(&content).as_ref();
         let hash_object = hash_generate(&store);
-        
+
         hash_list.insert(file_name_str.to_string(), hash_object);
     }
     Ok(())

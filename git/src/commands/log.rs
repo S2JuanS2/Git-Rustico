@@ -38,7 +38,7 @@ pub fn git_log(directory: &str) -> Result<String, GitError> {
             })
             .collect();
 
-            get_parts_commit(lines, &mut formatted_result);
+        get_parts_commit(lines, &mut formatted_result);
     }
 
     Ok(formatted_result)
@@ -50,19 +50,19 @@ pub fn git_log(directory: &str) -> Result<String, GitError> {
 /// 'formatted_result': String que contiene el resultado de git log formateado
 fn get_parts_commit(lines: Vec<String>, formatted_result: &mut String) {
     let mut count_line = 0;
-    for line in lines{
-        if count_line == 1{
+    for line in lines {
+        if count_line == 1 {
             let parts: Vec<&str> = line.split_whitespace().collect();
             formatted_result.push_str(&format!("Commit: {}\n", parts[0]));
-        }else if count_line == 3{
+        } else if count_line == 3 {
             let parts: Vec<&str> = line.split_whitespace().collect();
             formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
-        }else if count_line == 6{
+        } else if count_line == 6 {
             formatted_result.push('\n');
-            formatted_result.push_str(&format!("{}\n",line));
+            formatted_result.push_str(&format!("{}\n", line));
         }
         count_line += 1;
-        if count_line == 7{
+        if count_line == 7 {
             count_line = 1;
             formatted_result.push('\n');
         }

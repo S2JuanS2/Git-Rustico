@@ -38,7 +38,6 @@ pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, GitErr
 /// ###Parametros:
 /// 'contenido_commit': Contenido de un commit
 pub fn get_tree_hash(contenido_commit: &str) -> Option<&str> {
-
     if let Some(pos) = contenido_commit.find("tree ") {
         let start = pos + "tree ".len();
 
@@ -53,12 +52,10 @@ pub fn get_tree_hash(contenido_commit: &str) -> Option<&str> {
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'tree_hash': Valor hash de 40 caracteres (SHA-1) del tree a leer.
-fn load_files(directory: &str, tree_hash: &str) -> Result<(),GitError> {
-
+fn load_files(directory: &str, tree_hash: &str) -> Result<(), GitError> {
     let tree = git_cat_file(directory, tree_hash, "-p")?;
 
     for line in tree.lines() {
-
         let parts: Vec<&str> = line.split_whitespace().collect();
 
         let path_file = parts[1];
@@ -69,9 +66,8 @@ fn load_files(directory: &str, tree_hash: &str) -> Result<(),GitError> {
 
         let path = Path::new(&path_file_format);
 
-        if let Some(parent) = path.parent(){
+        if let Some(parent) = path.parent() {
             create_directory(parent)?;
-
         }
         create_file_replace(&path_file_format, &content_file)?;
     }
@@ -95,21 +91,21 @@ fn extract_parent_hash(commit: &str) -> Option<&str> {
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'hash_commit': Valor hash de 40 caracteres (SHA-1) del commit a leer.
-fn read_parent_commit(directory: &str, hash_commit: &str) -> Result<(), GitError>{
+fn read_parent_commit(directory: &str, hash_commit: &str) -> Result<(), GitError> {
     let commit = git_cat_file(directory, hash_commit, "-p")?;
 
     if let Some(parent_hash) = extract_parent_hash(&commit) {
         if parent_hash != PARENT_INITIAL {
             read_parent_commit(directory, parent_hash)?;
         }
-        if let Some(tree_hash) = get_tree_hash(&commit){
+        if let Some(tree_hash) = get_tree_hash(&commit) {
             load_files(directory, tree_hash)?;
-        };    
+        };
     } else if let Some(tree_hash) = get_tree_hash(&commit) {
-            load_files(directory, tree_hash)?;
-        }else{
-            return Err(GitError::GetHashError);
-        }; 
+        load_files(directory, tree_hash)?;
+    } else {
+        return Err(GitError::GetHashError);
+    };
 
     Ok(())
 }
@@ -118,15 +114,14 @@ fn read_parent_commit(directory: &str, hash_commit: &str) -> Result<(), GitError
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a cambiar.
-fn load_files_tree(directory: &str, branch_name: &str) -> Result<(),GitError>{
-
+fn load_files_tree(directory: &str, branch_name: &str) -> Result<(), GitError> {
     let branch = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
 
     let file = open_file(&branch)?;
     let hash_commit = read_file_string(file)?;
 
     read_parent_commit(directory, &hash_commit)?;
-    
+
     Ok(())
 }
 
@@ -167,7 +162,15 @@ pub fn git_checkout_switch(directory: &str, branch_name: &str) -> Result<(), Git
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{commands::{branch::git_branch_create, init::git_init, add::git_add, commit::{git_commit, Commit}}, util::files::create_file};
+    use crate::{
+        commands::{
+            add::git_add,
+            branch::git_branch_create,
+            commit::{git_commit, Commit},
+            init::git_init,
+        },
+        util::files::create_file,
+    };
     use std::fs;
 
     #[test]
@@ -176,7 +179,8 @@ mod tests {
         git_init(directory).expect("Falló al inicializar el repositorio");
 
         let current_branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, "master");
-        create_file(current_branch_path.as_str(), "12345").expect("Falló al crear el archivo que contiene la branch");
+        create_file(current_branch_path.as_str(), "12345")
+            .expect("Falló al crear el archivo que contiene la branch");
 
         // Cuando ejecuto la función sin agregar la branch "test_branch_switch1"
         let result = git_checkout_switch(directory, "test_branch_switch1");

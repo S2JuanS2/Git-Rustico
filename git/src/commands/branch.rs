@@ -1,7 +1,7 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::{open_file, read_file, read_file_string, create_file};
+use crate::util::files::{create_file, open_file, read_file, read_file_string};
 use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -71,8 +71,11 @@ pub fn git_branch_list(directory: &str) -> Result<String, GitError> {
 /// 'directory': directorio del repositorio local.
 /// 'current_branch': Nombre de la branch actual.
 /// 'branch_name': Nombre de la branch a crear.
-pub fn copy_log(directory: &str, current_branch: &str, branch_name: &str) -> Result<(),GitError>{
-    let current_branch_log_path = format!("{}/{}/logs/refs/heads/{}", directory, GIT_DIR, current_branch);
+pub fn copy_log(directory: &str, current_branch: &str, branch_name: &str) -> Result<(), GitError> {
+    let current_branch_log_path = format!(
+        "{}/{}/logs/refs/heads/{}",
+        directory, GIT_DIR, current_branch
+    );
     let new_branch_log_path = format!("{}/{}/logs/refs/heads/{}", directory, GIT_DIR, branch_name);
     let file_log_branch = open_file(&current_branch_log_path)?;
     let content_log_current_branch = read_file_string(file_log_branch)?;
@@ -183,10 +186,12 @@ mod tests {
         git_init(directory).expect("Falló al inicializar el repositorio");
 
         let current_branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, "master");
-        create_file(current_branch_path.as_str(), "12345").expect("Falló al crear el archivo que contiene la branch");
+        create_file(current_branch_path.as_str(), "12345")
+            .expect("Falló al crear el archivo que contiene la branch");
         let branch_name = "test_branch";
         let branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
-        create_file(branch_path.as_str(), "54321").expect("Falló al crear el archivo que contiene la branch");
+        create_file(branch_path.as_str(), "54321")
+            .expect("Falló al crear el archivo que contiene la branch");
 
         let result = git_branch_list(directory);
         let list_branches = " *- master\n - test_branch\n";
@@ -201,19 +206,22 @@ mod tests {
     fn test_git_branch_create() {
         let directory = "./test_git_branch_create";
         git_init(directory).expect("Falló al inicializar el repositorio");
-        
+
         let current_branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, "master");
-        create_file(current_branch_path.as_str(), "12345").expect("Falló al crear el archivo que contiene la branch");
-        
+        create_file(current_branch_path.as_str(), "12345")
+            .expect("Falló al crear el archivo que contiene la branch");
+
         let logs_dir = format!("{}/{}/logs/refs/heads", directory, GIT_DIR);
         fs::create_dir_all(logs_dir).expect("Falló al crear el directorio de logs");
-        
-        let current_branch_log_path = format!("{}/{}/logs/refs/heads/{}", directory, GIT_DIR, "master");
-        create_file(current_branch_log_path.as_str(), "12345").expect("Falló al crear el archivo que contiene la branch");
+
+        let current_branch_log_path =
+            format!("{}/{}/logs/refs/heads/{}", directory, GIT_DIR, "master");
+        create_file(current_branch_log_path.as_str(), "12345")
+            .expect("Falló al crear el archivo que contiene la branch");
 
         let result = git_branch_create(directory, "test_new_branch");
         let result_branch = format!("Rama {} creada con éxito!", "test_new_branch");
-        
+
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
         assert!(result.is_ok());
@@ -230,10 +238,7 @@ mod tests {
 
         // Crea una rama ficticia
         let branch_name = "test_branch_delete";
-        let branch_path = format!(
-            "{}/{}/{}/{}",
-            directory, GIT_DIR, REF_HEADS, branch_name
-        );
+        let branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
         fs::File::create(&branch_path).expect("Falló al crear el archivo que contiene la branch");
 
         let result = git_branch_delete(directory, branch_name);
@@ -251,17 +256,21 @@ mod tests {
         git_init(directory).expect("Falló al inicializar el repositorio");
 
         let current_branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, "master");
-        create_file(current_branch_path.as_str(), "12345").expect("Falló al crear el archivo que contiene la branch");
-        
+        create_file(current_branch_path.as_str(), "12345")
+            .expect("Falló al crear el archivo que contiene la branch");
+
         let logs_dir = format!("{}/{}/logs/refs/heads", directory, GIT_DIR);
         fs::create_dir_all(logs_dir).expect("Falló al crear el directorio de logs");
-        
-        let current_branch_log_path = format!("{}/{}/logs/refs/heads/{}", directory, GIT_DIR, "master");
-        create_file(current_branch_log_path.as_str(), "12345").expect("Falló al crear el archivo que contiene la branch");
+
+        let current_branch_log_path =
+            format!("{}/{}/logs/refs/heads/{}", directory, GIT_DIR, "master");
+        create_file(current_branch_log_path.as_str(), "12345")
+            .expect("Falló al crear el archivo que contiene la branch");
 
         git_branch_create(directory, "test_branch3").expect("Falló al crear la rama");
         let head_file = format!("{}/{}/HEAD", directory, GIT_DIR);
-        create_file_replace(head_file.as_str(), "ref: /refs/heads/test_branch3").expect("Falló al actualizar el archivo HEAD");
+        create_file_replace(head_file.as_str(), "ref: /refs/heads/test_branch3")
+            .expect("Falló al actualizar el archivo HEAD");
         let result = get_current_branch(directory);
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");

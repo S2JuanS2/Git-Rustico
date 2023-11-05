@@ -1,7 +1,7 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::{read_file_string, open_file};
+use crate::util::files::{open_file, read_file_string};
 use crate::util::formats::hash_generate;
 use std::fs::{self, File};
 use std::io::Write;
@@ -53,7 +53,11 @@ fn compare_hash(file_name: &str, directory: &str) -> Result<String, GitError> {
 /// 'directory': directorio del repositorio local.
 /// 'file_name': nombre del archivo a remover.
 /// 'hash_file': hash del archivo que se quiere remover del index.
-fn remove_from_index(directory: &str, file_name: &str, hash_file: &str) -> Result<String, GitError> {
+fn remove_from_index(
+    directory: &str,
+    file_name: &str,
+    hash_file: &str,
+) -> Result<String, GitError> {
     let directory_git = format!("{}/{}", directory, GIT_DIR);
     let index_file_path = format!("{}/{}", directory_git, INDEX);
 
@@ -73,7 +77,10 @@ fn remove_from_index(directory: &str, file_name: &str, hash_file: &str) -> Resul
                 Err(_) => return Err(GitError::RemoveFileError),
             };
         } else {
-            return Ok("No se puede remover el archivo porque no esta en su version mas reciente.".to_string());
+            return Ok(
+                "No se puede remover el archivo porque no esta en su version mas reciente."
+                    .to_string(),
+            );
         }
     }
 
@@ -103,7 +110,10 @@ fn update_index(index_file_path: String, lines: Vec<String>) -> Result<(), GitEr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{commands::init::git_init, util::files::{create_file, create_file_replace}};
+    use crate::{
+        commands::init::git_init,
+        util::files::{create_file, create_file_replace},
+    };
 
     #[test]
     fn rm_test() {
@@ -128,7 +138,10 @@ mod tests {
         // Se chequea que el index se haya modificado correctamente luego de la ejecucion de git_rm.
         let index_file = open_file(&index_path).expect("Fallo al abrir el archivo");
         let new_index_content = read_file_string(index_file).expect("Fallo al leer el archivo");
-        assert_eq!(new_index_content, "hola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0\n");
+        assert_eq!(
+            new_index_content,
+            "hola.rs blob sjdi293usjdkosju29eue2993sjhdia9992udhh0\n"
+        );
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 

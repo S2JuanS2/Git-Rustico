@@ -121,7 +121,11 @@ fn builder_commit_msg_edit(directory: &str, msg: String) -> Result<(), GitError>
 /// archivo con el nombre de la branch actual
 /// ###Parametros:
 /// 'directory': Directorio del git
-pub fn builder_commit_log(directory: &str, content: &str, hash_commit: &str) -> Result<(), GitError> {
+pub fn builder_commit_log(
+    directory: &str,
+    content: &str,
+    hash_commit: &str,
+) -> Result<(), GitError> {
     let logs_path = format!("{}/{}/logs/refs/heads", directory, GIT_DIR);
     if !Path::new(&logs_path).exists() {
         match fs::create_dir_all(logs_path.clone()) {
@@ -130,7 +134,7 @@ pub fn builder_commit_log(directory: &str, content: &str, hash_commit: &str) -> 
         };
     }
     let mut lines: Vec<&str> = content.lines().collect();
-    if let Some(first_line) = lines.first_mut(){
+    if let Some(first_line) = lines.first_mut() {
         *first_line = hash_commit;
     }
     let content_mod = lines.join("\n");
@@ -186,18 +190,18 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
 
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
-    
+
     let parent_hash;
     let mut contents = String::new();
-    if fs::metadata(&branch_current_path).is_ok(){
+    if fs::metadata(&branch_current_path).is_ok() {
         let file = open_file(&branch_current_path)?;
         contents = read_file_string(file)?;
     }
     if contents.is_empty() {
         parent_hash = PARENT_INITIAL.to_string();
-    }else{
+    } else {
         parent_hash = contents;
-    }; 
+    };
 
     let tree_hash = builder_object_tree(&git_dir)?;
     let content = commit_content_format(&commit, &tree_hash, &parent_hash);
@@ -219,7 +223,11 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
 /// 'current_branch': Nombre de la branch actual.
 /// 'branch_current_path': Path del archivo de la branch actual.
 /// 'hash_commit': Hash del commit a escribir.
-fn create_or_replace_commit_into_branch(current_branch: String, branch_current_path: String, hash_commit: String) -> Result<(), GitError> {
+fn create_or_replace_commit_into_branch(
+    current_branch: String,
+    branch_current_path: String,
+    hash_commit: String,
+) -> Result<(), GitError> {
     if current_branch == INITIAL_BRANCH && fs::metadata(&branch_current_path).is_err() {
         create_file(&branch_current_path, &hash_commit)?;
     } else {
@@ -278,7 +286,7 @@ mod tests {
     fn commit_erase_from_index_test() {
         let directory = "./test_commit_erase_index_repo";
         git_init(directory).expect("Falló en el comando init");
-        
+
         let test_commit = Commit::new(
             "prueba".to_string(),
             "Juan".to_string(),

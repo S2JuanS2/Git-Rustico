@@ -1,7 +1,7 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::{open_file, read_file, read_file_string, create_file_replace};
+use crate::util::files::{create_file_replace, open_file, read_file, read_file_string};
 use crate::util::objects::builder_object_blob;
 use std::ffi::OsString;
 use std::fs;
@@ -30,26 +30,25 @@ pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, GitError> {
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
 pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
-    
-    let entries = match fs::read_dir(directory){
+    let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
         Err(_) => return Err(GitError::ReadDirError),
     };
 
     for entry in entries {
-        let entry = match entry{
+        let entry = match entry {
             Ok(entry) => entry,
             Err(_) => return Err(GitError::DirEntryError),
         };
 
         let file_name = entry.file_name();
         let full_path = entry.path();
-        
+
         if full_path.is_file() {
             add_file(&full_path, &file_name)?;
-        }else if full_path.is_dir() {
+        } else if full_path.is_dir() {
             let path_str = file_name.to_str().ok_or(GitError::PathToStringError)?;
-            if !path_str.starts_with('.'){
+            if !path_str.starts_with('.') {
                 git_add_all(&full_path)?;
             }
         }
@@ -68,14 +67,14 @@ fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), GitError> {
     let directory = format!("{}/", parts[0]);
     if parts.len() >= 3 {
         let mut dir_format = String::new();
-        for i in 1..parts.len()-1 {
+        for i in 1..parts.len() - 1 {
             let dir_format_parts = format!("{}/", parts[i]);
             dir_format = dir_format + &dir_format_parts;
         }
         let file_name_str = file_name.to_string_lossy().to_string();
         let file_result = format!("{}{}", dir_format, file_name_str);
         git_add(&directory, &file_result)?;
-    }else{
+    } else {
         let file_name_str = file_name.to_string_lossy().to_string();
         git_add(&directory, &file_name_str)?;
     }
@@ -135,7 +134,10 @@ fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::{Read, Write}};
+    use std::{
+        fs::File,
+        io::{Read, Write},
+    };
 
     use super::*;
 

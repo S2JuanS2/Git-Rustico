@@ -1,8 +1,8 @@
-use crate::util::files::read_file;
-use crate::{consts::*, util::files::open_file};
 use crate::errors::GitError;
 use crate::models::client::Client;
+use crate::util::files::read_file;
 use crate::util::formats::hash_generate;
+use crate::{consts::*, util::files::open_file};
 
 /// Esta función se encarga de llamar al comando hash-object con los parametros necesarios
 /// ###Parametros:
