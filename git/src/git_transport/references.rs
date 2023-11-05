@@ -66,18 +66,8 @@ impl Reference {
         refs.extend(refs_tag);
         refs.extend(refs_remote);
 
-        println!("Buscare Head");
-        let path_head = Path::new(&path_git).join("HEAD");
-        println!("Path head: {:?}", path_head);
-        if let Ok(hash) = fs::read_to_string(path_head)
-        {
-            let head = match extract_reference_head(&hash)
-            {
-                Some(h) => h,
-                None => return Ok(refs),
-            };
-            println!("HEAD - hash: {}", head);
-        }
+        let head = get_reference_head(&path_git, &refs)?;
+        refs.insert(0, head);
         Ok(refs)
     }
 
@@ -119,19 +109,17 @@ pub fn reference_discovery(
 }
 
 
-/// Extrae las referencias contenidas en un directorio a partir de una ruta base.
-/// # Precondicion:
-/// 
-/// El directorio debe contener archivos con el hash de las referencias.
-/// 
+/// Extrae referencias de un subdirectorio de un directorio base, creando un vector de Referencias.
+///
 /// # Argumentos
 ///
-/// * `path_root` - Ruta base del directorio que contiene las referencias.
-/// * `path_relative` - Ruta relativa a las referencias.
+/// * `path_root` - Ruta base del directorio.
+/// * `subdirectory` - Subdirectorio del que se extraerán las referencias.
+/// * `signature` - Firma o identificador de las referencias.
 ///
 /// # Retorna
 ///
-/// Un Resultado que contiene un vector de Referencias si la operación es exitosa.
+/// Un resultado que contiene un vector de Referencias si la operación es exitosa.
 /// En caso de error, retorna un error de tipo UtilError.
 /// 
 fn extract_references_from_path(path_root: &PathBuf, subdirectory: &str, signature: &str) -> Result<Vec<Reference>, UtilError>
@@ -181,16 +169,42 @@ fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
 
     files
 }
-
-fn extract_reference_head(line: &str) -> Option<&str> {
+fn extract_reference_head(line: &str) -> Result<String, UtilError> {
     let trimmed_line = line.trim();
     if let Some(reference) = trimmed_line.splitn(2, ' ').nth(1) {
-        Some(reference)
+        Ok(reference.to_string())
     } else {
-        None
+        Err(UtilError::InvalidHeadReferenceFormat)
     }
 }
 
+fn extract_name_head_from_path(path_git: &str) -> Result<String, UtilError>
+{
+    let path = Path::new(&path_git).join("HEAD");
+    if let Ok(line) = fs::read_to_string(path) {
+        let refs = extract_reference_head(&line)?;
+        return Ok(refs);
+    }
+    Err(UtilError::HeadFolderNotFound)
+}
+
+
+fn extract_hash_head_from_path(refs: &Vec<Reference>, name_head: &str) -> Result<String, UtilError>
+{
+    for reference in refs {
+        if reference.get_name() == name_head {
+            return Ok(reference.get_hash().to_string());
+        }
+    }
+    Err(UtilError::HeadHashNotFound)
+}
+
+fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference, UtilError>
+{
+    let name_head = extract_name_head_from_path(path_git)?;
+    let hash_head = extract_hash_head_from_path(&refs, &name_head)?;
+    Reference::new(hash_head, REF_HEADS)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
