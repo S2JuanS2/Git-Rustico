@@ -203,7 +203,7 @@ fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference
 {
     let name_head = extract_name_head_from_path(path_git)?;
     let hash_head = extract_hash_head_from_path(&refs, &name_head)?;
-    Reference::new(hash_head, REF_HEADS.to_string())
+    Reference::new(hash_head, HEAD.to_string())
 }
 #[cfg(test)]
 mod tests {
