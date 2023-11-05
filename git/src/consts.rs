@@ -97,6 +97,16 @@ pub const HEAD_POINTER_REF: &str = "ref: /refs/heads/";
 
 pub const REF_HEADS: &str = "refs/heads";
 
+pub const REFS: &str = "refs";
+
+pub const REFS_HEADS: &str = "refs/heads";
+
+pub const REFS_REMOTES: &str = "refs/remotes";
+
+pub const REFS_TAGS: &str = "refs/tags";
+
+pub const DIR_REFS: &str = "refs";
+
 pub const DIR_OBJECTS: &str = "objects";
 
 pub const CONTENT_EMPTY: &str = "";

@@ -1,6 +1,6 @@
 use std::{net::TcpStream, fs, path::{Path, PathBuf}};
 
-use crate::util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly};
+use crate::{util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly}, consts::{GIT_DIR, REF_HEADS, REFS_REMOTES, REFS_TAGS}};
 
 use super::advertised::AdvertisedRefs;
 
@@ -54,12 +54,12 @@ impl Reference {
 
     pub fn extract_references_from_git(root: &str) -> Result<Vec<Reference>, UtilError> {
         println!("extract_references_from_git");
-        let path_git = join_paths_correctly(root, ".git");
+        let path_git = join_paths_correctly(root, GIT_DIR);
         
         let path = Path::new(&path_git).join("refs");
-        let refs_branch = extract_references_from_path(Path::new(path.as_os_str()).join("heads"), "refs/heads")?;
-        let refs_tag = extract_references_from_path(Path::new(path.as_os_str()).join("tags"), "refs/tags")?;
-        let refs_remote = extract_references_from_path(Path::new(path.as_os_str()).join("remotes"), "refs/remotes")?;
+        let refs_branch = extract_references_from_path(&path, "heads", REF_HEADS)?;
+        let refs_tag = extract_references_from_path(&path, "tags", REFS_TAGS)?;
+        let refs_remote = extract_references_from_path(&path, "remotes", REFS_REMOTES)?;
         
         let mut refs = Vec::new();
         refs.extend(refs_branch);
@@ -119,14 +119,30 @@ pub fn reference_discovery(
 }
 
 
-fn extract_references_from_path(path_root: PathBuf, path_relative: &str) -> Result<Vec<Reference>, UtilError>
+/// Extrae las referencias contenidas en un directorio a partir de una ruta base.
+/// # Precondicion:
+/// 
+/// El directorio debe contener archivos con el hash de las referencias.
+/// 
+/// # Argumentos
+///
+/// * `path_root` - Ruta base del directorio que contiene las referencias.
+/// * `path_relative` - Ruta relativa a las referencias.
+///
+/// # Retorna
+///
+/// Un Resultado que contiene un vector de Referencias si la operación es exitosa.
+/// En caso de error, retorna un error de tipo UtilError.
+/// 
+fn extract_references_from_path(path_root: &PathBuf, subdirectory: &str, signature: &str) -> Result<Vec<Reference>, UtilError>
 {
+    let new_root = Path::new(path_root.as_os_str()).join(subdirectory);
     let mut references = Vec::new();
-    let names_refs = get_files_in_directory(&path_root);
+    let names_refs = get_files_in_directory(&new_root);
     for name in names_refs {
-        let path = Path::new(&path_root).join(&name);
+        let path = Path::new(&new_root).join(&name);
         if let Ok(hash) = fs::read_to_string(path) {
-            let name_ref = format!("{}/{}", path_relative, name);
+            let name_ref = format!("{}/{}", signature, name);
             let refs = Reference::new(hash.trim().to_string(), name_ref)?;
             println!("Refs: {:?}", refs);
             references.push(refs);
@@ -135,6 +151,16 @@ fn extract_references_from_path(path_root: PathBuf, path_relative: &str) -> Resu
     Ok(references)
 }
 
+/// Obtiene los nombres de archivo dentro de un directorio.
+///
+/// # Argumentos
+///
+/// * `directory_path` - Ruta del directorio del que se desean obtener los nombres de archivo.
+///
+/// # Retorna
+///
+/// Un vector de cadenas que contiene los nombres de archivo del directorio especificado.
+/// 
 fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
     let mut files: Vec<String> = Vec::new();
 
