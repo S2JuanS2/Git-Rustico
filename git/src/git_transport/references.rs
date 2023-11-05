@@ -52,6 +52,16 @@ impl Reference {
     }
 
 
+    /// Extrae las referencias de un repositorio Git.
+    ///
+    /// # Argumentos
+    ///
+    /// * `root` - Ruta al directorio raíz del repositorio Git.
+    ///
+    /// # Retorna
+    ///
+    /// Un resultado que contiene un vector de Referencias si la operación es exitosa.
+    /// En caso de error, retorna un error de tipo UtilError.
     pub fn extract_references_from_git(root: &str) -> Result<Vec<Reference>, UtilError> {
         println!("extract_references_from_git");
         let path_git = join_paths_correctly(root, GIT_DIR);
@@ -169,6 +179,18 @@ fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
 
     files
 }
+
+/// Extrae la referencia HEAD de una línea dada.
+///
+/// # Argumentos
+///
+/// * `line` - Cadena que contiene la referencia HEAD.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene la cadena de la referencia HEAD si la operación es exitosa.
+/// En caso de un formato inválido, retorna un error de tipo UtilError.
+/// 
 fn extract_reference_head(line: &str) -> Result<String, UtilError> {
     let trimmed_line = line.trim();
     if let Some(reference) = trimmed_line.splitn(2, ' ').nth(1) {
@@ -178,6 +200,17 @@ fn extract_reference_head(line: &str) -> Result<String, UtilError> {
     }
 }
 
+/// Extrae el nombre de la referencia HEAD del archivo 'HEAD' en el directorio '.git'.
+///
+/// # Argumentos
+///
+/// * `path_git` - Ruta al directorio '.git'.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene el nombre de la referencia HEAD si la operación es exitosa.
+/// En caso de que no se encuentre el archivo 'HEAD', retorna un error de tipo UtilError.
+/// 
 fn extract_name_head_from_path(path_git: &str) -> Result<String, UtilError>
 {
     let path = Path::new(&path_git).join("HEAD");
@@ -188,7 +221,18 @@ fn extract_name_head_from_path(path_git: &str) -> Result<String, UtilError>
     Err(UtilError::HeadFolderNotFound)
 }
 
-
+/// Extrae el hash de la referencia HEAD a partir de un vector de referencias y el nombre de la referencia.
+///
+/// # Argumentos
+///
+/// * `refs` - Vector de referencias.
+/// * `name_head` - Nombre de la referencia HEAD.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene el hash de la referencia HEAD si la operación es exitosa.
+/// En caso de que no se encuentre el hash correspondiente a la referencia HEAD, retorna un error de tipo UtilError.
+/// 
 fn extract_hash_head_from_path(refs: &Vec<Reference>, name_head: &str) -> Result<String, UtilError>
 {
     for reference in refs {
@@ -199,6 +243,18 @@ fn extract_hash_head_from_path(refs: &Vec<Reference>, name_head: &str) -> Result
     Err(UtilError::HeadHashNotFound)
 }
 
+/// Obtiene la referencia HEAD a partir de la ruta al directorio '.git' y un vector de referencias.
+///
+/// # Argumentos
+///
+/// * `path_git` - Ruta al directorio '.git'.
+/// * `refs` - Vector de referencias.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene la referencia HEAD si la operación es exitosa.
+/// En caso de fallo al extraer la referencia HEAD, retorna un error de tipo UtilError.
+/// 
 fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference, UtilError>
 {
     let name_head = extract_name_head_from_path(path_git)?;
