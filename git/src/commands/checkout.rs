@@ -48,7 +48,7 @@ fn get_tree_hash(contenido: &str) -> Option<&str> {
     None
 }
 
-fn load_files(directory: &str, tree_hash: &str, modo: usize) -> Result<(),GitError> {
+fn load_files(directory: &str, tree_hash: &str, mode: usize) -> Result<(),GitError> {
 
     let tree = git_cat_file(directory, &tree_hash, "-p")?;
 
@@ -68,9 +68,9 @@ fn load_files(directory: &str, tree_hash: &str, modo: usize) -> Result<(),GitErr
             create_directory(parent)?;
 
         }
-        if modo == 0{
+        if mode == 0{
             create_file_replace(&path_file_format, &content_file)?;
-        }else if modo == 1{
+        }else if mode == 1{
             if fs::metadata(&path_file_format).is_ok(){
                 if fs::remove_file(&path_file_format).is_err() {
                     return Err(GitError::RemoveFileError);
@@ -91,33 +91,33 @@ fn extract_parent_hash(commit: &str) -> Option<&str> {
     None
 }
 
-fn read_parent_commit(directory: &str, hash_commit: &str, modo: usize) -> Result<(), GitError>{
+fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result<(), GitError>{
     let commit = git_cat_file(directory, &hash_commit, "-p")?;
 
     if let Some(parent_hash) = extract_parent_hash(&commit) {
         if !(parent_hash == PARENT_INITIAL) {
-            read_parent_commit(directory, parent_hash, modo)?;
+            read_parent_commit(directory, parent_hash, mode)?;
         }
         if let Some(tree_hash) = get_tree_hash(&commit){
-            load_files(directory, tree_hash, modo)?;
+            load_files(directory, tree_hash, mode)?;
         };    
     } else {
         if let Some(tree_hash) = get_tree_hash(&commit){
-            load_files(directory, tree_hash, modo)?;
+            load_files(directory, tree_hash, mode)?;
         }else{
             return Err(GitError::GetHashError);
         }; 
     }
     Ok(())
 }
-fn load_files_tree(directory: &str, branch_name: &str, modo: usize) -> Result<(),GitError>{
+fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<(),GitError>{
 
     let branch = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
 
     let file = open_file(&branch)?;
     let hash_commit = read_file_string(file)?;
 
-    read_parent_commit(directory, &hash_commit, modo)?;
+    read_parent_commit(directory, &hash_commit, mode)?;
     Ok(())
 }
 
