@@ -1,14 +1,12 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::{open_file, read_file};
+use crate::util::files::{open_file, read_file, read_file_string, create_file};
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
-
-const BRANCH_DIR: &str = "refs/heads/";
 
 /// Esta función se encarga de llamar a al comando branch con los parametros necesarios
 /// ###Parametros:
@@ -66,6 +64,16 @@ pub fn git_branch_list(directory: &str) -> Result<String, GitError> {
     Ok(formatted_branches)
 }
 
+pub fn copy_log(directory: &str, current_branch: &str, branch_name: &str) -> Result<(),GitError>{
+    let current_branch_log_path = format!("{}/{}/logs/refs/heads/{}", directory, GIT_DIR, current_branch);
+    let new_branch_log_path = format!("{}/{}/logs/refs/heads/{}", directory, GIT_DIR, branch_name);
+    let file_log_branch = open_file(&current_branch_log_path)?;
+    let content_log_current_branch = read_file_string(file_log_branch)?;
+    create_file(&new_branch_log_path, &content_log_current_branch)?;
+
+    Ok(())
+}
+
 /// Crea una nueva branch si no existe.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
@@ -76,11 +84,10 @@ pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, G
     if branches.contains(&branch_name.to_string()) {
         return Err(GitError::BranchAlreadyExistsError);
     }
-
     let current_branch = get_current_branch(directory)?;
-    let branch_current_path = format!("{}/{}/{}{}", directory, GIT_DIR, BRANCH_DIR, current_branch);
+    let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, current_branch);
     if fs::metadata(&branch_current_path).is_err() {
-        return Err(GitError::BranchDoesntExistError); // CAMBIAR ERROR
+        return Err(GitError::BranchDoesntExistError);
     }
     let file_current_branch = open_file(&branch_current_path)?;
     let hash_current_branch = read_file(file_current_branch)?;
@@ -89,19 +96,19 @@ pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, G
         Ok(commit_current_branch) => commit_current_branch,
         Err(_) => return Err(GitError::GenericError),
     };
-
     // Crear un nuevo archivo en .git/refs/heads/ con el nombre de la rama y el contenido es el hash del commit actual.
-    let branch_path = format!("{}/{}/{}{}", directory, GIT_DIR, BRANCH_DIR, branch_name);
+    let branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
 
     let mut file = match File::create(branch_path) {
         Ok(file) => file,
         Err(_) => return Err(GitError::BranchDirectoryOpenError),
     };
-
     match write!(file, "{}", commit_current_branch) {
         Ok(_) => (),
         Err(_) => return Err(GitError::BranchFileWriteError),
     }
+    copy_log(directory, &current_branch, branch_name)?;
+
     let result = format!("Rama {} creada con éxito!", branch_name);
 
     Ok(result)
@@ -111,7 +118,7 @@ pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, G
 pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
     // "directory/.git/refs/heads"
     let directory_git = format!("{}/{}", directory, GIT_DIR);
-    let branch_dir = Path::new(&directory_git).join(BRANCH_DIR);
+    let branch_dir = Path::new(&directory_git).join(REF_HEADS);
 
     let entries = match fs::read_dir(branch_dir) {
         Ok(entries) => entries,
@@ -151,7 +158,7 @@ pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<String, G
     }
 
     // Crear un nuevo archivo en .git/refs/heads/ con el nombre de la rama y el contenido es el hash del commit actual.
-    let branch_path = format!("{}/{}/{}{}", directory, GIT_DIR, BRANCH_DIR, branch_name);
+    let branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
 
     if fs::remove_file(branch_path).is_err() {
         return Err(GitError::DeleteBranchError);
@@ -174,15 +181,15 @@ mod tests {
     fn test_git_branch_list() {
         // Crea una rama ficticia y el directorio
         let branch_name = "test_branch";
-        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}/", TEST_DIRECTORY, GIT_DIR, REF_HEADS);
 
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio temporal: {}", err);
         }
 
         let branch_path_file = format!(
-            "{}/{}/{}{}",
-            TEST_DIRECTORY, GIT_DIR, BRANCH_DIR, branch_name
+            "{}/{}/{}/{}",
+            TEST_DIRECTORY, GIT_DIR, REF_HEADS, branch_name
         );
         fs::File::create(&branch_path_file)
             .expect("Falló al crear el archivo que contiene la branch");
@@ -201,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_git_branch_create() {
-        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}/", TEST_DIRECTORY, GIT_DIR, REF_HEADS);
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("Falló al crear el directorio temporal: {}", err);
         }
@@ -219,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_git_branch_delete() {
-        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
+        let branch_path = format!("{}/{}/{}/", TEST_DIRECTORY, GIT_DIR, REF_HEADS);
         if let Err(err) = fs::create_dir_all(&branch_path) {
             panic!("alló al crear el directorio temporal: {}", err);
         }
@@ -227,8 +234,8 @@ mod tests {
         // Crea una rama ficticia
         let branch_name = "test_branch_delete";
         let branch_path = format!(
-            "{}/{}/{}{}",
-            TEST_DIRECTORY, GIT_DIR, BRANCH_DIR, branch_name
+            "{}/{}/{}/{}",
+            TEST_DIRECTORY, GIT_DIR, REF_HEADS, branch_name
         );
         fs::File::create(&branch_path).expect("Falló al crear el archivo que contiene la branch");
 
