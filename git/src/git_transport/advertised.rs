@@ -150,23 +150,28 @@ impl AdvertisedRefs {
         Ok(())
     }
 
+    
     pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>)
     {
-        self.capabilities = common_values(self.capabilities.clone(), capabilities);
-        self.references = filtrar_por_refname(self.references.clone(), &references);
+        println!("update_data");
+        println!("Capabilities: {:?}", capabilities);
+        println!("References: {:?}", references);
+        println!("Adver: {:?}", self);
+        retain_common_values(&mut self.capabilities, &capabilities);
+        filter_by_hash(&mut self.references, &references);
     }
 
 }
 
-fn filtrar_por_refname(references: Vec<Reference>, refnames: &Vec<String>) -> Vec<Reference> {
-    references.into_iter().filter(|reference| refnames.contains(&reference.get_name())).collect()
+fn filter_by_hash(references: &mut Vec<Reference>, refnames: &Vec<String>) {
+    // references.into_iter().filter(|reference| refnames.contains(&reference.get_hash())).collect()
+    references.retain(|reference| refnames.contains(&reference.get_hash()));
 }
 
-fn common_values(vec1: Vec<String>, vec2: Vec<String>) -> Vec<String> {
-    let set1: std::collections::HashSet<_> = vec1.into_iter().collect();
-    let set2: std::collections::HashSet<_> = vec2.into_iter().collect();
+fn retain_common_values(vec1: &mut Vec<String>, vec2: &Vec<String>) {
+    let set2: std::collections::HashSet<_> = vec2.iter().collect();
 
-    set1.intersection(&set2).cloned().collect()
+    vec1.retain(|item| set2.contains(item));
 }
 
 // fn filter_references(advertised, references)
