@@ -1,8 +1,8 @@
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::{open_file, read_file_string, create_file_replace};
+use crate::util::files::{create_file_replace, open_file, read_file_string};
 
-/// Esta función se encarga de llamar al comando remote con los parametros necesarios
+/// Esta función se encarga de llamar al comando remote con los parametros necesarios.
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función remote
 /// 'client': Cliente que contiene la información del cliente que se conectó
@@ -28,13 +28,18 @@ pub fn handle_remote(args: Vec<&str>, client: Client) -> Result<String, GitError
     Ok(result)
 }
 
-/// Ejecuta la accion de remote en el repositorio local
+/// Ejecuta la accion de remote en el repositorio local.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'action': accion a realizar
 /// 'remote_name': nombre del repositorio remoto
 /// 'remote_url': url del repositorio remoto
-pub fn git_remote(directory: &str, action: &str, remote_name: &str, remote_url: &str) -> Result<String, GitError> {
+pub fn git_remote(
+    directory: &str,
+    action: &str,
+    remote_name: &str,
+    remote_url: &str,
+) -> Result<String, GitError> {
     let config_path = format!("{}/.git/config", directory);
     let config_file = open_file(&config_path)?;
     let config_content = read_file_string(config_file)?;
@@ -46,23 +51,31 @@ pub fn git_remote(directory: &str, action: &str, remote_name: &str, remote_url: 
         }
     }
     if action == "add" {
-        add_remote(config_path.as_str(), &config_content, remote_name, remote_url)?;
+        add_remote(
+            config_path.as_str(),
+            &config_content,
+            remote_name,
+            remote_url,
+        )?;
     }
     if action == "rm" {
         remove_remote(config_path.as_str(), &config_content, remote_name)?;
     }
-    
+
     Ok(formatted_result)
 }
 
-/// Obtiene los repositorios remotos del archivo de configuración
+/// Obtiene los repositorios remotos del archivo de configuración.
 /// ###Parametros:
 /// 'config_path': ruta del archivo de configuración
-fn get_remotes(config_content: &String) -> Result<Vec<String>, GitError> {
+fn get_remotes(config_content: &str) -> Result<Vec<String>, GitError> {
     let mut remotes = Vec::new();
     for line in config_content.lines() {
         if line.starts_with("[remote ") {
-            if let Some(remote) = line.strip_prefix("[remote \"").and_then(|s| s.strip_suffix("\"]")) {
+            if let Some(remote) = line
+                .strip_prefix("[remote \"")
+                .and_then(|s| s.strip_suffix("\"]"))
+            {
                 remotes.push(remote.to_string());
             }
         }
@@ -70,34 +83,45 @@ fn get_remotes(config_content: &String) -> Result<Vec<String>, GitError> {
     Ok(remotes)
 }
 
-/// Agrega un repositorio remoto al archivo de configuración
+/// Agrega un repositorio remoto al archivo de configuración.
 /// ###Parametros:
 /// 'config_path': ruta del archivo de configuración
 /// 'config_content': contenido del archivo de configuración
 /// 'remote_name': nombre del repositorio remoto
 /// 'remote_url': url del repositorio remoto
-fn add_remote(config_path: &str, config_content: &String, remote_name: &str, remote_url: &str) -> Result<(), GitError> {
+fn add_remote(
+    config_path: &str,
+    config_content: &String,
+    remote_name: &str,
+    remote_url: &str,
+) -> Result<(), GitError> {
     let remote_exists = check_if_remote_exists(config_content.as_str(), remote_name);
     if remote_exists {
         return Err(GitError::RemoteAlreadyExistsError);
     }
-    let remote = format!("[remote \"{}\"]\nurl = {}\nfetch = +refs/heads/*:refs/remotes/{}/*\n", remote_name, remote_url, remote_name);
+    let remote = format!(
+        "[remote \"{}\"]\nurl = {}\nfetch = +refs/heads/*:refs/remotes/{}/*\n",
+        remote_name, remote_url, remote_name
+    );
     let new_config_content = format!("{}\n{}", config_content, remote);
     create_file_replace(config_path, new_config_content.as_str())?;
-    
+
     Ok(())
 }
 
-/// Chequea si un repositorio remoto existe en el archivo de configuración
+/// Chequea si un repositorio remoto existe en el archivo de configuración.
 /// ###Parametros:
 /// 'config_content': contenido del archivo de configuración
 /// 'remote_name': nombre del repositorio remoto
 fn check_if_remote_exists(config_content: &str, remote_name: &str) -> bool {
     for line in config_content.lines() {
         if line.starts_with("[remote ") {
-            if let Some(remote) = line.strip_prefix("[remote \"").and_then(|s| s.strip_suffix("\"]")) {
+            if let Some(remote) = line
+                .strip_prefix("[remote \"")
+                .and_then(|s| s.strip_suffix("\"]"))
+            {
                 if remote == remote_name {
-                    return true
+                    return true;
                 }
             }
         }
@@ -105,13 +129,17 @@ fn check_if_remote_exists(config_content: &str, remote_name: &str) -> bool {
     false
 }
 
-/// Elimina un repositorio remoto del archivo de configuración
+/// Elimina un repositorio remoto del archivo de configuración.
 /// ###Parametros:
 /// 'config_path': ruta del archivo de configuración
 /// 'config_content': contenido del archivo de configuración
 /// 'remote_name': nombre del repositorio remoto
-fn remove_remote(config_path: &str, config_content: &String, remote_name: &str) -> Result<(), GitError> {
-    let remote_exists = check_if_remote_exists(config_content.as_str(), remote_name);
+fn remove_remote(
+    config_path: &str,
+    config_content: &str,
+    remote_name: &str,
+) -> Result<(), GitError> {
+    let remote_exists = check_if_remote_exists(config_content, remote_name);
     if !remote_exists {
         return Err(GitError::RemoteDoesNotExistError);
     }
@@ -127,7 +155,10 @@ fn remove_remote(config_path: &str, config_content: &String, remote_name: &str) 
             }
         }
         if line.starts_with("[remote \"") {
-            if let Some(remote) = line.strip_prefix("[remote \"").and_then(|s| s.strip_suffix("\"]")) {
+            if let Some(remote) = line
+                .strip_prefix("[remote \"")
+                .and_then(|s| s.strip_suffix("\"]"))
+            {
                 if remote != remote_name {
                     new_config_content.push_str(format!("{}\n", line).as_str());
                 } else {
@@ -146,8 +177,8 @@ fn remove_remote(config_path: &str, config_content: &String, remote_name: &str) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{commands::init::git_init, util::files::create_file_replace};
     use std::fs;
-    use crate::{util::files::create_file_replace, commands::init::git_init};
 
     const CONFIG_CONTENT: &str = "[core]\n\
     repositoryformatversion = 0\n\
@@ -173,12 +204,13 @@ mod tests {
         let directory = "./test_remote";
         git_init(directory).expect("Error al iniciar el repositorio");
         let config_path = format!("{}/.git/config", directory);
-        create_file_replace(config_path.as_str(), CONFIG_CONTENT).expect("Error al crear el archivo de configuración");
+        create_file_replace(config_path.as_str(), CONFIG_CONTENT)
+            .expect("Error al crear el archivo de configuración");
         let action = "none";
         let remote_name = "none";
         let remote_url = "none";
         let result = git_remote(directory, action, remote_name, remote_url);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "origin\nupstream\n".to_string());
 
@@ -190,7 +222,8 @@ mod tests {
         let directory = "./test_remote_add";
         git_init(directory).expect("Error al iniciar el repositorio");
         let config_path = format!("{}/.git/config", directory);
-        create_file_replace(config_path.as_str(), CONFIG_CONTENT).expect("Error al crear el archivo de configuración");
+        create_file_replace(config_path.as_str(), CONFIG_CONTENT)
+            .expect("Error al crear el archivo de configuración");
         let action = "add";
         let remote_name = "test";
         let remote_url = "https://github.com/taller-1-fiuba-rust/23C2-Rusteam-Visionary.git";
@@ -199,8 +232,10 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let config_path = open_file(&config_path).expect("Error al abrir el archivo de configuración");
-        let config_content_after_remote_add = read_file_string(config_path).expect("Error al leer el archivo de configuración");
+        let config_path =
+            open_file(&config_path).expect("Error al abrir el archivo de configuración");
+        let config_content_after_remote_add =
+            read_file_string(config_path).expect("Error al leer el archivo de configuración");
 
         assert!(config_content_after_remote_add.contains("[remote \"test\"]"));
 
@@ -212,7 +247,8 @@ mod tests {
         let directory = "./test_remote_rm";
         git_init(directory).expect("Error al iniciar el repositorio");
         let config_path = format!("{}/.git/config", directory);
-        create_file_replace(config_path.as_str(), CONFIG_CONTENT).expect("Error al crear el archivo de configuración");
+        create_file_replace(config_path.as_str(), CONFIG_CONTENT)
+            .expect("Error al crear el archivo de configuración");
         let action = "rm";
         let remote_name = "upstream";
         let remote_url = "none";
@@ -221,12 +257,13 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let config_path = open_file(&config_path).expect("Error al abrir el archivo de configuración");
-        let config_content_after_remote_rm = read_file_string(config_path).expect("Error al leer el archivo de configuración");
+        let config_path =
+            open_file(&config_path).expect("Error al abrir el archivo de configuración");
+        let config_content_after_remote_rm =
+            read_file_string(config_path).expect("Error al leer el archivo de configuración");
 
         assert!(!config_content_after_remote_rm.contains("[remote \"upstream\"]"));
-        
+
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
     }
-
 }

@@ -4,14 +4,16 @@ pub struct Client {
     email: String,
     ip: String,
     directory_path: String,
+    path_log: String,
 }
 impl Client {
-    pub fn new(name: String, email: String, ip: String, directory_path: String) -> Client {
+    pub fn new(name: String, email: String, ip: String, directory_path: String, path_log: String) -> Client {
         Client {
             name,
             email,
             ip,
             directory_path,
+            path_log
         }
     }
 
@@ -30,6 +32,11 @@ impl Client {
     pub fn get_directory_path(&self) -> &str {
         &self.directory_path
     }
+
+    pub fn get_path_log(&self) -> &str {
+        &self.path_log
+    }
+
     pub fn set_directory_path(&mut self, new_path: String) {
         self.directory_path = new_path;
     }

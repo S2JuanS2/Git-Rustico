@@ -2,83 +2,95 @@
 <!-- Generated with glade 3.22.2 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
-  <object class="GtkWindow" id="window_dialog_cat-file">
+  <object class="GtkImage" id="add">
+    <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Cat-file</property>
-    <child type="titlebar">
-      <placeholder/>
-    </child>
-    <child>
-      <object class="GtkBox">
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="margin_top">10</property>
-        <property name="margin_bottom">10</property>
-        <property name="orientation">vertical</property>
-        <child>
-          <object class="GtkEntry" id="entry_cat-file">
-            <property name="name">entry_cmd</property>
-            <property name="width_request">400</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="margin_left">10</property>
-            <property name="margin_right">10</property>
-            <property name="placeholder_text" translatable="yes">&lt;-t/-p&gt; &lt;hash&gt;</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkBox">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="margin_left">20</property>
-                <property name="margin_top">10</property>
-                <property name="label" translatable="yes">&lt;-t/-p&gt; &lt;hash&gt;</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="button_cmd_cat-file">
-                <property name="label" translatable="yes">Send</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="halign">end</property>
-                <property name="margin_top">10</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="padding">7</property>
-                <property name="pack_type">end</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
-        </child>
-      </object>
-    </child>
+    <property name="stock">gtk-add</property>
+  </object>
+  <object class="GtkImage" id="branch">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-index</property>
+  </object>
+  <object class="GtkImage" id="catfile">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-info</property>
+  </object>
+  <object class="GtkImage" id="checkout">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-index</property>
+  </object>
+  <object class="GtkImage" id="clear">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-delete</property>
+    <property name="icon_size">6</property>
+  </object>
+  <object class="GtkImage" id="clone">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-goto-bottom</property>
+    <property name="icon_size">3</property>
+  </object>
+  <object class="GtkImage" id="commit">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-paste</property>
+  </object>
+  <object class="GtkImage" id="hash">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-info</property>
+  </object>
+  <object class="GtkImage" id="help">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-dialog-question</property>
+  </object>
+  <object class="GtkImage" id="init">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-directory</property>
+    <property name="icon_size">3</property>
+  </object>
+  <object class="GtkImage" id="log">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-execute</property>
+  </object>
+  <object class="GtkImage" id="merge">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-dnd-multiple</property>
+  </object>
+  <object class="GtkImage" id="remote">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-network</property>
+  </object>
+  <object class="GtkImage" id="rm">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-close</property>
+  </object>
+  <object class="GtkImage" id="send">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="icon_name">mail-send</property>
+    <property name="icon_size">5</property>
+  </object>
+  <object class="GtkImage" id="send2">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="icon_name">mail-send</property>
   </object>
   <object class="GtkWindow" id="window_dialog_clone">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Clone</property>
+    <property name="resizable">False</property>
+    <property name="deletable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -127,12 +139,13 @@
             </child>
             <child>
               <object class="GtkButton" id="button_cmd_clone">
-                <property name="label" translatable="yes">Send</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
                 <property name="margin_top">9</property>
+                <property name="image">send2</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -152,9 +165,99 @@
       </object>
     </child>
   </object>
+  <object class="GtkImage" id="send3">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="icon_name">mail-send</property>
+    <property name="icon_size">5</property>
+  </object>
+  <object class="GtkWindow" id="window_dialog_cat-file">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Cat-file</property>
+    <property name="resizable">False</property>
+    <property name="deletable">False</property>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="margin_top">10</property>
+        <property name="margin_bottom">10</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkEntry" id="entry_cat-file">
+            <property name="name">entry_cmd</property>
+            <property name="width_request">400</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="margin_left">10</property>
+            <property name="margin_right">10</property>
+            <property name="placeholder_text" translatable="yes">&lt;-t/-p&gt; &lt;hash&gt;</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="margin_left">20</property>
+                <property name="margin_top">10</property>
+                <property name="label" translatable="yes">&lt;-t/-p&gt; &lt;hash&gt;</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="button_cmd_cat-file">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="halign">end</property>
+                <property name="margin_top">10</property>
+                <property name="image">send3</property>
+                <property name="always_show_image">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">7</property>
+                <property name="pack_type">end</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkImage" id="send4">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="icon_name">mail-send</property>
+  </object>
   <object class="GtkWindow" id="window_dialog_hash-object">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Hash-Oobject</property>
+    <property name="resizable">False</property>
+    <property name="deletable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -201,12 +304,13 @@
             </child>
             <child>
               <object class="GtkButton" id="button_cmd_hash-object">
-                <property name="label" translatable="yes">Send</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
                 <property name="margin_top">10</property>
+                <property name="image">send4</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -226,9 +330,15 @@
       </object>
     </child>
   </object>
+  <object class="GtkImage" id="status">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-info</property>
+  </object>
   <object class="GtkWindow" id="window_ppal">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Client Git</property>
+    <property name="resizable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -240,16 +350,18 @@
         <property name="margin_bottom">15</property>
         <child>
           <object class="GtkButton" id="button_send">
-            <property name="label" translatable="yes">Send</property>
-            <property name="width_request">75</property>
-            <property name="height_request">0</property>
+            <property name="width_request">70</property>
+            <property name="height_request">-1</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="is_focus">True</property>
             <property name="receives_default">True</property>
+            <property name="image">send</property>
+            <property name="image_position">right</property>
+            <property name="always_show_image">True</property>
           </object>
           <packing>
-            <property name="x">834</property>
+            <property name="x">836</property>
             <property name="y">740</property>
           </packing>
         </child>
@@ -267,7 +379,7 @@
             </attributes>
           </object>
           <packing>
-            <property name="x">23</property>
+            <property name="x">20</property>
             <property name="y">5</property>
           </packing>
         </child>
@@ -300,6 +412,9 @@
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
+                <property name="image">status</property>
+                <property name="image_position">right</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -361,12 +476,15 @@
             </child>
             <child>
               <object class="GtkButton" id="button_log">
-                <property name="label" translatable="yes">Log</property>
+                <property name="label" translatable="yes">Log </property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
+                <property name="image">log</property>
+                <property name="image_position">right</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -382,6 +500,9 @@
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
+                <property name="image">help</property>
+                <property name="image_position">right</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -392,13 +513,15 @@
             </child>
             <child>
               <object class="GtkButton" id="button_remote">
-                <property name="label" translatable="yes">Remote</property>
+                <property name="label" translatable="yes">Remote </property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
+                <property name="image">remote</property>
+                <property name="image_position">right</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -409,11 +532,13 @@
             </child>
             <child>
               <object class="GtkButton" id="button_clear">
-                <property name="label" translatable="yes">Clear console</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
+                <property name="image">clear</property>
+                <property name="image_position">right</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -425,12 +550,15 @@
             </child>
             <child>
               <object class="GtkButton" id="button_cat-file">
-                <property name="label" translatable="yes">Cat-file</property>
+                <property name="label" translatable="yes">Cat-file  </property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
+                <property name="image">catfile</property>
+                <property name="image_position">right</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -441,11 +569,14 @@
             </child>
             <child>
               <object class="GtkButton" id="button_hash-object">
-                <property name="label" translatable="yes">hash-object</property>
+                <property name="label" translatable="yes">hash-object  </property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="halign">end</property>
+                <property name="image">hash</property>
+                <property name="image_position">right</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -507,6 +638,8 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="image">branch</property>
+                    <property name="always_show_image">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -550,6 +683,8 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="image">checkout</property>
+                    <property name="always_show_image">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -596,6 +731,8 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
+                        <property name="image">add</property>
+                        <property name="always_show_image">True</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -610,6 +747,8 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
+                        <property name="image">rm</property>
+                        <property name="always_show_image">True</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -656,6 +795,8 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="image">commit</property>
+                    <property name="always_show_image">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -709,6 +850,8 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="image">merge</property>
+                    <property name="always_show_image">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -756,6 +899,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="image">init</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -765,10 +910,12 @@
             </child>
             <child>
               <object class="GtkButton" id="button_clone">
-                <property name="label" translatable="yes">Clone repository</property>
+                <property name="label" translatable="yes">Clone Repository</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="image">clone</property>
+                <property name="always_show_image">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -788,13 +935,16 @@
             <property name="height_request">60</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="orientation">vertical</property>
             <property name="spacing">6</property>
             <child>
               <object class="GtkLabel" id="user_tittle">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">User: </property>
+                <attributes>
+                  <attribute name="font-desc" value="Sans Bold Italic 14"/>
+                  <attribute name="foreground" value="#20204a4a8787"/>
+                </attributes>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -808,6 +958,9 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">User-name</property>
+                <attributes>
+                  <attribute name="font-desc" value="Sans Bold 12"/>
+                </attributes>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -819,6 +972,40 @@
           <packing>
             <property name="x">950</property>
             <property name="y">10</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="rusteam">
+            <property name="width_request">91</property>
+            <property name="height_request">25</property>
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label" translatable="yes">RusTeam</property>
+            <attributes>
+              <attribute name="font-desc" value="Sans Bold Italic 10"/>
+              <attribute name="foreground" value="#2e2e34343636"/>
+            </attributes>
+          </object>
+          <packing>
+            <property name="x">163</property>
+            <property name="y">47</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="fiuba">
+            <property name="width_request">100</property>
+            <property name="height_request">23</property>
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label" translatable="yes">Facultad de Ingeniería</property>
+            <attributes>
+              <attribute name="font-desc" value="Ubuntu Medium 9"/>
+              <attribute name="foreground" value="#000000000000"/>
+            </attributes>
+          </object>
+          <packing>
+            <property name="x">1059</property>
+            <property name="y">750</property>
           </packing>
         </child>
       </object>

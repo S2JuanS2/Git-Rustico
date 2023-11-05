@@ -46,6 +46,9 @@ pub enum UtilError {
     HeadHashNotFound,
     FlushNotSentDiscoveryReferences,
     VersionNotSentDiscoveryReferences,
+    UnexpectedRequestNotWant,
+    InvalidRequestFormat(String),
+    NegociacionExpectedDone,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -92,6 +95,9 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::HeadHashNotFound => write!(f, "HeadHashNotFoundError: No se encontró el hash del HEAD."),
         UtilError::FlushNotSentDiscoveryReferences => write!(f, "FlushNotSentDiscoveryReferencesError: No se envió el flush para la solicitud de descubrimiento de referencias."),
         UtilError::VersionNotSentDiscoveryReferences => write!(f, "VersionNotSentDiscoveryReferencesError: No se envió la versión para la solicitud de descubrimiento de referencias."),
+        UtilError::UnexpectedRequestNotWant => write!(f, "UnexpectedRequestNotWantError: Se recibió una solicitud inesperada que no es want."),
+        UtilError::InvalidRequestFormat(request) => write!(f, "InvalidRequestFormatError: Formato de solicitud inválido: {}", request),
+        UtilError::NegociacionExpectedDone => write!(f, "NegociacionExpectedDoneError: Se esperaba un done en la negociación."),
     }
 }
 
