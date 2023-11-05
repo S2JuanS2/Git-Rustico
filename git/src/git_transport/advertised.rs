@@ -116,6 +116,12 @@ impl AdvertisedRefs {
     pub fn get_reference(&self, index: usize) -> Option<&Reference> {
         self.references.get(index)
     }
+
+    pub fn create_from_path(path_repo: &str, version: u8, capabilities: Vec<String>) -> Result<AdvertisedRefs, UtilError>
+    {
+        let references = Reference::extract_references_from_git(path_repo)?;
+        Ok(AdvertisedRefs { version, capabilities, shallow: Vec::new(), references })
+    }
 }
 
 // pub struct Refere
