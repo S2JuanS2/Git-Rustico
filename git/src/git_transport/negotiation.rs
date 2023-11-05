@@ -33,13 +33,6 @@ pub fn upload_request(
     advertised: &AdvertisedRefs,
 ) -> Result<(), UtilError> {
     for refs in advertised.get_references() {
-        // let message = match a {
-        //     AdvertisedRefLine::Ref {
-        //         obj_id,
-        //         ref_name: _,
-        //     } => format!("want {}\n", obj_id),
-        //     _ => continue,
-        // };
         let message = format!("want {}\n", refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
         send_message(socket, message, UtilError::UploadRequest)?;
