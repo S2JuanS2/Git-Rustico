@@ -1,5 +1,5 @@
 
-use crate::{consts::NACK, util::{errors::UtilError, pkt_line, connections::{send_message, send_flush}}};
+use crate::{consts::NACK, util::{errors::UtilError, pkt_line, connections::{send_message, send_flush}, validation::is_valid_obj_id}};
 use std::{io::Read, net::TcpStream};
 
 use super::advertised::AdvertisedRefs;
@@ -55,17 +55,71 @@ pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
     Ok(())
 }
 
-// pub fn receive_request_command(stream: &mut dyn Read) -> Result<String, UtilError> {
-//     let mut buffer = [0u8; 4]; // Tamaño suficiente para "0004"
-//     if stream.read_exact(&mut buffer).is_err() {
-//         return Err(UtilError::InvalidPacketLineRequest);
-//     }
-//     let response = String::from_utf8_lossy(&buffer);
-//     let length = response.parse::<usize>().unwrap();
-//     let mut buffer = vec![0u8; length];
-//     if stream.read_exact(&mut buffer).is_err() {
-//         return Err(UtilError::InvalidPacketLineRequest);
-//     }
-//     let response = String::from_utf8_lossy(&buffer);
-//     Ok(response.to_string())
-// }
+pub fn receive_request_command(stream: &mut dyn Read) -> Result<Vec<String>, UtilError> {
+    let mut want = Vec::new();
+    // let lines = pkt_line::read(stream)?;
+
+    // // Want
+    // for i in 0..lines.len() {
+    //     let line = String::from_utf8_lossy(&lines[i]);
+    //     if !line.starts_with("want") {
+    //         return Err(UtilError::UnexpectedRequestNotWant);
+    //     }
+    //     let request = line.trim().to_string();
+    //     let mut iter = request.split_ascii_whitespace();
+    //     iter.next();
+    //     let hash = match iter.next()
+    //     {
+    //         Some(hash) => hash,
+    //         None => return Err(UtilError::InvalidRequestFormat(request.to_string())),
+    //     };
+    //     if !is_valid_obj_id(hash)
+    //     {
+    //         return Err(UtilError::InvalidObjectId);
+    //     }
+    //     want.push(hash.to_string());
+    // }
+
+    // if lines.len() == 1 
+    // {
+    //     let done = String::from_utf8_lossy(&lines[0]);
+    //     if done != "done" {
+    //         return Err(UtilError::InvalidRequestFormat(done.to_string()));
+    //     }
+    //     return Ok(want);
+    // }
+
+    // // Have
+    // let lines = pkt_line::read(stream)?;
+    // for i in 0..lines.len() {
+    //     let line = String::from_utf8_lossy(&lines[i]);
+    //     if !line.starts_with("have") {
+    //         return Err(UtilError::UnexpectedRequestNotWant);
+    //     }
+    //     let request = line.trim().to_string();
+    //     let mut iter = request.split_ascii_whitespace();
+    //     iter.next();
+    //     let hash = match iter.next()
+    //     {
+    //         Some(hash) => hash,
+    //         None => return Err(UtilError::InvalidRequestFormat(request.to_string())),
+    //     };
+    //     if !is_valid_obj_id(hash)
+    //     {
+    //         return Err(UtilError::InvalidObjectId);
+    //     }
+    //     want.push(hash.to_string());
+    // }
+    
+    // // Done
+    // let lines = pkt_line::read(stream)?;
+    // if lines.len() != 1 
+    // {
+    //     return Err(UtilError::InvalidRequestFormat(done.to_string()));
+    // }
+    // let done = String::from_utf8_lossy(&lines[0]);
+    // if done != "done" {
+    //     return Err(UtilError::InvalidRequestFormat(done.to_string()));
+    // }
+    Ok(want)
+}
