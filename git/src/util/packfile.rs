@@ -1,8 +1,8 @@
-use crate::{consts::PACK_SIGNATURE, util::objects::read_type_and_length_from_vec, git_transport::advertised::{self, AdvertisedRefs}};
+use crate::{consts::{PACK_SIGNATURE, PACK_BYTES}, util::objects::read_type_and_length_from_vec, git_transport::advertised::AdvertisedRefs};
 use flate2::read::ZlibDecoder;
 use std::io::{Read, Write};
 
-use super::{errors::UtilError, objects::ObjectEntry, pkt_line, connections::send_message};
+use super::{errors::UtilError, objects::ObjectEntry, connections::send_bytes};
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, UtilError> {
     read_signature(reader)?;
@@ -134,11 +134,14 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
 }
 
 pub fn send_packfile(writer: &mut dyn Write, advertised: &AdvertisedRefs) -> Result<(), UtilError> {
+    // Envio signature
+    send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
+
     // Envio version
-    let version = format!("version {}", advertised.version);
-    let message = pkt_line::add_length_prefix(&version, version.len());
-    send_message(writer, &message, UtilError::SendVersionPackfile)?;
+    send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
     
+    
+    // 
     Ok(())
 }
 #[cfg(test)]

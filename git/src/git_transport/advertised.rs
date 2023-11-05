@@ -23,7 +23,7 @@ use super::references::Reference;
 /// 
 #[derive(Debug)]
 pub struct AdvertisedRefs {
-    pub version: u8,
+    pub version: u32,
     pub capabilities: Vec<String>,
     pub shallow: Vec<String>,
     pub references: Vec<Reference>,
@@ -64,7 +64,7 @@ impl AdvertisedRefs {
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     /// 
     fn from_classified(classified: Vec<AdvertisedRefLine>) -> Result<AdvertisedRefs, UtilError> {
-        let mut version: u8 = VERSION_DEFAULT;
+        let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
         let mut references: Vec<Reference> = Vec::new();
@@ -117,7 +117,7 @@ impl AdvertisedRefs {
         self.references.get(index)
     }
 
-    pub fn create_from_path(path_repo: &str, version: u8, capabilities: Vec<String>) -> Result<AdvertisedRefs, UtilError>
+    pub fn create_from_path(path_repo: &str, version: u32, capabilities: Vec<String>) -> Result<AdvertisedRefs, UtilError>
     {
         let references = Reference::extract_references_from_git(path_repo)?;
         Ok(AdvertisedRefs { version, capabilities, shallow: Vec::new(), references })
@@ -153,10 +153,6 @@ impl AdvertisedRefs {
     
     pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>)
     {
-        println!("update_data");
-        println!("Capabilities: {:?}", capabilities);
-        println!("References: {:?}", references);
-        println!("Adver: {:?}", self);
         retain_common_values(&mut self.capabilities, &capabilities);
         filter_by_hash(&mut self.references, &references);
     }
@@ -198,7 +194,7 @@ fn retain_common_values(vec1: &mut Vec<String>, vec2: &Vec<String>) {
 ///    una referencia "shallow" y contiene el ID del objeto superficial.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AdvertisedRefLine {
-    Version(u8),
+    Version(u32),
     Capabilities(Vec<String>),
     Ref { obj_id: String, ref_name: String },
     Shallow { obj_id: String },

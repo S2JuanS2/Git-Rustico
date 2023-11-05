@@ -82,6 +82,8 @@ pub const PKT_NACK: &str = "0008NAK\n";
 
 pub const PACK_SIGNATURE: &str = "PACK";
 
+pub const PACK_BYTES: [u8; 4] = [b'P', b'A', b'C', b'K'];
+
 pub const SPACE: u8 = 32;
 
 pub const NULL: u8 = 0;
@@ -132,4 +134,4 @@ pub const FILE: &str = "100644";
 
 pub const PARENT_INITIAL: &str = "0000000000000000000000000000000000000000";
 
-pub const VERSION_DEFAULT: u8 = 1;
+pub const VERSION_DEFAULT: u32 = 1;

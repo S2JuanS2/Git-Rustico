@@ -50,6 +50,7 @@ pub enum UtilError {
     InvalidRequestFormat(String),
     NegociacionExpectedDone,
     SendVersionPackfile,
+    SendSignaturePackfile,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -100,6 +101,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidRequestFormat(request) => write!(f, "InvalidRequestFormatError: Formato de solicitud inválido: {}", request),
         UtilError::NegociacionExpectedDone => write!(f, "NegociacionExpectedDoneError: Se esperaba un done en la negociación."),
         UtilError::SendVersionPackfile => write!(f, "SendVersionPackfileError: Error al enviar la versión del packfile."),
+        UtilError::SendSignaturePackfile => write!(f, "SendSignaturePackfileError: Error al enviar la firma del packfile."),
     }
 }
 

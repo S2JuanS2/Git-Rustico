@@ -101,6 +101,21 @@ pub fn send_message(
     Ok(())
 }
 
+pub fn send_bytes(
+    writer: &mut dyn Write,
+    bytes: &[u8],
+    error: UtilError,
+) -> Result<(), UtilError> {
+    if writer.write_all(bytes).is_err() {
+        return Err(error);
+    };
+
+    if writer.flush().is_err() {
+        return Err(error);
+    };
+    Ok(())
+}
+
 /// Finaliza la conexión enviando un paquete de finalización al servidor.
 ///
 /// Después de que se hayan descubierto las referencias y las capacidades,
