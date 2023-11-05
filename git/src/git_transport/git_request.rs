@@ -3,9 +3,8 @@ use std::fmt;
 use std::io::Read;
 use std::path::Path;
 
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_SERVER};
-use crate::git_transport::advertised::{self, AdvertisedRefs};
-use crate::git_transport::references::Reference;
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
+use crate::git_transport::advertised::AdvertisedRefs;
 use crate::util::errors::UtilError;
 use crate::util::pkt_line::{add_length_prefix, read_pkt_line, read_line_from_bytes};
 use crate::util::validation::join_paths_correctly;
@@ -187,6 +186,7 @@ impl GitRequest {
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
                 println!("No llegue aca");
                 let advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new());
+                // advertised.send_references()?;
                 println!("advertised: {:?}", advertised);
                 println!("Fin UploadPack");
                 Ok(())

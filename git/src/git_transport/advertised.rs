@@ -1,6 +1,6 @@
-use crate::{consts::VERSION_DEFAULT, util::{errors::UtilError, validation::is_valid_obj_id}};
+use crate::{consts::VERSION_DEFAULT, util::{errors::UtilError, validation::is_valid_obj_id, connections::{send_flush, send_message}, pkt_line}};
 
-use std::{fmt, vec};
+use std::{fmt, vec, io::Write};
 
 use super::references::Reference;
 
@@ -121,6 +121,17 @@ impl AdvertisedRefs {
     {
         let references = Reference::extract_references_from_git(path_repo)?;
         Ok(AdvertisedRefs { version, capabilities, shallow: Vec::new(), references })
+    }
+
+    pub fn send_references(&self, writer: &mut dyn Write) -> Result<(), UtilError>
+    {
+        // Send version
+        let version = format!("version {}\n", self.version);
+        let version = pkt_line::add_length_prefix(&version, version.len());
+        send_message(writer, version, UtilError::VersionNotSentDiscoveryReferences)?;
+
+        send_flush(writer, UtilError::FlushNotSentDiscoveryReferences)?;
+        Ok(())
     }
 }
 
