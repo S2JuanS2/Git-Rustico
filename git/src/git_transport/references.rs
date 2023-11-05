@@ -110,7 +110,7 @@ fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError>
     Ok(content_object)
 }
 
-fn get_objects(directory: &str, references: Vec<Reference>) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
+pub fn get_objects(directory: &str, references: &Vec<Reference>) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
 
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
     

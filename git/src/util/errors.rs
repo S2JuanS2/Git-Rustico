@@ -51,6 +51,7 @@ pub enum UtilError {
     NegociacionExpectedDone,
     SendVersionPackfile,
     SendSignaturePackfile,
+    GetObjectsPackfile,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -102,6 +103,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::NegociacionExpectedDone => write!(f, "NegociacionExpectedDoneError: Se esperaba un done en la negociación."),
         UtilError::SendVersionPackfile => write!(f, "SendVersionPackfileError: Error al enviar la versión del packfile."),
         UtilError::SendSignaturePackfile => write!(f, "SendSignaturePackfileError: Error al enviar la firma del packfile."),
+        UtilError::GetObjectsPackfile => write!(f, "GetObjectsPackfileError: Error al obtener los objetos del packfile."),
     }
 }
 

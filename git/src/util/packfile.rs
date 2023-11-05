@@ -1,4 +1,4 @@
-use crate::{consts::{PACK_SIGNATURE, PACK_BYTES}, util::objects::read_type_and_length_from_vec, git_transport::advertised::AdvertisedRefs};
+use crate::{consts::{PACK_SIGNATURE, PACK_BYTES}, util::objects::read_type_and_length_from_vec, git_transport::{advertised::AdvertisedRefs, references::get_objects}};
 use flate2::read::ZlibDecoder;
 use std::io::{Read, Write};
 
@@ -133,15 +133,23 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
     Ok(value)
 }
 
-pub fn send_packfile(writer: &mut dyn Write, advertised: &AdvertisedRefs) -> Result<(), UtilError> {
+pub fn send_packfile(writer: &mut dyn Write, advertised: &AdvertisedRefs, path_repo: &str) -> Result<(), UtilError> {
     // Envio signature
     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
 
     // Envio version
     send_bytes(writer, &advertised.version.to_be_bytes(), UtilError::SendSignaturePackfile)?;
     
+    // Envio numero de objetos
+    let objects = match get_objects(path_repo, &advertised.references)
+    {
+        Ok(objects) => objects,
+        Err(_) => return Err(UtilError::GetObjectsPackfile),
+    };
+    let number_objects = objects.len() as u32;
+    send_bytes(writer, &number_objects.to_be_bytes(), UtilError::SendSignaturePackfile)?;
     
-    // 
+    
     Ok(())
 }
 #[cfg(test)]
