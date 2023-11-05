@@ -29,16 +29,26 @@ impl Controller {
         Controller { client }
     }
     pub fn send_command(&mut self, command: &str) -> Result<String, GitError> {
-        let result = match handle_command(command.to_string().clone(), &mut self.client) {
-            Ok(result) => result,
-            Err(e) => {
-                write_client_log(self.client.get_directory_path(), e.message().to_string(), self.client.get_path_log())?;
-                return Err(e);
+        write_client_log(self.client.get_directory_path(), command.to_string(), self.client.get_path_log())?;
+        match handle_command(command.to_string().clone(), &mut self.client) {
+            Ok(result) => {
+                write_client_log(
+                    self.client.get_directory_path(),
+                    "Successfully".to_string(),
+                    self.client.get_path_log(),
+                )?;
+                Ok(result)
             }
-        };
-        Ok(result)
+            Err(e) => {
+                write_client_log(
+                    self.client.get_directory_path(),
+                    e.message().to_string(),
+                    self.client.get_path_log(),
+                )?;
+                Err(e)
+            }
+        }
     }
-
     pub fn get_name_client(& self) -> &str{
         self.client.get_name()
     }
@@ -122,8 +132,5 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
     } else {
         return Err(GitError::NonGitCommandError);
     }
-    //seguir aca
-    write_client_log(client.get_directory_path(), command.to_string(), client.get_path_log())?;
-    write_client_log(&client.get_directory_path().to_string(), result.clone(), client.get_path_log())?;
     Ok(result)
 }
