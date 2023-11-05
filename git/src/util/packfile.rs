@@ -1,8 +1,8 @@
-use crate::{consts::PACK_SIGNATURE, util::objects::read_type_and_length_from_vec};
+use crate::{consts::PACK_SIGNATURE, util::objects::read_type_and_length_from_vec, git_transport::advertised::{self, AdvertisedRefs}};
 use flate2::read::ZlibDecoder;
-use std::io::Read;
+use std::io::{Read, Write};
 
-use super::{errors::UtilError, objects::ObjectEntry};
+use super::{errors::UtilError, objects::ObjectEntry, pkt_line, connections::send_message};
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, UtilError> {
     read_signature(reader)?;
@@ -133,6 +133,14 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
     Ok(value)
 }
 
+pub fn send_packfile(writer: &mut dyn Write, advertised: &AdvertisedRefs) -> Result<(), UtilError> {
+    // Envio version
+    let version = format!("version {}", advertised.version);
+    let message = pkt_line::add_length_prefix(&version, version.len());
+    send_message(writer, &message, UtilError::SendVersionPackfile)?;
+    
+    Ok(())
+}
 #[cfg(test)]
 mod tests {
     use super::*;

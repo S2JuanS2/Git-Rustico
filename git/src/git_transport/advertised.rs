@@ -128,7 +128,7 @@ impl AdvertisedRefs {
         // Send version
         let version = format!("version {}\n", self.version);
         let version = pkt_line::add_length_prefix(&version, version.len());
-        send_message(writer, version, UtilError::VersionNotSentDiscoveryReferences)?;
+        send_message(writer, &version, UtilError::VersionNotSentDiscoveryReferences)?;
 
         // Send references
         // HEAD lo inserte 1ero en el vector
@@ -136,7 +136,7 @@ impl AdvertisedRefs {
             let reference = format!("{} {}\n", reference.get_hash(), reference.get_name());
             let reference = pkt_line::add_length_prefix(&reference, reference.len());
             println!("Sending reference: {}", reference);
-            send_message(writer, reference, UtilError::ReferencesObtaining)?;
+            send_message(writer, &reference, UtilError::ReferencesObtaining)?;
         }
 
         // Send shallow
@@ -174,10 +174,6 @@ fn retain_common_values(vec1: &mut Vec<String>, vec2: &Vec<String>) {
     vec1.retain(|item| set2.contains(item));
 }
 
-// fn filter_references(advertised, references)
-// {
-
-// }
 
 
 // pub struct Refere

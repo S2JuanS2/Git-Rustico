@@ -35,7 +35,7 @@ pub fn upload_request(
     for refs in advertised.get_references() {
         let message = format!("want {}\n", refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
-        send_message(socket, message, UtilError::UploadRequest)?;
+        send_message(socket, &message, UtilError::UploadRequest)?;
     }
     send_flush(socket, UtilError::UploadRequestFlush)?;
     Ok(())

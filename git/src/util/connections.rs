@@ -88,7 +88,7 @@ pub fn receive_packfile(socket: &mut TcpStream) -> Result<Vec<(ObjectEntry, Vec<
 ///
 pub fn send_message(
     socket: &mut dyn Write,
-    message: String,
+    message: &str,
     error: UtilError,
 ) -> Result<(), UtilError> {
     if socket.write(message.as_bytes()).is_err() {
@@ -118,7 +118,7 @@ pub fn send_message(
 /// - `Result<(), UtilError>`: Un resultado que indica si la operación fue exitosa o si se produjo un error.
 ///   Si la operación se realiza con éxito, se devuelve `Ok(())`. Si se produce un error, se devuelve un error `UtilError`.
 pub fn send_flush(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilError> {
-    send_message(socket, FLUSH_PKT.to_string(), error)
+    send_message(socket, FLUSH_PKT, error)
 }
 
 /// Envia un mensaje "done" al servidor a través del socket proporcionado.
@@ -132,7 +132,7 @@ pub fn send_flush(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilEr
 /// Un Result que indica si el envío del mensaje "done" se realizó con éxito (Ok) o si se
 /// produjo un error (Err) de UtilError.
 pub fn send_done(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilError> {
-    send_message(socket, PKT_DONE.to_string(), error)
+    send_message(socket, PKT_DONE, error)
 }
 
 pub fn received_message(stream: &mut dyn Read, message: &str, error: UtilError) -> Result<(), UtilError> {
@@ -159,7 +159,7 @@ mod tests {
         let mut socket = Cursor::new(vec![]);
 
         let message = "Hello, Git!".to_string();
-        let result = send_message(&mut socket, message.clone(), UtilError::GenericError);
+        let result = send_message(&mut socket, &message, UtilError::GenericError);
 
         assert!(result.is_ok());
 

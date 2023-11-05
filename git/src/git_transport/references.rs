@@ -176,7 +176,7 @@ pub fn reference_discovery(
     stream: &mut TcpStream,
     message: String,
 ) -> Result<AdvertisedRefs, UtilError> {
-    send_message(stream, message, UtilError::ReferenceDiscovey)?;
+    send_message(stream, &message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(stream)?;
     AdvertisedRefs::new(&lines)
 }
