@@ -185,10 +185,12 @@ impl GitRequest {
         match self.request_command {
             RequestCommand::UploadPack => {
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
-                println!("No llegue aca");
+                
                 let advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
-                advertised.send_references(stream)?;
                 println!("advertised: {:?}", advertised);
+                advertised.send_references(stream)?;
+                
+                // receive_request(stream, &advertised)?;
                 println!("Fin UploadPack");
                 Ok(())
             }
@@ -269,6 +271,19 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
     ))
 }
 
+
+/// Obtiene la ruta del repositorio dado un directorio raíz y un nombre de ruta.
+///
+/// # Argumentos
+///
+/// * `root` - Ruta del directorio raíz.
+/// * `pathname` - Nombre de la ruta del repositorio.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene la ruta del repositorio si la operación es exitosa.
+/// En caso de error, retorna un error de tipo UtilError indicando la no existencia del repositorio.
+/// 
 fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> {
     let path_repo = join_paths_correctly(root, pathname);
     let path = Path::new(&path_repo);

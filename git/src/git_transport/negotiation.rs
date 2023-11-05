@@ -54,3 +54,18 @@ pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
     }
     Ok(())
 }
+
+// pub fn receive_request_command(stream: &mut dyn Read) -> Result<String, UtilError> {
+//     let mut buffer = [0u8; 4]; // Tamaño suficiente para "0004"
+//     if stream.read_exact(&mut buffer).is_err() {
+//         return Err(UtilError::InvalidPacketLineRequest);
+//     }
+//     let response = String::from_utf8_lossy(&buffer);
+//     let length = response.parse::<usize>().unwrap();
+//     let mut buffer = vec![0u8; length];
+//     if stream.read_exact(&mut buffer).is_err() {
+//         return Err(UtilError::InvalidPacketLineRequest);
+//     }
+//     let response = String::from_utf8_lossy(&buffer);
+//     Ok(response.to_string())
+// }
