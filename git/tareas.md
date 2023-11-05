@@ -14,3 +14,5 @@
 
 ## No aceptamos aun
 - Ref Tag y remotes
+- No acepto solicitudes have
+- En negociacion no permito que el server me de sus capacibilites
