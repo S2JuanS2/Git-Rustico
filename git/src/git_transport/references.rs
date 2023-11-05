@@ -1,9 +1,8 @@
-use std::{net::TcpStream, fs, path::Path, io};
+use std::{net::TcpStream, fs, path::{Path, PathBuf}};
 
-use crate::util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly};
+use crate::{util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly}, consts::{GIT_DIR, REF_HEADS, REFS_REMOTES, REFS_TAGS, HEAD}};
 use crate::commands::branch::get_current_branch;
 use crate::util::files::{open_file, read_file_string};
-use crate::consts::{GIT_DIR, REF_HEADS};
 use super::advertised::AdvertisedRefs;
 
 
@@ -54,28 +53,36 @@ impl Reference {
     }
 
 
-    pub fn extract_references_from_git(path: &str) -> Result<Vec<(String, String)>, io::Error> {
-        let path = join_paths_correctly(path, ".git");
-        let mut references: Vec<(String, String)> = Vec::new();
-        let refs = Path::new(&path).join("refs");
-        let refs_branch = refs.join("heads");
-        let _refs_tag = refs.join("tags");
-        let _refs_remote = refs.join("remotes");
+    /// Extrae las referencias de un repositorio Git.
+    ///
+    /// # Argumentos
+    ///
+    /// * `root` - Ruta al directorio raíz del repositorio Git.
+    ///
+    /// # Retorna
+    ///
+    /// Un resultado que contiene un vector de Referencias si la operación es exitosa.
+    /// En caso de error, retorna un error de tipo UtilError.
+    pub fn extract_references_from_git(root: &str) -> Result<Vec<Reference>, UtilError> {
+        println!("extract_references_from_git");
+        let path_git = join_paths_correctly(root, GIT_DIR);
         
-        for entry in fs::read_dir(refs_branch)? {
-            if let Ok(entry) = entry {
-                let entry_path = entry.path();
-                if !entry_path.is_file() {
-                    continue;
-                }
-                let name = entry_path.as_path().display().to_string();
-                if let Ok(hash) = fs::read_to_string(entry_path) {
-                    references.push((hash.trim().to_string(), name));
-                }
-            }
-        }
-        Ok(references)
+        let path = Path::new(&path_git).join("refs");
+        let refs_branch = extract_references_from_path(&path, "heads", REF_HEADS)?;
+        let refs_tag = extract_references_from_path(&path, "tags", REFS_TAGS)?;
+        let refs_remote = extract_references_from_path(&path, "remotes", REFS_REMOTES)?;
+        
+        let mut refs = Vec::new();
+        refs.extend(refs_branch);
+        refs.extend(refs_tag);
+        refs.extend(refs_remote);
+
+        let head = get_reference_head(&path_git, &refs)?;
+        refs.insert(0, head);
+        Ok(refs)
     }
+
+
 
     pub fn get_hash(&self) -> &String {
         &self.hash
@@ -124,28 +131,149 @@ pub fn reference_discovery(
     AdvertisedRefs::new(&lines)
 }
 
-// A mejorar
-// El packet-ref deberia eliminar esto
-// pub fn list_references(repo_path: &str) -> Result<Vec<String>, UtilError> {
-//     let mut references: Vec<String> = Vec::new();
 
-//     let refs_dir = format!("{}/.git/refs", repo_path);
+/// Extrae referencias de un subdirectorio de un directorio base, creando un vector de Referencias.
+///
+/// # Argumentos
+///
+/// * `path_root` - Ruta base del directorio.
+/// * `subdirectory` - Subdirectorio del que se extraerán las referencias.
+/// * `signature` - Firma o identificador de las referencias.
+///
+/// # Retorna
+///
+/// Un resultado que contiene un vector de Referencias si la operación es exitosa.
+/// En caso de error, retorna un error de tipo UtilError.
+/// 
+fn extract_references_from_path(path_root: &PathBuf, subdirectory: &str, signature: &str) -> Result<Vec<Reference>, UtilError>
+{
+    let new_root = Path::new(path_root.as_os_str()).join(subdirectory);
+    let mut references = Vec::new();
+    let names_refs = get_files_in_directory(&new_root);
+    for name in names_refs {
+        let path = Path::new(&new_root).join(&name);
+        if let Ok(hash) = fs::read_to_string(path) {
+            let name_ref = format!("{}/{}", signature, name);
+            let refs = Reference::new(hash.trim().to_string(), name_ref)?;
+            println!("Refs: {:?}", refs);
+            references.push(refs);
+        }
+    }
+    Ok(references)
+}
 
-//     if let Ok(entries) = fs::read_dir(refs_dir) {
-//         for entry in entries {
-//             if let Ok(entry) = entry {
-//                 if let Some(file_name) = entry.file_name().to_str() {
-//                     if file_name.starts_with("heads/") || file_name.starts_with("tags/") {
-//                         references.push(file_name.to_string());
-//                     }
-//                 }
-//             }
-//         }
-//     }
+/// Obtiene los nombres de archivo dentro de un directorio.
+///
+/// # Argumentos
+///
+/// * `directory_path` - Ruta del directorio del que se desean obtener los nombres de archivo.
+///
+/// # Retorna
+///
+/// Un vector de cadenas que contiene los nombres de archivo del directorio especificado.
+/// 
+fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
+    let mut files: Vec<String> = Vec::new();
 
-//     Ok(references)
-// }
+    if let Ok(entries) = fs::read_dir(directory_path) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(file_name) = path.file_name() {
+                        if let Some(name) = file_name.to_str() {
+                            files.push(name.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
 
+    files
+}
+
+/// Extrae la referencia HEAD de una línea dada.
+///
+/// # Argumentos
+///
+/// * `line` - Cadena que contiene la referencia HEAD.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene la cadena de la referencia HEAD si la operación es exitosa.
+/// En caso de un formato inválido, retorna un error de tipo UtilError.
+/// 
+fn extract_reference_head(line: &str) -> Result<String, UtilError> {
+    let trimmed_line = line.trim();
+    if let Some(reference) = trimmed_line.splitn(2, ' ').nth(1) {
+        Ok(reference.to_string())
+    } else {
+        Err(UtilError::InvalidHeadReferenceFormat)
+    }
+}
+
+/// Extrae el nombre de la referencia HEAD del archivo 'HEAD' en el directorio '.git'.
+///
+/// # Argumentos
+///
+/// * `path_git` - Ruta al directorio '.git'.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene el nombre de la referencia HEAD si la operación es exitosa.
+/// En caso de que no se encuentre el archivo 'HEAD', retorna un error de tipo UtilError.
+/// 
+fn extract_name_head_from_path(path_git: &str) -> Result<String, UtilError>
+{
+    let path = Path::new(&path_git).join("HEAD");
+    if let Ok(line) = fs::read_to_string(path) {
+        let refs = extract_reference_head(&line)?;
+        return Ok(refs);
+    }
+    Err(UtilError::HeadFolderNotFound)
+}
+
+/// Extrae el hash de la referencia HEAD a partir de un vector de referencias y el nombre de la referencia.
+///
+/// # Argumentos
+///
+/// * `refs` - Vector de referencias.
+/// * `name_head` - Nombre de la referencia HEAD.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene el hash de la referencia HEAD si la operación es exitosa.
+/// En caso de que no se encuentre el hash correspondiente a la referencia HEAD, retorna un error de tipo UtilError.
+/// 
+fn extract_hash_head_from_path(refs: &Vec<Reference>, name_head: &str) -> Result<String, UtilError>
+{
+    for reference in refs {
+        if reference.get_name() == name_head {
+            return Ok(reference.get_hash().to_string());
+        }
+    }
+    Err(UtilError::HeadHashNotFound)
+}
+
+/// Obtiene la referencia HEAD a partir de la ruta al directorio '.git' y un vector de referencias.
+///
+/// # Argumentos
+///
+/// * `path_git` - Ruta al directorio '.git'.
+/// * `refs` - Vector de referencias.
+///
+/// # Retorna
+///
+/// Devuelve un resultado que contiene la referencia HEAD si la operación es exitosa.
+/// En caso de fallo al extraer la referencia HEAD, retorna un error de tipo UtilError.
+/// 
+fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference, UtilError>
+{
+    let name_head = extract_name_head_from_path(path_git)?;
+    let hash_head = extract_hash_head_from_path(&refs, &name_head)?;
+    Reference::new(hash_head, HEAD.to_string())
+}
 #[cfg(test)]
 mod tests {
     use super::*;

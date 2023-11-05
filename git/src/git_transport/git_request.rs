@@ -183,15 +183,9 @@ impl GitRequest {
     pub fn execute(&self, _reader: &mut dyn Read, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
-                println!("root: {}", root);
-                println!("pathname: {}", self.pathname);
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
-                println!("Si tengo el repo!");
-                let references = match Reference::extract_references_from_git(path_repo.as_str())
-                {
-                    Ok(references) => references,
-                    Err(_) => return Err(UtilError::ReferencesObtaining)
-                };
+                println!("No llegue aca");
+                let references = Reference::extract_references_from_git(path_repo.as_str())?;
                 println!("References: {:?}", references);
                 println!("UploadPack");
                 Ok(())
@@ -276,11 +270,11 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
 fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> {
     let path_repo = join_paths_correctly(root, pathname);
     let path = Path::new(&path_repo);
+    println!("{:?}", path);
     if !(path.exists() && path.is_dir())
     {
         return Err(UtilError::RepoNotFoundError(pathname.to_string()));
     }
-
     // Valido si es un repo git
     let path_git = join_paths_correctly(&path_repo, ".git");
     let path = Path::new(&path_git);
