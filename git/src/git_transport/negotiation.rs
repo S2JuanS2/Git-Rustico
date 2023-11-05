@@ -55,18 +55,30 @@ pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
     Ok(())
 }
 
-pub fn receive_request(stream: &mut dyn Read) -> Result<Vec<String>, UtilError> {
-    let mut request = Vec::new();
-
-    // Want
+pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String>), UtilError> {
     let lines = pkt_line::read(stream)?;
-    let (hash, capacilities) = extraction_capabilities(&lines[0])?;
-    let want = receive_request_type(lines[1..].to_vec(), "want")?;
-    request.extend(want);
+
+    let (capacilities, request) = process_received_requests(lines)?;
 
     // Done
     received_message(stream, PKT_DONE, UtilError::NegociacionExpectedDone)?;
-    Ok(request)
+    Ok((capacilities, request))
+}
+
+fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<String>), UtilError>
+{
+    let mut request = Vec::new();
+
+    // Want and capabilities
+    let (hash, capacilities) = extraction_capabilities(&lines[0])?;
+    println!("Se extrajo las capacidades correctamente");
+    request.push(hash);
+
+    // Want
+    let want = receive_request_type(lines[1..].to_vec(), "want")?;
+    request.extend(want);
+
+    Ok((capacilities, request))
 }
 
 fn extraction_capabilities(line: &Vec<u8>) -> Result<(String, Vec<String>), UtilError> {
@@ -77,6 +89,10 @@ fn extraction_capabilities(line: &Vec<u8>) -> Result<(String, Vec<String>), Util
         return Err(UtilError::UnexpectedRequestNotWant);
     }
     let hash = line_split.next().ok_or_else(|| UtilError::InvalidRequestFormat(line_str.to_string()))?;
+    if !is_valid_obj_id(hash)
+    {
+        return Err(UtilError::InvalidObjectId);
+    }
     let capacilities = line_split.collect::<Vec<&str>>().iter().map(|s| s.to_string()).collect::<Vec<String>>();
     Ok((hash.to_string(), capacilities))
 }
@@ -107,54 +123,48 @@ fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str) -> Result<Vec<Strin
 mod tests {
     use super::*;
 
-    // Simula un stream que tiene líneas válidas de solicitud 'want'
-    struct MockStream;
 
-    impl std::io::Read for MockStream {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            // Simula líneas de solicitud válidas 'want'
-            let lines = b"0032want 7d1665144a3a975c05f1f43902ddaf084e784dbe\n0032want 7d1665144a3a975c05f1f43902ddaf084e784dbe\n0032want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a\n0000";
-            // let bytes_to_copy = std::cmp::min(buf.len(), lines.len());  // Limita el número de bytes a copiar al tamaño del buffer
-            // buf[..bytes_to_copy].copy_from_slice(&lines[..bytes_to_copy]);
-            buf.clone_from_slice(&lines[..lines.len()]);
-            println!("MockStream: {:?}", buf);
-            Ok(lines.len())
-        }
+    #[test]
+    fn test_receive_request_type_valid_want() {
+        let mut lines = Vec::new();
+        lines.push(b"want 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
+        lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
+        lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
+        let result = receive_request_type( lines, "want");
+        assert!(result.is_ok());
+        let wanted_hashes = result.unwrap();
+        assert_eq!(wanted_hashes, vec!["74730d410fcb6603ace96f1dc55ea6196122532d", "7d1665144a3a975c05f1f43902ddaf084e784dbe", "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"]);
     }
 
-    // #[test]
-    // fn test_receive_request_type_valid_want() {
-    //     let mut stream: &[u8] = b"0032want 74730d410fcb6603ace96f1dc55ea6196122532d\n0032want 7d1665144a3a975c05f1f43902ddaf084e784dbe\n0032want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a\n0000";
-    //     let result = receive_request_type(&mut stream, "want");
-    //     assert!(result.is_ok());
-    //     let wanted_hashes = result.unwrap();
-    //     assert_eq!(wanted_hashes, vec!["74730d410fcb6603ace96f1dc55ea6196122532d", "7d1665144a3a975c05f1f43902ddaf084e784dbe", "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"]);
-    // }
+    #[test]
+    fn test_receive_request_type_valid_have() {
+        let mut lines = Vec::new();
+        lines.push(b"have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01".to_vec());
+        lines.push(b"have 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
+        let result = receive_request_type(lines, "have");
+        assert!(result.is_ok());
+        let have_hashes = result.unwrap();
+        assert_eq!(have_hashes, vec!["7e47fe2bd8d01d481f44d7af0531bd93d3b21c01", "74730d410fcb6603ace96f1dc55ea6196122532d"]);
+    }
 
-    // #[test]
-    // fn test_receive_request_type_valid_have() {
-    //     let mut stream: &[u8] = b"0032have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n0032have 74730d410fcb6603ace96f1dc55ea6196122532d\n0000";
-    //     let result = receive_request_type(stream, "have");
-    //     assert!(result.is_ok());
-    //     let have_hashes = result.unwrap();
-    //     assert_eq!(have_hashes, vec!["7e47fe2bd8d01d481f44d7af0531bd93d3b21c01", "74730d410fcb6603ace96f1dc55ea6196122532d"]);
-    // }
+    #[test]
+    fn test_receive_request_type_invalid() {
+        let mut lines = Vec::new();
+        lines.push(b"have 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
+        lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
+        lines.push(b"have 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
+        let result = receive_request_type(lines, "want");
+        assert!(result.is_err());
+    }
 
-    // #[test]
-    // fn test_receive_request_type_invalid() {
-    //     let mut stream: &[u8] = b"0032have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n0032have 74730d410fcb6603ace96f1dc55ea6196122532d\n0000";
-    //     let result = receive_request_type(&mut stream, "want");
-    //     assert!(result.is_err());
-    // }
-
-    // #[test]
-    // fn test_receive_request_empty() {
-    //     let mut stream: &[u8] = b"0000";
-    //     let result = receive_request_type(&mut stream, "want");
-    //     assert!(result.is_ok());
-    //     let result = result.unwrap();
-    //     assert_eq!(result.len(), 0);
-    // }
+    #[test]
+    fn test_receive_request_empty() {
+        let  lines = Vec::new();
+        let result = receive_request_type(lines, "want");
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.len(), 0);
+    }
 
     #[test]
     fn test_extraction_capabilities_valid() {
@@ -176,4 +186,37 @@ mod tests {
         assert_eq!(capabilities.len(), 0);
     }
 
+    #[test]
+    fn test_receive_request_valid() {
+
+        let mut lines = Vec::new();
+        lines.push(b"want 74730d410fcb6603ace96f1dc55ea6196122532d multi_ack side-band-64k ofs-delta".to_vec());
+        lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
+        lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
+        
+        let result = process_received_requests(lines);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+        let (capabilities, request) = result.unwrap();
+
+        assert_eq!(capabilities, vec!["multi_ack", "side-band-64k", "ofs-delta"]);
+        assert_eq!(request, vec!["74730d410fcb6603ace96f1dc55ea6196122532d", "7d1665144a3a975c05f1f43902ddaf084e784dbe", "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"]);
+    }
+
+    #[test]
+    fn test_receive_request_valid_capabilities_empty() {
+
+        let mut lines = Vec::new();
+        lines.push(b"want 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
+        lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
+        lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
+        
+        let result = process_received_requests(lines);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+        let (capabilities, request) = result.unwrap();
+
+        assert_eq!(capabilities.len(), 0);
+        assert_eq!(request, vec!["74730d410fcb6603ace96f1dc55ea6196122532d", "7d1665144a3a975c05f1f43902ddaf084e784dbe", "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"]);
+    }
 }
