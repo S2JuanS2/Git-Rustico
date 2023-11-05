@@ -28,7 +28,7 @@ pub fn git_log(directory: &str) -> Result<String, GitError> {
     let current_branch = get_current_branch(directory)?;
 
     let commit_file = format!("{}/{}", logs_path, current_branch);
-    if let Ok(file) = File::open(&commit_file) {
+    if let Ok(file) = File::open(commit_file) {
         let reader = BufReader::new(file);
         let lines: Vec<String> = reader
             .lines()
@@ -58,13 +58,13 @@ fn get_parts_commit(lines: Vec<String>, formatted_result: &mut String) {
             let parts: Vec<&str> = line.split_whitespace().collect();
             formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
         }else if count_line == 6{
-            formatted_result.push_str(&format!("\n"));
+            formatted_result.push('\n');
             formatted_result.push_str(&format!("{}\n",line));
         }
         count_line += 1;
         if count_line == 7{
             count_line = 1;
-            formatted_result.push_str(&format!("\n"));
+            formatted_result.push('\n');
         }
     }
 }

@@ -79,7 +79,7 @@ fn get_logs_from_branches(directory: &str, branch_name: &str, current_branch: St
 /// 'branch_to_merge_hash': hash del commit de la rama a mergear
 /// 'path_current_branch': path del archivo de la rama actual
 fn get_result_depending_on_strategy(strategy: (String, String), formatted_result: &mut String, current_branch_hash: String, branch_to_merge_hash: String, path_current_branch: String) -> Result<(), GitError> {
-    Ok(if strategy.0 == "recursive" && strategy.1 == "ok" {
+    if strategy.0 == "recursive" && strategy.1 == "ok" {
         formatted_result.push_str("Merge made by the 'recursive' strategy.");
     }
     else if strategy.0 == "fast-forward" {
@@ -92,7 +92,8 @@ fn get_result_depending_on_strategy(strategy: (String, String), formatted_result
         formatted_result.push_str(format!("CONFLICT (content): Merge conflict in {}\n", path_current_branch).as_str());
         formatted_result.push_str("Automatic merge failed; fix conflicts and then commit the result.\n");
         formatted_result.push_str(format!("Conflict in file:{}\n", strategy.1).as_str());
-    })
+    }
+    Ok(())
 }
 
 /// Obtiene los hashes de los padres de los commits de las ramas a mergear.
@@ -125,7 +126,7 @@ fn get_parent_hashes(root_parent_current_branch: String, root_parent_merge_branc
 /// 'log_current_branch': Vector de strings que contiene los commits de la rama actual.
 /// 'log_merge_branch': Vector de strings que contiene los commits de la rama a mergear.
 /// 'formatted_result': String que contiene el resultado formateado del merge.
-fn check_if_current_is_up_to_date(log_current_branch: &Vec<String>, log_merge_branch: &Vec<String>, formatted_result: &mut String) {
+fn check_if_current_is_up_to_date(log_current_branch: &[String], log_merge_branch: &[String], formatted_result: &mut String) {
     for commit in log_current_branch.iter() {
         if let Some(last_hash_merge_branch) = log_merge_branch.last() {
             if commit == last_hash_merge_branch.as_str() {
@@ -199,7 +200,7 @@ fn get_tree_of_commit(content_commit: String, directory: &str) -> Result<String,
 /// 'branch_to_merge': nombre de la rama a mergear
 /// 'strategy': tupla que contiene la estrategia de merge utilizada y el archivo en conflicto (u ok si no hay)
 fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &str, strategy: &mut (String, String)) -> Result<(), GitError> {
-    let file = open_file(&path_file_format)?;
+    let file = open_file(path_file_format)?;
     let content_file_local = read_file_string(file)?;
     if content_file_local != content_file {
         // CONFLICTO
@@ -246,7 +247,7 @@ fn check_each_line(path_file_format: &str, content_file_local: String, content_f
 
     let mut new_content_file = String::new();
 
-    while line_local != None && line != None {
+    while line_local.is_some() && line.is_some() {
         if line_local != line {
             new_content_file.push_str("<<<<<<< HEAD\n");
             if let Some(line_local) = line_local {
@@ -258,13 +259,13 @@ fn check_each_line(path_file_format: &str, content_file_local: String, content_f
             }
             new_content_file.push_str("\n>>>>>>> ");
             new_content_file.push_str(branch_to_merge);
-            new_content_file.push_str("\n");
+            new_content_file.push('\n');
         }
         else {
             if let Some(line_local) = line_local {
                 new_content_file.push_str(line_local);
             }
-            new_content_file.push_str("\n");
+            new_content_file.push('\n');
         }
         line_local = content_file_local_lines.next();
         line = content_file_lines.next();

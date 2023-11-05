@@ -55,7 +55,7 @@ pub fn get_tree_hash(contenido_commit: &str) -> Option<&str> {
 /// 'tree_hash': Valor hash de 40 caracteres (SHA-1) del tree a leer.
 fn load_files(directory: &str, tree_hash: &str) -> Result<(),GitError> {
 
-    let tree = git_cat_file(directory, &tree_hash, "-p")?;
+    let tree = git_cat_file(directory, tree_hash, "-p")?;
 
     for line in tree.lines() {
 
@@ -85,7 +85,7 @@ fn extract_parent_hash(commit: &str) -> Option<&str> {
     for line in commit.lines() {
         if line.starts_with("parent") {
             let words: Vec<&str> = line.split_whitespace().collect();
-            return words.get(1).map(|&x| x);
+            return words.get(1).copied();
         }
     }
     None
@@ -96,22 +96,21 @@ fn extract_parent_hash(commit: &str) -> Option<&str> {
 /// 'directory': directorio del repositorio local.
 /// 'hash_commit': Valor hash de 40 caracteres (SHA-1) del commit a leer.
 fn read_parent_commit(directory: &str, hash_commit: &str) -> Result<(), GitError>{
-    let commit = git_cat_file(directory, &hash_commit, "-p")?;
+    let commit = git_cat_file(directory, hash_commit, "-p")?;
 
     if let Some(parent_hash) = extract_parent_hash(&commit) {
-        if !(parent_hash == PARENT_INITIAL) {
+        if parent_hash != PARENT_INITIAL {
             read_parent_commit(directory, parent_hash)?;
         }
         if let Some(tree_hash) = get_tree_hash(&commit){
             load_files(directory, tree_hash)?;
         };    
-    } else {
-        if let Some(tree_hash) = get_tree_hash(&commit){
+    } else if let Some(tree_hash) = get_tree_hash(&commit) {
             load_files(directory, tree_hash)?;
         }else{
             return Err(GitError::GetHashError);
         }; 
-    }
+
     Ok(())
 }
 

@@ -5,7 +5,7 @@ use crate::util::files::{open_file, read_file, read_file_string, create_file_rep
 use crate::util::objects::builder_object_blob;
 use std::ffi::OsString;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
@@ -49,7 +49,7 @@ pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
             add_file(&full_path, &file_name)?;
         }else if full_path.is_dir() {
             let path_str = file_name.to_str().ok_or(GitError::PathToStringError)?;
-            if !path_str.starts_with("."){
+            if !path_str.starts_with('.'){
                 git_add_all(&full_path)?;
             }
         }
@@ -62,12 +62,12 @@ pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
 /// ###Parametros:
 /// 'full_path': PathBuf que contiene el path completo del archivo
 /// 'file_name': Nombre del archivo que se le hizo add
-fn add_file(full_path: &PathBuf, file_name: &OsString) -> Result<(), GitError> {
+fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), GitError> {
     let full_path_str = full_path.to_str().ok_or(GitError::PathToStringError)?;
     let parts: Vec<&str> = full_path_str.split('/').collect();
     let directory = format!("{}/", parts[0]);
-    Ok(if parts.len() >= 3 {
-        let mut dir_format = format!("");
+    if parts.len() >= 3 {
+        let mut dir_format = String::new();
         for i in 1..parts.len()-1 {
             let dir_format_parts = format!("{}/", parts[i]);
             dir_format = dir_format + &dir_format_parts;
@@ -78,7 +78,8 @@ fn add_file(full_path: &PathBuf, file_name: &OsString) -> Result<(), GitError> {
     }else{
         let file_name_str = file_name.to_string_lossy().to_string();
         git_add(&directory, &file_name_str)?;
-    })
+    }
+    Ok(())
 }
 
 /// Esta función crea el objeto y lo guarda

@@ -300,17 +300,15 @@ fn create_hash_working_dir(path: PathBuf, hash_list: &mut HashMap<String, String
             calculate_directory_hashes(path_str, hash_list)?;
         }
     } 
-    else {
-        if let Some(file_name_str) = path.to_str() {
-            let file = open_file(file_name_str)?;
-            let content = read_file(file)?;
-
-            let header = format!("{} {}\0", BLOB, content.len());
-            let store = header + String::from_utf8_lossy(&content).as_ref();
-            let hash_object = hash_generate(&store);
-
-            hash_list.insert(file_name_str.to_string(), hash_object);
-        }
+    else if let Some(file_name_str) = path.to_str() {
+        let file = open_file(file_name_str)?;
+        let content = read_file(file)?;
+         
+        let header = format!("{} {}\0", BLOB, content.len());
+        let store = header + String::from_utf8_lossy(&content).as_ref();
+        let hash_object = hash_generate(&store);
+        
+        hash_list.insert(file_name_str.to_string(), hash_object);
     }
     Ok(())
 }

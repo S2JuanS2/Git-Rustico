@@ -58,7 +58,7 @@ pub fn git_remote(directory: &str, action: &str, remote_name: &str, remote_url: 
 /// Obtiene los repositorios remotos del archivo de configuración.
 /// ###Parametros:
 /// 'config_path': ruta del archivo de configuración
-fn get_remotes(config_content: &String) -> Result<Vec<String>, GitError> {
+fn get_remotes(config_content: &str) -> Result<Vec<String>, GitError> {
     let mut remotes = Vec::new();
     for line in config_content.lines() {
         if line.starts_with("[remote ") {
@@ -110,8 +110,8 @@ fn check_if_remote_exists(config_content: &str, remote_name: &str) -> bool {
 /// 'config_path': ruta del archivo de configuración
 /// 'config_content': contenido del archivo de configuración
 /// 'remote_name': nombre del repositorio remoto
-fn remove_remote(config_path: &str, config_content: &String, remote_name: &str) -> Result<(), GitError> {
-    let remote_exists = check_if_remote_exists(config_content.as_str(), remote_name);
+fn remove_remote(config_path: &str, config_content: &str, remote_name: &str) -> Result<(), GitError> {
+    let remote_exists = check_if_remote_exists(config_content, remote_name);
     if !remote_exists {
         return Err(GitError::RemoteDoesNotExistError);
     }
