@@ -41,6 +41,26 @@ pub fn upload_request(
     Ok(())
 }
 
+/// Recibe y procesa un mensaje de no confirmación (NACK) del flujo de entrada.
+///
+/// Lee del flujo `stream` un mensaje de no confirmación (NACK) con un formato esperado.
+///
+/// # Argumentos
+///
+/// * `stream` - Una referencia mutable al flujo de entrada (implementa `Read`).
+///
+/// # Errores
+///
+/// Puede devolver un error en los siguientes casos:
+///
+/// - Si hay un error al leer los bytes del flujo de entrada o si la lectura no coincide con el mensaje NACK,
+///   se devuelve un error `PackfileNegotiationReceiveNACK`.
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene `()` en caso de éxito o un error (`UtilError`) si falla la lectura
+/// del mensaje NACK o si el mensaje recibido no coincide con el esperado.
+/// 
 pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
     let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
     if stream.read_exact(&mut buffer).is_err() {
@@ -54,6 +74,28 @@ pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
     Ok(())
 }
 
+/// Recibe una solicitud del flujo de entrada y procesa las solicitudes recibidas.
+///
+/// Lee del flujo `stream` un conjunto de líneas que representan solicitudes y realiza el procesamiento de
+/// las solicitudes para extraer información relevante.
+///
+/// # Argumentos
+///
+/// * `stream` - Una referencia mutable al flujo de entrada (implementa `Read`).
+///
+/// # Errores
+///
+/// Puede devolver un error en los siguientes casos:
+///
+/// - Si hay un error al leer las líneas del flujo de entrada.
+/// - Si falla el procesamiento de las solicitudes recibidas, se devuelve el error específico asociado.
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene una tupla con un vector de capacidades en formato de cadenas
+/// y un vector de hashes de solicitudes de tipo "want" en formato de cadenas (`(Vec<String>, Vec<String>)`),
+/// o un error (`UtilError`) en caso de que falle el procesamiento de las solicitudes recibidas.
+/// 
 pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String>), UtilError> {
     let lines = pkt_line::read(stream)?;
 
@@ -64,6 +106,29 @@ pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String
     Ok((capacilities, request))
 }
 
+/// Procesa las solicitudes recibidas a partir de un conjunto de líneas de bytes.
+///
+/// Toma un vector de vectores de bytes `lines` que representan las solicitudes recibidas.
+/// Itera sobre las líneas y extrae las solicitudes de tipo "want" y sus capacidades.
+///
+/// # Argumentos
+///
+/// * `lines` - Vector de vectores de bytes que contiene las líneas con las solicitudes recibidas.
+///
+/// # Errores
+///
+/// Puede devolver un error en los siguientes casos:
+///
+/// - Si hay un error al extraer las capacidades o el hash, se devuelve el error correspondiente.
+/// - Si hay un error al procesar las solicitudes, se devuelve el error específico asociado.
+///
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene una tupla con un vector de capacidades en formato de cadenas
+/// y un vector de hashes de solicitudes de tipo "want" en formato de cadenas (`(Vec<String>, Vec<String>)`),
+/// o un error (`UtilError`) en caso de que falle el procesamiento de las solicitudes recibidas.
+/// 
 fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<String>), UtilError>
 {
     let mut request = Vec::new();
@@ -79,6 +144,29 @@ fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<St
     Ok((capacilities, request))
 }
 
+/// Extrae las capacidades y el hash de una línea de bytes.
+///
+/// Toma una referencia a un vector de bytes `line` y busca las capacidades y el hash
+/// de una solicitud determinada.
+///
+/// # Argumentos
+///
+/// * `line` - Referencia al vector de bytes que contiene la línea con las capacidades y el hash.
+///
+/// # Errores
+///
+/// Puede devolver un error en los siguientes casos:
+///
+/// - Si no se encuentra el tipo de solicitud esperado, se devuelve `UtilError::UnexpectedRequestNotWant`.
+/// - Si hay un error en el formato de la solicitud, se devuelve `UtilError::InvalidRequestFormat`.
+/// - Si el identificador de objeto (hash) no es válido, se devuelve `UtilError::InvalidObjectId`.
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene una tupla con el hash en formato de cadena y un vector de capacidades
+/// en formato de cadenas (`(String, Vec<String>)`), o un error (`UtilError`) en caso de que falle la extracción
+/// o validación de las capacidades y el hash.
+/// 
 fn extraction_capabilities(line: &Vec<u8>) -> Result<(String, Vec<String>), UtilError> {
     let line_str = String::from_utf8_lossy(&line);
     let mut line_split = line_str.split_ascii_whitespace();
@@ -96,6 +184,29 @@ fn extraction_capabilities(line: &Vec<u8>) -> Result<(String, Vec<String>), Util
 }
 
 
+/// Extrae y procesa las solicitudes de un tipo específico a partir de un conjunto de líneas.
+///
+/// Toma un vector de vectores de bytes `lines` y un `type_req` que indica el tipo de solicitud esperado.
+/// Itera sobre las líneas y extrae las solicitudes del tipo requerido, validando y obteniendo los hashes.
+///
+/// # Argumentos
+///
+/// * `lines` - Vector que contiene las líneas de bytes con las solicitudes.
+/// * `type_req` - Tipo de solicitud esperada, por ejemplo, "want".
+///
+/// # Errores
+///
+/// Puede devolver un error en los siguientes casos:
+///
+/// - Si la solicitud no comienza con el tipo requerido, se devuelve `UtilError::UnexpectedRequestNotWant`.
+/// - Si hay un error en el formato de la solicitud, se devuelve `UtilError::InvalidRequestFormat`.
+/// - Si el identificador de objeto (hash) no es válido, se devuelve `UtilError::InvalidObjectId`.
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene un vector de cadenas (`Vec<String>`) con los hashes extraídos, 
+/// o un error (`UtilError`) en caso de que falle la extracción o validación de las solicitudes.
+/// 
 fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str) -> Result<Vec<String>, UtilError>
 {
     lines.iter().try_fold(Vec::new(), |mut acc, line| {
