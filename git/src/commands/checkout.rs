@@ -124,7 +124,7 @@ fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a cambiar.
-fn load_files_tree(directory: &str, branch_name: &str) -> Result<(), GitError> {
+fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<(), GitError> {
     let branch = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
 
     let file = open_file(&branch)?;
