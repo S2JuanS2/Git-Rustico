@@ -74,9 +74,11 @@ pub const LENGTH_PREFIX_SIZE: usize = 4;
 //
 pub const FLUSH_PKT: &str = "0000";
 
-pub const DONE: &str = "0009done\n";
+pub const PKT_DONE: &str = "0009done\n";
 
-pub const NACK: &str = "0008NAK\n";
+pub const DONE: &str = "done";
+
+pub const PKT_NACK: &str = "0008NAK\n";
 
 pub const PACK_SIGNATURE: &str = "PACK";
 

@@ -163,11 +163,11 @@ fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
 /// Un Result que contiene un vector de AdvertisedRefLine si la operación fue exitosa,
 /// o un error de UtilError en caso contrario.
 pub fn reference_discovery(
-    socket: &mut TcpStream,
+    stream: &mut TcpStream,
     message: String,
 ) -> Result<AdvertisedRefs, UtilError> {
-    send_message(socket, message, UtilError::ReferenceDiscovey)?;
-    let lines = pkt_line::read(socket)?;
+    send_message(stream, message, UtilError::ReferenceDiscovey)?;
+    let lines = pkt_line::read(stream)?;
     AdvertisedRefs::new(&lines)
 }
 
