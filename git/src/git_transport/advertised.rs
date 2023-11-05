@@ -130,6 +130,22 @@ impl AdvertisedRefs {
         let version = pkt_line::add_length_prefix(&version, version.len());
         send_message(writer, version, UtilError::VersionNotSentDiscoveryReferences)?;
 
+        // Send references
+        // HEAD lo inserte 1ero en el vector
+        for reference in &self.references {
+            let reference = format!("{} {}\n", reference.get_hash(), reference.get_name());
+            let reference = pkt_line::add_length_prefix(&reference, reference.len());
+            println!("Sending reference: {}", reference);
+            send_message(writer, reference, UtilError::ReferencesObtaining)?;
+        }
+
+        // Send shallow
+        // for shallow in &self.shallow {
+        //     let shallow = format!("shallow {}\n", shallow);
+        //     let shallow = pkt_line::add_length_prefix(&shallow, shallow.len());
+        //     send_message(writer, shallow, UtilError::ReferencesObtaining)?;
+        // }
+
         send_flush(writer, UtilError::FlushNotSentDiscoveryReferences)?;
         Ok(())
     }

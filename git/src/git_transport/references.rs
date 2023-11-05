@@ -127,7 +127,6 @@ pub fn reference_discovery(
 ) -> Result<AdvertisedRefs, UtilError> {
     send_message(socket, message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(socket)?;
-    println!("lines: {:?}", lines);
     AdvertisedRefs::new(&lines)
 }
 

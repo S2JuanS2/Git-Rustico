@@ -1,6 +1,7 @@
 
 use std::fmt;
 use std::io::Read;
+use std::net::TcpStream;
 use std::path::Path;
 
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
@@ -180,13 +181,13 @@ impl GitRequest {
         add_length_prefix(&message, len)
     }
     
-    pub fn execute(&self, _reader: &mut dyn Read, root: &str) -> Result<(), UtilError> {
+    pub fn execute(&self, stream: &mut TcpStream, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
                 println!("No llegue aca");
-                let advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new());
-                // advertised.send_references()?;
+                let advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
+                advertised.send_references(stream)?;
                 println!("advertised: {:?}", advertised);
                 println!("Fin UploadPack");
                 Ok(())
