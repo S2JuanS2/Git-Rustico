@@ -164,7 +164,7 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
         .as_secs();
 
     let content = format!(
-        "tree {}\nparent {}\nauthor {} <{}> {}\ncommitter {} <{}> {}\n\n{}\n",
+        "tree {}\nparent {}\nauthor {} <{}> {} -0300\ncommitter {} <{}> {} -0300\n\n{}\n",
         tree_hash,
         parent_hash,
         commit.get_author_name(),
