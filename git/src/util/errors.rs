@@ -44,6 +44,8 @@ pub enum UtilError {
     HeadFolderNotFound,
     InvalidHeadReferenceFormat,
     HeadHashNotFound,
+    FlushNotSentDiscoveryReferences,
+    VersionNotSentDiscoveryReferences,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -88,6 +90,8 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::HeadFolderNotFound => write!(f, "HeadFolderNotFoundError: No se encontró el directorio HEAD."),
         UtilError::InvalidHeadReferenceFormat => write!(f, "InvalidHeadReferenceFormatError: Formato de referencia HEAD inválido."),
         UtilError::HeadHashNotFound => write!(f, "HeadHashNotFoundError: No se encontró el hash del HEAD."),
+        UtilError::FlushNotSentDiscoveryReferences => write!(f, "FlushNotSentDiscoveryReferencesError: No se envió el flush para la solicitud de descubrimiento de referencias."),
+        UtilError::VersionNotSentDiscoveryReferences => write!(f, "VersionNotSentDiscoveryReferencesError: No se envió la versión para la solicitud de descubrimiento de referencias."),
     }
 }
 

@@ -1,10 +1,11 @@
 
 use std::fmt;
 use std::io::Read;
+use std::net::TcpStream;
 use std::path::Path;
 
-use crate::consts::END_OF_STRING;
-use crate::git_transport::references::Reference;
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
+use crate::git_transport::advertised::AdvertisedRefs;
 use crate::util::errors::UtilError;
 use crate::util::pkt_line::{add_length_prefix, read_pkt_line, read_line_from_bytes};
 use crate::util::validation::join_paths_correctly;
@@ -180,14 +181,15 @@ impl GitRequest {
         add_length_prefix(&message, len)
     }
     
-    pub fn execute(&self, _reader: &mut dyn Read, root: &str) -> Result<(), UtilError> {
+    pub fn execute(&self, stream: &mut TcpStream, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
                 println!("No llegue aca");
-                let references = Reference::extract_references_from_git(path_repo.as_str())?;
-                println!("References: {:?}", references);
-                println!("UploadPack");
+                let advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
+                advertised.send_references(stream)?;
+                println!("advertised: {:?}", advertised);
+                println!("Fin UploadPack");
                 Ok(())
             }
             RequestCommand::ReceivePack => {

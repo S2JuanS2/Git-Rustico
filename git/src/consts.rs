@@ -84,6 +84,11 @@ pub const SPACE: u8 = 32;
 
 pub const NULL: u8 = 0;
 
+// const MY_STR_ARRAY: [&'static str; 4] = ["HOLA", "CHAU", "COMO", "ESTAS"];
+
+pub const CAPABILITIES_SERVER: [&'static str; 0] = [];
+
+
 // Directorios
 pub const GIT_DIR: &str = ".git";
 

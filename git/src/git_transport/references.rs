@@ -169,7 +169,6 @@ pub fn reference_discovery(
 ) -> Result<AdvertisedRefs, UtilError> {
     send_message(socket, message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(socket)?;
-    println!("lines: {:?}", lines);
     AdvertisedRefs::new(&lines)
 }
 
@@ -316,6 +315,7 @@ fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference
     let hash_head = extract_hash_head_from_path(&refs, &name_head)?;
     Reference::new(hash_head, HEAD.to_string())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
