@@ -3,7 +3,6 @@ use std::{net::TcpStream, fs, path::{Path, PathBuf}};
 use crate::{util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly}, consts::{GIT_DIR, REF_HEADS, REFS_REMOTES, REFS_TAGS, HEAD}};
 use crate::commands::branch::get_current_branch;
 use crate::util::files::{open_file, read_file_string};
-use crate::consts::{GIT_DIR, REF_HEADS};
 use super::advertised::AdvertisedRefs;
 
 
