@@ -34,18 +34,25 @@ pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, GitErr
     Ok("Rama cambiada con éxito".to_string())
 }
 
-pub fn get_tree_hash(contenido: &str) -> Option<&str> {
+/// Esta función se encarga de leer el tree hash de un commit
+/// ###Parametros:
+/// 'contenido_commit': Contenido de un commit
+pub fn get_tree_hash(contenido_commit: &str) -> Option<&str> {
 
-    if let Some(pos) = contenido.find("tree ") {
+    if let Some(pos) = contenido_commit.find("tree ") {
         let start = pos + "tree ".len();
 
-        if let Some(end) = contenido[start..].find(char::is_whitespace) {
-            return Some(&contenido[start..start + end]);
+        if let Some(end) = contenido_commit[start..].find(char::is_whitespace) {
+            return Some(&contenido_commit[start..start + end]);
         }
     }
     None
 }
 
+/// Esta función se encarga de leer los archivos de un tree
+/// ###Parametros:
+/// 'directory': directorio del repositorio local.
+/// 'tree_hash': Valor hash de 40 caracteres (SHA-1) del tree a leer.
 fn load_files(directory: &str, tree_hash: &str) -> Result<(),GitError> {
 
     let tree = git_cat_file(directory, &tree_hash, "-p")?;
@@ -71,6 +78,9 @@ fn load_files(directory: &str, tree_hash: &str) -> Result<(),GitError> {
     Ok(())
 }
 
+/// Esta función se encarga de leer el parent hash de un commit
+/// ###Parametros:
+/// 'commit': Contenido de un commit
 fn extract_parent_hash(commit: &str) -> Option<&str> {
     for line in commit.lines() {
         if line.starts_with("parent") {
@@ -81,6 +91,10 @@ fn extract_parent_hash(commit: &str) -> Option<&str> {
     None
 }
 
+/// Esta función se encarga de leer los commits padres de un commit recursivamente
+/// ###Parametros:
+/// 'directory': directorio del repositorio local.
+/// 'hash_commit': Valor hash de 40 caracteres (SHA-1) del commit a leer.
 fn read_parent_commit(directory: &str, hash_commit: &str) -> Result<(), GitError>{
     let commit = git_cat_file(directory, &hash_commit, "-p")?;
 
@@ -100,6 +114,11 @@ fn read_parent_commit(directory: &str, hash_commit: &str) -> Result<(), GitError
     }
     Ok(())
 }
+
+/// Esta función se encarga de leer el commit de un branch y sus padres.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'branch_name': Nombre de la branch a cambiar.
 fn load_files_tree(directory: &str, branch_name: &str) -> Result<(),GitError>{
 
     let branch = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
@@ -149,25 +168,21 @@ pub fn git_checkout_switch(directory: &str, branch_name: &str) -> Result<(), Git
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::branch::{git_branch_create, git_branch_delete};
+    use crate::{commands::{branch::git_branch_create, init::git_init, add::git_add, commit::{git_commit, Commit}}, util::files::create_file};
     use std::fs;
-
-    const TEST_DIRECTORY: &str = "./test_repo";
-    const BRANCH_DIR: &str = "refs/heads/";
 
     #[test]
     fn test_git_checkout_switch_error() {
-        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
-        if let Err(err) = fs::create_dir_all(&branch_path) {
-            panic!("Falló al crear el directorio: {}", err);
-        }
-        // Cuando ejecuto la función
-        let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch1");
+        let directory = "./test_git_checkout_switch_error";
+        git_init(directory).expect("Falló al inicializar el repositorio");
 
-        // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists() {
-            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
-        };
+        let current_branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, "master");
+        create_file(current_branch_path.as_str(), "12345").expect("Falló al crear el archivo que contiene la branch");
+
+        // Cuando ejecuto la función sin agregar la branch "test_branch_switch1"
+        let result = git_checkout_switch(directory, "test_branch_switch1");
+
+        fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
         // Entonces la función lanza error
         assert!(result.is_err());
@@ -175,22 +190,37 @@ mod tests {
 
     #[test]
     fn test_git_checkout_switch_ok() {
-        let branch_path = format!("{}/{}/{}", TEST_DIRECTORY, GIT_DIR, BRANCH_DIR);
-        if let Err(err) = fs::create_dir_all(&branch_path) {
-            panic!("Falló al crear el directorio: {}", err);
-        }
-        let _ = git_branch_delete(TEST_DIRECTORY, "test_branch_switch2");
-        git_branch_create(TEST_DIRECTORY, "test_branch_switch2")
+        let directory = "./test_git_checkout_switch_ok";
+        git_init(directory).expect("Falló al inicializar el repositorio");
+
+        let file_path = format!("{}/{}", directory, "hola_mundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"hola mundo")
+            .expect("Error al escribir en el archivo");
+
+        let test_commit = Commit::new(
+            "prueba".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_add(directory, "hola_mundo.txt").expect("Falló al agregar el archivo");
+        git_commit(directory, test_commit).expect("Falló al hacer el commit");
+
+        git_branch_create(directory, "test_branch_switch2")
             .expect("Falló en la creación de la branch");
-        // Cuando ejecuto la función
-        let result = git_checkout_switch(TEST_DIRECTORY, "test_branch_switch2");
 
-        // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists() {
-            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
-        }
+        let result = git_checkout_switch(directory, "test_branch_switch2");
 
-        // Entonces la función no lanza error.
+        let head_file = format!("{}/{}/{}", directory, GIT_DIR, HEAD);
+        let head_file_path = open_file(&head_file).expect("Falló al abrir el archivo");
+        let head_actualizado = read_file_string(head_file_path).expect("Falló al leer el archivo");
+
+        fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
+
         assert!(result.is_ok());
+        assert_eq!(head_actualizado, "ref: /refs/heads/test_branch_switch2\n")
     }
 }

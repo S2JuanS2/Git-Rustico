@@ -1,12 +1,11 @@
 use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
-use crate::util::files::{open_file, read_file};
+use crate::util::files::{open_file, read_file, read_file_string, create_file_replace};
 use crate::util::objects::builder_object_blob;
+use std::ffi::OsString;
 use std::fs;
-use std::fs::OpenOptions;
-use std::path::Path;
-use std::{fs::File, io::Read, io::Write};
+use std::path::{Path, PathBuf};
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
@@ -47,22 +46,7 @@ pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
         let full_path = entry.path();
         
         if full_path.is_file() {
-            let full_path_str = full_path.to_str().ok_or(GitError::PathToStringError)?;
-            let parts: Vec<&str> = full_path_str.split('/').collect();
-            let directory = format!("{}/", parts[0]);
-            if parts.len() >= 3 {
-                let mut dir_format = format!("");
-                for i in 1..parts.len()-1 {
-                    let dir_format_parts = format!("{}/", parts[i]);
-                    dir_format = dir_format + &dir_format_parts;
-                }
-                let file_name_str = file_name.to_string_lossy().to_string();
-                let file_result = format!("{}{}", dir_format, file_name_str);
-                git_add(&directory, &file_result)?;
-            }else{
-                let file_name_str = file_name.to_string_lossy().to_string();
-                git_add(&directory, &file_name_str)?;
-            }
+            add_file(&full_path, &file_name)?;
         }else if full_path.is_dir() {
             let path_str = file_name.to_str().ok_or(GitError::PathToStringError)?;
             if !path_str.starts_with("."){
@@ -73,15 +57,37 @@ pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
     Ok("Archivos agregados con exito!".to_string())
 }
 
+/// Esta función se encarga de llamar a la función git_add con los parametros necesarios si se hace git
+/// add . y la entrada es un archivo.
+/// ###Parametros:
+/// 'full_path': PathBuf que contiene el path completo del archivo
+/// 'file_name': Nombre del archivo que se le hizo add
+fn add_file(full_path: &PathBuf, file_name: &OsString) -> Result<(), GitError> {
+    let full_path_str = full_path.to_str().ok_or(GitError::PathToStringError)?;
+    let parts: Vec<&str> = full_path_str.split('/').collect();
+    let directory = format!("{}/", parts[0]);
+    Ok(if parts.len() >= 3 {
+        let mut dir_format = format!("");
+        for i in 1..parts.len()-1 {
+            let dir_format_parts = format!("{}/", parts[i]);
+            dir_format = dir_format + &dir_format_parts;
+        }
+        let file_name_str = file_name.to_string_lossy().to_string();
+        let file_result = format!("{}{}", dir_format, file_name_str);
+        git_add(&directory, &file_result)?;
+    }else{
+        let file_name_str = file_name.to_string_lossy().to_string();
+        git_add(&directory, &file_name_str)?;
+    })
+}
+
 /// Esta función crea el objeto y lo guarda
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
 /// 'file_name': Nombre del archivo del cual se leera el contenido para luego comprimirlo y generar el objeto
 pub fn git_add(directory: &str, file_name: &str) -> Result<String, GitError> {
     let file_path = format!("{}/{}", directory, file_name);
-
     let file = open_file(&file_path)?;
-
     let content = read_file(file)?;
 
     let git_dir = format!("{}/{}", directory, GIT_DIR);
@@ -94,61 +100,42 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<String, GitError> {
     Ok("Archivo agregado con exito!".to_string())
 }
 
+/// Esta función se encarga de actualizar el index con el nuevo archivo al que se le hizo add.
+/// ###Parametros:
+/// 'git_dir': directorio donde esta el directory/.git
+/// 'file_name': Nombre del archivo que se le hizo add
+/// 'hash_object': Hash del objeto que se creó al hacer add
 fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result<(), GitError> {
     let index_path = format!("{}/{}", &git_dir, INDEX);
 
-    // Abre el archivo de índice en modo lectura y escritura.
-    let mut index_file = match OpenOptions::new().read(true).write(true).open(&index_path) {
-        Ok(index_file) => index_file,
-        Err(_) => return Err(GitError::OpenFileError),
-    };
+    let index_file = open_file(index_path.as_str())?;
+    let index_content = read_file_string(index_file)?;
 
-    // Lee el contenido del archivo de índice.
-    let mut index_content = String::new();
-    if index_file.read_to_string(&mut index_content).is_err() {
-        return Err(GitError::ReadFileError);
-    }
-
-    // Divide el contenido del índice en líneas.
     let mut lines: Vec<String> = index_content.lines().map(String::from).collect();
     let mut updated = false;
 
-    // Busca si el file_name ya existe en el índice.
     for line in &mut lines {
         if line.starts_with(file_name) {
-            // Actualiza la línea existente con el nuevo hash_object.
             *line = format!("{} {} {}", file_name, BLOB, hash_object);
             updated = true;
             break;
         }
     }
 
-    // Si el file_name no existía en el índice, agrega una nueva entrada.
     if !updated {
         lines.push(format!("{} {} {}", file_name, BLOB, hash_object));
     }
 
-    // Reescribe el contenido del archivo de índice.
     let updated_index_content = lines.join("\n");
-    let mut index_file = match File::create(index_path) {
-        Ok(index_file) => index_file,
-        Err(_) => return Err(GitError::OpenFileError),
-    };
-    if index_file.set_len(0).is_err() {
-        return Err(GitError::WriteFileError);
-    }
-    if index_file
-        .write_all(updated_index_content.as_bytes())
-        .is_err()
-    {
-        return Err(GitError::WriteFileError);
-    }
+    create_file_replace(index_path.as_str(), updated_index_content.as_str())?;
 
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    use std::{fs::File, io::{Read, Write}};
+
     use super::*;
 
     #[test]
