@@ -9,8 +9,6 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::fs::File;
-use std::io::Read;
 
 use crate::commands::branch::get_current_branch;
 
@@ -177,17 +175,14 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
     );
     content
 }
+
 /// Esta función genera y crea el objeto commit
 /// ###Parametros:
 /// 'directory': Directorio del git
 /// 'commit': Estructura que contiene la información del commit
 pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
-
     let git_dir = format!("{}/{}", directory, GIT_DIR);
-    let index_content = get_index_content(&git_dir)?;
-    if index_content.trim().is_empty() {
-        return Err(CommandsError::CommitEmptyIndex.into());
-    }
+    check_index_content(&git_dir)?;
 
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
@@ -195,13 +190,8 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
     let parent_hash;
     let mut contents = String::new();
     if fs::metadata(&branch_current_path).is_ok(){
-        let mut file = match File::open(&branch_current_path){
-            Ok(file) => file,
-            Err(_) => return Err(GitError::OpenFileError),
-        };
-        if file.read_to_string(&mut contents).is_err(){
-            return Err(GitError::ReadFileError);
-        };
+        let file = open_file(&branch_current_path)?;
+        contents = read_file_string(file)?;
     }
     if contents.is_empty() {
         parent_hash = PARENT_INITIAL.to_string();
@@ -215,40 +205,38 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
     builder_commit_log(directory, &content, &hash_commit)?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
+    create_or_replace_commit_into_branch(current_branch, branch_current_path, hash_commit)?;
+
+    let index_path = format!("{}/index", git_dir);
+    create_file_replace(&index_path, "")?;
+
+    Ok("Commit exitoso!".to_string())
+}
+
+/// Esta función cambia el hash del commit en el archivo de la branch actual (y si no existe el path de
+/// la branch actual lo crea).
+/// ###Parametros:
+/// 'current_branch': Nombre de la branch actual.
+/// 'branch_current_path': Path del archivo de la branch actual.
+/// 'hash_commit': Hash del commit a escribir.
+fn create_or_replace_commit_into_branch(current_branch: String, branch_current_path: String, hash_commit: String) -> Result<(), GitError> {
     if current_branch == INITIAL_BRANCH && fs::metadata(&branch_current_path).is_err() {
         create_file(&branch_current_path, &hash_commit)?;
     } else {
-        let mut file_current_branch = match OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .open(branch_current_path)
-        {
-            Ok(file_current_branch) => file_current_branch,
-            Err(_) => return Err(GitError::BranchNotFoundError),
-        };
-        if file_current_branch
-            .write_all(hash_commit.as_bytes())
-            .is_err()
-        {
-            return Err(GitError::WriteFileError);
-        }
+        create_file_replace(&branch_current_path, &hash_commit)?;
     }
-    //Actualizar el index
+    Ok(())
+}
 
-    let mut index = match OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .open(format!("{}/index", git_dir))
-    {
-        Ok(index) => index,
-        Err(_) => return Err(GitError::OpenFileError),
-    };
-    match index.write_all(b"") {
-        Ok(_) => (),
-        Err(_) => return Err(GitError::WriteFileError),
-    };
-
-    Ok("Commit exitoso!".to_string())
+/// Esta función chequea que el index no este vacio.
+/// ###Parametros:
+/// 'git_dir': Directorio del git
+fn check_index_content(git_dir: &String) -> Result<(), GitError> {
+    let index_content = get_index_content(git_dir)?;
+    if index_content.trim().is_empty() {
+        return Err(CommandsError::CommitEmptyIndex.into());
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -261,6 +249,14 @@ mod tests {
 
     #[test]
     fn commit_test() {
+        let directory = "./test_commit_repo";
+        git_init(directory).expect("Falló en el comando init");
+
+        let file_path = format!("{}/{}", directory, "holamundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo")
+            .expect("Error al escribir en el archivo");
+
         let test_commit = Commit::new(
             "prueba".to_string(),
             "Juan".to_string(),
@@ -269,8 +265,8 @@ mod tests {
             "jdr@fi.uba.ar".to_string(),
         );
 
-        let directory = "./test_repo";
-        git_init(directory).expect("Falló en el comando init");
+        git_add(directory, "holamundo.txt").expect("Fallo en el comando add");
+
         let result = git_commit(directory, test_commit);
 
         fs::remove_dir_all(directory).expect("Falló al remover los directorios");
@@ -280,6 +276,9 @@ mod tests {
 
     #[test]
     fn commit_erase_from_index_test() {
+        let directory = "./test_commit_erase_index_repo";
+        git_init(directory).expect("Falló en el comando init");
+        
         let test_commit = Commit::new(
             "prueba".to_string(),
             "Juan".to_string(),
@@ -288,15 +287,11 @@ mod tests {
             "jdr@fi.uba.ar".to_string(),
         );
 
-        let directory = "./test_repo";
-        git_init(directory).expect("Falló en el comando init");
-        //
         let file_path = format!("{}/{}", directory, "testfile.rs");
         let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
         file.write_all(b"Hola Mundo")
             .expect("Error al escribir en el archivo");
 
-        File::create(format!("{}/.git/index", directory)).expect("Error");
         git_add(directory, "testfile.rs").expect("Fallo en el comando add");
         let mut index_file = File::open(format!("{}/.git/index", directory)).expect("Error");
         let mut index_content = String::new();
@@ -309,7 +304,7 @@ mod tests {
             "testfile.rs blob ade1f58b626e2918ca61cc9c8c3bd7f507fd1044",
             index_content
         );
-        //
+
         let result = git_commit(directory, test_commit);
 
         let mut index_file = File::open(format!("{}/.git/index", directory)).expect("Error");

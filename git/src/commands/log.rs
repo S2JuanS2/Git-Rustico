@@ -17,11 +17,10 @@ pub fn handle_log(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     git_log(directory)
 }
 
-/// muestra el log de los commits
+/// Muestra el log de los commits
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 pub fn git_log(directory: &str) -> Result<String, GitError> {
-
     let mut formatted_result = String::new();
 
     let logs_path = format!("{}/.git/logs/refs/heads", directory);
@@ -39,77 +38,86 @@ pub fn git_log(directory: &str) -> Result<String, GitError> {
             })
             .collect();
 
-        let mut count_line = 0;
-        for line in lines{
-            if count_line == 1{
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                formatted_result.push_str(&format!("Commit: {}\n", parts[0]));
-            }else if count_line == 3{
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
-            }else if count_line == 6{
-                formatted_result.push_str(&format!("\n"));
-                formatted_result.push_str(&format!("{}\n",line));
-            }
-            count_line += 1;
-            if count_line == 7{
-                count_line = 1;
-                formatted_result.push_str(&format!("\n"));
-            }
-
-        }
+            get_parts_commit(lines, &mut formatted_result);
     }
 
     Ok(formatted_result)
 }
 
+/// Obtiene las partes del commit.
+/// ###Parametros:
+/// 'lines': Vector de strings que contiene las lineas del archivo del commit
+/// 'formatted_result': String que contiene el resultado de git log formateado
+fn get_parts_commit(lines: Vec<String>, formatted_result: &mut String) {
+    let mut count_line = 0;
+    for line in lines{
+        if count_line == 1{
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            formatted_result.push_str(&format!("Commit: {}\n", parts[0]));
+        }else if count_line == 3{
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
+        }else if count_line == 6{
+            formatted_result.push_str(&format!("\n"));
+            formatted_result.push_str(&format!("{}\n",line));
+        }
+        count_line += 1;
+        if count_line == 7{
+            count_line = 1;
+            formatted_result.push_str(&format!("\n"));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::commands::add::git_add;
+    use crate::commands::commit::{git_commit, Commit};
+    use crate::commands::init::git_init;
+    use crate::util::files::create_file;
+
     use super::*;
     use std::fs;
-    use std::fs::File;
-    use std::io::Write;
-    use std::path::Path;
 
     #[test]
     fn test_git_log() {
-        let directory = "./testdir";
-        let git_dir = format!("{}/.git/", directory);
-        if let Err(err) = fs::create_dir_all(&git_dir) {
-            panic!("Falló al crear el directorio temporal: {}", err);
-        }
-        //crear head file
-        let mut file = File::create(format!("{}/.git/HEAD", directory)).unwrap();
-        writeln!(file, "ref: refs/heads/master").unwrap();
-        let log_path = format!("{}/.git/logs/refs/heads/", directory);
-        if let Err(err) = fs::create_dir_all(&log_path) {
-            panic!("Falló al crear el directorio temporal: {}", err);
-        }
-        let mut file = File::create(format!("{}master", directory)).unwrap();
-        writeln!(file, "Commit 2: Line 1").unwrap();
-        writeln!(file, "Commit 2: Line 2").unwrap();
-        writeln!(file, "Commit 2: Line 3").unwrap();
-        writeln!(file, "Commit 2: Line 4").unwrap();
-        writeln!(file, "Commit 2: Line 5").unwrap();
-        writeln!(file, "Commit 1: Line 1").unwrap();
-        writeln!(file, "Commit 1: Line 2").unwrap();
-        writeln!(file, "Commit 1: Line 3").unwrap();
-        writeln!(file, "Commit 1: Line 4").unwrap();
-        writeln!(file, "Commit 1: Line 5").unwrap();
+        let directory = "./test_log";
+        git_init(directory).expect("Falló al crear el repositorio");
+
+        let file_path = format!("{}/test.txt", directory);
+        create_file(&file_path, "test").expect("Falló al crear el archivo");
+
+        git_add(directory, "test.txt").expect("Falló al agregar el primer archivo");
+
+        let test_commit1 = Commit::new(
+            "prueba".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit1).expect("Falló al hacer el primer commit");
+
+        let other_file_path = format!("{}/test2.txt", directory);
+        create_file(&other_file_path, "test2").expect("Falló al crear el archivo");
+
+        git_add(directory, "test2.txt").expect("Falló al agregar el segundo archivo");
+
+        let test_commit1 = Commit::new(
+            "prueba2".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit1).expect("Falló al hacer el segundo commit");
+
         let result = git_log(directory);
+
         assert!(result.is_ok());
 
-        //eliminar head file
-        if let Err(err) = fs::remove_file(format!("{}/.git/HEAD", directory)) {
-            panic!("Falló al eliminar el archivo temporal: {}", err);
-        }
-
-        if !Path::new(&log_path).exists() {
-            fs::remove_dir_all(log_path).expect("Falló al remover el directorio temporal");
-        }
-
-        if !Path::new(directory).exists() {
-            fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
-        }
+        fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
     }
 }

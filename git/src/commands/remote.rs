@@ -2,7 +2,7 @@ use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string, create_file_replace};
 
-/// Esta función se encarga de llamar al comando remote con los parametros necesarios
+/// Esta función se encarga de llamar al comando remote con los parametros necesarios.
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función remote
 /// 'client': Cliente que contiene la información del cliente que se conectó
@@ -28,7 +28,7 @@ pub fn handle_remote(args: Vec<&str>, client: Client) -> Result<String, GitError
     Ok(result)
 }
 
-/// Ejecuta la accion de remote en el repositorio local
+/// Ejecuta la accion de remote en el repositorio local.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'action': accion a realizar
@@ -55,7 +55,7 @@ pub fn git_remote(directory: &str, action: &str, remote_name: &str, remote_url: 
     Ok(formatted_result)
 }
 
-/// Obtiene los repositorios remotos del archivo de configuración
+/// Obtiene los repositorios remotos del archivo de configuración.
 /// ###Parametros:
 /// 'config_path': ruta del archivo de configuración
 fn get_remotes(config_content: &String) -> Result<Vec<String>, GitError> {
@@ -70,7 +70,7 @@ fn get_remotes(config_content: &String) -> Result<Vec<String>, GitError> {
     Ok(remotes)
 }
 
-/// Agrega un repositorio remoto al archivo de configuración
+/// Agrega un repositorio remoto al archivo de configuración.
 /// ###Parametros:
 /// 'config_path': ruta del archivo de configuración
 /// 'config_content': contenido del archivo de configuración
@@ -88,7 +88,7 @@ fn add_remote(config_path: &str, config_content: &String, remote_name: &str, rem
     Ok(())
 }
 
-/// Chequea si un repositorio remoto existe en el archivo de configuración
+/// Chequea si un repositorio remoto existe en el archivo de configuración.
 /// ###Parametros:
 /// 'config_content': contenido del archivo de configuración
 /// 'remote_name': nombre del repositorio remoto
@@ -105,7 +105,7 @@ fn check_if_remote_exists(config_content: &str, remote_name: &str) -> bool {
     false
 }
 
-/// Elimina un repositorio remoto del archivo de configuración
+/// Elimina un repositorio remoto del archivo de configuración.
 /// ###Parametros:
 /// 'config_path': ruta del archivo de configuración
 /// 'config_content': contenido del archivo de configuración

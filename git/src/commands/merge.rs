@@ -8,7 +8,7 @@ use super::checkout::git_checkout_switch;
 use super::cat_file::git_cat_file;
 use super::log::git_log;
 
-/// Esta función se encarga de llamar al comando merge con los parametros necesarios
+/// Esta función se encarga de llamar al comando merge con los parametros necesarios.
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función merge
 /// 'client': Cliente que contiene la información del cliente que se conectó
@@ -21,7 +21,7 @@ pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, GitError>
     git_merge(directory, branch_name)
 }
 
-/// Ejecuta la accion de merge en el repositorio local
+/// Ejecuta la accion de merge en el repositorio local.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
@@ -55,7 +55,7 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
     Ok(formatted_result)
 }
 
-/// Obtiene los logs de las ramas a mergear
+/// Obtiene los logs de las ramas a mergear.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
@@ -70,9 +70,9 @@ fn get_logs_from_branches(directory: &str, branch_name: &str, current_branch: St
     Ok((log_current_branch, log_merge_branch))
 }
 
-/// Obtiene el resultado del merge dependiendo de la estrategia de merge utilizada
+/// Obtiene el resultado del merge dependiendo de la estrategia de merge utilizada.
 /// ###Parametros:
-/// 'strategy': tupla que contiene la estrategia de merge utilizada y el archivo en conflicto (o ok si no hay
+/// 'strategy': tupla que contiene la estrategia de merge utilizada y el archivo en conflicto (u ok si no hay
 /// conflictos)
 /// 'formatted_result': String que contiene el resultado formateado del merge.
 /// 'current_branch_hash': hash del commit de la rama actual
@@ -95,7 +95,7 @@ fn get_result_depending_on_strategy(strategy: (String, String), formatted_result
     })
 }
 
-/// Obtiene los hashes de los padres de los commits de las ramas a mergear
+/// Obtiene los hashes de los padres de los commits de las ramas a mergear.
 /// ###Parametros:
 /// 'root_parent_current_branch': String que contiene el contenido del primer commit de la rama actual
 /// 'root_parent_merge_branch': String que contiene el contenido del primer commit de la rama a mergear
@@ -175,7 +175,7 @@ fn merge_depending_on_strategy(hash_parent_current: &str, hash_parent_merge: &st
     Ok(strategy)
 }
 
-/// Obtiene el contenido del arbol del commit
+/// Obtiene el contenido del arbol del commit.
 /// ###Parametros:
 /// 'content_commit': String que contiene el contenido del commit
 /// 'directory': directorio del repositorio local
@@ -192,7 +192,7 @@ fn get_tree_of_commit(content_commit: String, directory: &str) -> Result<String,
     Ok(content_tree)
 }
 
-/// Compara el archivo en la rama actual con el de la rama a mergear
+/// Compara el archivo en la rama actual con el de la rama a mergear.
 /// ###Parametros:
 /// 'path_file_format': path del archivo a comparar
 /// 'content_file': contenido del archivo en la rama a mergear
@@ -216,7 +216,7 @@ fn compare_files(path_file_format: &str, content_file: &str, branch_to_merge: &s
     Ok(())
 }
 
-/// Esta función se encarga de obtener los commits de un log
+/// Esta función se encarga de obtener los commits de un log.
 /// ###Parametros:
 /// 'log': String que contiene el log
 fn get_commits_from_log(log: String) -> Vec<String> {
@@ -232,7 +232,7 @@ fn get_commits_from_log(log: String) -> Vec<String> {
     commit_hashes
 }
 
-/// Chequea cada linea de los archivos para ver si hay conflictos
+/// Chequea cada linea de los archivos para ver si hay conflictos.
 /// ###Parametros:
 /// 'path_file_format': path del archivo a comparar
 /// 'content_file_local': contenido del archivo en la rama actual
@@ -284,9 +284,9 @@ mod tests {
     use std::{fs::{self}, io::Write};
 
     #[test]
-    fn git_merge_test(){
+    fn git_merge_fast_forward_test(){
         
-        let directory = "./repo_test";
+        let directory = "./test_merge_fast_forward";
         git_init(directory).expect("Error al iniciar el repositorio");
 
         let file_path = format!("{}/{}", directory, "tocommitinmain.txt");
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn git_merge_recursive_test(){
-        let directory = "./repo_test_recursive";
+        let directory = "./test_merge_recursive";
         git_init(directory).expect("Error al iniciar el repositorio");
 
         let file_path = format!("{}/{}", directory, "tocommitinmaster.txt");
