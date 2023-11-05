@@ -51,21 +51,22 @@ fn load_files(directory: &str, tree_hash: &str) -> Result<(),GitError> {
     let tree = git_cat_file(directory, &tree_hash, "-p")?;
 
     for line in tree.lines() {
-
+        println!("line: {}", line);
         let parts: Vec<&str> = line.split_whitespace().collect();
 
-        let path_file = parts[1];
+        let path_file = parts[0];
         let hash_blob = parts[2];
 
         let path_file_format = format!("{}/{}", directory, path_file);
         let content_file = git_cat_file(directory, hash_blob, "-p")?;
-
+        println!("content: {}", content_file);
         let path = Path::new(&path_file_format);
 
         if let Some(parent) = path.parent(){
             create_directory(parent)?;
 
         }
+        println!("path: {}", path_file_format);
         create_file_replace(&path_file_format, &content_file)?;
     }
     Ok(())
