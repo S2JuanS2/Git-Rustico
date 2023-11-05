@@ -1,6 +1,6 @@
 use std::{net::TcpStream, fs, path::{Path, PathBuf}};
 
-use crate::{util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly}, consts::{GIT_DIR, REF_HEADS, REFS_REMOTES, REFS_TAGS}};
+use crate::{util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly}, consts::{GIT_DIR, REF_HEADS, REFS_REMOTES, REFS_TAGS, HEAD}};
 
 use super::advertised::AdvertisedRefs;
 
