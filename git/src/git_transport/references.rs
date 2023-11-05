@@ -1,7 +1,9 @@
 use std::{net::TcpStream, fs, path::Path, io};
 
 use crate::util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly};
-
+use crate::commands::branch::get_current_branch;
+use crate::util::files::{open_file, read_file_string};
+use crate::consts::{GIT_DIR, REF_HEADS};
 use super::advertised::AdvertisedRefs;
 
 
@@ -88,6 +90,18 @@ impl Reference {
     }
 }
 
+fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
+    let current_branch = get_current_branch(directory).expect("Error");
+    let refname = format!("refs/heads/{}", current_branch);
+    let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, current_branch);
+    if fs::metadata(&branch_current_path).is_err() {
+        return Err(UtilError::GenericError);
+    }
+    let file_current_branch = open_file(&branch_current_path).expect("Error");
+    let hash_current_branch = read_file_string(file_current_branch).expect("Error");
+
+    Reference::new(hash_current_branch, refname)
+}
 
 /// Realiza un proceso de descubrimiento de referencias (refs) enviando un mensaje al servidor
 /// a través del socket proporcionado, y luego procesa las líneas recibidas para clasificarlas
