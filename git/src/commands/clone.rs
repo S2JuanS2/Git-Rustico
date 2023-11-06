@@ -59,6 +59,7 @@ pub fn git_clone(
 
     // Packfile Data
     let content = receive_packfile(socket)?;
+    println!("content: {:?}", content);
 
     // Cantidad de objetos recibidos
     let count_objects = content.len();
