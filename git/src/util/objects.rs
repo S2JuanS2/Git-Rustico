@@ -331,6 +331,7 @@ fn read_index_clone(content: &str) -> Result<Vec<u8>, GitError> {
 }
 
 pub fn builder_object_tree_clone(git_dir: &str, content: &str) -> Result<String, GitError> {
+    println!("content: {}", content);
     let format_tree = read_index_clone(content)?;
 
     let content_size = format_tree.len().to_string();

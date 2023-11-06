@@ -53,6 +53,8 @@ pub enum UtilError {
     SendSignaturePackfile,
     GetObjectsPackfile,
     SendNACKPackfile,
+    SendObjectPackfile,
+    ObjectDeserializationPackfile,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -106,6 +108,8 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::SendSignaturePackfile => write!(f, "SendSignaturePackfileError: Error al enviar la firma del packfile."),
         UtilError::GetObjectsPackfile => write!(f, "GetObjectsPackfileError: Error al obtener los objetos del packfile."),
         UtilError::SendNACKPackfile => write!(f, "SendNACKPackfileError: Error al enviar el NACK para preparar el packfile."),
+        UtilError::SendObjectPackfile => write!(f, "SendObjectPackfileError: Error al enviar el objeto del packfile."),
+        UtilError::ObjectDeserializationPackfile => write!(f, "ObjectDeserializationPackfileError: Error al deserializar el objeto para crear el packfile."),
     }
 }
 
