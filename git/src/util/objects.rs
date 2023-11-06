@@ -820,4 +820,23 @@ mod tests {
         encode_size_encoding(99999, 0, &mut bytes);
         assert_eq!(bytes, vec![0b10011111, 0b10001101, 0b00000110]);
     }
+
+    #[test]
+    fn test_to_bytes_with_small_obj_length() {
+        let object = ObjectEntry::new(ObjectType::Blob, 10);
+        let bytes = object.to_bytes();
+
+        assert_eq!(bytes.len(), 1);
+        assert_eq!(bytes[0], 0b00111010); // Assuming Blob type for 10-byte length
+    }
+
+    #[test]
+    fn test_to_bytes_with_large_obj_length() {
+        let object = ObjectEntry::new(ObjectType::Tree, 300);
+        let bytes = object.to_bytes();
+        println!("Bytes: {:?}", bytes);
+        assert_eq!(bytes.len(), 2); 
+        assert_eq!(bytes[0], 0b10101100); 
+        assert_eq!(bytes[1], 0b00010010); 
+    }
 }
