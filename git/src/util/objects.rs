@@ -23,6 +23,23 @@ pub struct ObjectEntry {
     pub obj_length: usize,
 }
 
+/// Convierte un objeto en bytes, siguiendo las reglas de la especificación Git Pack.
+///
+/// # Ejemplo
+///
+/// ```rust
+/// use crate::util::objects::{ObjectEntry, ObjectType};
+///
+/// let object = ObjectType::new(ObjectType::Blob, 50);
+/// let bytes = object.to_bytes();
+/// ```
+/// # Argumentos
+/// * `obj_type` - Tipo de objeto.
+/// * `obj_length` - Longitud del objeto.
+/// 
+/// # Retorno
+/// * `Vec<u8>` - Vector de bytes que representa el objeto.
+/// 
 impl ObjectEntry {
     pub fn new(obj_type: ObjectType, obj_length: usize) -> ObjectEntry {
         ObjectEntry {
@@ -59,7 +76,14 @@ impl ObjectEntry {
     }
 }
 
-
+/// Codifica un número usando el esquema de codificación de tamaño definido por Git Pack.
+///
+/// # Argumentos
+///
+/// * `number` - Número a codificar.
+/// * `offset` - Desplazamiento para el número.
+/// * `result` - Vector que almacena los bytes codificados.
+/// 
 pub fn encode_size_encoding(mut number: usize, offset: u8, result: &mut Vec<u8>) {
     number >>= offset;
     loop {

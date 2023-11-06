@@ -145,17 +145,18 @@ pub fn send_packfile(writer: &mut dyn Write, advertised: &AdvertisedRefs, path_r
     let objects = match get_objects(path_repo, &advertised.references[1..].to_vec())
     {
         Ok(objects) => objects,
-        Err(e) => {
-            println!("Error al obtener los objetos del packfile: {:?}", e);
-            return Err(UtilError::GetObjectsPackfile);
-        }
+        Err(_) => return Err(UtilError::GetObjectsPackfile),
     };
     let number_objects = objects.len() as u32;
     send_bytes(writer, &number_objects.to_be_bytes(), UtilError::SendSignaturePackfile)?;
     println!("Number of objects: {}", number_objects);
-    for object in objects {
-        println!("Object: {:?}", object);
-    }
+
+
+    // // Envio de objetos
+    // for (object_type, content) in objects {
+        
+    // }
+    
     
     Ok(())
 }
