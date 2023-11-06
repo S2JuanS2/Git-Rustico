@@ -68,7 +68,6 @@ impl Reference {
     /// Un resultado que contiene un vector de Referencias si la operación es exitosa.
     /// En caso de error, retorna un error de tipo UtilError.
     pub fn extract_references_from_git(root: &str) -> Result<Vec<Reference>, UtilError> {
-        println!("extract_references_from_git");
         let path_git = join_paths_correctly(root, GIT_DIR);
         
         let path = Path::new(&path_git).join("refs");
@@ -81,7 +80,9 @@ impl Reference {
         refs.extend(refs_tag);
         refs.extend(refs_remote);
 
+        println!("refs: {:?}", refs);
         let head = get_reference_head(&path_git, &refs)?;
+        println!("head: {:?}", head);
         refs.insert(0, head);
         Ok(refs)
     }
@@ -118,7 +119,9 @@ pub fn get_objects(directory: &str, references: &Vec<Reference>) -> Result<Vec<(
         let parts: Vec<&str> = reference.get_name().split('/').collect();
         let branch = parts.last().map_or("", |&x| x);
         let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
+        println!("branch_current_path: {:?}", branch_current_path);
         let file_current_branch = open_file(&branch_current_path)?;
+        println!("abri el file");
         let hash_commit_current_branch = read_file_string(file_current_branch)?;
         
         let mut object_commit:(ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
@@ -320,7 +323,10 @@ fn extract_hash_head_from_path(refs: &Vec<Reference>, name_head: &str) -> Result
 /// 
 fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference, UtilError>
 {
-    let name_head = extract_name_head_from_path(path_git)?;
+    let mut name_head = extract_name_head_from_path(path_git)?;
+    if let Some('/') = name_head.chars().next() {
+        name_head.remove(0);
+    }
     let hash_head = extract_hash_head_from_path(&refs, &name_head)?;
     Reference::new(hash_head, HEAD.to_string())
 }

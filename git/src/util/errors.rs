@@ -52,6 +52,7 @@ pub enum UtilError {
     SendVersionPackfile,
     SendSignaturePackfile,
     GetObjectsPackfile,
+    SendNACKPackfile,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -104,6 +105,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::SendVersionPackfile => write!(f, "SendVersionPackfileError: Error al enviar la versión del packfile."),
         UtilError::SendSignaturePackfile => write!(f, "SendSignaturePackfileError: Error al enviar la firma del packfile."),
         UtilError::GetObjectsPackfile => write!(f, "GetObjectsPackfileError: Error al obtener los objetos del packfile."),
+        UtilError::SendNACKPackfile => write!(f, "SendNACKPackfileError: Error al enviar el NACK para preparar el packfile."),
     }
 }
 
