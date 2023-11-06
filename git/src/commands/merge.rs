@@ -30,10 +30,7 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
     let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
     let path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
 
-    let current_branch_file = open_file(&path_current_branch)?;
-    let current_branch_hash = read_file_string(current_branch_file)?;
-    let merge_branch_file = open_file(&path_branch_to_merge)?;
-    let branch_to_merge_hash = read_file_string(merge_branch_file)?;
+    let (current_branch_hash, branch_to_merge_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
 
     let mut formatted_result = String::new();
     if current_branch_hash == branch_to_merge_hash || current_branch_hash == branch_name {
@@ -42,19 +39,21 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
     } else {
         let (log_current_branch, log_merge_branch) =
             get_logs_from_branches(directory, branch_name, current_branch)?;
-        check_if_current_is_up_to_date(
+        if check_if_current_is_up_to_date(
             &log_current_branch,
             &log_merge_branch,
             &mut formatted_result,
-        );
+        ) {
+            return Ok(formatted_result);
+        }
 
-        let first_commit_current_branch = &log_current_branch[0];
-        let first_commit_merge_branch = &log_merge_branch[0];
+        let (first_commit_current_branch, first_commit_merge_branch) = get_first_commit_of_each_branch(&log_current_branch, &log_merge_branch);
         let root_parent_current_branch =
-            git_cat_file(directory, first_commit_current_branch, "-p")?;
-        let root_parent_merge_branch = git_cat_file(directory, first_commit_merge_branch, "-p")?;
+            git_cat_file(directory, &first_commit_current_branch, "-p")?;
+        let root_parent_merge_branch = git_cat_file(directory, &first_commit_merge_branch, "-p")?;
         let (hash_parent_current, hash_parent_merge) =
             get_parent_hashes(root_parent_current_branch, root_parent_merge_branch);
+
         let strategy = merge_depending_on_strategy(
             &hash_parent_current,
             &hash_parent_merge,
@@ -71,6 +70,45 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
         )?;
     }
     Ok(formatted_result)
+}
+
+/// Obtiene el primer commit de cada rama por separado.
+/// ###Parametros:
+/// 'log_current_branch': Vector de strings que contiene los commits de la rama actual.
+/// 'log_merge_branch': Vector de strings que contiene los commits de la rama a mergear.
+fn get_first_commit_of_each_branch(log_current_branch: &Vec<String>, log_merge_branch: &Vec<String>) -> (String, String) {
+    let logs_just_in_current_branch = log_current_branch
+        .iter()
+        .filter(|commit| !log_merge_branch.contains(commit))
+        .collect::<Vec<_>>();
+    let logs_just_in_merge_branch = log_merge_branch
+        .iter()
+        .filter(|commit| !log_current_branch.contains(commit))
+        .collect::<Vec<_>>();
+
+    let mut first_commit_current_branch = &log_current_branch[0];
+    let mut first_commit_merge_branch = &log_merge_branch[0];
+
+    if !logs_just_in_current_branch.is_empty() {
+        first_commit_current_branch = logs_just_in_current_branch[0];
+    }
+
+    if !logs_just_in_merge_branch.is_empty() {
+        first_commit_merge_branch = logs_just_in_merge_branch[0];
+    }
+    (first_commit_current_branch.to_string(), first_commit_merge_branch.to_string())
+}
+
+/// Obtiene los hashes de los commits de las ramas a mergear.
+/// ###Parametros:
+/// 'path_current_branch': path del archivo de la rama actual
+/// 'path_branch_to_merge': path del archivo de la rama a mergear
+fn get_branches_hashes(path_current_branch: &String, path_branch_to_merge: &String) -> Result<(String, String), GitError> {
+    let current_branch_file = open_file(path_current_branch)?;
+    let current_branch_hash = read_file_string(current_branch_file)?;
+    let merge_branch_file = open_file(path_branch_to_merge)?;
+    let branch_to_merge_hash = read_file_string(merge_branch_file)?;
+    Ok((current_branch_hash, branch_to_merge_hash))
 }
 
 /// Obtiene los logs de las ramas a mergear.
@@ -175,14 +213,16 @@ fn check_if_current_is_up_to_date(
     log_current_branch: &[String],
     log_merge_branch: &[String],
     formatted_result: &mut String,
-) {
+) -> bool {
     for commit in log_current_branch.iter() {
         if let Some(last_hash_merge_branch) = log_merge_branch.last() {
             if commit == last_hash_merge_branch.as_str() {
                 formatted_result.push_str("Already up to date.");
+                return true;
             }
         }
     }
+    false
 }
 
 /// Recorre los commits en la merge branch y hace el merge dependiendo de la estrategia a utilizar.
@@ -394,7 +434,20 @@ mod tests {
             "Valen".to_string(),
             "vlanzillotta@fi.uba.ar".to_string(),
         );
+
+        let test_commit2 = Commit::new(
+            "prueba otra".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
         git_commit(directory, test_commit1).expect("Error al commitear");
+
+        git_add(directory, "tocommitinnew3.txt").expect("Error al agregar el archivo");
+
+        git_commit(directory, test_commit2).expect("Error al commitear");
 
         git_branch_create(directory, "new_branch").expect("Error al crear la rama");
 
@@ -423,17 +476,6 @@ mod tests {
         );
 
         git_commit(directory, test_commit5).expect("Error al commitear");
-
-        git_add(directory, "tocommitinnew3.txt").expect("Error al agregar el archivo");
-
-        let test_commit2 = Commit::new(
-            "prueba otra".to_string(),
-            "Valen".to_string(),
-            "vlanzillotta@fi.uba.ar".to_string(),
-            "Valen".to_string(),
-            "vlanzillotta@fi.uba.ar".to_string(),
-        );
-        git_commit(directory, test_commit2).expect("Error al commitear");
 
         git_checkout_switch(directory, "master").expect("Error al cambiar de rama");
 
