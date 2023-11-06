@@ -323,11 +323,11 @@ fn read_index_clone(content: &str) -> Result<Vec<u8>, GitError> {
 }
 
 pub fn builder_object_tree_clone(git_dir: &str, content: &str) -> Result<String, GitError> {
-    println!("content: {}", content);
+    // println!("content: {}", content);
     let format_tree = read_index_clone(content)?;
 
     let content_size = format_tree.len().to_string();
-    println!("{}", content_size);
+    // println!("{}", content_size);
     let tree_format = "tree ";
     let mut header: Vec<u8> = vec![];
     header.extend_from_slice(tree_format.as_bytes());
@@ -386,7 +386,7 @@ pub fn builder_object_tree(git_dir: &str) -> Result<String, GitError> {
     let format_tree = read_index(git_dir)?;
 
     let content_size = format_tree.len().to_string();
-    println!("{}", content_size);
+    // println!("{}", content_size);
     let tree_format = "tree ";
     let mut header: Vec<u8> = vec![];
     header.extend_from_slice(tree_format.as_bytes());
