@@ -320,7 +320,7 @@ mod tests {
     fn test_extraction_capabilities_empty() {
         let line = b"want 74730d410fcb6603ace96f1dc55ea6196122532d\n".to_vec();
         let result = extraction_capabilities(&line);
-        println!("result: {:?}", result);
+        // println!("result: {:?}", result);
         assert!(result.is_ok());
         let (hash, capabilities) = result.unwrap();
         assert_eq!(hash, "74730d410fcb6603ace96f1dc55ea6196122532d");

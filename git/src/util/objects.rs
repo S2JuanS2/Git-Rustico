@@ -118,7 +118,7 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
     if reader.read_exact(&mut buffer).is_err() {
         return Err(GitError::HeaderPackFileReadError);
     };
-    println!("(read_type_and_length)Buffer: {:?}", buffer);
+    // println!("(read_type_and_length)Buffer: {:?}", buffer);
     let byte = buffer[0];
 
     let obj_type: ObjectType = create_object_bits(byte)?;
@@ -177,7 +177,7 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
         return Ok(length_bits); // Se gasto un bit para el tipo
     }
 
-    println!("(MSB)Length firts: {:?}", length_bits);
+    // println!("(MSB)Length firts: {:?}", length_bits);
     let mut shift: usize = 4;
 
     loop {
@@ -185,16 +185,16 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
         if reader.read_exact(&mut byte).is_err() {
             return Err(GitError::HeaderPackFileReadError);
         };
-        println!("(MSB)Buffer: {:?}", byte);
+        // println!("(MSB)Buffer: {:?}", byte);
 
         let seven_bits = (byte[0] & 0b01111111) as usize;
         // print_u8_bits(byte[0] & 0b01111111);
-        println!(
-            "(MSB)Unire:length seven: {:?} y length_bits: {}",
-            seven_bits, length_bits
-        );
+        // println!(
+        //     "(MSB)Unire:length seven: {:?} y length_bits: {}",
+        //     seven_bits, length_bits
+        // );
         length_bits |= seven_bits << shift;
-        println!("(MSB)Length final: {:?}", length_bits);
+        // println!("(MSB)Length final: {:?}", length_bits);
         if (byte[0] & 0x80) == 0 {
             break;
         }

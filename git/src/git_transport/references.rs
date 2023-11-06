@@ -87,9 +87,9 @@ impl Reference {
         refs.extend(refs_tag);
         refs.extend(refs_remote);
 
-        println!("refs: {:?}", refs);
+        // println!("refs: {:?}", refs);
         let head = get_reference_head(&path_git, &refs)?;
-        println!("head: {:?}", head);
+        // println!("head: {:?}", head);
         refs.insert(0, head);
         Ok(refs)
     }
@@ -131,9 +131,9 @@ pub fn get_objects(
         let parts: Vec<&str> = reference.get_name().split('/').collect();
         let branch = parts.last().map_or("", |&x| x);
         let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
-        println!("branch_current_path: {:?}", branch_current_path);
+        // println!("branch_current_path: {:?}", branch_current_path);
         let file_current_branch = open_file(&branch_current_path)?;
-        println!("abri el file");
+        // println!("abri el file");
         let hash_commit_current_branch = read_file_string(file_current_branch)?;
 
         let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
