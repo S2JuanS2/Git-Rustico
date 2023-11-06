@@ -204,7 +204,7 @@ fn merge_depending_on_strategy(
         let content_commit = git_cat_file(directory, &commit, "-p")?;
         let content_tree = get_tree_of_commit(content_commit, directory)?;
         for line in content_tree.lines() {
-            let file = line.split_whitespace().skip(1).take(1).collect::<String>();
+            let file = line.split_whitespace().take(1).collect::<String>();
             let hash_blob = line.split_whitespace().skip(2).take(1).collect::<String>();
             let content_file = git_cat_file(directory, &hash_blob, "-p")?;
             let path_file_format = format!("{}/{}", directory, file);
