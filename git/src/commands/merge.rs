@@ -30,7 +30,8 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
     let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
     let path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
 
-    let (current_branch_hash, branch_to_merge_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
+    let (current_branch_hash, branch_to_merge_hash) =
+        get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
 
     let mut formatted_result = String::new();
     if current_branch_hash == branch_to_merge_hash || current_branch_hash == branch_name {
@@ -47,7 +48,8 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
             return Ok(formatted_result);
         }
 
-        let (first_commit_current_branch, first_commit_merge_branch) = get_first_commit_of_each_branch(&log_current_branch, &log_merge_branch);
+        let (first_commit_current_branch, first_commit_merge_branch) =
+            get_first_commit_of_each_branch(&log_current_branch, &log_merge_branch);
         let root_parent_current_branch =
             git_cat_file(directory, &first_commit_current_branch, "-p")?;
         let root_parent_merge_branch = git_cat_file(directory, &first_commit_merge_branch, "-p")?;
@@ -76,7 +78,10 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError>
 /// ###Parametros:
 /// 'log_current_branch': Vector de strings que contiene los commits de la rama actual.
 /// 'log_merge_branch': Vector de strings que contiene los commits de la rama a mergear.
-fn get_first_commit_of_each_branch(log_current_branch: &[String], log_merge_branch: &[String]) -> (String, String) {
+fn get_first_commit_of_each_branch(
+    log_current_branch: &[String],
+    log_merge_branch: &[String],
+) -> (String, String) {
     let logs_just_in_current_branch = log_current_branch
         .iter()
         .filter(|commit| !log_merge_branch.contains(commit))
@@ -96,14 +101,20 @@ fn get_first_commit_of_each_branch(log_current_branch: &[String], log_merge_bran
     if !logs_just_in_merge_branch.is_empty() {
         first_commit_merge_branch = logs_just_in_merge_branch[0];
     }
-    (first_commit_current_branch.to_string(), first_commit_merge_branch.to_string())
+    (
+        first_commit_current_branch.to_string(),
+        first_commit_merge_branch.to_string(),
+    )
 }
 
 /// Obtiene los hashes de los commits de las ramas a mergear.
 /// ###Parametros:
 /// 'path_current_branch': path del archivo de la rama actual
 /// 'path_branch_to_merge': path del archivo de la rama a mergear
-fn get_branches_hashes(path_current_branch: &str, path_branch_to_merge: &str) -> Result<(String, String), GitError> {
+fn get_branches_hashes(
+    path_current_branch: &str,
+    path_branch_to_merge: &str,
+) -> Result<(String, String), GitError> {
     let current_branch_file = open_file(path_current_branch)?;
     let current_branch_hash = read_file_string(current_branch_file)?;
     let merge_branch_file = open_file(path_branch_to_merge)?;
