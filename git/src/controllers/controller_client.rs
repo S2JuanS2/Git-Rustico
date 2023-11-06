@@ -29,13 +29,13 @@ impl Controller {
         Controller { client }
     }
     pub fn send_command(&mut self, command: &str) -> Result<String, GitError> {
-        write_client_log(
-            self.client.get_directory_path(),
-            command.to_string(),
-            self.client.get_path_log(),
-        )?;
         match handle_command(command.to_string().clone(), &mut self.client) {
             Ok(result) => {
+                write_client_log(
+                    self.client.get_directory_path(),
+                    command.to_string(),
+                    self.client.get_path_log(),
+                )?;
                 write_client_log(
                     self.client.get_directory_path(),
                     "Successfully".to_string(),
@@ -44,6 +44,11 @@ impl Controller {
                 Ok(result)
             }
             Err(e) => {
+                write_client_log(
+                    self.client.get_directory_path(),
+                    command.to_string(),
+                    self.client.get_path_log(),
+                )?;
                 write_client_log(
                     self.client.get_directory_path(),
                     e.message().to_string(),

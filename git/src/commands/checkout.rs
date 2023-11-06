@@ -60,7 +60,7 @@ fn load_files(directory: &str, tree_hash: &str, mode: usize) -> Result<(), GitEr
     for line in tree.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
 
-        let path_file = parts[0];
+        let path_file = parts[1];
         let hash_blob = parts[2];
 
         let path_file_format = format!("{}/{}", directory, path_file);
