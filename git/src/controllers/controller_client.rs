@@ -82,7 +82,7 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
                 result = handle_branch(rest_of_command, client.clone())?;
             }
             "clone" => {
-                if let Some(path_clone) = rest_of_command.get(0) {
+                if let Some(path_clone) = rest_of_command.first() {
                     client.set_directory_path(path_clone.to_string());
                 }
                 result = handle_clone(rest_of_command, client.clone())?;

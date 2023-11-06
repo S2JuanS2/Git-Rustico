@@ -194,7 +194,7 @@ mod tests {
             .expect("Falló al crear el archivo que contiene la branch");
 
         let result = git_branch_list(directory);
-        let list_branches = " *- master\n - test_branch\n";
+        let list_branches = " - test_branch\n *- master\n";
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
