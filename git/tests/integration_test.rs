@@ -90,62 +90,62 @@ mod tests {
 
     // #[test]
     // fn commit_and_log_test() {
-        // let directory = "./testing_commit_log";
-        // git_init(directory).expect("Error al iniciar el repositorio");
-        // let git_dir = format!("{}/{}", directory, "/.git");
+    // let directory = "./testing_commit_log";
+    // git_init(directory).expect("Error al iniciar el repositorio");
+    // let git_dir = format!("{}/{}", directory, "/.git");
 
-        // let file_path = format!("{}/{}", directory, "tocommit.txt");
-        // let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
-        // file.write_all(b"Archivo a commitear")
-            // .expect("Error al escribir en el archivo");
+    // let file_path = format!("{}/{}", directory, "tocommit.txt");
+    // let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+    // file.write_all(b"Archivo a commitear")
+    // .expect("Error al escribir en el archivo");
 
-        // let file_path2 = format!("{}/{}", directory, "othertocommit.txt");
-        // let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
-        // file2
-            // .write_all(b"Otro archivo a commitear")
-            // .expect("Error al escribir en el archivo");
+    // let file_path2 = format!("{}/{}", directory, "othertocommit.txt");
+    // let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+    // file2
+    // .write_all(b"Otro archivo a commitear")
+    // .expect("Error al escribir en el archivo");
 
-        // git_add(directory, "tocommit.txt").expect("Error al agregar el archivo");
+    // git_add(directory, "tocommit.txt").expect("Error al agregar el archivo");
 
-        // // let test_commit1 = Commit::new(
-        // //     "prueba".to_string(),
-        // //     "Valen".to_string(),
-        // //     "vlanzillotta@fi.uba.ar".to_string(),
-        // //     "Valen".to_string(),
-        // //     "vlanzillotta@fi.uba.ar".to_string(),
-        // // );
-        // // git_commit(directory, test_commit1).expect("Error al commitear");
-        // let current_branch = get_current_branch(directory).expect("Error al encontrar la branch");
-        // let branch_current_path = format!("{}/{}/{}", git_dir, "refs/heads", current_branch);
-        // let commit_hash1 =
-            // fs::read_to_string(&branch_current_path).expect("Error al leer el archivo");
-        // let author1 = "Valen".to_string();
-        // let email1 = "vlanzillotta@fi.uba.ar".to_string();
+    // // let test_commit1 = Commit::new(
+    // //     "prueba".to_string(),
+    // //     "Valen".to_string(),
+    // //     "vlanzillotta@fi.uba.ar".to_string(),
+    // //     "Valen".to_string(),
+    // //     "vlanzillotta@fi.uba.ar".to_string(),
+    // // );
+    // // git_commit(directory, test_commit1).expect("Error al commitear");
+    // let current_branch = get_current_branch(directory).expect("Error al encontrar la branch");
+    // let branch_current_path = format!("{}/{}/{}", git_dir, "refs/heads", current_branch);
+    // let commit_hash1 =
+    // fs::read_to_string(&branch_current_path).expect("Error al leer el archivo");
+    // let author1 = "Valen".to_string();
+    // let email1 = "vlanzillotta@fi.uba.ar".to_string();
 
-        // git_add(directory, "othertocommit.txt").expect("Error al agregar el archivo");
+    // git_add(directory, "othertocommit.txt").expect("Error al agregar el archivo");
 
-        // // let test_commit2 = Commit::new(
-        // //     "otra prueba".to_string(),
-        // //     "Juan".to_string(),
-        // //     "jdr@fi.uba.ar".to_string(),
-        // //     "Juan".to_string(),
-        // //     "jdr@fi.uba.ar".to_string(),
-        // // );
-        // // git_commit(directory, test_commit2).expect("Error al commitear");
-        // let commit_hash2 =
-            // fs::read_to_string(&branch_current_path).expect("Error al leer el archivo");
-        // let author2 = "Juan".to_string();
-        // let email2 = "jdr@fi.uba.ar".to_string();
+    // // let test_commit2 = Commit::new(
+    // //     "otra prueba".to_string(),
+    // //     "Juan".to_string(),
+    // //     "jdr@fi.uba.ar".to_string(),
+    // //     "Juan".to_string(),
+    // //     "jdr@fi.uba.ar".to_string(),
+    // // );
+    // // git_commit(directory, test_commit2).expect("Error al commitear");
+    // let commit_hash2 =
+    // fs::read_to_string(&branch_current_path).expect("Error al leer el archivo");
+    // let author2 = "Juan".to_string();
+    // let email2 = "jdr@fi.uba.ar".to_string();
 
-        // let log = git_log(directory).expect("Error al obtener el log");
-        // let log_msg = format!(
-            // "Commit: {}\nAuthor: {} <{}>\nCommit: {}\nAuthor: {} <{}>\n",
-            // commit_hash1, author1, email1, commit_hash2, author2, email2
-        // );
+    // let log = git_log(directory).expect("Error al obtener el log");
+    // let log_msg = format!(
+    // "Commit: {}\nAuthor: {} <{}>\nCommit: {}\nAuthor: {} <{}>\n",
+    // commit_hash1, author1, email1, commit_hash2, author2, email2
+    // );
 
-        // println!("{}", log);
-        // assert_eq!(log, log_msg);
+    // println!("{}", log);
+    // assert_eq!(log, log_msg);
 
-        // fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
+    // fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
     // }
 }
