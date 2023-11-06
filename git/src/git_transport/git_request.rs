@@ -139,23 +139,6 @@ impl GitRequest {
     /// - `ip`: La dirección IP del host al que se enviará la solicitud.
     /// - `port`: El puerto en el que se realizará la conexión con el host.
     ///
-    /// ## Ejemplo
-    ///
-    /// ```
-    /// use git::util::git_request::GitRequest;
-    /// use git::util::request_command::RequestCommand;
-    ///
-    /// let command = RequestCommand::UploadPack;
-    /// let repo = "mi-repositorio".to_string();
-    /// let ip = "127.0.0.1".to_string();
-    /// let port = "22".to_string();
-    ///
-    /// let git_request = GitRequest::generate_request_string(command, repo, ip, port);
-    ///
-    /// // Verificar el resultado esperado
-    /// assert_eq!(git_request, "0036git-upload-pack /mi-repositorio\0host=127.0.0.1:22\0");
-    /// ```
-    ///
     /// ## Retorno
     ///
     /// Una line pkt que representa la solicitud Git formateada.

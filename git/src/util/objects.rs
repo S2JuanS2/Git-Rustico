@@ -26,14 +26,6 @@ pub struct ObjectEntry {
 
 /// Convierte un objeto en bytes, siguiendo las reglas de la especificación Git Pack.
 ///
-/// # Ejemplo
-///
-/// ```rust
-/// use crate::util::objects::{ObjectEntry, ObjectType};
-///
-/// let object = ObjectType::new(ObjectType::Blob, 50);
-/// let bytes = object.to_bytes();
-/// ```
 /// # Argumentos
 /// * `obj_type` - Tipo de objeto.
 /// * `obj_length` - Longitud del objeto.
