@@ -3,8 +3,8 @@ use git::errors::GitError;
 use git::git_transport::git_request::GitRequest;
 use git::util::connections::start_server;
 use git::util::logger::{
-    get_client_signature, handle_log_file, log_client_connect,
-    log_message, log_client_disconnection_error, log_client_disconnection_success,
+    get_client_signature, handle_log_file, log_client_connect, log_client_disconnection_error,
+    log_client_disconnection_success, log_message,
 };
 use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc::{self, Sender};
@@ -12,9 +12,11 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
-
-fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Sender<String>>>) -> Result<GitRequest, GitError>
-{
+fn receive_request(
+    stream: &mut TcpStream,
+    signature: String,
+    tx: Arc<Mutex<Sender<String>>>,
+) -> Result<GitRequest, GitError> {
     let request = GitRequest::read_git_request(stream);
     match request {
         Ok(request) => {
@@ -31,10 +33,14 @@ fn receive_request(stream: &mut TcpStream, signature: String, tx: Arc<Mutex<Send
     }
 }
 
-fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, signature: &String, request: &GitRequest, root_directory: &str) -> Result<(), GitError>
-{
-    match request.execute(stream, root_directory)
-    {
+fn process_request(
+    stream: &mut TcpStream,
+    tx: &Arc<Mutex<Sender<String>>>,
+    signature: &String,
+    request: &GitRequest,
+    root_directory: &str,
+) -> Result<(), GitError> {
+    match request.execute(stream, root_directory) {
         Ok(()) => {
             let message = format!("{}Request exitosa", signature);
             log_message(tx, &message);
@@ -49,7 +55,11 @@ fn process_request(stream: &mut TcpStream, tx: &Arc<Mutex<Sender<String>>>, sign
     }
 }
 
-fn handle_client(stream: &mut TcpStream, tx: Arc<Mutex<Sender<String>>>, root_directory: String) -> Result<(), GitError> {
+fn handle_client(
+    stream: &mut TcpStream,
+    tx: Arc<Mutex<Sender<String>>>,
+    root_directory: String,
+) -> Result<(), GitError> {
     log_client_connect(stream, &tx);
     let signature = get_client_signature(stream)?;
 

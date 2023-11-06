@@ -10,15 +10,15 @@ pub const ENTRY_CAT_FILE: &str = "entry_cat-file";
 
 pub fn get_entries() -> Vec<String> {
     let entries: Vec<String> = vec![
-            ENTRY_CONSOLE.to_string(),
-            ENTRY_BRANCH.to_string(),
-            ENTRY_CHECKOUT.to_string(),
-            ENTRY_ADD_RM.to_string(),
-            ENTRY_COMMIT.to_string(),
-            ENTRY_MERGE.to_string(),
-            ENTRY_CLONE.to_string(),
-            ENTRY_HASH_OBJECT.to_string(),
-            ENTRY_CAT_FILE.to_string(),
-        ];
+        ENTRY_CONSOLE.to_string(),
+        ENTRY_BRANCH.to_string(),
+        ENTRY_CHECKOUT.to_string(),
+        ENTRY_ADD_RM.to_string(),
+        ENTRY_COMMIT.to_string(),
+        ENTRY_MERGE.to_string(),
+        ENTRY_CLONE.to_string(),
+        ENTRY_HASH_OBJECT.to_string(),
+        ENTRY_CAT_FILE.to_string(),
+    ];
     entries
 }

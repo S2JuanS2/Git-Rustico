@@ -10,10 +10,10 @@ use crate::util::files::create_directory;
 use crate::util::files::create_file_replace;
 use crate::util::files::open_file;
 use crate::util::files::read_file_string;
+use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
-use std::fs;
 
 /// Esta función se encarga de llamar al comando checkout con los parametros necesarios
 /// ###Parametros:
@@ -71,10 +71,10 @@ fn load_files(directory: &str, tree_hash: &str, mode: usize) -> Result<(), GitEr
         if let Some(parent) = path.parent() {
             create_directory(parent)?;
         }
-        if mode == 0{
+        if mode == 0 {
             create_file_replace(&path_file_format, &content_file)?;
-        }else if mode == 1{
-            if fs::metadata(&path_file_format).is_ok(){
+        } else if mode == 1 {
+            if fs::metadata(&path_file_format).is_ok() {
                 if fs::remove_file(&path_file_format).is_err() {
                     return Err(GitError::RemoveFileError);
                 };
@@ -96,7 +96,7 @@ fn extract_parent_hash(commit: &str) -> Option<&str> {
     }
     None
 }
-  
+
 /// Esta función se encarga de leer los commits padres de un commit recursivamente
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.

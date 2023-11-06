@@ -7,13 +7,19 @@ pub struct Client {
     path_log: String,
 }
 impl Client {
-    pub fn new(name: String, email: String, ip: String, directory_path: String, path_log: String) -> Client {
+    pub fn new(
+        name: String,
+        email: String,
+        ip: String,
+        directory_path: String,
+        path_log: String,
+    ) -> Client {
         Client {
             name,
             email,
             ip,
             directory_path,
-            path_log
+            path_log,
         }
     }
 

@@ -8,7 +8,7 @@ use std::io::Read;
 use std::path::Path;
 
 use super::errors::UtilError;
-use super::formats::{hash_generate_with_bytes, compressor_object_with_bytes};
+use super::formats::{compressor_object_with_bytes, hash_generate_with_bytes};
 
 /// Estructura que representa una entrada de objeto en el sistema de control de versiones Git.
 ///
@@ -24,6 +24,23 @@ pub struct ObjectEntry {
     pub obj_length: usize,
 }
 
+/// Convierte un objeto en bytes, siguiendo las reglas de la especificación Git Pack.
+///
+/// # Ejemplo
+///
+/// ```rust
+/// use crate::util::objects::{ObjectEntry, ObjectType};
+///
+/// let object = ObjectType::new(ObjectType::Blob, 50);
+/// let bytes = object.to_bytes();
+/// ```
+/// # Argumentos
+/// * `obj_type` - Tipo de objeto.
+/// * `obj_length` - Longitud del objeto.
+///
+/// # Retorno
+/// * `Vec<u8>` - Vector de bytes que representa el objeto.
+///
 impl ObjectEntry {
     pub fn new(obj_type: ObjectType, obj_length: usize) -> ObjectEntry {
         ObjectEntry {
@@ -32,10 +49,9 @@ impl ObjectEntry {
         }
     }
 
-    pub fn to_bytes(&self) -> Vec<u8>
-    {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
-        let mut byte:u8 = 0;
+        let mut byte: u8 = 0;
         match &self.obj_type {
             ObjectType::Commit => byte |= 0b00010000,
             ObjectType::Tree => byte |= 0b00100000,
@@ -46,7 +62,7 @@ impl ObjectEntry {
         };
 
         if self.obj_length < 15 {
-            byte |= self.obj_length  as u8;
+            byte |= self.obj_length as u8;
             bytes.push(byte);
             return bytes;
         }
@@ -56,11 +72,18 @@ impl ObjectEntry {
         bytes.push(byte);
         encode_size_encoding(self.obj_length, 4, &mut bytes);
         bytes
-        // return 
+        // return
     }
 }
 
-
+/// Codifica un número usando el esquema de codificación de tamaño definido por Git Pack.
+///
+/// # Argumentos
+///
+/// * `number` - Número a codificar.
+/// * `offset` - Desplazamiento para el número.
+/// * `result` - Vector que almacena los bytes codificados.
+///
 pub fn encode_size_encoding(mut number: usize, offset: u8, result: &mut Vec<u8>) {
     number >>= offset;
     loop {
@@ -276,7 +299,6 @@ pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, Git
 }
 
 fn read_index_clone(content: &str) -> Result<Vec<u8>, GitError> {
-
     let mut format_tree = Vec::new();
 
     for line in content.lines() {
@@ -363,7 +385,6 @@ fn read_index(git_dir: &str) -> Result<Vec<u8>, GitError> {
         format_tree.extend_from_slice(mode.as_bytes());
         format_tree.push(NULL);
         format_tree.extend_from_slice(&bytes);
-
     }
     Ok(format_tree)
 }
@@ -849,8 +870,8 @@ mod tests {
         let object = ObjectEntry::new(ObjectType::Tree, 300);
         let bytes = object.to_bytes();
         println!("Bytes: {:?}", bytes);
-        assert_eq!(bytes.len(), 2); 
-        assert_eq!(bytes[0], 0b10101100); 
-        assert_eq!(bytes[1], 0b00010010); 
+        assert_eq!(bytes.len(), 2);
+        assert_eq!(bytes[0], 0b10101100);
+        assert_eq!(bytes[1], 0b00010010);
     }
 }

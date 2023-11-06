@@ -23,7 +23,6 @@ pub fn create_directory(directory: &Path) -> Result<(), GitError> {
 /// 'file': archivo a crear.
 /// 'content': contenido que se escribirá en el archivo.
 pub fn create_file_replace(file: &str, content: &str) -> Result<(), GitError> {
-
     let mut file = match fs::File::create(file) {
         Ok(file) => file,
         Err(_) => return Err(GitError::CreateFileError),

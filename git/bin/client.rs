@@ -24,7 +24,7 @@ fn main() -> Result<(), GitError> {
     let current_src = "./";
     let files = match fs::read_dir(&current_src) {
         Ok(files) => files,
-        Err(_) => return Err(GitError::ReadDirError), 
+        Err(_) => return Err(GitError::ReadDirError),
     };
     for file in files {
         let entry = match file {

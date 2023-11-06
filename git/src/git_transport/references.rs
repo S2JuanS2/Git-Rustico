@@ -1,14 +1,22 @@
-use std::{net::TcpStream, fs, path::{Path, PathBuf}};
-use crate::commands::checkout::get_tree_hash;
-use crate::errors::GitError;
 use crate::commands::branch::get_current_branch;
 use crate::commands::cat_file::git_cat_file;
+use crate::commands::checkout::get_tree_hash;
+use crate::errors::GitError;
 use crate::util::files::{open_file, read_file, read_file_string};
 use crate::util::objects::ObjectType;
-use crate::{util::{errors::UtilError, connections::send_message, pkt_line, validation::join_paths_correctly}, consts::{GIT_DIR, REF_HEADS, REFS_REMOTES, REFS_TAGS, HEAD}};
+use crate::{
+    consts::{GIT_DIR, HEAD, REFS_REMOTES, REFS_TAGS, REF_HEADS},
+    util::{
+        connections::send_message, errors::UtilError, pkt_line, validation::join_paths_correctly,
+    },
+};
+use std::{
+    fs,
+    net::TcpStream,
+    path::{Path, PathBuf},
+};
 
 use super::advertised::AdvertisedRefs;
-
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ReferenceType {
@@ -56,7 +64,6 @@ impl Reference {
         }
     }
 
-
     /// Extrae las referencias de un repositorio Git.
     ///
     /// # Argumentos
@@ -69,12 +76,12 @@ impl Reference {
     /// En caso de error, retorna un error de tipo UtilError.
     pub fn extract_references_from_git(root: &str) -> Result<Vec<Reference>, UtilError> {
         let path_git = join_paths_correctly(root, GIT_DIR);
-        
+
         let path = Path::new(&path_git).join("refs");
         let refs_branch = extract_references_from_path(&path, "heads", REF_HEADS)?;
         let refs_tag = extract_references_from_path(&path, "tags", REFS_TAGS)?;
         let refs_remote = extract_references_from_path(&path, "remotes", REFS_REMOTES)?;
-        
+
         let mut refs = Vec::new();
         refs.extend(refs_branch);
         refs.extend(refs_tag);
@@ -86,8 +93,6 @@ impl Reference {
         refs.insert(0, head);
         Ok(refs)
     }
-
-
 
     pub fn get_hash(&self) -> &String {
         &self.hash
@@ -103,19 +108,26 @@ impl Reference {
 }
 
 fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError> {
-
-    let path_object = format!("{}/{}/objects/{}/{}", directory, GIT_DIR, &hash_object[..2], &hash_object[2..]);
+    let path_object = format!(
+        "{}/{}/objects/{}/{}",
+        directory,
+        GIT_DIR,
+        &hash_object[..2],
+        &hash_object[2..]
+    );
     let file_object = open_file(&path_object).expect("Error");
     let content_object = read_file(file_object).expect("Error");
 
     Ok(content_object)
 }
 
-pub fn get_objects(directory: &str, references: &Vec<Reference>) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
-
+pub fn get_objects(
+    directory: &str,
+    references: &Vec<Reference>,
+) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
-    
-    for reference in references.iter(){
+
+    for reference in references.iter() {
         let parts: Vec<&str> = reference.get_name().split('/').collect();
         let branch = parts.last().map_or("", |&x| x);
         let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
@@ -123,29 +135,27 @@ pub fn get_objects(directory: &str, references: &Vec<Reference>) -> Result<Vec<(
         let file_current_branch = open_file(&branch_current_path)?;
         println!("abri el file");
         let hash_commit_current_branch = read_file_string(file_current_branch)?;
-        
-        let mut object_commit:(ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
+
+        let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
         object_commit.1 = get_content(directory, &hash_commit_current_branch)?;
 
         objects.push(object_commit);
-    
-        let content_commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
-        if let Some(tree_hash) = get_tree_hash(&content_commit){
 
-            let mut object_tree:(ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+        let content_commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
+        if let Some(tree_hash) = get_tree_hash(&content_commit) {
+            let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
             object_tree.1 = get_content(directory, &tree_hash)?;
-    
+
             objects.push(object_tree);
-            
+
             let tree_content = git_cat_file(directory, tree_hash, "-p")?;
             for line in tree_content.lines() {
-        
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 let hash_blob = parts[2];
-                let mut object_blob:(ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
+                let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
                 object_blob.1 = get_content(directory, &hash_blob)?;
                 objects.push(object_blob);
-            }         
+            }
         };
     }
     Ok(objects)
@@ -184,7 +194,6 @@ pub fn reference_discovery(
     AdvertisedRefs::new(&lines)
 }
 
-
 /// Extrae referencias de un subdirectorio de un directorio base, creando un vector de Referencias.
 ///
 /// # Argumentos
@@ -197,9 +206,12 @@ pub fn reference_discovery(
 ///
 /// Un resultado que contiene un vector de Referencias si la operación es exitosa.
 /// En caso de error, retorna un error de tipo UtilError.
-/// 
-fn extract_references_from_path(path_root: &PathBuf, subdirectory: &str, signature: &str) -> Result<Vec<Reference>, UtilError>
-{
+///
+fn extract_references_from_path(
+    path_root: &PathBuf,
+    subdirectory: &str,
+    signature: &str,
+) -> Result<Vec<Reference>, UtilError> {
     let new_root = Path::new(path_root.as_os_str()).join(subdirectory);
     let mut references = Vec::new();
     let names_refs = get_files_in_directory(&new_root);
@@ -224,7 +236,7 @@ fn extract_references_from_path(path_root: &PathBuf, subdirectory: &str, signatu
 /// # Retorna
 ///
 /// Un vector de cadenas que contiene los nombres de archivo del directorio especificado.
-/// 
+///
 fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
     let mut files: Vec<String> = Vec::new();
 
@@ -256,7 +268,7 @@ fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
 ///
 /// Devuelve un resultado que contiene la cadena de la referencia HEAD si la operación es exitosa.
 /// En caso de un formato inválido, retorna un error de tipo UtilError.
-/// 
+///
 fn extract_reference_head(line: &str) -> Result<String, UtilError> {
     let trimmed_line = line.trim();
     if let Some(reference) = trimmed_line.splitn(2, ' ').nth(1) {
@@ -276,9 +288,8 @@ fn extract_reference_head(line: &str) -> Result<String, UtilError> {
 ///
 /// Devuelve un resultado que contiene el nombre de la referencia HEAD si la operación es exitosa.
 /// En caso de que no se encuentre el archivo 'HEAD', retorna un error de tipo UtilError.
-/// 
-fn extract_name_head_from_path(path_git: &str) -> Result<String, UtilError>
-{
+///
+fn extract_name_head_from_path(path_git: &str) -> Result<String, UtilError> {
     let path = Path::new(&path_git).join("HEAD");
     if let Ok(line) = fs::read_to_string(path) {
         let refs = extract_reference_head(&line)?;
@@ -298,9 +309,11 @@ fn extract_name_head_from_path(path_git: &str) -> Result<String, UtilError>
 ///
 /// Devuelve un resultado que contiene el hash de la referencia HEAD si la operación es exitosa.
 /// En caso de que no se encuentre el hash correspondiente a la referencia HEAD, retorna un error de tipo UtilError.
-/// 
-fn extract_hash_head_from_path(refs: &Vec<Reference>, name_head: &str) -> Result<String, UtilError>
-{
+///
+fn extract_hash_head_from_path(
+    refs: &Vec<Reference>,
+    name_head: &str,
+) -> Result<String, UtilError> {
     for reference in refs {
         if reference.get_name() == name_head {
             return Ok(reference.get_hash().to_string());
@@ -320,9 +333,8 @@ fn extract_hash_head_from_path(refs: &Vec<Reference>, name_head: &str) -> Result
 ///
 /// Devuelve un resultado que contiene la referencia HEAD si la operación es exitosa.
 /// En caso de fallo al extraer la referencia HEAD, retorna un error de tipo UtilError.
-/// 
-fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference, UtilError>
-{
+///
+fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference, UtilError> {
     let mut name_head = extract_name_head_from_path(path_git)?;
     if let Some('/') = name_head.chars().next() {
         name_head.remove(0);
@@ -370,11 +382,17 @@ mod tests {
 
     #[test]
     fn test_create_remote_reference() {
-        let result = Reference::new("some_hash".to_string(), "refs/remotes/origin/main".to_string());
+        let result = Reference::new(
+            "some_hash".to_string(),
+            "refs/remotes/origin/main".to_string(),
+        );
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
-            assert_eq!(reference.get_name(), &"refs/remotes/origin/main".to_string());
+            assert_eq!(
+                reference.get_name(),
+                &"refs/remotes/origin/main".to_string()
+            );
             assert_eq!(*reference.get_type(), ReferenceType::Remote);
         }
     }
@@ -384,7 +402,6 @@ mod tests {
         let result = Reference::new("some_hash".to_string(), "invalid_reference".to_string());
         assert!(result.is_err());
     }
-
 
     #[test]
     fn test_get_hash() {
@@ -417,8 +434,12 @@ mod tests {
     }
 
     #[test]
-    fn test_get_object(){
-        let references = vec![Reference::new("123123".to_string(), "refs/heads/master".to_string()).expect("Error")];
+    fn test_get_object() {
+        let references =
+            vec![
+                Reference::new("123123".to_string(), "refs/heads/master".to_string())
+                    .expect("Error"),
+            ];
         let result = get_objects("Repository", &references);
 
         assert!(result.is_ok());

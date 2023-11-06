@@ -1,5 +1,12 @@
-
-use crate::{consts::{PKT_NACK, PKT_DONE}, util::{errors::UtilError, pkt_line, connections::{send_message, send_flush, received_message}, validation::is_valid_obj_id}};
+use crate::{
+    consts::{PKT_DONE, PKT_NACK},
+    util::{
+        connections::{received_message, send_flush, send_message},
+        errors::UtilError,
+        pkt_line,
+        validation::is_valid_obj_id,
+    },
+};
 use std::{io::Read, net::TcpStream};
 
 use super::advertised::AdvertisedRefs;
@@ -60,7 +67,7 @@ pub fn upload_request(
 ///
 /// Devuelve un `Result` que contiene `()` en caso de éxito o un error (`UtilError`) si falla la lectura
 /// del mensaje NACK o si el mensaje recibido no coincide con el esperado.
-/// 
+///
 pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
     let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
     if stream.read_exact(&mut buffer).is_err() {
@@ -95,7 +102,7 @@ pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
 /// Devuelve un `Result` que contiene una tupla con un vector de capacidades en formato de cadenas
 /// y un vector de hashes de solicitudes de tipo "want" en formato de cadenas (`(Vec<String>, Vec<String>)`),
 /// o un error (`UtilError`) en caso de que falle el procesamiento de las solicitudes recibidas.
-/// 
+///
 pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String>), UtilError> {
     let lines = pkt_line::read(stream)?;
 
@@ -128,9 +135,8 @@ pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String
 /// Devuelve un `Result` que contiene una tupla con un vector de capacidades en formato de cadenas
 /// y un vector de hashes de solicitudes de tipo "want" en formato de cadenas (`(Vec<String>, Vec<String>)`),
 /// o un error (`UtilError`) en caso de que falle el procesamiento de las solicitudes recibidas.
-/// 
-fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<String>), UtilError>
-{
+///
+fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<String>), UtilError> {
     let mut request = Vec::new();
 
     // Want and capabilities
@@ -166,23 +172,29 @@ fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<St
 /// Devuelve un `Result` que contiene una tupla con el hash en formato de cadena y un vector de capacidades
 /// en formato de cadenas (`(String, Vec<String>)`), o un error (`UtilError`) en caso de que falle la extracción
 /// o validación de las capacidades y el hash.
-/// 
+///
 fn extraction_capabilities(line: &Vec<u8>) -> Result<(String, Vec<String>), UtilError> {
     let line_str = String::from_utf8_lossy(&line);
     let mut line_split = line_str.split_ascii_whitespace();
-    let type_request = line_split.next().ok_or_else(|| UtilError::InvalidRequestFormat(line_str.to_string()))?;
+    let type_request = line_split
+        .next()
+        .ok_or_else(|| UtilError::InvalidRequestFormat(line_str.to_string()))?;
     if type_request != "want" {
         return Err(UtilError::UnexpectedRequestNotWant);
     }
-    let hash = line_split.next().ok_or_else(|| UtilError::InvalidRequestFormat(line_str.to_string()))?;
-    if !is_valid_obj_id(hash)
-    {
+    let hash = line_split
+        .next()
+        .ok_or_else(|| UtilError::InvalidRequestFormat(line_str.to_string()))?;
+    if !is_valid_obj_id(hash) {
         return Err(UtilError::InvalidObjectId);
     }
-    let capacilities = line_split.collect::<Vec<&str>>().iter().map(|s| s.to_string()).collect::<Vec<String>>();
+    let capacilities = line_split
+        .collect::<Vec<&str>>()
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
     Ok((hash.to_string(), capacilities))
 }
-
 
 /// Extrae y procesa las solicitudes de un tipo específico a partir de un conjunto de líneas.
 ///
@@ -204,25 +216,27 @@ fn extraction_capabilities(line: &Vec<u8>) -> Result<(String, Vec<String>), Util
 ///
 /// # Retorno
 ///
-/// Devuelve un `Result` que contiene un vector de cadenas (`Vec<String>`) con los hashes extraídos, 
+/// Devuelve un `Result` que contiene un vector de cadenas (`Vec<String>`) con los hashes extraídos,
 /// o un error (`UtilError`) en caso de que falle la extracción o validación de las solicitudes.
-/// 
-fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str) -> Result<Vec<String>, UtilError>
-{
+///
+fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str) -> Result<Vec<String>, UtilError> {
     lines.iter().try_fold(Vec::new(), |mut acc, line| {
         let line_str = String::from_utf8_lossy(line);
-    
+
         if !line_str.starts_with(type_req) {
             return Err(UtilError::UnexpectedRequestNotWant);
         }
-    
+
         let request = line_str.trim().to_string();
-        let hash = request.split_ascii_whitespace().nth(1).ok_or_else(|| UtilError::InvalidRequestFormat(request.to_string()))?;
-    
+        let hash = request
+            .split_ascii_whitespace()
+            .nth(1)
+            .ok_or_else(|| UtilError::InvalidRequestFormat(request.to_string()))?;
+
         if !is_valid_obj_id(hash) {
             return Err(UtilError::InvalidObjectId);
         }
-    
+
         acc.push(hash.to_string());
         Ok(acc)
     })
@@ -232,17 +246,23 @@ fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str) -> Result<Vec<Strin
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_receive_request_type_valid_want() {
         let mut lines = Vec::new();
         lines.push(b"want 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
         lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
         lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
-        let result = receive_request_type( lines, "want");
+        let result = receive_request_type(lines, "want");
         assert!(result.is_ok());
         let wanted_hashes = result.unwrap();
-        assert_eq!(wanted_hashes, vec!["74730d410fcb6603ace96f1dc55ea6196122532d", "7d1665144a3a975c05f1f43902ddaf084e784dbe", "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"]);
+        assert_eq!(
+            wanted_hashes,
+            vec![
+                "74730d410fcb6603ace96f1dc55ea6196122532d",
+                "7d1665144a3a975c05f1f43902ddaf084e784dbe",
+                "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"
+            ]
+        );
     }
 
     #[test]
@@ -253,7 +273,13 @@ mod tests {
         let result = receive_request_type(lines, "have");
         assert!(result.is_ok());
         let have_hashes = result.unwrap();
-        assert_eq!(have_hashes, vec!["7e47fe2bd8d01d481f44d7af0531bd93d3b21c01", "74730d410fcb6603ace96f1dc55ea6196122532d"]);
+        assert_eq!(
+            have_hashes,
+            vec![
+                "7e47fe2bd8d01d481f44d7af0531bd93d3b21c01",
+                "74730d410fcb6603ace96f1dc55ea6196122532d"
+            ]
+        );
     }
 
     #[test]
@@ -268,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_receive_request_empty() {
-        let  lines = Vec::new();
+        let lines = Vec::new();
         let result = receive_request_type(lines, "want");
         assert!(result.is_ok());
         let result = result.unwrap();
@@ -277,12 +303,17 @@ mod tests {
 
     #[test]
     fn test_extraction_capabilities_valid() {
-        let line = b"want 74730d410fcb6603ace96f1dc55ea6196122532d capability1 capability2 capability3\n".to_vec();
+        let line =
+            b"want 74730d410fcb6603ace96f1dc55ea6196122532d capability1 capability2 capability3\n"
+                .to_vec();
         let result = extraction_capabilities(&line);
         assert!(result.is_ok());
         let (hash, capabilities) = result.unwrap();
         assert_eq!(hash, "74730d410fcb6603ace96f1dc55ea6196122532d");
-        assert_eq!(capabilities, vec!["capability1", "capability2", "capability3"]);
+        assert_eq!(
+            capabilities,
+            vec!["capability1", "capability2", "capability3"]
+        );
     }
 
     #[test]
@@ -298,34 +329,52 @@ mod tests {
 
     #[test]
     fn test_receive_request_valid() {
-
         let mut lines = Vec::new();
-        lines.push(b"want 74730d410fcb6603ace96f1dc55ea6196122532d multi_ack side-band-64k ofs-delta".to_vec());
+        lines.push(
+            b"want 74730d410fcb6603ace96f1dc55ea6196122532d multi_ack side-band-64k ofs-delta"
+                .to_vec(),
+        );
         lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
         lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
-        
+
         let result = process_received_requests(lines);
         assert!(result.is_ok());
         let (capabilities, request) = result.unwrap();
 
-        assert_eq!(capabilities, vec!["multi_ack", "side-band-64k", "ofs-delta"]);
-        assert_eq!(request, vec!["74730d410fcb6603ace96f1dc55ea6196122532d", "7d1665144a3a975c05f1f43902ddaf084e784dbe", "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"]);
+        assert_eq!(
+            capabilities,
+            vec!["multi_ack", "side-band-64k", "ofs-delta"]
+        );
+        assert_eq!(
+            request,
+            vec![
+                "74730d410fcb6603ace96f1dc55ea6196122532d",
+                "7d1665144a3a975c05f1f43902ddaf084e784dbe",
+                "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"
+            ]
+        );
     }
 
     #[test]
     fn test_receive_request_valid_capabilities_empty() {
-
         let mut lines = Vec::new();
         lines.push(b"want 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
         lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
         lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
-        
+
         let result = process_received_requests(lines);
         println!("{:?}", result);
         assert!(result.is_ok());
         let (capabilities, request) = result.unwrap();
 
         assert_eq!(capabilities.len(), 0);
-        assert_eq!(request, vec!["74730d410fcb6603ace96f1dc55ea6196122532d", "7d1665144a3a975c05f1f43902ddaf084e784dbe", "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"]);
+        assert_eq!(
+            request,
+            vec![
+                "74730d410fcb6603ace96f1dc55ea6196122532d",
+                "7d1665144a3a975c05f1f43902ddaf084e784dbe",
+                "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"
+            ]
+        );
     }
 }
