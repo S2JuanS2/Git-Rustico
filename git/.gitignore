@@ -3,3 +3,5 @@ target/
 *.log
 test_repo/
 server_root/
+testing_commit_log/
+Repository/

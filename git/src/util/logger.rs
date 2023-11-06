@@ -31,7 +31,11 @@ fn send_message_channel(
     message: &str,
     error: UtilError,
 ) -> Result<(), UtilError> {
-    match tx.lock().unwrap().send(message.to_string()) {
+    let tx = match tx.lock() {
+        Ok(tx) => tx,
+        Err(_) => return Err(error),
+    };
+    match tx.send(message.to_string()) {
         Ok(_) => Ok(()),
         Err(_) => Err(error),
     }

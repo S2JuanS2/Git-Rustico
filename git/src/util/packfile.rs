@@ -14,13 +14,13 @@ use super::{
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, UtilError> {
     read_signature(reader)?;
-    println!("Signature: {}", PACK_SIGNATURE);
+    // println!("Signature: {}", PACK_SIGNATURE);
 
-    let version = read_version(reader)?;
-    println!("Version: {}", version);
+    let _version = read_version(reader)?;
+    // println!("Version: {}", version);
 
     let number_object = read_objects_contained(reader)?;
-    println!("Number of objects: {}", number_object);
+    // println!("Number of objects: {}", number_object);
     Ok(number_object)
 }
 
@@ -39,7 +39,7 @@ pub fn read_packfile_data(
 
     for _ in 0..objects {
         let object_entry = read_type_and_length_from_vec(&buffer, &mut offset)?;
-        println!("Object entry: {:?}", object_entry);
+        // println!("Object entry: {:?}", object_entry);
         let data: Vec<u8> = read_object_data(&buffer, &mut offset)?;
 
         if data.len() != object_entry.obj_length {
@@ -168,7 +168,7 @@ pub fn send_packfile(
         &number_objects.to_be_bytes(),
         UtilError::SendSignaturePackfile,
     )?;
-    println!("Number of objects: {}", number_objects);
+    // println!("Number of objects: {}", number_objects);
 
     // Envio de objetos
     for (object_type, content) in objects {

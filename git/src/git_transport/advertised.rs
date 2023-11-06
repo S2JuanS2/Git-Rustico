@@ -152,7 +152,7 @@ impl AdvertisedRefs {
         for reference in &self.references {
             let reference = format!("{} {}\n", reference.get_hash(), reference.get_name());
             let reference = pkt_line::add_length_prefix(&reference, reference.len());
-            println!("Sending reference: {}", reference);
+            // println!("Sending reference: {}", reference);
             send_message(writer, &reference, UtilError::ReferencesObtaining)?;
         }
 

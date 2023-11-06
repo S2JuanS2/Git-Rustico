@@ -139,23 +139,6 @@ impl GitRequest {
     /// - `ip`: La dirección IP del host al que se enviará la solicitud.
     /// - `port`: El puerto en el que se realizará la conexión con el host.
     ///
-    /// ## Ejemplo
-    ///
-    /// ```
-    /// use git::util::git_request::GitRequest;
-    /// use git::util::request_command::RequestCommand;
-    ///
-    /// let command = RequestCommand::UploadPack;
-    /// let repo = "mi-repositorio".to_string();
-    /// let ip = "127.0.0.1".to_string();
-    /// let port = "22".to_string();
-    ///
-    /// let git_request = GitRequest::generate_request_string(command, repo, ip, port);
-    ///
-    /// // Verificar el resultado esperado
-    /// assert_eq!(git_request, "0036git-upload-pack /mi-repositorio\0host=127.0.0.1:22\0");
-    /// ```
-    ///
     /// ## Retorno
     ///
     /// Una line pkt que representa la solicitud Git formateada.
@@ -184,17 +167,17 @@ impl GitRequest {
         match self.request_command {
             RequestCommand::UploadPack => {
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
-                println!("path_repo: {:?}", path_repo);
+                // println!("path_repo: {:?}", path_repo);
                 let mut advertised =
                     AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
-                println!("advertised: {:?}", advertised);
+                // println!("advertised: {:?}", advertised);
                 advertised.send_references(stream)?;
-                println!("Envie las referencias");
+                // println!("Envie las referencias");
                 let (capabilities, references) = receive_request(stream)?;
                 advertised.update_data(capabilities, references);
-                println!("advertised filter: {:?}", advertised);
+                // println!("advertised filter: {:?}", advertised);
                 send_packfile(stream, &advertised, &path_repo)?;
-                println!("Fin UploadPack");
+                // println!("Fin UploadPack");
                 Ok(())
             }
             RequestCommand::ReceivePack => {

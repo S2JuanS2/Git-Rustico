@@ -26,14 +26,6 @@ pub struct ObjectEntry {
 
 /// Convierte un objeto en bytes, siguiendo las reglas de la especificación Git Pack.
 ///
-/// # Ejemplo
-///
-/// ```rust
-/// use crate::util::objects::{ObjectEntry, ObjectType};
-///
-/// let object = ObjectType::new(ObjectType::Blob, 50);
-/// let bytes = object.to_bytes();
-/// ```
 /// # Argumentos
 /// * `obj_type` - Tipo de objeto.
 /// * `obj_length` - Longitud del objeto.
@@ -126,7 +118,7 @@ pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitErr
     if reader.read_exact(&mut buffer).is_err() {
         return Err(GitError::HeaderPackFileReadError);
     };
-    println!("(read_type_and_length)Buffer: {:?}", buffer);
+    // println!("(read_type_and_length)Buffer: {:?}", buffer);
     let byte = buffer[0];
 
     let obj_type: ObjectType = create_object_bits(byte)?;
@@ -185,7 +177,7 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
         return Ok(length_bits); // Se gasto un bit para el tipo
     }
 
-    println!("(MSB)Length firts: {:?}", length_bits);
+    // println!("(MSB)Length firts: {:?}", length_bits);
     let mut shift: usize = 4;
 
     loop {
@@ -193,16 +185,16 @@ fn read_size_encoded_length(reader: &mut dyn Read, byte: u8) -> Result<usize, Gi
         if reader.read_exact(&mut byte).is_err() {
             return Err(GitError::HeaderPackFileReadError);
         };
-        println!("(MSB)Buffer: {:?}", byte);
+        // println!("(MSB)Buffer: {:?}", byte);
 
         let seven_bits = (byte[0] & 0b01111111) as usize;
         // print_u8_bits(byte[0] & 0b01111111);
-        println!(
-            "(MSB)Unire:length seven: {:?} y length_bits: {}",
-            seven_bits, length_bits
-        );
+        // println!(
+        //     "(MSB)Unire:length seven: {:?} y length_bits: {}",
+        //     seven_bits, length_bits
+        // );
         length_bits |= seven_bits << shift;
-        println!("(MSB)Length final: {:?}", length_bits);
+        // println!("(MSB)Length final: {:?}", length_bits);
         if (byte[0] & 0x80) == 0 {
             break;
         }
@@ -331,11 +323,11 @@ fn read_index_clone(content: &str) -> Result<Vec<u8>, GitError> {
 }
 
 pub fn builder_object_tree_clone(git_dir: &str, content: &str) -> Result<String, GitError> {
-    println!("content: {}", content);
+    // println!("content: {}", content);
     let format_tree = read_index_clone(content)?;
 
     let content_size = format_tree.len().to_string();
-    println!("{}", content_size);
+    // println!("{}", content_size);
     let tree_format = "tree ";
     let mut header: Vec<u8> = vec![];
     header.extend_from_slice(tree_format.as_bytes());
@@ -394,7 +386,7 @@ pub fn builder_object_tree(git_dir: &str) -> Result<String, GitError> {
     let format_tree = read_index(git_dir)?;
 
     let content_size = format_tree.len().to_string();
-    println!("{}", content_size);
+    // println!("{}", content_size);
     let tree_format = "tree ";
     let mut header: Vec<u8> = vec![];
     header.extend_from_slice(tree_format.as_bytes());
