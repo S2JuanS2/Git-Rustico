@@ -173,12 +173,12 @@ impl AdvertisedRefs {
     }
 }
 
-fn filter_by_hash(references: &mut Vec<Reference>, refnames: &Vec<String>) {
+fn filter_by_hash(references: &mut Vec<Reference>, refnames: &[String]) {
     // references.into_iter().filter(|reference| refnames.contains(&reference.get_hash())).collect()
-    references.retain(|reference| refnames.contains(&reference.get_hash()));
+    references.retain(|reference| refnames.contains(reference.get_hash()));
 }
 
-fn retain_common_values(vec1: &mut Vec<String>, vec2: &Vec<String>) {
+fn retain_common_values(vec1: &mut Vec<String>, vec2: &[String]) {
     let set2: std::collections::HashSet<_> = vec2.iter().collect();
 
     vec1.retain(|item| set2.contains(item));

@@ -173,8 +173,8 @@ fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<St
 /// en formato de cadenas (`(String, Vec<String>)`), o un error (`UtilError`) en caso de que falle la extracción
 /// o validación de las capacidades y el hash.
 ///
-fn extraction_capabilities(line: &Vec<u8>) -> Result<(String, Vec<String>), UtilError> {
-    let line_str = String::from_utf8_lossy(&line);
+fn extraction_capabilities(line: &[u8]) -> Result<(String, Vec<String>), UtilError> {
+    let line_str = String::from_utf8_lossy(line);
     let mut line_split = line_str.split_ascii_whitespace();
     let type_request = line_split
         .next()

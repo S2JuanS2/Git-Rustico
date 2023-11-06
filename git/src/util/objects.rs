@@ -339,7 +339,7 @@ pub fn builder_object_tree_clone(git_dir: &str, content: &str) -> Result<String,
     let tree_format = "tree ";
     let mut header: Vec<u8> = vec![];
     header.extend_from_slice(tree_format.as_bytes());
-    header.extend_from_slice(&content_size.as_bytes());
+    header.extend_from_slice(content_size.as_bytes());
     header.push(NULL);
     header.extend_from_slice(&format_tree);
     let hash_tree = hash_generate_with_bytes(header.clone());
@@ -398,7 +398,7 @@ pub fn builder_object_tree(git_dir: &str) -> Result<String, GitError> {
     let tree_format = "tree ";
     let mut header: Vec<u8> = vec![];
     header.extend_from_slice(tree_format.as_bytes());
-    header.extend_from_slice(&content_size.as_bytes());
+    header.extend_from_slice(content_size.as_bytes());
     header.push(NULL);
     header.extend_from_slice(&format_tree);
     let hash_tree = hash_generate_with_bytes(header.clone());

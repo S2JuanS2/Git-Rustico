@@ -123,7 +123,7 @@ impl View {
             if let Some(button) = self.buttons.get(button_cmd) {
                 button.connect_clicked(move |_| {
                     window.hide();
-                    let entry_format = format!("{} {}", git_cmd, entry_clone.text().to_string());
+                    let entry_format = format!("{} {}", git_cmd, entry_clone.text());
                     entry_clone.set_text("");
                     let result = controller.borrow_mut().send_command(&entry_format);
                     Self::response_write_buffer(result, Rc::clone(&response));
@@ -189,7 +189,7 @@ impl View {
             let entry_branch = Rc::clone(entry);
             if let Some(button) = self.buttons.get(button_cmd) {
                 button.connect_clicked(move |_| {
-                    let entry_format = format!("{} {}", git_cmd, entry_branch.text().to_string());
+                    let entry_format = format!("{} {}", git_cmd, entry_branch.text());
                     entry_branch.set_text("");
                     let result = controller.borrow_mut().send_command(&entry_format);
                     Self::response_write_buffer(result, Rc::clone(&response));

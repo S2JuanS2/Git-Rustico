@@ -191,16 +191,15 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
 
-    let parent_hash;
     let mut contents = String::new();
     if fs::metadata(&branch_current_path).is_ok() {
         let file = open_file(&branch_current_path)?;
         contents = read_file_string(file)?;
     }
-    if contents.is_empty() {
-        parent_hash = PARENT_INITIAL.to_string();
+    let parent_hash = if contents.is_empty() {
+        PARENT_INITIAL.to_string()
     } else {
-        parent_hash = contents;
+        contents
     };
 
     let tree_hash = builder_object_tree(&git_dir)?;

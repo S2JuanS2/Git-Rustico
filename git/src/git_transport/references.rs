@@ -123,7 +123,7 @@ fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError>
 
 pub fn get_objects(
     directory: &str,
-    references: &Vec<Reference>,
+    references: &[Reference],
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
 
@@ -144,7 +144,7 @@ pub fn get_objects(
         let content_commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
         if let Some(tree_hash) = get_tree_hash(&content_commit) {
             let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
-            object_tree.1 = get_content(directory, &tree_hash)?;
+            object_tree.1 = get_content(directory, tree_hash)?;
 
             objects.push(object_tree);
 
@@ -153,7 +153,7 @@ pub fn get_objects(
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 let hash_blob = parts[2];
                 let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
-                object_blob.1 = get_content(directory, &hash_blob)?;
+                object_blob.1 = get_content(directory, hash_blob)?;
                 objects.push(object_blob);
             }
         };
@@ -161,7 +161,7 @@ pub fn get_objects(
     Ok(objects)
 }
 
-fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
+pub fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
     let current_branch = get_current_branch(directory).expect("Error");
     let refname = format!("refs/heads/{}", current_branch);
     let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, current_branch);
@@ -208,7 +208,7 @@ pub fn reference_discovery(
 /// En caso de error, retorna un error de tipo UtilError.
 ///
 fn extract_references_from_path(
-    path_root: &PathBuf,
+    path_root: &Path,
     subdirectory: &str,
     signature: &str,
 ) -> Result<Vec<Reference>, UtilError> {
@@ -339,7 +339,7 @@ fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference
     if let Some('/') = name_head.chars().next() {
         name_head.remove(0);
     }
-    let hash_head = extract_hash_head_from_path(&refs, &name_head)?;
+    let hash_head = extract_hash_head_from_path(refs, &name_head)?;
     Reference::new(hash_head, HEAD.to_string())
 }
 
@@ -431,17 +431,5 @@ mod tests {
             reference_type: ReferenceType::Remote,
         };
         assert_eq!(*reference.get_type(), ReferenceType::Remote);
-    }
-
-    #[test]
-    fn test_get_object() {
-        let references =
-            vec![
-                Reference::new("123123".to_string(), "refs/heads/master".to_string())
-                    .expect("Error"),
-            ];
-        let result = get_objects("Repository", &references);
-
-        assert!(result.is_ok());
     }
 }

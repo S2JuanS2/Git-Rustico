@@ -65,7 +65,6 @@ fn load_files(directory: &str, tree_hash: &str, mode: usize) -> Result<(), GitEr
 
         let path_file_format = format!("{}/{}", directory, path_file);
         let content_file = git_cat_file(directory, hash_blob, "-p")?;
-        println!("content: {}", content_file);
         let path = Path::new(&path_file_format);
 
         if let Some(parent) = path.parent() {
@@ -73,12 +72,11 @@ fn load_files(directory: &str, tree_hash: &str, mode: usize) -> Result<(), GitEr
         }
         if mode == 0 {
             create_file_replace(&path_file_format, &content_file)?;
-        } else if mode == 1 {
-            if fs::metadata(&path_file_format).is_ok() {
-                if fs::remove_file(&path_file_format).is_err() {
-                    return Err(GitError::RemoveFileError);
-                };
-            }
+        } else if mode == 1
+            && fs::metadata(&path_file_format).is_ok()
+            && fs::remove_file(&path_file_format).is_err()
+        {
+            return Err(GitError::RemoveFileError);
         }
     }
     Ok(())

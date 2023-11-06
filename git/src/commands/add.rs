@@ -12,18 +12,16 @@ use std::path::Path;
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    let result;
     if args.len() != 1 {
         return Err(GitError::InvalidArgumentCountAddError);
     }
     let directory = client.get_directory_path();
     let file_name = args[0];
     if args[0] != ALL {
-        result = git_add(directory, file_name)?;
+        git_add(directory, file_name)
     } else {
-        result = git_add_all(Path::new(directory))?;
+        git_add_all(Path::new(directory))
     }
-    Ok(result)
 }
 
 /// Esta función crea todos los objetos y los guarda
@@ -67,8 +65,8 @@ fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), GitError> {
     let directory = format!("{}/", parts[0]);
     if parts.len() >= 3 {
         let mut dir_format = String::new();
-        for i in 1..parts.len() - 1 {
-            let dir_format_parts = format!("{}/", parts[i]);
+        for part in parts.iter().take(parts.len() - 1).skip(1) {
+            let dir_format_parts = format!("{}/", part);
             dir_format = dir_format + &dir_format_parts;
         }
         let file_name_str = file_name.to_string_lossy().to_string();
