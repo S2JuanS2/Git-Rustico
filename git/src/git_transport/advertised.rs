@@ -23,7 +23,7 @@ use super::references::Reference;
 /// 
 #[derive(Debug)]
 pub struct AdvertisedRefs {
-    pub version: u8,
+    pub version: u32,
     pub capabilities: Vec<String>,
     pub shallow: Vec<String>,
     pub references: Vec<Reference>,
@@ -64,7 +64,7 @@ impl AdvertisedRefs {
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     /// 
     fn from_classified(classified: Vec<AdvertisedRefLine>) -> Result<AdvertisedRefs, UtilError> {
-        let mut version: u8 = VERSION_DEFAULT;
+        let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
         let mut references: Vec<Reference> = Vec::new();
@@ -117,7 +117,7 @@ impl AdvertisedRefs {
         self.references.get(index)
     }
 
-    pub fn create_from_path(path_repo: &str, version: u8, capabilities: Vec<String>) -> Result<AdvertisedRefs, UtilError>
+    pub fn create_from_path(path_repo: &str, version: u32, capabilities: Vec<String>) -> Result<AdvertisedRefs, UtilError>
     {
         let references = Reference::extract_references_from_git(path_repo)?;
         Ok(AdvertisedRefs { version, capabilities, shallow: Vec::new(), references })
@@ -128,7 +128,7 @@ impl AdvertisedRefs {
         // Send version
         let version = format!("version {}\n", self.version);
         let version = pkt_line::add_length_prefix(&version, version.len());
-        send_message(writer, version, UtilError::VersionNotSentDiscoveryReferences)?;
+        send_message(writer, &version, UtilError::VersionNotSentDiscoveryReferences)?;
 
         // Send references
         // HEAD lo inserte 1ero en el vector
@@ -136,7 +136,7 @@ impl AdvertisedRefs {
             let reference = format!("{} {}\n", reference.get_hash(), reference.get_name());
             let reference = pkt_line::add_length_prefix(&reference, reference.len());
             println!("Sending reference: {}", reference);
-            send_message(writer, reference, UtilError::ReferencesObtaining)?;
+            send_message(writer, &reference, UtilError::ReferencesObtaining)?;
         }
 
         // Send shallow
@@ -149,7 +149,28 @@ impl AdvertisedRefs {
         send_flush(writer, UtilError::FlushNotSentDiscoveryReferences)?;
         Ok(())
     }
+
+    
+    pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>)
+    {
+        retain_common_values(&mut self.capabilities, &capabilities);
+        filter_by_hash(&mut self.references, &references);
+    }
+
 }
+
+fn filter_by_hash(references: &mut Vec<Reference>, refnames: &Vec<String>) {
+    // references.into_iter().filter(|reference| refnames.contains(&reference.get_hash())).collect()
+    references.retain(|reference| refnames.contains(&reference.get_hash()));
+}
+
+fn retain_common_values(vec1: &mut Vec<String>, vec2: &Vec<String>) {
+    let set2: std::collections::HashSet<_> = vec2.iter().collect();
+
+    vec1.retain(|item| set2.contains(item));
+}
+
+
 
 // pub struct Refere
 
@@ -173,7 +194,7 @@ impl AdvertisedRefs {
 ///    una referencia "shallow" y contiene el ID del objeto superficial.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AdvertisedRefLine {
-    Version(u8),
+    Version(u32),
     Capabilities(Vec<String>),
     Ref { obj_id: String, ref_name: String },
     Shallow { obj_id: String },

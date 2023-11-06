@@ -24,6 +24,27 @@ pub struct ObjectEntry {
     pub obj_length: usize,
 }
 
+impl ObjectEntry {
+    pub fn new(obj_type: ObjectType, obj_length: usize) -> ObjectEntry {
+        ObjectEntry {
+            obj_type,
+            obj_length,
+        }
+    }
+
+    // pub fn to_bytes(&self) -> Vec<u8>
+    // {
+    //     let bytes = match self.obj_type {
+    //         ObjectType::Commit => 1,
+    //         ObjectType::Tree => 2,
+    //         ObjectType::Blob => 3,
+    //         ObjectType::Tag => 4,
+    //         ObjectType::OfsDelta => 6,
+    //         ObjectType::RefDelta => 7,
+    //     };
+    // }
+}
+
 /// Enumeración que representa los tipos de objetos Git.
 ///
 /// Cada variante de esta enumeración corresponde a un tipo de objeto en el sistema de control de versiones Git.
@@ -47,7 +68,7 @@ pub enum ObjectType {
 }
 
 pub fn read_type_and_length(reader: &mut dyn Read) -> Result<ObjectEntry, GitError> {
-    let mut buffer = [0u8; 1];
+    let mut buffer: [u8; 1] = [0u8; 1];
     if reader.read_exact(&mut buffer).is_err() {
         return Err(GitError::HeaderPackFileReadError);
     };

@@ -49,6 +49,10 @@ pub enum UtilError {
     UnexpectedRequestNotWant,
     InvalidRequestFormat(String),
     NegociacionExpectedDone,
+    SendVersionPackfile,
+    SendSignaturePackfile,
+    GetObjectsPackfile,
+    SendNACKPackfile,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -98,6 +102,10 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::UnexpectedRequestNotWant => write!(f, "UnexpectedRequestNotWantError: Se recibió una solicitud inesperada que no es want."),
         UtilError::InvalidRequestFormat(request) => write!(f, "InvalidRequestFormatError: Formato de solicitud inválido: {}", request),
         UtilError::NegociacionExpectedDone => write!(f, "NegociacionExpectedDoneError: Se esperaba un done en la negociación."),
+        UtilError::SendVersionPackfile => write!(f, "SendVersionPackfileError: Error al enviar la versión del packfile."),
+        UtilError::SendSignaturePackfile => write!(f, "SendSignaturePackfileError: Error al enviar la firma del packfile."),
+        UtilError::GetObjectsPackfile => write!(f, "GetObjectsPackfileError: Error al obtener los objetos del packfile."),
+        UtilError::SendNACKPackfile => write!(f, "SendNACKPackfileError: Error al enviar el NACK para preparar el packfile."),
     }
 }
 
