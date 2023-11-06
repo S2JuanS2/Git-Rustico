@@ -29,7 +29,11 @@ impl Controller {
         Controller { client }
     }
     pub fn send_command(&mut self, command: &str) -> Result<String, GitError> {
-        write_client_log(self.client.get_directory_path(), command.to_string(), self.client.get_path_log())?;
+        write_client_log(
+            self.client.get_directory_path(),
+            command.to_string(),
+            self.client.get_path_log(),
+        )?;
         match handle_command(command.to_string().clone(), &mut self.client) {
             Ok(result) => {
                 write_client_log(
@@ -49,7 +53,7 @@ impl Controller {
             }
         }
     }
-    pub fn get_name_client(& self) -> &str{
+    pub fn get_name_client(&self) -> &str {
         self.client.get_name()
     }
 }
@@ -78,7 +82,7 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
                 result = handle_branch(rest_of_command, client.clone())?;
             }
             "clone" => {
-                if let Some(path_clone) = rest_of_command.get(0){
+                if let Some(path_clone) = rest_of_command.get(0) {
                     client.set_directory_path(path_clone.to_string());
                 }
                 result = handle_clone(rest_of_command, client.clone())?;

@@ -3,10 +3,9 @@ use crate::errors::GitError;
 use crate::views::buttons::*;
 use crate::views::entries::*;
 use gtk::prelude::*;
-use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
-
+use std::rc::Rc;
 
 const DIV: &str = "\nResponse: ";
 
@@ -36,13 +35,19 @@ impl View {
 
         let mut buttons: HashMap<String, gtk::Button> = HashMap::new();
         for button_id in buttons_ids {
-            let button: gtk::Button = builder.object(&button_id).ok_or(GitError::ObjectBuildFailed)?;
+            let button: gtk::Button = builder
+                .object(&button_id)
+                .ok_or(GitError::ObjectBuildFailed)?;
             buttons.insert(button_id, button);
         }
         let mut entries: HashMap<String, Rc<gtk::Entry>> = HashMap::new();
 
         for entry_id in entries_ids {
-            let entry: Rc<gtk::Entry> = Rc::new(builder.object(&entry_id).ok_or(GitError::ObjectBuildFailed)?);
+            let entry: Rc<gtk::Entry> = Rc::new(
+                builder
+                    .object(&entry_id)
+                    .ok_or(GitError::ObjectBuildFailed)?,
+            );
             entries.insert(entry_id, entry);
         }
         let window: gtk::Window = builder
@@ -62,9 +67,7 @@ impl View {
                 .object("console")
                 .ok_or(GitError::ObjectBuildFailed)?,
         );
-        let label_user: gtk::Label = builder
-                .object("user")
-                .ok_or(GitError::ObjectBuildFailed)?;
+        let label_user: gtk::Label = builder.object("user").ok_or(GitError::ObjectBuildFailed)?;
 
         let controller = Rc::new(RefCell::new(controller));
         Ok(View {
@@ -78,10 +81,9 @@ impl View {
             response,
             label_user,
         })
-
     }
-    
-    fn set_label_user(&mut self){
+
+    fn set_label_user(&mut self) {
         let controller = Rc::clone(&self.controller);
         let binding = controller.borrow_mut();
         let user_name = binding.get_name_client();
@@ -107,10 +109,16 @@ impl View {
             }
         }
     }
-    fn connect_button_cmd(&mut self, entry_cmd: &str, button_cmd: &str, git_cmd: String, window: gtk::Window){
+    fn connect_button_cmd(
+        &mut self,
+        entry_cmd: &str,
+        button_cmd: &str,
+        git_cmd: String,
+        window: gtk::Window,
+    ) {
         let controller = Rc::clone(&self.controller);
         let response = Rc::clone(&self.response);
-        if let Some(entry) = self.entries.get(entry_cmd){
+        if let Some(entry) = self.entries.get(entry_cmd) {
             let entry_clone = Rc::clone(entry);
             if let Some(button) = self.buttons.get(button_cmd) {
                 button.connect_clicked(move |_| {
@@ -120,7 +128,7 @@ impl View {
                     let result = controller.borrow_mut().send_command(&entry_format);
                     Self::response_write_buffer(result, Rc::clone(&response));
                 });
-            }   
+            }
         };
     }
     fn connect_button_cat_file(&self) {
@@ -131,11 +139,11 @@ impl View {
             });
         }
     }
-    
+
     fn connect_button_hash_object(&self) {
         let dialog = self.window_dialog_hash_object.clone();
 
-        if let Some(button) = self.buttons.get(BUTTON_HASH_OBJECT){
+        if let Some(button) = self.buttons.get(BUTTON_HASH_OBJECT) {
             button.connect_clicked(move |_| {
                 dialog.show_all();
             });
@@ -144,19 +152,18 @@ impl View {
     fn connect_button_clone(&self) {
         let dialog = self.window_dialog_clone.clone();
 
-        if let Some(button) = self.buttons.get(BUTTON_CLONE){
+        if let Some(button) = self.buttons.get(BUTTON_CLONE) {
             button.connect_clicked(move |_| {
                 dialog.show_all();
-    
             });
         }
     }
     fn connect_button_send(&self) {
         let response = Rc::clone(&self.response);
         let controller = Rc::clone(&self.controller);
-        if let Some(entry) = self.entries.get(ENTRY_CONSOLE){
+        if let Some(entry) = self.entries.get(ENTRY_CONSOLE) {
             let entry_send = Rc::clone(entry);
-            if let Some(button) = self.buttons.get(BUTTON_SEND){
+            if let Some(button) = self.buttons.get(BUTTON_SEND) {
                 button.connect_clicked(move |_| {
                     let command = entry_send.text().to_string();
                     entry_send.set_text("");
@@ -167,7 +174,7 @@ impl View {
         };
     }
     fn connect_button_clear(&self) {
-        if let Some(button) = self.buttons.get(BUTTON_CLEAR){
+        if let Some(button) = self.buttons.get(BUTTON_CLEAR) {
             if let Some(buffer) = self.response.buffer() {
                 button.connect_clicked(move |_| {
                     buffer.set_text("");
@@ -178,9 +185,9 @@ impl View {
     fn connect_button_with_entry(&self, entry_cmd: &str, button_cmd: &str, git_cmd: String) {
         let controller = Rc::clone(&self.controller);
         let response = Rc::clone(&self.response);
-        if let Some(entry) = self.entries.get(entry_cmd){
+        if let Some(entry) = self.entries.get(entry_cmd) {
             let entry_branch = Rc::clone(entry);
-            if let Some(button) = self.buttons.get(button_cmd){
+            if let Some(button) = self.buttons.get(button_cmd) {
                 button.connect_clicked(move |_| {
                     let entry_format = format!("{} {}", git_cmd, entry_branch.text().to_string());
                     entry_branch.set_text("");
@@ -194,7 +201,7 @@ impl View {
         let controller = Rc::clone(&self.controller);
         let response = Rc::clone(&self.response);
 
-        if let Some(button) = self.buttons.get(button_cmd){
+        if let Some(button) = self.buttons.get(button_cmd) {
             button.connect_clicked(move |_| {
                 let result = controller.borrow_mut().send_command(&git_cmd);
                 Self::response_write_buffer(result, Rc::clone(&response));
@@ -208,7 +215,7 @@ impl View {
         self.connect_button_with_entry(ENTRY_COMMIT, BUTTON_COMMIT, "git commit".to_string());
         self.connect_button_with_entry(ENTRY_MERGE, BUTTON_MERGE, "git merge".to_string());
         self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH, "git branch".to_string());
-        
+
         let commands = [
             (BUTTON_INIT, "git init".to_string()),
             (BUTTON_STATUS, "git status".to_string()),
@@ -218,7 +225,7 @@ impl View {
             (BUTTON_REMOTE, "git remote".to_string()),
             (BUTTON_LOG, "git log".to_string()),
         ];
-    
+
         for (button, command) in commands {
             self.connect_button_with_not_entry(button, command);
         }
@@ -233,13 +240,26 @@ impl View {
         let window_cat_file = self.window_dialog_cat_file.clone();
         let window_hash_object = self.window_dialog_hash_object.clone();
 
-        self.connect_button_cmd(ENTRY_CLONE, BUTTON_CMD_CLONE, "git clone".to_string(), window_clone);
-        self.connect_button_cmd(ENTRY_CAT_FILE, BUTTON_CMD_CAT_FILE, "git cat-file".to_string(), window_cat_file);
-        self.connect_button_cmd(ENTRY_HASH_OBJECT, BUTTON_CMD_HASH_OBJECT, "git hash-object".to_string(), window_hash_object);
-
+        self.connect_button_cmd(
+            ENTRY_CLONE,
+            BUTTON_CMD_CLONE,
+            "git clone".to_string(),
+            window_clone,
+        );
+        self.connect_button_cmd(
+            ENTRY_CAT_FILE,
+            BUTTON_CMD_CAT_FILE,
+            "git cat-file".to_string(),
+            window_cat_file,
+        );
+        self.connect_button_cmd(
+            ENTRY_HASH_OBJECT,
+            BUTTON_CMD_HASH_OBJECT,
+            "git hash-object".to_string(),
+            window_hash_object,
+        );
     }
     pub fn start_view(&mut self) -> Result<(), GitError> {
-
         self.connect_buttons();
 
         self.window.connect_destroy(|_| {
@@ -247,7 +267,7 @@ impl View {
         });
 
         self.set_label_user();
-        
+
         self.window.show_all();
         gtk::main();
 

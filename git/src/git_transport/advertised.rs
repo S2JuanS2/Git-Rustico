@@ -1,10 +1,16 @@
-use crate::{consts::VERSION_DEFAULT, util::{errors::UtilError, validation::is_valid_obj_id, connections::{send_flush, send_message}, pkt_line}};
+use crate::{
+    consts::VERSION_DEFAULT,
+    util::{
+        connections::{send_flush, send_message},
+        errors::UtilError,
+        pkt_line,
+        validation::is_valid_obj_id,
+    },
+};
 
-use std::{fmt, vec, io::Write};
+use std::{fmt, io::Write, vec};
 
 use super::references::Reference;
-
-
 
 /// Representa las referencias anunciadas recibidas durante una operación de fetch/push en Git.
 ///
@@ -20,7 +26,7 @@ use super::references::Reference;
 /// - `capabilities`: Una lista de capacidades soportadas por el servidor.
 /// - `shallow`: Una lista de referencias superficiales.
 /// - `references`: Una lista de referencias disponibles en el repositorio del servidor.
-/// 
+///
 #[derive(Debug)]
 pub struct AdvertisedRefs {
     pub version: u32,
@@ -43,7 +49,7 @@ impl AdvertisedRefs {
     /// # Retorno
     /// Devuelve un `Result` que contiene la estructura `AdvertisedRefs` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
-    /// 
+    ///
     pub fn new(content: &Vec<Vec<u8>>) -> Result<AdvertisedRefs, UtilError> {
         let classified = AdvertisedRefLine::classify_vec(content)?;
         AdvertisedRefs::from_classified(classified)
@@ -62,7 +68,7 @@ impl AdvertisedRefs {
     /// # Retorno
     /// Devuelve un `Result` que contiene la estructura `AdvertisedRefs` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
-    /// 
+    ///
     fn from_classified(classified: Vec<AdvertisedRefLine>) -> Result<AdvertisedRefs, UtilError> {
         let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
@@ -95,7 +101,7 @@ impl AdvertisedRefs {
     ///
     /// # Retorno
     /// Devuelve una referencia al vector que contiene las referencias disponibles.
-    /// 
+    ///
     pub fn get_references(&self) -> &Vec<Reference> {
         &self.references
     }
@@ -112,23 +118,34 @@ impl AdvertisedRefs {
     /// # Retorno
     /// Devuelve una referencia a la referencia en la posición especificada si existe,
     /// de lo contrario, devuelve `None`.
-    /// 
+    ///
     pub fn get_reference(&self, index: usize) -> Option<&Reference> {
         self.references.get(index)
     }
 
-    pub fn create_from_path(path_repo: &str, version: u32, capabilities: Vec<String>) -> Result<AdvertisedRefs, UtilError>
-    {
+    pub fn create_from_path(
+        path_repo: &str,
+        version: u32,
+        capabilities: Vec<String>,
+    ) -> Result<AdvertisedRefs, UtilError> {
         let references = Reference::extract_references_from_git(path_repo)?;
-        Ok(AdvertisedRefs { version, capabilities, shallow: Vec::new(), references })
+        Ok(AdvertisedRefs {
+            version,
+            capabilities,
+            shallow: Vec::new(),
+            references,
+        })
     }
 
-    pub fn send_references(&self, writer: &mut dyn Write) -> Result<(), UtilError>
-    {
+    pub fn send_references(&self, writer: &mut dyn Write) -> Result<(), UtilError> {
         // Send version
         let version = format!("version {}\n", self.version);
         let version = pkt_line::add_length_prefix(&version, version.len());
-        send_message(writer, &version, UtilError::VersionNotSentDiscoveryReferences)?;
+        send_message(
+            writer,
+            &version,
+            UtilError::VersionNotSentDiscoveryReferences,
+        )?;
 
         // Send references
         // HEAD lo inserte 1ero en el vector
@@ -150,13 +167,10 @@ impl AdvertisedRefs {
         Ok(())
     }
 
-    
-    pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>)
-    {
+    pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>) {
         retain_common_values(&mut self.capabilities, &capabilities);
         filter_by_hash(&mut self.references, &references);
     }
-
 }
 
 fn filter_by_hash(references: &mut Vec<Reference>, refnames: &Vec<String>) {
@@ -169,8 +183,6 @@ fn retain_common_values(vec1: &mut Vec<String>, vec2: &Vec<String>) {
 
     vec1.retain(|item| set2.contains(item));
 }
-
-
 
 // pub struct Refere
 

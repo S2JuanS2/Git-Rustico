@@ -1,5 +1,5 @@
-use crate::consts::PKT_DONE;
 use crate::consts::FLUSH_PKT;
+use crate::consts::PKT_DONE;
 use crate::git_transport::advertised::AdvertisedRefs;
 use crate::git_transport::negotiation::receive_nack;
 use crate::git_transport::negotiation::upload_request;
@@ -101,11 +101,7 @@ pub fn send_message(
     Ok(())
 }
 
-pub fn send_bytes(
-    writer: &mut dyn Write,
-    bytes: &[u8],
-    error: UtilError,
-) -> Result<(), UtilError> {
+pub fn send_bytes(writer: &mut dyn Write, bytes: &[u8], error: UtilError) -> Result<(), UtilError> {
     if writer.write_all(bytes).is_err() {
         return Err(error);
     };
@@ -150,7 +146,11 @@ pub fn send_done(socket: &mut dyn Write, error: UtilError) -> Result<(), UtilErr
     send_message(socket, PKT_DONE, error)
 }
 
-pub fn received_message(stream: &mut dyn Read, message: &str, error: UtilError) -> Result<(), UtilError> {
+pub fn received_message(
+    stream: &mut dyn Read,
+    message: &str,
+    error: UtilError,
+) -> Result<(), UtilError> {
     let mut buffer = vec![0u8; message.len()];
     if stream.read_exact(&mut buffer).is_err() {
         return Err(UtilError::PackfileNegotiationReceiveNACK);

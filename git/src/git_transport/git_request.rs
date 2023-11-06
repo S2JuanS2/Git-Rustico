@@ -1,4 +1,3 @@
-
 use std::fmt;
 use std::io::Read;
 use std::net::TcpStream;
@@ -9,11 +8,10 @@ use crate::git_transport::advertised::AdvertisedRefs;
 use crate::git_transport::negotiation::receive_request;
 use crate::util::errors::UtilError;
 use crate::util::packfile::send_packfile;
-use crate::util::pkt_line::{add_length_prefix, read_pkt_line, read_line_from_bytes};
+use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
 
 use super::request_command::RequestCommand;
-
 
 /// # `GitRequest`
 ///
@@ -48,7 +46,6 @@ impl fmt::Display for GitRequest {
 }
 
 impl GitRequest {
-
     /// Lee y procesa una solicitud de Git a partir de datos leídos de un flujo de lectura.
     /// Se utiliza para leer y procesar la solicitud de un cliente Git desde un flujo de lectura.
     /// Se espera que la solicitud se reciba como un paquete de líneas de Git y, por lo tanto,
@@ -92,7 +89,7 @@ impl GitRequest {
         }
         process_request_data(data)
     }
-    
+
     /// Crea una solicitud Git a partir de información detallada proporcionada.
     /// Se utiliza para construir una solicitud Git con información específica como el comando,
     /// la dirección del repositorio, la IP y el puerto del host.
@@ -158,7 +155,7 @@ impl GitRequest {
     /// // Verificar el resultado esperado
     /// assert_eq!(git_request, "0036git-upload-pack /mi-repositorio\0host=127.0.0.1:22\0");
     /// ```
-    /// 
+    ///
     /// ## Retorno
     ///
     /// Una line pkt que representa la solicitud Git formateada.
@@ -182,17 +179,18 @@ impl GitRequest {
         let message = format!("{}{}{}", command, project, host);
         add_length_prefix(&message, len)
     }
-    
+
     pub fn execute(&self, stream: &mut TcpStream, root: &str) -> Result<(), UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
                 println!("path_repo: {:?}", path_repo);
-                let mut advertised = AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
+                let mut advertised =
+                    AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
                 println!("advertised: {:?}", advertised);
                 advertised.send_references(stream)?;
                 println!("Envie las referencias");
-                let (capabilities, references) =  receive_request(stream)?;
+                let (capabilities, references) = receive_request(stream)?;
                 advertised.update_data(capabilities, references);
                 println!("advertised filter: {:?}", advertised);
                 send_packfile(stream, &advertised, &path_repo)?;
@@ -235,15 +233,12 @@ fn process_request_data(data: &[u8]) -> Result<GitRequest, UtilError> {
 
     let request_command = RequestCommand::from_string(first_part)?;
 
-    get_components_request(second_part)
-        .map(|(pathname, extra_parameters)| GitRequest {
-            request_command,
-            pathname: String::from_utf8_lossy(pathname).trim().to_string(),
-            extra_parameters,
-        })
+    get_components_request(second_part).map(|(pathname, extra_parameters)| GitRequest {
+        request_command,
+        pathname: String::from_utf8_lossy(pathname).trim().to_string(),
+        extra_parameters,
+    })
 }
-
-
 
 /// Obtiene los componentes de una solicitud Git y los retorna como tupla.
 /// Toma los bytes de una solicitud Git y los separa en sus diferentes componentes,
@@ -276,7 +271,6 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
     ))
 }
 
-
 /// Obtiene la ruta del repositorio dado un directorio raíz y un nombre de ruta.
 ///
 /// # Argumentos
@@ -288,25 +282,22 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
 ///
 /// Devuelve un resultado que contiene la ruta del repositorio si la operación es exitosa.
 /// En caso de error, retorna un error de tipo UtilError indicando la no existencia del repositorio.
-/// 
+///
 fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> {
     let path_repo = join_paths_correctly(root, pathname);
     let path = Path::new(&path_repo);
     println!("{:?}", path);
-    if !(path.exists() && path.is_dir())
-    {
+    if !(path.exists() && path.is_dir()) {
         return Err(UtilError::RepoNotFoundError(pathname.to_string()));
     }
     // Valido si es un repo git
     let path_git = join_paths_correctly(&path_repo, ".git");
     let path = Path::new(&path_git);
-    if !(path.exists() && path.is_dir())
-    {
+    if !(path.exists() && path.is_dir()) {
         return Err(UtilError::RepoNotFoundError(pathname.to_string()));
     }
     Ok(path_repo)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -377,7 +368,7 @@ mod tests {
         assert!(result_no_space.is_err()); // Comprobar que el resultado es un error
     }
     #[test]
-    fn test_git_request_new_with_valid_data() -> Result<(), UtilError>{
+    fn test_git_request_new_with_valid_data() -> Result<(), UtilError> {
         // Datos de entrada con un comando no válido
         let input_invalid_command = b"003agit-upload-pack /schacon/gitbook.git\0host=example.com\0";
         let request = GitRequest::create_from_bytes(input_invalid_command)?;

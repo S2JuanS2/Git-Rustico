@@ -2,7 +2,6 @@ use std::fmt;
 
 use crate::util::errors::UtilError;
 
-
 /// Enumeración `RequestCommand` representa los comandos de solicitud en un protocolo Git.
 ///
 /// Esta enumeración define tres comandos utilizados en las operaciones de Git.
@@ -51,7 +50,6 @@ impl RequestCommand {
     }
 }
 
-
 #[cfg(test)]
 mod request_command_tests {
     use super::*;
@@ -68,7 +66,10 @@ mod request_command_tests {
 
     #[test]
     fn display_upload_archive() {
-        assert_eq!(format!("{}", RequestCommand::UploadArchive), "Upload Archive");
+        assert_eq!(
+            format!("{}", RequestCommand::UploadArchive),
+            "Upload Archive"
+        );
     }
 
     #[test]
@@ -83,7 +84,10 @@ mod request_command_tests {
 
     #[test]
     fn to_string_upload_archive() {
-        assert_eq!(RequestCommand::UploadArchive.to_string(), "git-upload-archive");
+        assert_eq!(
+            RequestCommand::UploadArchive.to_string(),
+            "git-upload-archive"
+        );
     }
 
     #[test]

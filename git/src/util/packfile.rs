@@ -1,8 +1,12 @@
-use crate::{consts::{PACK_SIGNATURE, PACK_BYTES, PKT_NACK}, util::{objects::read_type_and_length_from_vec, connections::send_message}, git_transport::{advertised::AdvertisedRefs, references::get_objects}};
+use crate::{
+    consts::{PACK_BYTES, PACK_SIGNATURE, PKT_NACK},
+    git_transport::{advertised::AdvertisedRefs, references::get_objects},
+    util::{connections::send_message, objects::read_type_and_length_from_vec},
+};
 use flate2::read::ZlibDecoder;
 use std::io::{Read, Write};
 
-use super::{errors::UtilError, objects::ObjectEntry, connections::send_bytes};
+use super::{connections::send_bytes, errors::UtilError, objects::ObjectEntry};
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, UtilError> {
     read_signature(reader)?;
@@ -133,31 +137,40 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
     Ok(value)
 }
 
-pub fn send_packfile(writer: &mut dyn Write, advertised: &AdvertisedRefs, path_repo: &str) -> Result<(), UtilError> {
-    send_message(writer, PKT_NACK, UtilError::SendNACKPackfile)?; 
+pub fn send_packfile(
+    writer: &mut dyn Write,
+    advertised: &AdvertisedRefs,
+    path_repo: &str,
+) -> Result<(), UtilError> {
+    send_message(writer, PKT_NACK, UtilError::SendNACKPackfile)?;
     // Envio signature
     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
 
     // Envio version
-    send_bytes(writer, &advertised.version.to_be_bytes(), UtilError::SendSignaturePackfile)?;
-    
+    send_bytes(
+        writer,
+        &advertised.version.to_be_bytes(),
+        UtilError::SendSignaturePackfile,
+    )?;
+
     // Envio numero de objetos
-    let objects = match get_objects(path_repo, &advertised.references[1..].to_vec())
-    {
+    let objects = match get_objects(path_repo, &advertised.references[1..].to_vec()) {
         Ok(objects) => objects,
         Err(_) => return Err(UtilError::GetObjectsPackfile),
     };
     let number_objects = objects.len() as u32;
-    send_bytes(writer, &number_objects.to_be_bytes(), UtilError::SendSignaturePackfile)?;
+    send_bytes(
+        writer,
+        &number_objects.to_be_bytes(),
+        UtilError::SendSignaturePackfile,
+    )?;
     println!("Number of objects: {}", number_objects);
-
 
     // // Envio de objetos
     // for (object_type, content) in objects {
-        
+
     // }
-    
-    
+
     Ok(())
 }
 #[cfg(test)]

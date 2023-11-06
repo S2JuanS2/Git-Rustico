@@ -1,4 +1,4 @@
-use std::{path::Path, fs};
+use std::{fs, path::Path};
 
 use crate::{consts::*, errors::GitError};
 
@@ -150,7 +150,7 @@ pub fn valid_path(input: &str) -> Result<String, GitError> {
 /// # Retorno
 ///
 /// Devuelve `true` si la ruta es un directorio existente, de lo contrario, devuelve `false`.
-/// 
+///
 fn is_valid_directory(path: &str) -> bool {
     fs::metadata(path)
         .map(|metadata| metadata.is_dir())
@@ -166,16 +166,14 @@ fn is_valid_directory(path: &str) -> bool {
 /// # Retorno
 ///
 /// Devuelve `true` si el archivo no existe y su directorio padre es válido, de lo contrario, devuelve `false`.
-/// 
+///
 fn is_valid_file_directory(path: &str) -> bool {
-    if is_valid_directory(path)
-    {
+    if is_valid_directory(path) {
         return false;
     }
 
     let file = Path::new(path);
-    let parent_dir = match file.parent()
-    {
+    let parent_dir = match file.parent() {
         Some(dir) => dir,
         None => return false,
     };
@@ -423,11 +421,9 @@ fn is_valid_domain_part(domain_part: &str) -> bool {
 /// # Retorno
 ///
 /// Devuelve `Ok(path.to_string())` si el archivo no existe y su directorio padre es válido. En caso contrario, devuelve un error `Err(GitError::InvalidLogDirectoryError)`.
-/// 
-pub fn valid_path_log(path: &str) -> Result<String, GitError>
-{
-    match is_valid_file_directory(path)
-    {
+///
+pub fn valid_path_log(path: &str) -> Result<String, GitError> {
+    match is_valid_file_directory(path) {
         true => Ok(path.to_string()),
         false => Err(GitError::InvalidLogDirectoryError),
     }
@@ -442,11 +438,9 @@ pub fn valid_path_log(path: &str) -> Result<String, GitError>
 /// # Retorno
 ///
 /// Devuelve `Ok(path.to_string())` si la ruta es un directorio existente. En caso contrario, devuelve un error `Err(GitError::InvalidSrcDirectoryError)`.
-/// 
-pub fn valid_directory_src(path: &str) -> Result<String, GitError>
-{
-    match is_valid_directory(path)
-    {
+///
+pub fn valid_directory_src(path: &str) -> Result<String, GitError> {
+    match is_valid_directory(path) {
         true => Ok(path.to_string()),
         false => Err(GitError::InvalidSrcDirectoryError),
     }
@@ -463,11 +457,11 @@ pub fn valid_directory_src(path: &str) -> Result<String, GitError>
 ///
 /// ```rust
 /// use git::util::validation::is_subdirectory;
-/// 
+///
 /// let result = is_subdirectory("../", "commands");
 /// assert!(result);
 /// ```
-/// 
+///
 /// # Retorno
 ///
 /// Devuelve `true` si el directorio `parent_path` contiene un subdirectorio con el nombre `child_name`,
@@ -478,7 +472,6 @@ pub fn is_subdirectory(parent_path: &str, child_name: &str) -> bool {
     let child_path = parent_path.join(child_name);
     child_path.exists() && child_path.is_dir()
 }
-
 
 /// Combina dos rutas de manera que se asegura la correcta unión de las mismas, eliminando
 /// barras innecesarias o faltantes.
@@ -501,10 +494,8 @@ pub fn is_subdirectory(parent_path: &str, child_name: &str) -> bool {
 /// Un `String` que representa la combinación de ambas rutas asegurando una correcta unión,
 /// eliminando barras innecesarias o faltantes.
 pub fn join_paths_correctly(first_path: &str, second_path: &str) -> String {
-
     let second_path = second_path.trim().trim_start_matches('/');
-    let first_path = match first_path.trim().ends_with('/')
-    {
+    let first_path = match first_path.trim().ends_with('/') {
         true => first_path.to_string(),
         false => format!("{}{}", first_path, "/"),
     };
@@ -783,7 +774,7 @@ mod tests {
     fn test_is_subdirectory_when_child_does_not_exist() {
         let parent_directory = "./";
         let child_directory = "files.rs";
-        
+
         assert!(!is_subdirectory(parent_directory, child_directory));
     }
 
@@ -791,7 +782,7 @@ mod tests {
     fn test_is_subdirectory_format_double() {
         let parent_directory = "../";
         let child_directory = "commands";
-        
+
         assert!(is_subdirectory(parent_directory, child_directory));
     }
 
