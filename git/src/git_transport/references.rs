@@ -419,7 +419,7 @@ mod tests {
     #[test]
     fn test_get_object(){
         let references = vec![Reference::new("123123".to_string(), "refs/heads/master".to_string()).expect("Error")];
-        let result = get_objects("Repository", references);
+        let result = get_objects("Repository", &references);
 
         assert!(result.is_ok());
     }

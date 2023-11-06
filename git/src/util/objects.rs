@@ -31,17 +31,48 @@ impl ObjectEntry {
         }
     }
 
-    // pub fn to_bytes(&self) -> Vec<u8>
-    // {
-    //     let bytes = match self.obj_type {
-    //         ObjectType::Commit => 1,
-    //         ObjectType::Tree => 2,
-    //         ObjectType::Blob => 3,
-    //         ObjectType::Tag => 4,
-    //         ObjectType::OfsDelta => 6,
-    //         ObjectType::RefDelta => 7,
-    //     };
-    // }
+    pub fn to_bytes(&self) -> Vec<u8>
+    {
+        let mut bytes: Vec<u8> = Vec::new();
+        let mut byte:u8 = 0;
+        match &self.obj_type {
+            ObjectType::Commit => byte |= 0b00010000,
+            ObjectType::Tree => byte |= 0b00100000,
+            ObjectType::Blob => byte |= 0b00110000,
+            ObjectType::Tag => byte |= 0b01000000,
+            ObjectType::OfsDelta => byte |= 0b01100000,
+            ObjectType::RefDelta => byte |= 0b01110000,
+        };
+
+        if self.obj_length < 15 {
+            byte |= self.obj_length  as u8;
+            bytes.push(byte);
+            return bytes;
+        }
+        let rest = (self.obj_length & 0b00001111) as u8;
+        byte |= rest;
+        byte |= 0b10000000;
+        bytes.push(byte);
+        encode_size_encoding(self.obj_length, 4, &mut bytes);
+        bytes
+        // return 
+    }
+}
+
+
+pub fn encode_size_encoding(mut number: usize, offset: u8, result: &mut Vec<u8>) {
+    number >>= offset;
+    loop {
+        let mut byte = (number & 0b01111111) as u8;
+        number >>= 7;
+        if number != 0 {
+            byte |= 0b10000000;
+        }
+        result.push(byte);
+        if number == 0 {
+            break;
+        }
+    }
 }
 
 /// Enumeración que representa los tipos de objetos Git.
@@ -753,5 +784,40 @@ mod tests {
         let blob = read_blob(&decompressed_data).expect("Error al leer el tipo");
 
         assert_eq!(blob, "what is up, doc?");
+    }
+
+    #[test]
+    fn test_encode_size_encoding_100() {
+        let mut bytes: Vec<u8> = Vec::new();
+        encode_size_encoding(100, 0, &mut bytes);
+        assert_eq!(bytes, vec![0b01100100]);
+    }
+
+    #[test]
+    fn test_encode_size_encoding_200() {
+        let mut bytes: Vec<u8> = Vec::new();
+        encode_size_encoding(200, 0, &mut bytes);
+        assert_eq!(bytes, vec![0b11001000, 0b00000001]);
+    }
+
+    #[test]
+    fn test_encode_size_encoding_128() {
+        let mut bytes: Vec<u8> = Vec::new();
+        encode_size_encoding(128, 0, &mut bytes);
+        assert_eq!(bytes, vec![0b10000000, 0b00000001]);
+    }
+
+    #[test]
+    fn test_encode_size_encoding_300() {
+        let mut bytes: Vec<u8> = Vec::new();
+        encode_size_encoding(300, 0, &mut bytes);
+        assert_eq!(bytes, vec![0b10101100, 0b00000010]);
+    }
+
+    #[test]
+    fn test_encode_size_encoding_99999() {
+        let mut bytes: Vec<u8> = Vec::new();
+        encode_size_encoding(99999, 0, &mut bytes);
+        assert_eq!(bytes, vec![0b10011111, 0b10001101, 0b00000110]);
     }
 }
