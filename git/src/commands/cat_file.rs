@@ -21,6 +21,10 @@ pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, GitErr
     git_cat_file(directory, args[1], args[0])
 }
 
+/// Esta funcion se encarga de leer el contenido de un objeto
+/// ###Parametros:
+/// 'bytes': Vector de bytes que contiene el contenido del objeto
+/// 'type_object': Tipo de objeto que se va a leer
 pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, GitError> {
     let mut content = String::new();
 
@@ -34,6 +38,7 @@ pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, Git
 
     Ok(content)
 }
+
 /// Esta función se utiliza para mostrar el contenido o información sobre los objetos (archivos, commits, etc.)
 /// ###Parametros:
 /// 'directory': dirección donde se encuentra inicializado el repositorio.
@@ -64,7 +69,6 @@ mod tests {
     use crate::util::formats::compressor_object;
     use std::fs;
     use std::fs::File;
-    use std::path::Path;
 
     const TEST_DIRECTORY: &str = "./test_repo";
 
@@ -90,9 +94,6 @@ mod tests {
         // El contenido original deberia ser igual al descomprimido
         assert_eq!(result, object_content);
 
-        // Limpia el archivo de prueba
-        if !Path::new(TEST_DIRECTORY).exists() {
-            fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
-        }
+        fs::remove_dir_all(TEST_DIRECTORY).expect("Falló al remover el directorio temporal");
     }
 }

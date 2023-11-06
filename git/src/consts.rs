@@ -102,7 +102,7 @@ pub const INITIAL_BRANCH: &str = "master";
 
 pub const INDEX: &str = "index";
 
-pub const HEAD_POINTER_REF: &str = "ref: /refs/heads/";
+pub const HEAD_POINTER_REF: &str = "ref: refs/heads/";
 
 pub const REF_HEADS: &str = "refs/heads";
 

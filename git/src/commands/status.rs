@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-/// Esta función se encarga de llamar al comando status con los parametros necesarios
+/// Esta función se encarga de llamar al comando status con los parametros necesarios.
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
 /// 'client': Cliente que contiene la información del cliente que se conectó
@@ -50,25 +50,12 @@ fn get_head_branch(directory: &str) -> Result<String, GitError> {
     Ok(head_branch_name)
 }
 
-/// Muestra por pantalla el nombre de la rama actual.
-/// ###Parámetros:
-/// 'directory': directorio del repositorio local.
-pub fn print_head(directory: &str) -> Result<String, GitError> {
-    let head_branch_name = get_head_branch(directory);
-    let head_branch_name = match head_branch_name {
-        Ok(name) => name,
-        Err(_) => return Err(GitError::HeadBranchError),
-    };
-    Ok(head_branch_name)
-}
-
 /// Compara los hashes de los archivos del directorio de trabajo con los de objects e imprime el estado
 /// del repositorio local, incluyendo las diferencias entre los archivos locales y los archivos que ya
 /// fueron agregados al staging area.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 pub fn git_status(directory: &str) -> Result<String, GitError> {
-    // "directory/.git"
     let directory_git = format!("{}/{}", directory, GIT_DIR);
 
     let index_content = get_index_content(&directory_git)?;
@@ -83,11 +70,8 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
     }
 
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
-
     let objects_hash_list = get_hashes_objects(directory_git)?;
-
     let untracked_files_list = compare_hash_lists(working_directory_hash_list, objects_hash_list);
-
     let value = print_changes(index_files, untracked_files_list, directory)?;
 
     Ok(value)
@@ -115,6 +99,7 @@ pub fn get_index_content(directory_git: &String) -> Result<String, GitError> {
 /// Imprime los cambios que se realizaron en el repositorio local y no estan en el staging area.
 /// ###Parámetros:
 /// 'updated_files_list': vector con los nombres de los archivos que se modificaron.
+/// 'untracked_files_list': vector con los nombres de los archivos que no estan en el staging area.
 /// 'directory': directorio del repositorio local.
 fn print_changes(
     index_files_list: Vec<String>,
@@ -123,44 +108,76 @@ fn print_changes(
 ) -> Result<String, GitError> {
     let mut formatted_result = String::new();
     let head_branch_name = get_head_branch(directory)?;
-    // Si el vector de archivos modificados esta vacio, significa que no hay cambios
+
     formatted_result.push_str("On branch ");
     formatted_result.push_str(&head_branch_name);
     if index_files_list.is_empty() && untracked_files_list.is_empty() {
-        formatted_result.push_str(&format!(
-            "\nYour branch is up to date with 'origin/{}'.\n",
-            head_branch_name
-        ));
-        formatted_result.push_str("\nnothing to commit, working tree clean\n");
+        branch_up_to_date(&mut formatted_result, head_branch_name);
     }
     if !index_files_list.is_empty() {
-        formatted_result.push_str("\nChanges to be committed:\n");
-        formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
-
-        for file in index_files_list {
-            let file_name: Vec<&str> = file.split(' ').collect();
-            let file_name = match file_name.first() {
-                Some(name) => name,
-                None => return Err(GitError::HeadBranchError), //CAMBIAR ERROR
-            };
-            formatted_result.push_str(&format!("\tmodified:   {}\n", file_name));
-        }
+        branch_missing_commits(&mut formatted_result, index_files_list)?;
     }
     if !untracked_files_list.is_empty() {
-        formatted_result.push_str("\nChanges not staged for commit:\n");
-        formatted_result
-            .push_str("  (use \"git add <file>...\" to update what will be committed)\n");
-        formatted_result.push_str(
-            "  (use \"git checkout -- <file>...\" to discard changes in working directory)\n",
-        );
-
-        for file in untracked_files_list {
-            let file_path = &file.0[directory.len()+1..];
-            formatted_result.push_str(&format!("\t{}\n", file_path));
-        }
+        branch_with_untracked_files(&mut formatted_result, untracked_files_list, directory);
     }
 
     Ok(formatted_result)
+}
+
+/// Muestra los archivos que no estan en el staging area.
+/// ###Parámetros:
+/// 'formatted_result': string con el resultado del status formateado.
+/// 'untracked_files_list': vector con los nombres de los archivos que no estan en el staging area.
+/// 'directory': directorio del repositorio local.
+fn branch_with_untracked_files(
+    formatted_result: &mut String,
+    untracked_files_list: Vec<(String, String)>,
+    directory: &str,
+) {
+    formatted_result.push_str("\nChanges not staged for commit:\n");
+    formatted_result.push_str("  (use \"git add <file>...\" to update what will be committed)\n");
+    formatted_result.push_str(
+        "  (use \"git checkout -- <file>...\" to discard changes in working directory)\n",
+    );
+
+    for file in untracked_files_list {
+        let file_path = &file.0[directory.len() + 1..];
+        formatted_result.push_str(&format!("\t{}\n", file_path));
+    }
+}
+
+/// Muestra los archivos que estan en el staging area y van a ser incluidos en el proximo commit.
+/// ###Parámetros:
+/// 'formatted_result': string con el resultado del status formateado.
+/// 'index_files_list': vector con los nombres de los archivos que estan en el staging area
+fn branch_missing_commits(
+    formatted_result: &mut String,
+    index_files_list: Vec<String>,
+) -> Result<(), GitError> {
+    formatted_result.push_str("\nChanges to be committed:\n");
+    formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
+
+    for file in index_files_list {
+        let file_name: Vec<&str> = file.split(' ').collect();
+        let file_name = match file_name.first() {
+            Some(name) => name,
+            None => return Err(GitError::GenericError),
+        };
+        formatted_result.push_str(&format!("\tmodified:   {}\n", file_name));
+    }
+    Ok(())
+}
+
+/// Muestra que el repositorio local esta actualizado.
+/// ###Parámetros:
+/// 'formatted_result': string con el resultado del status formateado.
+/// 'head_branch_name': nombre de la rama actual.
+fn branch_up_to_date(formatted_result: &mut String, head_branch_name: String) {
+    formatted_result.push_str(&format!(
+        "\nYour branch is up to date with 'origin/{}'.\n",
+        head_branch_name
+    ));
+    formatted_result.push_str("\nnothing to commit, working tree clean\n");
 }
 
 /// Compara los hashes de los archivos del directorio de trabajo con los de objects y devuelve un vector
@@ -188,7 +205,7 @@ fn compare_hash_lists(
 fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, GitError> {
     let objects_dir = Path::new(&directory_git).join(DIR_OBJECTS);
     let mut objects_hash_list: Vec<String> = Vec::new();
-    visit_dirs(&objects_dir, &mut objects_hash_list)?;
+    visit_objects_dir(&objects_dir, &mut objects_hash_list)?;
     Ok(objects_hash_list)
 }
 
@@ -206,7 +223,7 @@ fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, Strin
 /// ###Parámetros:
 /// 'dir': directorio del repositorio local.
 /// 'hash_list': vector con los hashes de los archivos en objects.
-fn visit_dirs(dir: &Path, hash_list: &mut Vec<String>) -> Result<(), GitError> {
+fn visit_objects_dir(dir: &Path, hash_list: &mut Vec<String>) -> Result<(), GitError> {
     if dir.is_dir() {
         let fs = match fs::read_dir(dir) {
             Ok(fs) => fs,
@@ -220,41 +237,37 @@ fn visit_dirs(dir: &Path, hash_list: &mut Vec<String>) -> Result<(), GitError> {
             let path = entry.path();
 
             if path.is_dir() {
-                let visit = visit_dirs(&path, hash_list);
-                match visit {
-                    Ok(file) => file,
-                    Err(_) => return Err(GitError::VisitDirectoryError),
-                };
+                visit_objects_dir(&path, hash_list)?;
             } else {
-                let hash_first_part = dir.file_name();
-                let hash_first_part = match hash_first_part {
-                    Some(name) => {
-                        let name_str = name.to_str();
-                        match name_str {
-                            Some(name_str) => name_str,
-                            None => return Err(GitError::GetHashError),
-                        }
-                    }
-                    None => return Err(GitError::GetHashError),
-                };
-
-                let hash_second_part = path.file_name();
-                let hash_second_part = match hash_second_part {
-                    Some(name) => {
-                        let name_str = name.to_str();
-                        match name_str {
-                            Some(name_str) => name_str,
-                            None => return Err(GitError::GetHashError),
-                        }
-                    }
-                    None => return Err(GitError::GetHashError),
-                };
-                let hash = format!("{}{}", hash_first_part, hash_second_part);
+                let hash = get_full_hash_in_objects(dir, path);
                 hash_list.push(hash);
             }
         }
     }
     Ok(())
+}
+
+/// Devuelve el hash completo de una entrada en objects.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'path': path de la entrada en objects.
+fn get_full_hash_in_objects(directory: &Path, path: PathBuf) -> String {
+    let mut hash_first_part = "";
+    if let Some(hash_first) = directory.file_name() {
+        if let Some(name_str) = hash_first.to_str() {
+            hash_first_part = name_str;
+        };
+    };
+
+    let mut hash_second_part = "";
+    if let Some(hash_second) = path.file_name() {
+        if let Some(name_str) = hash_second.to_str() {
+            hash_second_part = name_str;
+        };
+    };
+
+    let hash = format!("{}{}", hash_first_part, hash_second_part);
+    hash
 }
 
 /// Recorre el directorio de trabajo recursivamente y devuelve un HashMap con los nombres de los archivos y
@@ -279,35 +292,38 @@ pub fn calculate_directory_hashes(
         let path = entry.path();
 
         let file_name = entry.file_name();
-        let entry = match file_name.to_str() {
-            Some(entry) => entry,
-            None => return Err(GitError::PathToStringError),
-        };
-
-        if entry.starts_with('.') {
-            continue;
+        if let Some(file_name) = file_name.to_str() {
+            if file_name.starts_with('.') {
+                continue;
+            }
         }
 
-        if path.is_dir() {
-            let direct = match path.to_str() {
-                Some(direct) => direct,
-                None => return Err(GitError::PathToStringError),
-            };
-            calculate_directory_hashes(direct, hash_list)?;
-        } else {
-            let file_name = match path.to_str() {
-                Some(file_name) => file_name,
-                None => return Err(GitError::PathToStringError),
-            };
-            let file = open_file(file_name)?;
-            let content = read_file(file)?;
+        create_hash_working_dir(path, hash_list)?;
+    }
+    Ok(())
+}
 
-            let header = format!("{} {}\0", BLOB, content.len());
-            let store = header + String::from_utf8_lossy(&content).as_ref();
-            let hash_object = hash_generate(&store);
-
-            hash_list.insert(file_name.to_string(), hash_object);
+/// Crea el hash de un archivo del working directory y lo agrega a un HashMap.
+/// ###Parámetros:
+/// 'path': path del archivo.
+/// 'hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
+fn create_hash_working_dir(
+    path: PathBuf,
+    hash_list: &mut HashMap<String, String>,
+) -> Result<(), GitError> {
+    if path.is_dir() {
+        if let Some(path_str) = path.to_str() {
+            calculate_directory_hashes(path_str, hash_list)?;
         }
+    } else if let Some(file_name_str) = path.to_str() {
+        let file = open_file(file_name_str)?;
+        let content = read_file(file)?;
+
+        let header = format!("{} {}\0", BLOB, content.len());
+        let store = header + String::from_utf8_lossy(&content).as_ref();
+        let hash_object = hash_generate(&store);
+
+        hash_list.insert(file_name_str.to_string(), hash_object);
     }
     Ok(())
 }
@@ -319,7 +335,7 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    const TEST_DIRECTORY: &str = "./test_repo";
+    const TEST_DIRECTORY: &str = "./test_status";
 
     #[test]
     fn test_git_status() {
@@ -354,12 +370,17 @@ mod tests {
         file.write_all(b"Chau Mundo")
             .expect("Error al escribir en el archivo");
 
-        assert!(git_status(TEST_DIRECTORY).is_ok());
+        let result_before_add = git_status(TEST_DIRECTORY);
 
-        let _ = git_add(TEST_DIRECTORY, "testfile.rs");
+        git_add(TEST_DIRECTORY, "testfile.rs").expect("Error al ejecutar git add");
 
-        assert!(git_status(TEST_DIRECTORY).is_ok());
+        let result_after_add = git_status(TEST_DIRECTORY);
+        let result_after = "On branch master\nChanges to be committed:\n  (use \"git reset HEAD <file>...\" to unstage)\n\tmodified:   testfile.rs\n\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git checkout -- <file>...\" to discard changes in working directory)\n\tmain.rs\n";
+        assert_eq!(result_after_add, Ok(result_after.to_string()));
 
         fs::remove_dir_all(TEST_DIRECTORY).expect("Error al intentar remover el directorio");
+
+        assert!(result_before_add.is_ok());
+        assert!(result_after_add.is_ok());
     }
 }

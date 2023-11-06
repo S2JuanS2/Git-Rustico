@@ -8,6 +8,7 @@ use std::io::Read;
 use std::path::Path;
 
 use super::errors::UtilError;
+use super::formats::{hash_generate_with_bytes, compressor_object_with_bytes};
 
 /// Estructura que representa una entrada de objeto en el sistema de control de versiones Git.
 ///
@@ -298,9 +299,9 @@ pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, Git
     Ok(hash_commit)
 }
 
-fn read_index_clone(content: &str) -> Result<String, GitError> {
+fn read_index_clone(content: &str) -> Result<Vec<u8>, GitError> {
 
-    let mut format_tree = String::new();
+    let mut format_tree = Vec::new();
 
     for line in content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
@@ -322,37 +323,43 @@ fn read_index_clone(content: &str) -> Result<String, GitError> {
             })
             .collect::<Vec<u8>>();
 
-        let hash_string = unsafe { String::from_utf8_unchecked(bytes)};
-        let format_line = format!("{} {}\0{}", file_name, mode, hash_string);
-
-        format_tree = format_tree + &format_line;
+        format_tree.extend_from_slice(file_name.as_bytes());
+        format_tree.push(SPACE);
+        format_tree.extend_from_slice(mode.as_bytes());
+        format_tree.push(NULL);
+        format_tree.extend_from_slice(&bytes);
     }
     Ok(format_tree)
 }
 
 pub fn builder_object_tree_clone(git_dir: &str, content: &str) -> Result<String, GitError> {
-    let format_tree: String = read_index_clone(content)?;
+    let format_tree = read_index_clone(content)?;
 
     let content_size = format_tree.len().to_string();
-    let header = format!("tree {}\0", content_size);
-    let store = header + &format_tree;
-    let hash_tree = hash_generate(&store);
+    println!("{}", content_size);
+    let tree_format = "tree ";
+    let mut header: Vec<u8> = vec![];
+    header.extend_from_slice(tree_format.as_bytes());
+    header.extend_from_slice(&content_size.as_bytes());
+    header.push(NULL);
+    header.extend_from_slice(&format_tree);
+    let hash_tree = hash_generate_with_bytes(header.clone());
 
     let file = builder_object(git_dir, &hash_tree)?;
 
-    compressor_object(store, file)?;
+    compressor_object_with_bytes(header, file)?;
 
     Ok(hash_tree)
 }
 
-fn read_index(git_dir: &str) -> Result<String, GitError> {
+fn read_index(git_dir: &str) -> Result<Vec<u8>, GitError> {
     let path_index = format!("{}/{}", git_dir, INDEX);
 
     let content_bytes = match fs::read(path_index) {
         Ok(content_bytes) => content_bytes,
         Err(_) => return Err(GitError::OpenFileError),
     };
-    let mut format_tree = String::new();
+    let mut format_tree = Vec::new();
     let content_index = String::from_utf8_lossy(&content_bytes);
 
     for line in content_index.lines() {
@@ -375,10 +382,12 @@ fn read_index(git_dir: &str) -> Result<String, GitError> {
             })
             .collect::<Vec<u8>>();
 
-        let hash_string = unsafe { String::from_utf8_unchecked(bytes)};
-        let format_line = format!("{} {}\0{}", mode, file_name, hash_string);
+        format_tree.extend_from_slice(file_name.as_bytes());
+        format_tree.push(SPACE);
+        format_tree.extend_from_slice(mode.as_bytes());
+        format_tree.push(NULL);
+        format_tree.extend_from_slice(&bytes);
 
-        format_tree = format_tree + &format_line;
     }
     Ok(format_tree)
 }
@@ -387,13 +396,18 @@ pub fn builder_object_tree(git_dir: &str) -> Result<String, GitError> {
     let format_tree = read_index(git_dir)?;
 
     let content_size = format_tree.len().to_string();
-    let header = format!("tree {}\0", content_size);
-    let store = header + &format_tree;
-    let hash_tree = hash_generate(&store);
+    println!("{}", content_size);
+    let tree_format = "tree ";
+    let mut header: Vec<u8> = vec![];
+    header.extend_from_slice(tree_format.as_bytes());
+    header.extend_from_slice(&content_size.as_bytes());
+    header.push(NULL);
+    header.extend_from_slice(&format_tree);
+    let hash_tree = hash_generate_with_bytes(header.clone());
 
     let file = builder_object(git_dir, &hash_tree)?;
 
-    compressor_object(store, file)?;
+    compressor_object_with_bytes(header, file)?;
 
     Ok(hash_tree)
 }
