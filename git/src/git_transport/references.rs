@@ -241,14 +241,12 @@ fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
     let mut files: Vec<String> = Vec::new();
 
     if let Ok(entries) = fs::read_dir(directory_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                if path.is_file() {
-                    if let Some(file_name) = path.file_name() {
-                        if let Some(name) = file_name.to_str() {
-                            files.push(name.to_string());
-                        }
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(file_name) = path.file_name() {
+                    if let Some(name) = file_name.to_str() {
+                        files.push(name.to_string());
                     }
                 }
             }
@@ -271,7 +269,7 @@ fn get_files_in_directory(directory_path: &PathBuf) -> Vec<String> {
 ///
 fn extract_reference_head(line: &str) -> Result<String, UtilError> {
     let trimmed_line = line.trim();
-    if let Some(reference) = trimmed_line.splitn(2, ' ').nth(1) {
+    if let Some(reference) = trimmed_line.split_once(' ').map(|x| x.1) {
         Ok(reference.to_string())
     } else {
         Err(UtilError::InvalidHeadReferenceFormat)

@@ -90,7 +90,7 @@ pub fn git_clone(
                 let hash = refs.get_hash();
                 let branch = refs.get_name();
 
-                if let Some(current_branch) = branch.rsplitn(2, '/').next() {
+                if let Some(current_branch) = branch.rsplit('/').next() {
                     let branch_dir =
                         format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
                     create_file(&branch_dir, hash)?;
