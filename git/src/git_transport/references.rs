@@ -5,7 +5,7 @@ use crate::errors::GitError;
 use crate::util::files::{open_file, read_file, read_file_string};
 use crate::util::objects::ObjectType;
 use crate::{
-    consts::{GIT_DIR, HEAD, REFS_REMOTES, REFS_TAGS, REF_HEADS},
+    consts::{GIT_DIR, HEAD, REFS_REMOTES, REFS_TAGS, REF_HEADS, FILE, DIRECTORY},
     util::{
         connections::send_message, errors::UtilError, pkt_line, validation::join_paths_correctly,
     },
@@ -121,19 +121,40 @@ fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError>
     Ok(content_object)
 }
 
+// CONTINUAR DESPUES DE CORREGIR EL INDEX
+pub fn recovery_tree(directory: &str, tree_hash: &str, mut objects: Vec<(ObjectType, Vec<u8>)>) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError>{
+   
+    let tree_content = git_cat_file(directory, tree_hash, "-p")?;
+
+    for line in tree_content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let mode = parts[0];
+        //let file_name = parts[1];
+        let hash_blob = parts[2];
+        println!("mode: {}", mode);
+        if mode == FILE{
+            let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
+            object_blob.1 = get_content(directory, hash_blob)?;
+            objects.push(object_blob);
+        }else if mode == DIRECTORY {
+
+        }
+
+    }
+    Ok(objects)
+}
+
 pub fn get_objects(
     directory: &str,
     references: &[Reference],
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
-
+    println!("hola");
     for reference in references.iter() {
         let parts: Vec<&str> = reference.get_name().split('/').collect();
         let branch = parts.last().map_or("", |&x| x);
         let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
-        // println!("branch_current_path: {:?}", branch_current_path);
         let file_current_branch = open_file(&branch_current_path)?;
-        // println!("abri el file");
         let hash_commit_current_branch = read_file_string(file_current_branch)?;
 
         let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
@@ -148,14 +169,7 @@ pub fn get_objects(
 
             objects.push(object_tree);
 
-            let tree_content = git_cat_file(directory, tree_hash, "-p")?;
-            for line in tree_content.lines() {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                let hash_blob = parts[2];
-                let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
-                object_blob.1 = get_content(directory, hash_blob)?;
-                objects.push(object_blob);
-            }
+            objects = recovery_tree(directory, tree_hash, objects)?;
         };
     }
     Ok(objects)

@@ -10,7 +10,7 @@ use crate::util::connections::{packfile_negotiation, receive_packfile, start_cli
 use crate::util::files::{create_directory, create_file, create_file_replace};
 use crate::util::objects::ObjectType;
 use crate::util::objects::{
-    builder_object_blob, builder_object_commit, builder_object_tree_clone, read_blob,
+    builder_object_blob, builder_object_commit, builder_object_tree, read_blob,
     read_blob_content, read_commit, read_commit_content, read_tree, read_tree_content,
 };
 use std::net::TcpStream;
@@ -104,7 +104,7 @@ pub fn git_clone(
             } else {
                 read_tree_content(&content[i].1)?
             };
-            builder_object_tree_clone(&git_dir, &tree_content)?;
+            builder_object_tree(&git_dir, &tree_content)?;
             i = recovery_tree(tree_content, path_dir_cloned, &content, i, &git_dir)?;
             i += 1;
         }
@@ -152,7 +152,7 @@ fn recovery_tree(
             } else {
                 read_tree_content(&content[i].1)?
             };
-            builder_object_tree_clone(repo, &tree_content)?;
+            builder_object_tree(repo, &tree_content)?;
             i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo)?;
         }
     }
