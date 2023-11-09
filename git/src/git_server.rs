@@ -7,3 +7,5 @@ pub mod negotiation;
 pub mod request_command;
 
 pub mod references;
+
+pub mod errors;
