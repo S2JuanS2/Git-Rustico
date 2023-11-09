@@ -25,10 +25,7 @@ use crate::{
     consts::*,
     util::validation::{valid_email, valid_ip, valid_port},
 };
-use crate::{
-    errors::GitError,
-    util::validation::valid_path_log,
-};
+use crate::{errors::GitError, util::validation::valid_path_log};
 
 type Operacion = fn(&str, &mut Config) -> Result<(), GitError>;
 
@@ -129,7 +126,7 @@ pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
         "path_log" => config.path_log = valid_path_log(value)?,
         "ip" => config.ip = valid_ip(value)?,
         "port" => config.port = valid_port(value)?,
-        "src" => config.src = value.to_string(),//valid_directory_src(value)?,
+        "src" => config.src = value.to_string(), //valid_directory_src(value)?,
         _ => return Err(GitError::InvalidConfigurationValueError),
     }
     Ok(())

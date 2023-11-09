@@ -1,3 +1,1 @@
-pub enum GitTransportError {
-
-}
+pub enum GitTransportError {}

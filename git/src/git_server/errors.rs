@@ -15,7 +15,7 @@
 //             write!(f, "Error al enviar la versión del protocolo")
 //         }
 //         GitServerError::UtilFromCommands(info) => write!(f, "{}", info),
-        
+
 //     }
 // }
 
