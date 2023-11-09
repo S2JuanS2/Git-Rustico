@@ -1,8 +1,8 @@
 use crate::consts::FLUSH_PKT;
 use crate::consts::PKT_DONE;
-use crate::git_server::advertised::AdvertisedRefs;
-use crate::git_server::negotiation::receive_nack;
-use crate::git_server::negotiation::upload_request;
+use crate::git_transport::advertised::AdvertisedRefs;
+use crate::git_transport::negotiation::receive_nack;
+use crate::git_transport::negotiation::upload_request;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpListener;

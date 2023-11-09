@@ -4,8 +4,8 @@ use std::net::TcpStream;
 use std::path::Path;
 
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
-use crate::git_server::advertised::AdvertisedRefs;
-use crate::git_server::negotiation::receive_request;
+use crate::git_transport::advertised::AdvertisedRefs;
+use crate::git_transport::negotiation::receive_request;
 use crate::util::errors::UtilError;
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
