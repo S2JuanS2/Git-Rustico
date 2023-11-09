@@ -131,7 +131,6 @@ pub fn recovery_tree(directory: &str, tree_hash: &str, mut objects: Vec<(ObjectT
         let mode = parts[0];
         //let file_name = parts[1];
         let hash_blob = parts[2];
-        println!("mode: {}", mode);
         if mode == FILE{
             let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
             object_blob.1 = get_content(directory, hash_blob)?;
@@ -149,7 +148,6 @@ pub fn get_objects(
     references: &[Reference],
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
-    println!("hola");
     for reference in references.iter() {
         let parts: Vec<&str> = reference.get_name().split('/').collect();
         let branch = parts.last().map_or("", |&x| x);
