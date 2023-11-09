@@ -80,6 +80,7 @@ pub enum GitError {
     InvalidSrcDirectoryError,
     RemoteAlreadyExistsError,
     RemoteDoesNotExistError,
+    GitServerError(String),
 }
 
 impl GitError {
@@ -169,6 +170,7 @@ impl GitError {
             GitError::GitFromCommandsError(msg) => msg,
             GitError::RemoteAlreadyExistsError => "El repositorio remoto ya existe",
             GitError::RemoteDoesNotExistError => "El repositorio remoto no existe",
+            GitError::GitServerError(msg) => msg,
         }
     }
 }
