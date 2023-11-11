@@ -4,7 +4,7 @@ use std::net::TcpStream;
 use std::path::Path;
 
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
-use crate::git_transport::advertised::AdvertisedRefs;
+use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_request;
 use crate::util::errors::UtilError;
 use crate::util::packfile::send_packfile;
@@ -169,7 +169,7 @@ impl GitRequest {
                 let path_repo = get_path_repository(root, self.pathname.as_str())?;
                 // println!("path_repo: {:?}", path_repo);
                 let mut advertised =
-                    AdvertisedRefs::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
+                    GitServer::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
                 // println!("advertised: {:?}", advertised);
                 advertised.send_references(stream)?;
                 // println!("Envie las referencias");

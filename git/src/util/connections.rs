@@ -1,6 +1,6 @@
 use crate::consts::FLUSH_PKT;
 use crate::consts::PKT_DONE;
-use crate::git_transport::advertised::AdvertisedRefs;
+use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_nack;
 use crate::git_transport::negotiation::upload_request;
 use std::io::Read;
@@ -56,7 +56,7 @@ pub fn start_client(ip: &str) -> Result<TcpStream, UtilError> {
 /// produjo un error (Err) de UtilError.
 pub fn packfile_negotiation(
     socket: &mut TcpStream,
-    advertised: &AdvertisedRefs,
+    advertised: &GitServer,
 ) -> Result<(), UtilError> {
     upload_request(socket, advertised)?;
     send_done(socket, UtilError::UploadRequestDone)?;
