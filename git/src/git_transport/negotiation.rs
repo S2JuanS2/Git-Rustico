@@ -5,11 +5,10 @@ use crate::{
         errors::UtilError,
         pkt_line,
         validation::is_valid_obj_id,
-    },
+    }, git_server::GitServer,
 };
 use std::{io::Read, net::TcpStream};
 
-use super::advertised::AdvertisedRefs;
 
 /// Realiza una solicitud de carga al servidor Git.
 ///
@@ -37,7 +36,7 @@ use super::advertised::AdvertisedRefs;
 /// Esta función no devuelve ningún valor. Si se completa con éxito, indica que las solicitudes "want" se han enviado al servidor correctamente.
 pub fn upload_request(
     socket: &mut TcpStream,
-    advertised: &AdvertisedRefs,
+    advertised: &GitServer,
 ) -> Result<(), UtilError> {
     for refs in advertised.get_references() {
         let message = format!("want {}\n", refs.get_hash());

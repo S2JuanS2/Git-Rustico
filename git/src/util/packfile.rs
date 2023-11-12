@@ -1,7 +1,7 @@
 use crate::{
     consts::{PACK_BYTES, PACK_SIGNATURE, PKT_NACK},
-    git_transport::{advertised::AdvertisedRefs, references::get_objects},
-    util::{connections::send_message, objects::read_type_and_length_from_vec},
+    git_transport::references::get_objects,
+    util::{connections::send_message, objects::read_type_and_length_from_vec}, git_server::GitServer,
 };
 use flate2::read::ZlibDecoder;
 use std::io::{Read, Write};
@@ -143,7 +143,7 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
 
 pub fn send_packfile(
     writer: &mut dyn Write,
-    advertised: &AdvertisedRefs,
+    advertised: &GitServer,
     path_repo: &str,
 ) -> Result<(), UtilError> {
     send_message(writer, PKT_NACK, UtilError::SendNACKPackfile)?;

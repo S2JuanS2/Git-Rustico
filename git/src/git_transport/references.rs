@@ -2,6 +2,7 @@ use crate::commands::branch::get_current_branch;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::checkout::get_tree_hash;
 use crate::errors::GitError;
+use crate::git_server::GitServer;
 use crate::util::files::{open_file, read_file, read_file_string};
 use crate::util::objects::ObjectType;
 use crate::{
@@ -16,7 +17,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::advertised::AdvertisedRefs;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ReferenceType {
@@ -200,10 +200,10 @@ pub fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
 pub fn reference_discovery(
     stream: &mut TcpStream,
     message: String,
-) -> Result<AdvertisedRefs, UtilError> {
+) -> Result<GitServer, UtilError> {
     send_message(stream, &message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(stream)?;
-    AdvertisedRefs::new(&lines)
+    GitServer::new(&lines)
 }
 
 /// Extrae referencias de un subdirectorio de un directorio base, creando un vector de Referencias.
