@@ -2,7 +2,7 @@ use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::*;
-use crate::util::objects::{builder_object_commit, builder_object_tree};
+use crate::util::objects::{builder_object_commit, builder_object_tree, open_index};
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::OpenOptions;
@@ -202,10 +202,11 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
         contents
     };
 
-    let tree_hash = builder_object_tree(&git_dir)?;
-    let content = commit_content_format(&commit, &tree_hash, &parent_hash);
-    let hash_commit = builder_object_commit(&content, &git_dir)?;
-    builder_commit_log(directory, &content, &hash_commit)?;
+    let index_content = open_index(&git_dir)?;
+    let tree_hash = builder_object_tree(&git_dir, &index_content)?;
+    let commit_content = commit_content_format(&commit, &tree_hash, &parent_hash);
+    let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
+    builder_commit_log(directory, &commit_content, &hash_commit)?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
     create_or_replace_commit_into_branch(current_branch, branch_current_path, hash_commit)?;

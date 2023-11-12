@@ -2,12 +2,12 @@ use crate::consts::*;
 use crate::errors::GitError;
 use crate::util::files::create_directory;
 use crate::util::formats::{compressor_object, hash_generate};
-use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
 use super::errors::UtilError;
+use super::files::{open_file, read_file_string};
 use super::formats::{compressor_object_with_bytes, hash_generate_with_bytes};
 
 /// Estructura que representa una entrada de objeto en el sistema de control de versiones Git.
@@ -290,10 +290,12 @@ pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, Git
     Ok(hash_commit)
 }
 
-fn read_index_clone(content: &str) -> Result<Vec<u8>, GitError> {
+/// Construye el formato del objeto tree
+fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, GitError> {
+
     let mut format_tree = Vec::new();
 
-    for line in content.lines() {
+    for line in index_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
         let file_name = parts[0];
         let mut mode = parts[1];
@@ -313,21 +315,20 @@ fn read_index_clone(content: &str) -> Result<Vec<u8>, GitError> {
             })
             .collect::<Vec<u8>>();
 
-        format_tree.extend_from_slice(file_name.as_bytes());
-        format_tree.push(SPACE);
         format_tree.extend_from_slice(mode.as_bytes());
+        format_tree.push(SPACE);
+        format_tree.extend_from_slice(file_name.as_bytes());
         format_tree.push(NULL);
         format_tree.extend_from_slice(&bytes);
     }
     Ok(format_tree)
 }
 
-pub fn builder_object_tree_clone(git_dir: &str, content: &str) -> Result<String, GitError> {
-    // println!("content: {}", content);
-    let format_tree = read_index_clone(content)?;
+pub fn builder_object_tree(git_dir: &str, content: &str) -> Result<String, GitError> {
+
+    let format_tree = builder_format_tree(content)?;
 
     let content_size = format_tree.len().to_string();
-    // println!("{}", content_size);
     let tree_format = "tree ";
     let mut header: Vec<u8> = vec![];
     header.extend_from_slice(tree_format.as_bytes());
@@ -343,63 +344,11 @@ pub fn builder_object_tree_clone(git_dir: &str, content: &str) -> Result<String,
     Ok(hash_tree)
 }
 
-fn read_index(git_dir: &str) -> Result<Vec<u8>, GitError> {
+pub fn open_index(git_dir: &str) -> Result<String, GitError> {
     let path_index = format!("{}/{}", git_dir, INDEX);
 
-    let content_bytes = match fs::read(path_index) {
-        Ok(content_bytes) => content_bytes,
-        Err(_) => return Err(GitError::OpenFileError),
-    };
-    let mut format_tree = Vec::new();
-    let content_index = String::from_utf8_lossy(&content_bytes);
-
-    for line in content_index.lines() {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        let file_name = parts[0];
-        let mut mode = parts[1];
-        let hash = parts[2];
-
-        if mode == BLOB {
-            mode = FILE;
-        } else if mode == TREE {
-            mode = DIRECTORY;
-        }
-        let bytes = hash
-            .as_bytes()
-            .chunks(2)
-            .filter_map(|chunk| {
-                let hex_str = String::from_utf8_lossy(chunk);
-                u8::from_str_radix(&hex_str, 16).ok()
-            })
-            .collect::<Vec<u8>>();
-
-        format_tree.extend_from_slice(mode.as_bytes());
-        format_tree.push(SPACE);
-        format_tree.extend_from_slice(file_name.as_bytes());
-        format_tree.push(NULL);
-        format_tree.extend_from_slice(&bytes);
-    }
-    Ok(format_tree)
-}
-
-pub fn builder_object_tree(git_dir: &str) -> Result<String, GitError> {
-    let format_tree = read_index(git_dir)?;
-
-    let content_size = format_tree.len().to_string();
-    // println!("{}", content_size);
-    let tree_format = "tree ";
-    let mut header: Vec<u8> = vec![];
-    header.extend_from_slice(tree_format.as_bytes());
-    header.extend_from_slice(content_size.as_bytes());
-    header.push(NULL);
-    header.extend_from_slice(&format_tree);
-    let hash_tree = hash_generate_with_bytes(header.clone());
-
-    let file = builder_object(git_dir, &hash_tree)?;
-
-    compressor_object_with_bytes(header, file)?;
-
-    Ok(hash_tree)
+    let index_file = open_file(&path_index)?;
+    read_file_string(index_file)
 }
 
 /// Lee desde el contenido descomprimido el tipo de objeto.
