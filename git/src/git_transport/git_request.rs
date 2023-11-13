@@ -144,9 +144,9 @@ impl GitRequest {
     /// Una line pkt que representa la solicitud Git formateada.
     pub fn generate_request_string(
         command: RequestCommand,
-        repo: String,
-        ip: String,
-        port: String,
+        repo: &str,
+        ip: &str,
+        port: &str,
     ) -> String {
         let mut len: usize = 0;
 
@@ -285,9 +285,9 @@ mod tests {
     fn test_generate_request_string_upload_pack() {
         let message = GitRequest::generate_request_string(
             RequestCommand::UploadPack,
-            "project.git".to_string(),
-            "myserver.com".to_string(),
-            "9418".to_string(),
+            "project.git",
+            "myserver.com",
+            "9418",
         );
         assert_eq!(
             message,
@@ -299,9 +299,9 @@ mod tests {
     fn test_generate_request_string_receive_pack() {
         let message = GitRequest::generate_request_string(
             RequestCommand::ReceivePack,
-            "project.git".to_string(),
-            "127.0.0.2".to_string(),
-            "12030".to_string(),
+            "project.git",
+            "127.0.0.2",
+            "12030",
         );
         assert_eq!(
             message,
@@ -313,9 +313,9 @@ mod tests {
     fn test_generate_request_string_upload_archive() {
         let message = GitRequest::generate_request_string(
             RequestCommand::UploadArchive,
-            "project.git".to_string(),
-            "250.250.250.250".to_string(),
-            "8080".to_string(),
+            "project.git",
+            "250.250.250.250",
+            "8080",
         );
         assert_eq!(
             message,

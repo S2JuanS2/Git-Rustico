@@ -32,13 +32,13 @@ pub fn start_server(ip: &str) -> Result<TcpListener, UtilError> {
 /// Inicia una conexión de cliente con el servidor en la dirección IP proporcionada.
 ///
 /// # Argumentos
-/// - `ip`: Una cadena de texto que representa la dirección IP del servidor al que se desea conectar.
+/// - `Address`: Una cadena de texto que representa la address del servidor al que se desea conectar.
 ///
 /// # Retorno
 /// Un Result que indica si la conexión de cliente se estableció con éxito (Ok) o si se
 /// produjo un error (Err) de UtilError, como un error de conexión.
-pub fn start_client(ip: &str) -> Result<TcpStream, UtilError> {
-    match TcpStream::connect(ip) {
+pub fn start_client(address: &str) -> Result<TcpStream, UtilError> {
+    match TcpStream::connect(address) {
         Ok(socket) => Ok(socket),
         Err(_) => Err(UtilError::ClientConnection),
     }
