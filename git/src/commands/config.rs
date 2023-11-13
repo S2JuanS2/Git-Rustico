@@ -4,6 +4,14 @@ use std::path::Path;
 use std::io::Write;
 use std::fs::File;
 use std::io;
+
+
+impl Default for GitConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Representa la configuración de Git con secciones específicas.
 ///
 /// La estructura almacena información de configuración en secciones, incluyendo la sección
@@ -36,7 +44,7 @@ impl GitConfig {
         }
         git_config
     }
-    
+
     /// Analiza una línea de configuración Git y actualiza las secciones correspondientes.
     ///
     /// # Argumentos
