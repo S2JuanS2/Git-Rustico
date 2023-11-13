@@ -4,7 +4,15 @@ use std::path::Path;
 use std::io::Write;
 use std::fs::File;
 use std::io;
-
+/// Representa la configuración de Git con secciones específicas.
+///
+/// La estructura almacena información de configuración en secciones, incluyendo la sección
+/// "core", "remote.origin" y "branch.main".
+/// La deficion de los miembros:
+/// * `core`: HashMap que contiene la información de la sección "core".
+/// * `remote_origin`: HashMap que contiene la información de la sección "remote.origin".
+/// * `branch_main`: HashMap que contiene la información de la sección "branch.main".
+/// 
 #[derive(Debug)]
 pub struct GitConfig {
     core: HashMap<String, String>,
@@ -21,6 +29,20 @@ impl GitConfig {
         }
     }
 
+    pub fn new_from_lines(lines: Vec<String>) -> Self {
+        let mut git_config = GitConfig::new();
+        for line in lines {
+            git_config.parse_line(&line);
+        }
+        git_config
+    }
+    
+    /// Analiza una línea de configuración Git y actualiza las secciones correspondientes.
+    ///
+    /// # Argumentos
+    ///
+    /// * `line`: Una cadena que representa una línea de configuración Git en el formato "clave=valor".
+    /// 
     pub fn parse_line(&mut self, line: &str) {
         let parts: Vec<&str> = line.splitn(2, '=').collect();
         if parts.len() == 2 {
@@ -42,6 +64,17 @@ impl GitConfig {
         }
     }
 
+    /// Lee la configuración de Git desde un archivo y actualiza las secciones correspondientes.
+    ///
+    /// # Argumentos
+    ///
+    /// * `file_path`: La ruta del archivo que contiene la configuración Git.
+    ///
+    /// # Errores
+    ///
+    /// Devuelve un resultado `Result` indicando si la operación fue exitosa o si se produjo un error
+    /// al leer el archivo.
+    ///
     pub fn read_git_config(&mut self, file_path: &str) -> Result<(), std::io::Error> {
         if Path::new(file_path).exists() {
             let content = fs::read_to_string(file_path)?;
@@ -54,6 +87,14 @@ impl GitConfig {
         Ok(())
     }
 
+    /// Agrega una entrada a una sección específica de la configuración Git.
+    ///
+    /// # Argumentos
+    ///
+    /// * `key`: La clave de la entrada que se va a agregar.
+    /// * `value`: El valor de la entrada que se va a agregar.
+    /// * `section`: La sección a la que pertenece la entrada.
+    ///
     pub fn add_entry(&mut self, key: &str, value: &str, section: &str) {
         match section {
             "core" => {
@@ -69,6 +110,17 @@ impl GitConfig {
         }
     }
 
+    /// Obtiene el valor asociado a una clave en una sección específica de la configuración Git.
+    ///
+    /// # Argumentos
+    ///
+    /// * `key`: La clave de la entrada cuyo valor se va a obtener.
+    /// * `section`: La sección a la que pertenece la entrada.
+    ///
+    /// # Retorno
+    ///
+    /// Devuelve `Some(&String)` si la entrada existe, o `None` si no se encuentra.
+    ///
     pub fn get_value(&self, key: &str, section: &str) -> Option<&String> {
         match section {
             "core" => self.core.get(key),
@@ -78,6 +130,17 @@ impl GitConfig {
         }
     }
 
+    /// Escribe la configuración Git en un archivo especificado.
+    ///
+    /// # Argumentos
+    ///
+    /// * `file_path`: La ruta del archivo en el que se escribirá la configuración.
+    ///
+    /// # Errores
+    ///
+    /// Devuelve un resultado `io::Result` indicando si la operación fue exitosa o si se produjo un error
+    /// al escribir en el archivo.
+    ///
     pub fn write_to_file(&self, file_path: &str) -> io::Result<()> {
         let mut file = File::create(file_path)?;
 

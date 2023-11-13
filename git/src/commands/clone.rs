@@ -1,4 +1,5 @@
 use crate::commands::commit::builder_commit_log;
+use crate::commands::config::GitConfig;
 use crate::commands::init::git_init;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR, PARENT_INITIAL, REF_HEADS};
 use crate::errors::GitError;
