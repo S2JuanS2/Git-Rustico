@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
-use std::io::Write;
 use std::fs::File;
 use std::io;
-
+use std::io::Write;
+use std::path::Path;
 
 impl Default for GitConfig {
     fn default() -> Self {
@@ -20,7 +19,7 @@ impl Default for GitConfig {
 /// * `core`: HashMap que contiene la información de la sección "core".
 /// * `remote_origin`: HashMap que contiene la información de la sección "remote.origin".
 /// * `branch_main`: HashMap que contiene la información de la sección "branch.main".
-/// 
+///
 #[derive(Debug)]
 pub struct GitConfig {
     core: HashMap<String, String>,
@@ -50,7 +49,7 @@ impl GitConfig {
     /// # Argumentos
     ///
     /// * `line`: Una cadena que representa una línea de configuración Git en el formato "clave=valor".
-    /// 
+    ///
     pub fn parse_line(&mut self, line: &str) {
         let parts: Vec<&str> = line.splitn(2, '=').collect();
         if parts.len() == 2 {
@@ -62,7 +61,8 @@ impl GitConfig {
                     self.core.insert(key.to_string(), value.to_string());
                 }
                 "url" | "fetch" => {
-                    self.remote_origin.insert(key.to_string(), value.to_string());
+                    self.remote_origin
+                        .insert(key.to_string(), value.to_string());
                 }
                 "remote" | "merge" => {
                     self.branch_main.insert(key.to_string(), value.to_string());
@@ -109,7 +109,8 @@ impl GitConfig {
                 self.core.insert(key.to_string(), value.to_string());
             }
             "remote.origin" => {
-                self.remote_origin.insert(key.to_string(), value.to_string());
+                self.remote_origin
+                    .insert(key.to_string(), value.to_string());
             }
             "branch.main" => {
                 self.branch_main.insert(key.to_string(), value.to_string());
@@ -171,8 +172,6 @@ impl GitConfig {
 
         Ok(())
     }
-
-    
 }
 
 #[cfg(test)]
@@ -184,21 +183,30 @@ mod tests {
     fn parse_line_valid_core_key_value() {
         let mut git_config = GitConfig::new();
         git_config.parse_line("repositoryformatversion = 0");
-        assert_eq!(git_config.core.get("repositoryformatversion"), Some(&"0".to_string()));
+        assert_eq!(
+            git_config.core.get("repositoryformatversion"),
+            Some(&"0".to_string())
+        );
     }
 
     #[test]
     fn parse_line_valid_remote_origin_key_value() {
         let mut git_config = GitConfig::new();
         git_config.parse_line("url = git@github.com:example/repo.git");
-        assert_eq!(git_config.remote_origin.get("url"), Some(&"git@github.com:example/repo.git".to_string()));
+        assert_eq!(
+            git_config.remote_origin.get("url"),
+            Some(&"git@github.com:example/repo.git".to_string())
+        );
     }
 
     #[test]
     fn parse_line_valid_branch_main_key_value() {
         let mut git_config = GitConfig::new();
         git_config.parse_line("remote = origin");
-        assert_eq!(git_config.branch_main.get("remote"), Some(&"origin".to_string()));
+        assert_eq!(
+            git_config.branch_main.get("remote"),
+            Some(&"origin".to_string())
+        );
     }
 
     #[test]
@@ -223,10 +231,12 @@ mod tests {
     fn test_read_git_config() {
         // Crea un archivo de prueba temporal con contenido de configuración Git
         let temp_file_path = "test_git_config_1.txt";
-        let mut temp_file = std::fs::File::create(temp_file_path).expect("Failed to create temp file");
+        let mut temp_file =
+            std::fs::File::create(temp_file_path).expect("Failed to create temp file");
         writeln!(temp_file, "repositoryformatversion = 0").expect("Failed to write to temp file");
         writeln!(temp_file, "[remote \"origin\"]").expect("Failed to write to temp file");
-        writeln!(temp_file, "   url = git@github.com:example/repo.git").expect("Failed to write to temp file");
+        writeln!(temp_file, "   url = git@github.com:example/repo.git")
+            .expect("Failed to write to temp file");
         writeln!(temp_file, "[branch \"main\"]").expect("Failed to write to temp file");
         writeln!(temp_file, "   remote = origin").expect("Failed to write to temp file");
 
@@ -237,7 +247,10 @@ mod tests {
         // Verifica que la lectura sea exitosa y que las secciones se hayan analizado correctamente
         assert!(result.is_ok());
         assert_eq!(git_config.core["repositoryformatversion"], "0");
-        assert_eq!(git_config.remote_origin["url"], "git@github.com:example/repo.git");
+        assert_eq!(
+            git_config.remote_origin["url"],
+            "git@github.com:example/repo.git"
+        );
         assert_eq!(git_config.branch_main["remote"], "origin");
 
         // Limpia el archivo temporal después de las pruebas
@@ -273,7 +286,10 @@ mod tests {
         git_config.add_entry("url", "git@github.com:example/repo.git", "remote.origin");
 
         assert!(git_config.core.is_empty());
-        assert_eq!(git_config.remote_origin["url"], "git@github.com:example/repo.git");
+        assert_eq!(
+            git_config.remote_origin["url"],
+            "git@github.com:example/repo.git"
+        );
         assert!(git_config.branch_main.is_empty());
     }
 
@@ -302,7 +318,10 @@ mod tests {
         let mut git_config = GitConfig::new();
         git_config.add_entry("repositoryformatversion", "0", "core");
 
-        assert_eq!(git_config.get_value("repositoryformatversion", "core"), Some(&"0".to_string()));
+        assert_eq!(
+            git_config.get_value("repositoryformatversion", "core"),
+            Some(&"0".to_string())
+        );
         assert_eq!(git_config.get_value("filemode", "core"), None);
     }
 
@@ -323,7 +342,10 @@ mod tests {
         let mut git_config = GitConfig::new();
         git_config.add_entry("remote", "origin", "branch.main");
 
-        assert_eq!(git_config.get_value("remote", "branch.main"), Some(&"origin".to_string()));
+        assert_eq!(
+            git_config.get_value("remote", "branch.main"),
+            Some(&"origin".to_string())
+        );
         assert_eq!(git_config.get_value("merge", "branch.main"), None);
     }
 
@@ -345,7 +367,8 @@ mod tests {
 
         let mut file_content = String::new();
         let mut file = File::open(file_path).expect("Could not open file");
-        file.read_to_string(&mut file_content).expect("Could not read file");
+        file.read_to_string(&mut file_content)
+            .expect("Could not read file");
 
         let expected_content = "repositoryformatversion = 0\n\
                                 [remote \"origin\"]\n    \
@@ -358,5 +381,4 @@ mod tests {
         // Cleanup
         fs::remove_file(file_path).expect("Could not remove file");
     }
-
 }
