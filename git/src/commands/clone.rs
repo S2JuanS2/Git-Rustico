@@ -10,8 +10,8 @@ use crate::util::connections::{packfile_negotiation, receive_packfile, start_cli
 use crate::util::files::{create_directory, create_file, create_file_replace};
 use crate::util::objects::ObjectType;
 use crate::util::objects::{
-    builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_blob_content,
-    read_commit, read_commit_content, read_tree, read_tree_content,
+    builder_object_blob, builder_object_commit, builder_object_tree, read_blob,
+    read_commit, read_tree,
 };
 use std::net::TcpStream;
 use std::path::Path;
@@ -69,21 +69,12 @@ pub fn git_clone(
     let git_dir = format!("{}/{}", repo, GIT_DIR);
 
     // let references = advertised.get_references();
-    let commit: Vec<u8> = vec![99, 111, 109, 109, 105, 116];
-    let tree: Vec<u8> = vec![116, 114, 101, 101];
 
     let mut i = 0;
     while i < count_objects {
         if content[i].0.obj_type == ObjectType::Commit {
-            let commit_content;
-            let commit_result;
-            if content[i].1.starts_with(&commit) {
-                commit_content = read_commit(&content[i].1)?;
-                commit_result = commit_content.clone();
-            } else {
-                commit_content = read_commit_content(&content[i].1)?;
-                commit_result = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
-            }
+            let commit_content = read_commit(&content[i].1)?;
+            let commit_result = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
             builder_object_commit(&commit_content, &git_dir)?;
 
             if let Some(refs) = advertised.get_reference(i + 1) {
@@ -99,11 +90,7 @@ pub fn git_clone(
             }
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
-            let tree_content = if content[i].1.starts_with(&tree) {
-                read_tree(&content[i].1)?
-            } else {
-                read_tree_content(&content[i].1)?
-            };
+            let tree_content = read_tree(&content[i].1)?;
             builder_object_tree(&git_dir, &tree_content)?;
             i = recovery_tree(tree_content, path_dir_cloned, &content, i, &git_dir)?;
             i += 1;
@@ -119,8 +106,6 @@ fn recovery_tree(
     mut i: usize,
     repo: &str,
 ) -> Result<usize, GitError> {
-    let blob: Vec<u8> = vec![98, 108, 111, 98];
-    let tree: Vec<u8> = vec![116, 114, 101, 101];
 
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
@@ -132,14 +117,10 @@ fn recovery_tree(
         let path_dir_cloned = path_dir_cloned.join(file_name);
         if mode == FILE {
             i += 1;
-
-            let blob_content = if content[i].1.starts_with(&blob) {
-                read_blob(&content[i].1)?
-            } else {
-                read_blob_content(&content[i].1)?
-            };
+            let blob_content = read_blob(&content[i].1)?;
             let blob_content_bytes = blob_content.clone();
             builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
+
             if let Some(str_path) = path_dir_cloned.to_str() {
                 create_file_replace(str_path, &blob_content)?;
             }
@@ -147,11 +128,7 @@ fn recovery_tree(
             create_directory(&path_dir_cloned).expect("Error");
             i += 1;
 
-            let tree_content = if content[i].1.starts_with(&tree) {
-                read_tree(&content[i].1)?
-            } else {
-                read_tree_content(&content[i].1)?
-            };
+            let tree_content = read_tree(&content[i].1)?;
             builder_object_tree(repo, &tree_content)?;
             i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo)?;
         }
