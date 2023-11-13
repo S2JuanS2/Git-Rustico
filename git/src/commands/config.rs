@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn test_read_git_config() {
         // Crea un archivo de prueba temporal con contenido de configuración Git
-        let temp_file_path = "test_git_config.txt";
+        let temp_file_path = "test_git_config_1.txt";
         let mut temp_file = std::fs::File::create(temp_file_path).expect("Failed to create temp file");
         writeln!(temp_file, "repositoryformatversion = 0").expect("Failed to write to temp file");
         writeln!(temp_file, "[remote \"origin\"]").expect("Failed to write to temp file");
@@ -170,7 +170,7 @@ mod tests {
         assert_eq!(git_config.branch_main["remote"], "origin");
 
         // Limpia el archivo temporal después de las pruebas
-        std::fs::remove_file(temp_file_path).expect("Failed to remove temp file");
+        fs::remove_file(temp_file_path).expect("Failed to remove temp file");
     }
 
     #[test]
