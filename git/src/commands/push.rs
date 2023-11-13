@@ -9,7 +9,7 @@ use std::net::TcpStream;
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_push(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     let client_clone = client.clone();
-    let address = client_clone.get_ip();
+    let address = client_clone.get_address();
     if args.len() != 2 {
         return Err(GitError::InvalidArgumentCountPushError);
     }

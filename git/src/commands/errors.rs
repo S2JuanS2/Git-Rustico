@@ -4,24 +4,19 @@ use crate::{errors::GitError, util::errors::UtilError};
 
 pub enum CommandsError {
     CommandsFromUtil(String), // Para tener polimofismo con UtilError
-    CloneMissingRepoInfo(String),
     CloneMissingRepo,
     CommitEmptyIndex,
+    InvalidArgumentCountFetchError,
+    CloneMissingRepoError,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
         CommandsError::CommandsFromUtil(info) => write!(f, "{}", info),
-        CommandsError::CloneMissingRepo => {
-            write!(f, "CloneMissingRepo: Use: git clone <repositorio>")
-        }
-        CommandsError::CloneMissingRepoInfo(info) => write!(
-            f,
-            "{}\nMore info: {}",
-            CommandsError::CloneMissingRepo,
-            info
-        ),
+        CommandsError::CloneMissingRepo => write!(f, "CloneMissingRepo: Use: git clone <repositorio>"),
         CommandsError::CommitEmptyIndex => write!(f, "Nada al que hacer Commit"),
+        CommandsError::InvalidArgumentCountFetchError => write!(f, "InvalidArgumentCountFetchError: Use: git fetch"),
+        CommandsError::CloneMissingRepoError => write!(f, "CloneMissingRepoError: Use: git clone <repositorio>"),
     }
 }
 

@@ -16,20 +16,38 @@ use crate::util::objects::{
 use std::net::TcpStream;
 use std::path::Path;
 
-/// Esta función se encarga de llamar a al comando clone con los parametros necesarios
-/// ###Parametros:
-/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función clone
-/// 'client': Cliente que contiene la información del cliente que se conectó
+use super::errors::CommandsError;
+
+/// Maneja la ejecución del comando "clone" en el cliente Git.
+/// 
+/// # Developer
+/// 
+/// Solo se aceptaran los comandos que tengan la siguiente estructura:
+/// 
+/// * `git clone <path_name>`
+///
+/// # Argumentos
+///
+/// * `args`: Un vector que contiene los argumentos pasados al comando "clone". Se espera que tenga exactamente un elemento, que es la URL del repositorio Git que se va a clonar.
+///
+/// * `client`: Un objeto `Client` que representa la configuración del cliente Git.
+///
+/// # Devoluciones
+///
+/// Devuelve un `Result` que contiene un mensaje de éxito (String) o un error (GitError).
+///
+/// # Errores
+///
+/// * `CloneMissingRepoError`: Se produce si no se proporciona la URL del repositorio Git para clonar.
+///
+/// * Otros errores de `GitError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket, o el proceso de clonación.
+///
 pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    let address: String = client.get_ip().to_string();
     if args.len() != 1 {
-        return Err(GitError::CloneMissingRepoError);
+        return Err(CommandsError::CloneMissingRepoError.into());
     }
-    let mut socket = start_client(&address)?;
-    let parts = address.split(':').collect::<Vec<&str>>();
-    let ip = parts[0].to_string();
-    let port = parts[1].to_string();
-    git_clone(&mut socket, ip, port, args[0].to_string())
+    let mut socket = start_client(client.get_address())?;
+    git_clone(&mut socket, client.get_ip(), client.get_port(), args[0])
 }
 
 /// Esta función se encarga de clonar un repositorio remoto
@@ -40,15 +58,15 @@ pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<String, GitError>
 /// 'repo': Nombre del repositorio que se quiere clonar
 pub fn git_clone(
     socket: &mut TcpStream,
-    ip: String,
-    port: String,
-    repo: String,
+    ip: &str,
+    port: &str,
+    repo: &str,
 ) -> Result<String, GitError> {
     println!("Clonando repositorio remoto: {}", repo);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
-        GitRequest::generate_request_string(RequestCommand::UploadPack, repo.clone(), ip, port);
+        GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
     let advertised = reference_discovery(socket, message)?;
@@ -64,8 +82,8 @@ pub fn git_clone(
     let count_objects = content.len();
 
     // ARREGLAR EL CONFIG PARA OBTENER EL PATH
-    let path_dir_cloned = Path::new(&repo);
-    git_init(&repo)?;
+    let path_dir_cloned = Path::new(repo);
+    git_init(repo)?;
     let git_dir = format!("{}/{}", repo, GIT_DIR);
 
     // let references = advertised.get_references();
@@ -86,7 +104,7 @@ pub fn git_clone(
                         format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
                     create_file(&branch_dir, hash)?;
                 }
-                builder_commit_log(&repo, &commit_result, hash)?;
+                builder_commit_log(repo, &commit_result, hash)?;
             }
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {

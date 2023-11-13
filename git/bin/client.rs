@@ -16,6 +16,8 @@ fn main() -> Result<(), GitError> {
     let mut client = Client::new(
         config.name,
         config.email,
+        config.ip,
+        config.port,
         address,
         config.src,
         config.path_log,

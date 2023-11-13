@@ -1,97 +1,126 @@
-use crate::consts::*;
-use crate::errors::GitError;
-use std::fs;
-use std::path::Path;
-
-use super::cat_file::git_cat_file;
+use crate::util::connections::start_client;
+use std::net::TcpStream;
 use crate::models::client::Client;
 
-const REMOTES_DIR: &str = "refs/remotes/";
+use super::errors::CommandsError;
 
-/// Esta función se encarga de llamar al comando fetch con los parametros necesarios
-/// ###Parametros:
-/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función fetch
-/// 'client': cliente que contiene el directorio del repositorio local
-pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), GitError> {
-    // Verifica que se haya ingresado un nombre de repositorio remoto
-    let directory = client.get_directory_path();
-    if args.len() == 1 {
-        git_fetch(directory, args[0])?;
-    } else if args.len() == 2 {
-        //fetch para una rama especifica
-    } else {
-        return Err(GitError::InvalidArgumentCountFetchError);
+// use super::cat_file::git_cat_file;
+
+// const REMOTES_DIR: &str = "refs/remotes/";
+
+
+/// Maneja la ejecución del comando "fetch" en el cliente Git.
+///
+/// # Developer
+/// 
+/// Solo se aceptaran los comandos que tengan la siguiente estructura:
+/// 
+/// * `git fetch`
+/// 
+/// # Argumentos
+///
+/// * `args`: Un vector que contiene los argumentos pasados al comando "fetch". En este caso, se espera que esté vacío, ya que solo se admite la forma básica `git fetch`.
+///
+/// * `client`: Un objeto `Client` que representa la configuración del cliente Git.
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene `Ok(())` en caso de éxito o un error (GitError) en caso de fallo.
+///
+/// # Errores
+///
+/// * Otros errores de `GitError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
+///
+pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
+    if !args.is_empty() {
+        return Err(CommandsError::InvalidArgumentCountFetchError);
     }
+    let mut socket = start_client(client.get_address())?;
+    git_fetch_all(&mut socket, client.get_ip(), client.get_port(), args[0])
+}
 
+pub fn git_fetch_all(
+    _socket: &mut TcpStream,
+    ip: &str,
+    port: &str,
+    directory: &str,
+) -> Result<(), CommandsError> {
+    println!("Fetching from remote repository: {}", directory);
+    println!("Fetching references...");
+    println!("ip: {}", ip);
+    println!("port: {}", port);
+
+    
     Ok(())
 }
 
-/// Recupera las referencias y objetos del repositorio remoto.
-/// ###Parámetros:
-/// 'directory': directorio del repositorio local.
-/// 'remote_name': nombre del repositorio remoto.
-pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
-    // Verifica si el repositorio remoto existe
-    let remote_dir = format!("{}{}", REMOTES_DIR, remote_name);
-    let remote_refs_dir = format!("{}{}", directory, remote_dir);
 
-    if !Path::new(&remote_refs_dir).exists() {
-        return Err(GitError::RemoteDoesntExistError);
-    }
+// /// Recupera las referencias y objetos del repositorio remoto.
+// /// ###Parámetros:
+// /// 'directory': directorio del repositorio local.
+// /// 'remote_name': nombre del repositorio remoto.
+// pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
+//     // Verifica si el repositorio remoto existe
+//     let remote_dir = format!("{}{}", REMOTES_DIR, remote_name);
+//     let remote_refs_dir = format!("{}{}", directory, remote_dir);
 
-    // Copia las referencias del repositorio remoto al directorio local
-    let local_refs_dir = format!("{}{}", directory, GIT_DIR);
-    let local_refs_dir = Path::new(&local_refs_dir)
-        .join("refs/remotes")
-        .join(remote_name);
+//     if !Path::new(&remote_refs_dir).exists() {
+//         return Err(GitError::RemoteDoesntExistError);
+//     }
 
-    if fs::create_dir_all(&local_refs_dir).is_err() {
-        return Err(GitError::OpenFileError);
-    }
+//     // Copia las referencias del repositorio remoto al directorio local
+//     let local_refs_dir = format!("{}{}", directory, GIT_DIR);
+//     let local_refs_dir = Path::new(&local_refs_dir)
+//         .join("refs/remotes")
+//         .join(remote_name);
 
-    let entries = match fs::read_dir(&remote_refs_dir) {
-        Ok(entries) => entries,
-        Err(_) => return Err(GitError::ReadFileError),
-    };
+//     if fs::create_dir_all(&local_refs_dir).is_err() {
+//         return Err(GitError::OpenFileError);
+//     }
 
-    for entry in entries {
-        match entry {
-            Ok(entry) => {
-                let file_name = entry.file_name();
-                let local_ref_path = local_refs_dir.join(file_name);
-                let remote_ref_path = entry.path();
+//     let entries = match fs::read_dir(&remote_refs_dir) {
+//         Ok(entries) => entries,
+//         Err(_) => return Err(GitError::ReadFileError),
+//     };
 
-                if fs::copy(remote_ref_path, local_ref_path).is_err() {
-                    return Err(GitError::CopyFileError);
-                }
-            }
-            Err(_) => {
-                return Err(GitError::ReadFileError);
-            }
-        }
-    }
+//     for entry in entries {
+//         match entry {
+//             Ok(entry) => {
+//                 let file_name = entry.file_name();
+//                 let local_ref_path = local_refs_dir.join(file_name);
+//                 let remote_ref_path = entry.path();
 
-    // Descarga los objetos necesarios desde el repositorio remoto
-    let objects_dir = format!("{}/{}", directory, GIT_DIR);
+//                 if fs::copy(remote_ref_path, local_ref_path).is_err() {
+//                     return Err(GitError::CopyFileError);
+//                 }
+//             }
+//             Err(_) => {
+//                 return Err(GitError::ReadFileError);
+//             }
+//         }
+//     }
 
-    let objects = match fs::read_dir(&objects_dir) {
-        Ok(objects) => objects,
-        Err(_) => return Err(GitError::ReadFileError),
-    };
+//     // Descarga los objetos necesarios desde el repositorio remoto
+//     let objects_dir = format!("{}/{}", directory, GIT_DIR);
 
-    for entry in objects {
-        match entry {
-            Ok(entry) => {
-                let file_name = entry.file_name();
-                let object_hash = file_name.to_string_lossy().to_string();
+//     let objects = match fs::read_dir(&objects_dir) {
+//         Ok(objects) => objects,
+//         Err(_) => return Err(GitError::ReadFileError),
+//     };
 
-                git_cat_file(directory, &object_hash, "-p")?;
-            }
-            Err(_) => {
-                return Err(GitError::ReadFileError);
-            }
-        }
-    }
+//     for entry in objects {
+//         match entry {
+//             Ok(entry) => {
+//                 let file_name = entry.file_name();
+//                 let object_hash = file_name.to_string_lossy().to_string();
 
-    Ok(())
-}
+//                 git_cat_file(directory, &object_hash, "-p")?;
+//             }
+//             Err(_) => {
+//                 return Err(GitError::ReadFileError);
+//             }
+//         }
+//     }
+
+//     Ok(())
+// }
