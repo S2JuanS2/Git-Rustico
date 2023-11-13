@@ -1,14 +1,14 @@
 use crate::{
     consts::{PKT_DONE, PKT_NACK},
+    git_server::GitServer,
     util::{
         connections::{received_message, send_flush, send_message},
         errors::UtilError,
         pkt_line,
         validation::is_valid_obj_id,
-    }, git_server::GitServer,
+    },
 };
 use std::{io::Read, net::TcpStream};
-
 
 /// Realiza una solicitud de carga al servidor Git.
 ///
@@ -34,10 +34,7 @@ use std::{io::Read, net::TcpStream};
 /// # Retorno
 ///
 /// Esta función no devuelve ningún valor. Si se completa con éxito, indica que las solicitudes "want" se han enviado al servidor correctamente.
-pub fn upload_request(
-    socket: &mut TcpStream,
-    advertised: &GitServer,
-) -> Result<(), UtilError> {
+pub fn upload_request(socket: &mut TcpStream, advertised: &GitServer) -> Result<(), UtilError> {
     for refs in advertised.get_references() {
         let message = format!("want {}\n", refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());

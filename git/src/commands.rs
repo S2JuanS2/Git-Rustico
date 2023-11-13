@@ -15,6 +15,7 @@ pub mod cat_file;
 pub mod checkout;
 pub mod clone;
 pub mod commit;
+pub mod config;
 pub mod errors;
 pub mod fetch;
 pub mod hash_object;

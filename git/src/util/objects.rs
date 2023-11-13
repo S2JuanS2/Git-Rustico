@@ -292,7 +292,6 @@ pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, Git
 
 /// Construye el formato del objeto tree
 fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, GitError> {
-
     let mut format_tree = Vec::new();
 
     for line in index_content.lines() {
@@ -325,7 +324,6 @@ fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, GitError> {
 }
 
 pub fn builder_object_tree(git_dir: &str, content: &str) -> Result<String, GitError> {
-
     let format_tree = builder_format_tree(content)?;
 
     let content_size = format_tree.len().to_string();

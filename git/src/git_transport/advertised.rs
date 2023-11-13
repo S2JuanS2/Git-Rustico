@@ -1,5 +1,3 @@
-
-
 // /// Representa las referencias anunciadas recibidas durante una operación de fetch/push en Git.
 // ///
 // /// Esta estructura encapsula la información sobre las referencias anunciadas por un servidor Git

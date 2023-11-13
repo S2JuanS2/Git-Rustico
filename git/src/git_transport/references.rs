@@ -6,7 +6,7 @@ use crate::git_server::GitServer;
 use crate::util::files::{open_file, read_file, read_file_string};
 use crate::util::objects::ObjectType;
 use crate::{
-    consts::{GIT_DIR, HEAD, REFS_REMOTES, REFS_TAGS, REF_HEADS, FILE, DIRECTORY},
+    consts::{DIRECTORY, FILE, GIT_DIR, HEAD, REFS_REMOTES, REFS_TAGS, REF_HEADS},
     util::{
         connections::send_message, errors::UtilError, pkt_line, validation::join_paths_correctly,
     },
@@ -16,7 +16,6 @@ use std::{
     net::TcpStream,
     path::{Path, PathBuf},
 };
-
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ReferenceType {
@@ -122,8 +121,11 @@ fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError>
 }
 
 // CONTINUAR DESPUES DE CORREGIR EL INDEX
-pub fn recovery_tree(directory: &str, tree_hash: &str, mut objects: Vec<(ObjectType, Vec<u8>)>) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError>{
-   
+pub fn recovery_tree(
+    directory: &str,
+    tree_hash: &str,
+    mut objects: Vec<(ObjectType, Vec<u8>)>,
+) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
 
     for line in tree_content.lines() {
@@ -131,14 +133,12 @@ pub fn recovery_tree(directory: &str, tree_hash: &str, mut objects: Vec<(ObjectT
         let mode = parts[0];
         //let file_name = parts[1];
         let hash_blob = parts[2];
-        if mode == FILE{
+        if mode == FILE {
             let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
             object_blob.1 = get_content(directory, hash_blob)?;
             objects.push(object_blob);
-        }else if mode == DIRECTORY {
-
+        } else if mode == DIRECTORY {
         }
-
     }
     Ok(objects)
 }
