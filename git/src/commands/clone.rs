@@ -82,8 +82,8 @@ pub fn git_clone(
     let count_objects = content.len();
 
     // ARREGLAR EL CONFIG PARA OBTENER EL PATH
-    let path_dir_cloned = Path::new(&repo);
-    git_init(&repo)?;
+    let path_dir_cloned = Path::new(repo);
+    git_init(repo)?;
     let git_dir = format!("{}/{}", repo, GIT_DIR);
 
     // let references = advertised.get_references();
@@ -104,7 +104,7 @@ pub fn git_clone(
                         format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
                     create_file(&branch_dir, hash)?;
                 }
-                builder_commit_log(&repo, &commit_result, hash)?;
+                builder_commit_log(repo, &commit_result, hash)?;
             }
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {

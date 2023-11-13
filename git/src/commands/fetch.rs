@@ -32,7 +32,7 @@ use super::errors::CommandsError;
 /// * Otros errores de `GitError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
-    if args.len() > 0 {
+    if !args.is_empty() {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
     let mut socket = start_client(client.get_address())?;
