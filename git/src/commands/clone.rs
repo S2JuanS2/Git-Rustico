@@ -16,11 +16,15 @@ use crate::util::objects::{
 use std::net::TcpStream;
 use std::path::Path;
 
+use super::errors::CommandsError;
+
 /// Maneja la ejecución del comando "clone" en el cliente Git.
 /// 
 /// # Developer
+/// 
 /// Solo se aceptaran los comandos que tengan la siguiente estructura:
-/// * git clone <path_name>
+/// 
+/// * `git clone <path_name>`
 ///
 /// # Argumentos
 ///
@@ -40,7 +44,7 @@ use std::path::Path;
 ///
 pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() != 1 {
-        return Err(GitError::CloneMissingRepoError);
+        return Err(CommandsError::CloneMissingRepoError.into());
     }
     let mut socket = start_client(client.get_address())?;
     git_clone(&mut socket, client.get_ip(), client.get_port(), args[0])
