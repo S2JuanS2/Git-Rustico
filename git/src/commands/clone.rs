@@ -21,7 +21,7 @@ use std::path::Path;
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función clone
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    let address: String = client.get_ip().to_string();
+    let address: String = client.get_address().to_string();
     if args.len() != 1 {
         return Err(GitError::CloneMissingRepoError);
     }
