@@ -52,7 +52,7 @@ pub fn git_fetch_all(
         GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
-    let advertised = reference_discovery(socket, message)?;
+    let _advertised = reference_discovery(socket, message)?;
 
 
     // println!("Fetching from remote repository: {}", directory);

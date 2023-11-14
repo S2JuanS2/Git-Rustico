@@ -2,13 +2,14 @@ use crate::commands::commit::builder_commit_log;
 use crate::commands::init::git_init;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR, PARENT_INITIAL, REF_HEADS};
 use crate::errors::GitError;
+use crate::git_server::GitServer;
 use crate::git_transport::git_request::GitRequest;
 use crate::git_transport::references::reference_discovery;
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{packfile_negotiation, receive_packfile, start_client};
 use crate::util::files::{create_directory, create_file, create_file_replace};
-use crate::util::objects::ObjectType;
+use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::objects::{
     builder_object_blob, builder_object_commit, builder_object_tree, read_blob,
     read_commit, read_tree,
@@ -77,6 +78,11 @@ pub fn git_clone(
     // Packfile Data
     let content = receive_packfile(socket)?;
 
+    create_repository(advertised, content, repo)
+}
+
+fn create_repository(advertised: GitServer, content: Vec<(ObjectEntry, Vec<u8>)> , repo: &str) -> Result<String, GitError>
+{
     // Cantidad de objetos recibidos
     let count_objects = content.len();
 
@@ -85,36 +91,23 @@ pub fn git_clone(
     git_init(repo)?;
     let git_dir = format!("{}/{}", repo, GIT_DIR);
 
-    // let references = advertised.get_references();
-
     let mut i = 0;
     while i < count_objects {
         if content[i].0.obj_type == ObjectType::Commit {
-            let commit_content = read_commit(&content[i].1)?;
-            let commit_result = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
-            builder_object_commit(&commit_content, &git_dir)?;
-
-            if let Some(refs) = advertised.get_reference(i + 1) {
-                let hash = refs.get_hash();
-                let branch = refs.get_name();
-
-                if let Some(current_branch) = branch.rsplit('/').next() {
-                    let branch_dir =
-                        format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
-                    create_file(&branch_dir, hash)?;
-                }
-                builder_commit_log(repo, &commit_result, hash)?;
-            }
+            handle_commit(&content, repo, &advertised, &git_dir, i)?;
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
-            let tree_content = read_tree(&content[i].1)?;
-            builder_object_tree(&git_dir, &tree_content)?;
-            i = recovery_tree(tree_content, path_dir_cloned, &content, i, &git_dir)?;
+            i = match handle_tree(&content, &git_dir, i, path_dir_cloned)
+            {
+                Ok(i) => i,
+                Err(e) => return Err(e)
+            };
             i += 1;
         }
     }
     Ok("Clonación exitosa!".to_string())
 }
+
 
 fn recovery_tree(
     tree_content: String,
@@ -173,4 +166,34 @@ fn insert_line_between_lines(
     }
 
     result
+}
+
+
+fn handle_commit(content: &Vec<(ObjectEntry, Vec<u8>)>, repo: &str, advertised: &GitServer, git_dir: &str, i: usize) -> Result<(), GitError>
+{
+    let commit_content = read_commit(&content[i].1)?;
+    let commit_result = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
+    builder_object_commit(&commit_content, &git_dir)?;
+
+    if let Some(refs) = advertised.get_reference(i + 1) {
+        let hash = refs.get_hash();
+        let branch = refs.get_name();
+
+        if let Some(current_branch) = branch.rsplit('/').next() {
+            let branch_dir =
+                format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
+            create_file(&branch_dir, hash)?;
+        }
+        builder_commit_log(repo, &commit_result, hash)?;
+    }
+
+    Ok(())
+}
+
+fn handle_tree(content: &Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str, i: usize, path_dir_cloned: &Path) -> Result<usize, GitError>
+{
+    let tree_content = read_tree(&content[i].1)?;
+    builder_object_tree(&git_dir, &tree_content)?;
+    let i = recovery_tree(tree_content, path_dir_cloned, &content, i, &git_dir)?;
+    Ok(i)
 }
