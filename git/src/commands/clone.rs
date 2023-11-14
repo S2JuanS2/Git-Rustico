@@ -51,12 +51,19 @@ pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<String, GitError>
     git_clone(&mut socket, client.get_ip(), client.get_port(), args[0])
 }
 
-/// Esta función se encarga de clonar un repositorio remoto
-/// ###Parametros:
-/// 'socket': Socket que se utiliza para comunicarse con el servidor
-/// 'ip': Dirección ip del servidor
-/// 'port': Puerto del servidor
-/// 'repo': Nombre del repositorio que se quiere clonar
+/// Clona un repositorio Git desde un servidor remoto utilizando el protocolo Git.
+///
+/// # Argumentos
+///
+/// - `socket`: Una referencia mutable a un `TcpStream` que representa la conexión con el servidor.
+/// - `ip`: La dirección IP del servidor Git.
+/// - `port`: El número de puerto utilizado para la conexión.
+/// - `repo`: La ruta del repositorio Git que se va a clonar.
+///
+/// # Returns
+///
+/// Un `Result` que contiene una cadena indicando el éxito del clon o un error `GitError` en caso de error.
+///
 pub fn git_clone(
     socket: &mut TcpStream,
     ip: &str,
