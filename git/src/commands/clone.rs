@@ -9,22 +9,22 @@ use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{packfile_negotiation, receive_packfile, start_client};
 use crate::util::files::{create_directory, create_file, create_file_replace};
-use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::objects::{
-    builder_object_blob, builder_object_commit, builder_object_tree, read_blob,
-    read_commit, read_tree,
+    builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_commit,
+    read_tree,
 };
+use crate::util::objects::{ObjectEntry, ObjectType};
 use std::net::TcpStream;
 use std::path::Path;
 
 use super::errors::CommandsError;
 
 /// Maneja la ejecución del comando "clone" en el cliente Git.
-/// 
+///
 /// # Developer
-/// 
+///
 /// Solo se aceptaran los comandos que tengan la siguiente estructura:
-/// 
+///
 /// * `git clone <path_name>`
 ///
 /// # Argumentos
@@ -66,8 +66,7 @@ pub fn git_clone(
     println!("Clonando repositorio remoto: {}", repo);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
-    let message =
-        GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
+    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
     let advertised = reference_discovery(socket, message)?;
@@ -81,8 +80,11 @@ pub fn git_clone(
     create_repository(advertised, content, repo)
 }
 
-fn create_repository(advertised: GitServer, content: Vec<(ObjectEntry, Vec<u8>)> , repo: &str) -> Result<String, GitError>
-{
+fn create_repository(
+    advertised: GitServer,
+    content: Vec<(ObjectEntry, Vec<u8>)>,
+    repo: &str,
+) -> Result<String, GitError> {
     // Cantidad de objetos recibidos
     let count_objects = content.len();
 
@@ -97,17 +99,15 @@ fn create_repository(advertised: GitServer, content: Vec<(ObjectEntry, Vec<u8>)>
             handle_commit(&content, repo, &advertised, &git_dir, i)?;
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
-            i = match handle_tree(&content, &git_dir, i, path_dir_cloned)
-            {
+            i = match handle_tree(&content, &git_dir, i, path_dir_cloned) {
                 Ok(i) => i,
-                Err(e) => return Err(e)
+                Err(e) => return Err(e),
             };
             i += 1;
         }
     }
     Ok("Clonación exitosa!".to_string())
 }
-
 
 fn recovery_tree(
     tree_content: String,
@@ -116,7 +116,6 @@ fn recovery_tree(
     mut i: usize,
     repo: &str,
 ) -> Result<usize, GitError> {
-
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
 
@@ -168,9 +167,13 @@ fn insert_line_between_lines(
     result
 }
 
-
-fn handle_commit(content: &[(ObjectEntry, Vec<u8>)], repo: &str, advertised: &GitServer, git_dir: &str, i: usize) -> Result<(), GitError>
-{
+fn handle_commit(
+    content: &[(ObjectEntry, Vec<u8>)],
+    repo: &str,
+    advertised: &GitServer,
+    git_dir: &str,
+    i: usize,
+) -> Result<(), GitError> {
     let commit_content = read_commit(&content[i].1)?;
     let commit_result = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
     builder_object_commit(&commit_content, git_dir)?;
@@ -180,8 +183,7 @@ fn handle_commit(content: &[(ObjectEntry, Vec<u8>)], repo: &str, advertised: &Gi
         let branch = refs.get_name();
 
         if let Some(current_branch) = branch.rsplit('/').next() {
-            let branch_dir =
-                format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
+            let branch_dir = format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
             create_file(&branch_dir, hash)?;
         }
         builder_commit_log(repo, &commit_result, hash)?;
@@ -190,8 +192,12 @@ fn handle_commit(content: &[(ObjectEntry, Vec<u8>)], repo: &str, advertised: &Gi
     Ok(())
 }
 
-fn handle_tree(content: &Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str, i: usize, path_dir_cloned: &Path) -> Result<usize, GitError>
-{
+fn handle_tree(
+    content: &Vec<(ObjectEntry, Vec<u8>)>,
+    git_dir: &str,
+    i: usize,
+    path_dir_cloned: &Path,
+) -> Result<usize, GitError> {
     let tree_content = read_tree(&content[i].1)?;
     builder_object_tree(git_dir, &tree_content)?;
     let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir)?;

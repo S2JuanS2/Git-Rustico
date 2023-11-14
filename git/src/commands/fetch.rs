@@ -1,6 +1,11 @@
-use crate::{util::connections::start_client, git_transport::{git_request::GitRequest, request_command::RequestCommand, references::reference_discovery}};
-use std::net::TcpStream;
 use crate::models::client::Client;
+use crate::{
+    git_transport::{
+        git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
+    },
+    util::connections::start_client,
+};
+use std::net::TcpStream;
 
 use super::errors::CommandsError;
 
@@ -8,15 +13,14 @@ use super::errors::CommandsError;
 
 // const REMOTES_DIR: &str = "refs/remotes/";
 
-
 /// Maneja la ejecución del comando "fetch" en el cliente Git.
 ///
 /// # Developer
-/// 
+///
 /// Solo se aceptaran los comandos que tengan la siguiente estructura:
-/// 
+///
 /// * `git fetch`
-/// 
+///
 /// # Argumentos
 ///
 /// * `args`: Un vector que contiene los argumentos pasados al comando "fetch". En este caso, se espera que esté vacío, ya que solo se admite la forma básica `git fetch`.
@@ -48,22 +52,18 @@ pub fn git_fetch_all(
     println!("Fetch del repositorio remoto: {}", repo);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
-    let message =
-        GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
+    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
     let _advertised = reference_discovery(socket, message)?;
-
 
     // println!("Fetching from remote repository: {}", directory);
     // println!("Fetching references...");
     // println!("ip: {}", ip);
     // println!("port: {}", port);
 
-    
     Ok(())
 }
-
 
 // /// Recupera las referencias y objetos del repositorio remoto.
 // /// ###Parámetros:

@@ -13,7 +13,7 @@ impl Client {
     pub fn new(
         name: String,
         email: String,
-        ip: String, 
+        ip: String,
         port: String,
         address: String,
         directory_path: String,
@@ -61,5 +61,4 @@ impl Client {
     pub fn get_port(&self) -> &str {
         &self.port
     }
-
 }

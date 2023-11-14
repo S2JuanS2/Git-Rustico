@@ -13,10 +13,16 @@ pub enum CommandsError {
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
         CommandsError::CommandsFromUtil(info) => write!(f, "{}", info),
-        CommandsError::CloneMissingRepo => write!(f, "CloneMissingRepo: Use: git clone <repositorio>"),
+        CommandsError::CloneMissingRepo => {
+            write!(f, "CloneMissingRepo: Use: git clone <repositorio>")
+        }
         CommandsError::CommitEmptyIndex => write!(f, "Nada al que hacer Commit"),
-        CommandsError::InvalidArgumentCountFetchError => write!(f, "InvalidArgumentCountFetchError: Use: git fetch"),
-        CommandsError::CloneMissingRepoError => write!(f, "CloneMissingRepoError: Use: git clone <repositorio>"),
+        CommandsError::InvalidArgumentCountFetchError => {
+            write!(f, "InvalidArgumentCountFetchError: Use: git fetch")
+        }
+        CommandsError::CloneMissingRepoError => {
+            write!(f, "CloneMissingRepoError: Use: git clone <repositorio>")
+        }
     }
 }
 
