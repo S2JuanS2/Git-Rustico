@@ -478,7 +478,7 @@ pub fn read_commit(decompressed_data: &[u8]) -> Result<String, GitError> {
         }
         index += 1;
         Ok(String::from_utf8_lossy(&decompressed_data[index..]).to_string())
-    }else{
+    } else {
         Ok(String::from_utf8_lossy(decompressed_data).to_string())
     }
 }
@@ -505,7 +505,7 @@ pub fn read_blob(decompressed_data: &[u8]) -> Result<String, GitError> {
         }
         index += 1;
         Ok(String::from_utf8_lossy(&decompressed_data[index..]).to_string())
-    }else{
+    } else {
         Ok(String::from_utf8_lossy(decompressed_data).to_string())
     }
 }

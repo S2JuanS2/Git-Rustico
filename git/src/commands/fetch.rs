@@ -1,6 +1,12 @@
-use crate::util::connections::start_client;
-use std::net::TcpStream;
 use crate::models::client::Client;
+use crate::util::connections::{packfile_negotiation, receive_packfile};
+use crate::{
+    git_transport::{
+        git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
+    },
+    util::connections::start_client,
+};
+use std::net::TcpStream;
 
 use super::errors::CommandsError;
 
@@ -8,15 +14,14 @@ use super::errors::CommandsError;
 
 // const REMOTES_DIR: &str = "refs/remotes/";
 
-
 /// Maneja la ejecución del comando "fetch" en el cliente Git.
 ///
 /// # Developer
-/// 
+///
 /// Solo se aceptaran los comandos que tengan la siguiente estructura:
-/// 
+///
 /// * `git fetch`
-/// 
+///
 /// # Argumentos
 ///
 /// * `args`: Un vector que contiene los argumentos pasados al comando "fetch". En este caso, se espera que esté vacío, ya que solo se admite la forma básica `git fetch`.
@@ -40,20 +45,33 @@ pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), CommandsError
 }
 
 pub fn git_fetch_all(
-    _socket: &mut TcpStream,
+    socket: &mut TcpStream,
     ip: &str,
     port: &str,
-    directory: &str,
+    repo: &str,
 ) -> Result<(), CommandsError> {
-    println!("Fetching from remote repository: {}", directory);
-    println!("Fetching references...");
-    println!("ip: {}", ip);
-    println!("port: {}", port);
+    println!("Fetch del repositorio remoto: {}", repo);
 
-    
+    // Prepara la solicitud "git-upload-pack" para el servidor
+    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
+
+    // Reference Discovery
+    let server = reference_discovery(socket, message)?;
+
+    // Packfile Negotiation
+    packfile_negotiation(socket, &server)?;
+
+    // Packfile Data
+    let _content = receive_packfile(socket)?;
+
+    // Guardar los objects
+
+    // Guardar las referencias en remote refs
+
+    // Crear archivo FETCH_HEAD
+
     Ok(())
 }
-
 
 // /// Recupera las referencias y objetos del repositorio remoto.
 // /// ###Parámetros:
