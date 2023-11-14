@@ -1,4 +1,5 @@
 use crate::models::client::Client;
+use crate::util::connections::{packfile_negotiation, receive_packfile};
 use crate::{
     git_transport::{
         git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
@@ -55,12 +56,19 @@ pub fn git_fetch_all(
     let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
-    let _advertised = reference_discovery(socket, message)?;
+    let server = reference_discovery(socket, message)?;
 
-    // println!("Fetching from remote repository: {}", directory);
-    // println!("Fetching references...");
-    // println!("ip: {}", ip);
-    // println!("port: {}", port);
+    // Packfile Negotiation
+    packfile_negotiation(socket, &server)?;
+
+    // Packfile Data
+    let _content = receive_packfile(socket)?;
+
+    // Guardar los objects
+
+    // Guardar las referencias en remote refs
+
+    // Crear archivo FETCH_HEAD
 
     Ok(())
 }
