@@ -169,11 +169,11 @@ fn insert_line_between_lines(
 }
 
 
-fn handle_commit(content: &Vec<(ObjectEntry, Vec<u8>)>, repo: &str, advertised: &GitServer, git_dir: &str, i: usize) -> Result<(), GitError>
+fn handle_commit(content: &[(ObjectEntry, Vec<u8>)], repo: &str, advertised: &GitServer, git_dir: &str, i: usize) -> Result<(), GitError>
 {
     let commit_content = read_commit(&content[i].1)?;
     let commit_result = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
-    builder_object_commit(&commit_content, &git_dir)?;
+    builder_object_commit(&commit_content, git_dir)?;
 
     if let Some(refs) = advertised.get_reference(i + 1) {
         let hash = refs.get_hash();
@@ -193,7 +193,7 @@ fn handle_commit(content: &Vec<(ObjectEntry, Vec<u8>)>, repo: &str, advertised: 
 fn handle_tree(content: &Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str, i: usize, path_dir_cloned: &Path) -> Result<usize, GitError>
 {
     let tree_content = read_tree(&content[i].1)?;
-    builder_object_tree(&git_dir, &tree_content)?;
-    let i = recovery_tree(tree_content, path_dir_cloned, &content, i, &git_dir)?;
+    builder_object_tree(git_dir, &tree_content)?;
+    let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir)?;
     Ok(i)
 }
