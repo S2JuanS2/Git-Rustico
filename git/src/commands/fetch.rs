@@ -1,4 +1,4 @@
-use crate::util::connections::start_client;
+use crate::{util::connections::start_client, git_transport::{git_request::GitRequest, request_command::RequestCommand, references::reference_discovery}};
 use std::net::TcpStream;
 use crate::models::client::Client;
 
@@ -40,15 +40,25 @@ pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), CommandsError
 }
 
 pub fn git_fetch_all(
-    _socket: &mut TcpStream,
+    socket: &mut TcpStream,
     ip: &str,
     port: &str,
-    directory: &str,
+    repo: &str,
 ) -> Result<(), CommandsError> {
-    println!("Fetching from remote repository: {}", directory);
-    println!("Fetching references...");
-    println!("ip: {}", ip);
-    println!("port: {}", port);
+    println!("Fetch del repositorio remoto: {}", repo);
+
+    // Prepara la solicitud "git-upload-pack" para el servidor
+    let message =
+        GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
+
+    // Reference Discovery
+    let advertised = reference_discovery(socket, message)?;
+
+
+    // println!("Fetching from remote repository: {}", directory);
+    // println!("Fetching references...");
+    // println!("ip: {}", ip);
+    // println!("port: {}", port);
 
     
     Ok(())

@@ -70,7 +70,6 @@ pub fn git_clone(
 
     // Reference Discovery
     let advertised = reference_discovery(socket, message)?;
-    // println!("advertised: {:?}", advertised);
 
     // Packfile Negotiation
     packfile_negotiation(socket, &advertised)?;
