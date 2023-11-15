@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{commands::errors::CommandsError, errors::GitError};
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum UtilError {
     UtilFromCommands(String), // Para tener polimorfismo con CommandsError
     InvalidPacketLine,
@@ -56,6 +56,7 @@ pub enum UtilError {
     SendObjectPackfile,
     ObjectDeserializationPackfile,
     ChannelSendLog,
+    UnexpectedRequestNotHave,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -112,6 +113,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::SendObjectPackfile => write!(f, "SendObjectPackfileError: Error al enviar el objeto del packfile."),
         UtilError::ObjectDeserializationPackfile => write!(f, "ObjectDeserializationPackfileError: Error al deserializar el objeto para crear el packfile."),
         UtilError::ChannelSendLog => write!(f, "ChannelSendLogError: Error al enviar un mensaje de registro por el canal."),
+        UtilError::UnexpectedRequestNotHave => write!(f, "UnexpectedRequestNotHaveError: Se recibió una solicitud inesperada que no es have."),
     }
 }
 
