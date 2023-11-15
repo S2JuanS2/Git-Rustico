@@ -226,7 +226,7 @@ fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str, error: UtilError) -
         let line_str = String::from_utf8_lossy(line);
 
         if !line_str.starts_with(type_req) {
-            return Err(error);
+            return Err(error.clone());
         }
 
         let request = line_str.trim().to_string();

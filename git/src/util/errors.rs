@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{commands::errors::CommandsError, errors::GitError};
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum UtilError {
     UtilFromCommands(String), // Para tener polimorfismo con CommandsError
     InvalidPacketLine,
