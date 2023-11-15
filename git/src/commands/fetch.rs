@@ -1,5 +1,8 @@
+use crate::consts::GIT_DIR;
 use crate::models::client::Client;
 use crate::util::connections::{packfile_negotiation, receive_packfile};
+use crate::util::formats::{hash_generate, compressor_object};
+use crate::util::objects::{ObjectType, builder_object, ObjectEntry};
 use crate::{
     git_transport::{
         git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
@@ -36,8 +39,8 @@ use super::errors::CommandsError;
 ///
 /// * Otros errores de `GitError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
-pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
-    if !args.is_empty() {
+pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
+    if args.is_empty() {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
     let mut socket = start_client(client.get_address())?;
@@ -49,7 +52,7 @@ pub fn git_fetch_all(
     ip: &str,
     port: &str,
     repo: &str,
-) -> Result<(), CommandsError> {
+) -> Result<String, CommandsError> {
     println!("Fetch del repositorio remoto: {}", repo);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
@@ -62,14 +65,46 @@ pub fn git_fetch_all(
     packfile_negotiation(socket, &server)?;
 
     // Packfile Data
-    let _content = receive_packfile(socket)?;
+    let content = receive_packfile(socket)?;
 
-    // Guardar los objects
-
+    save_objects(repo, content)?;
+    
     // Guardar las referencias en remote refs
 
     // Crear archivo FETCH_HEAD
 
+    Ok("Sucessfully!".to_string())
+}
+
+/// Maneja la creación y el guardado de los objetos recibidos del servidor
+///
+/// # Argumentos
+///
+/// * `repo`: Contiene la dirección del repositorio al utilizar el comando fetch.
+///
+/// * `content`: Contiene el contenido de los objetos a crear.
+///
+/// # Retorno
+///
+/// Devuelve un `Result` que contiene `Ok(())` en caso de éxito o un error (CommandsError) en caso de fallo.
+///
+fn save_objects(repo: &str, content: Vec<(ObjectEntry, Vec<u8>)>) -> Result<(), CommandsError> {
+    let git_dir = format!("{}/{}", repo, GIT_DIR);
+
+    // Guardar los objects
+    for object in content.iter(){
+        
+        if object.0.obj_type == ObjectType::Commit {
+            let commit_hash = hash_generate(&String::from_utf8_lossy(&object.1));
+            let file = match builder_object(&git_dir, &commit_hash){
+                Ok(file) => file,
+                Err(_) => return Err(CommandsError::RepositoryNotInitialized),
+            };
+            if compressor_object(String::from_utf8_lossy(&object.1).to_string(), file).is_err(){
+                return Err(CommandsError::RepositoryNotInitialized); 
+            };
+        }
+    }
     Ok(())
 }
 

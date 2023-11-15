@@ -108,7 +108,10 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
                 result = handle_checkout(rest_of_command, client.clone())?;
             }
             "fetch" => {
-                handle_fetch(rest_of_command, client.clone())?;
+                if let Some(path_clone) = rest_of_command.first() {
+                    client.set_directory_path(path_clone.to_string());
+                }
+                result = handle_fetch(rest_of_command, client.clone())?;
             }
             "hash-object" => {
                 result = handle_hash_object(rest_of_command, client.clone())?;
