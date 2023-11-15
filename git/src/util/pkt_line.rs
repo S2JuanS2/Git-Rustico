@@ -38,6 +38,12 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, UtilError> {
                     lines.push(line);
                     return Ok(lines);
                 }
+
+                // DONE
+                if line == b"done" {
+                    lines.push(line);
+                    return Ok(lines);
+                }
                 lines.push(line);
             }
             Err(err) => return Err(err),

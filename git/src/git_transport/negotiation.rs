@@ -101,8 +101,8 @@ pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String
     let (capacilities, request) = process_received_requests_want(lines)?;
 
     let lines = pkt_line::read(stream)?;
-    
-    if lines.len() == 1 && lines[0] == b"done\n" {
+
+    if lines.len() == 1 && lines[0] == b"done" {
         return Ok((capacilities, request, Vec::new()));
     }
 
