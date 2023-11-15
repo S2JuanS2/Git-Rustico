@@ -170,8 +170,8 @@ impl GitRequest {
                 let mut server =
                     GitServer::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
                 server.send_references(stream)?;
-                let (capabilities, references) = receive_request(stream)?;
-                server.update_data(capabilities, references);
+                let (capabilities, wanted_objects, _common_objects) = receive_request(stream)?;
+                server.update_data(capabilities, wanted_objects);
                 send_packfile(stream, &server, &path_repo)?;
                 Ok(())
             }

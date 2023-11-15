@@ -77,36 +77,41 @@ pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
     Ok(())
 }
 
-/// Recibe una solicitud del flujo de entrada y procesa las solicitudes recibidas.
-///
-/// Lee del flujo `stream` un conjunto de líneas que representan solicitudes y realiza el procesamiento de
-/// las solicitudes para extraer información relevante.
+/// Recibe una solicitud del cliente durante la fase de negociación del protocolo de transporte de Git.
+/// La solicitud puede incluir mensajes "want", "have" y "done".
 ///
 /// # Argumentos
 ///
-/// * `stream` - Una referencia mutable al flujo de entrada (implementa `Read`).
+/// * `stream` - Una referencia mutable a un objeto `Read` que representa el flujo de entrada desde el cliente.
+///
+/// # Retorna
+///
+/// Un `Result` que contiene una tupla con tres vectores: `capacities`, `wanted_objects` y `common_objects`.
+/// - `capacities`: Un vector de cadenas que representa las capacidades solicitadas por el cliente.
+/// - `wanted_objects`: Un vector de cadenas que representa los objetos solicitados por el cliente mediante "want".
+/// - `common_objects`: Un vector de cadenas que representa los objetos que el cliente ya tiene mediante "have".
 ///
 /// # Errores
 ///
-/// Puede devolver un error en los siguientes casos:
-///
-/// - Si hay un error al leer las líneas del flujo de entrada.
-/// - Si falla el procesamiento de las solicitudes recibidas, se devuelve el error específico asociado.
-///
-/// # Retorno
-///
-/// Devuelve un `Result` que contiene una tupla con un vector de capacidades en formato de cadenas
-/// y un vector de hashes de solicitudes de tipo "want" en formato de cadenas (`(Vec<String>, Vec<String>)`),
-/// o un error (`UtilError`) en caso de que falle el procesamiento de las solicitudes recibidas.
-///
-pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String>), UtilError> {
-    let lines = pkt_line::read(stream)?;
+/// Retorna un `UtilError` en caso de cualquier problema durante la comunicación o si no se recibe el mensaje "done" esperado.
 
-    let (capacilities, request) = process_received_requests(lines)?;
+pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String>, Vec<String>), UtilError> {
+    // Want    
+    let lines = pkt_line::read(stream)?;
+    let (capacilities, request) = process_received_requests_want(lines)?;
+
+    let lines = pkt_line::read(stream)?;
+    
+    if lines.len() == 1 && lines[0] == b"done\n" {
+        return Ok((capacilities, request, Vec::new()));
+    }
+
+    // Have
+    let request_have = receive_request_type(lines, "have", UtilError::UnexpectedRequestNotHave)?;
 
     // Done
     received_message(stream, PKT_DONE, UtilError::NegociacionExpectedDone)?;
-    Ok((capacilities, request))
+    Ok((capacilities, request, request_have))
 }
 
 /// Procesa las solicitudes recibidas a partir de un conjunto de líneas de bytes.
@@ -132,7 +137,7 @@ pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String
 /// y un vector de hashes de solicitudes de tipo "want" en formato de cadenas (`(Vec<String>, Vec<String>)`),
 /// o un error (`UtilError`) en caso de que falle el procesamiento de las solicitudes recibidas.
 ///
-fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<String>), UtilError> {
+fn process_received_requests_want(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<String>), UtilError> {
     let mut request = Vec::new();
 
     // Want and capabilities
@@ -140,7 +145,7 @@ fn process_received_requests(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<St
     request.push(hash);
 
     // Want
-    let want = receive_request_type(lines[1..].to_vec(), "want")?;
+    let want = receive_request_type(lines[1..].to_vec(), "want", UtilError::UnexpectedRequestNotWant)?;
     request.extend(want);
 
     Ok((capacilities, request))
@@ -201,6 +206,7 @@ fn extraction_capabilities(line: &[u8]) -> Result<(String, Vec<String>), UtilErr
 ///
 /// * `lines` - Vector que contiene las líneas de bytes con las solicitudes.
 /// * `type_req` - Tipo de solicitud esperada, por ejemplo, "want".
+/// * `err` - Error específico a devolver en caso de que no se encuentre el tipo de solicitud esperado.
 ///
 /// # Errores
 ///
@@ -215,12 +221,12 @@ fn extraction_capabilities(line: &[u8]) -> Result<(String, Vec<String>), UtilErr
 /// Devuelve un `Result` que contiene un vector de cadenas (`Vec<String>`) con los hashes extraídos,
 /// o un error (`UtilError`) en caso de que falle la extracción o validación de las solicitudes.
 ///
-fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str) -> Result<Vec<String>, UtilError> {
+fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str, error: UtilError) -> Result<Vec<String>, UtilError> {
     lines.iter().try_fold(Vec::new(), |mut acc, line| {
         let line_str = String::from_utf8_lossy(line);
 
         if !line_str.starts_with(type_req) {
-            return Err(UtilError::UnexpectedRequestNotWant);
+            return Err(error);
         }
 
         let request = line_str.trim().to_string();
@@ -248,7 +254,7 @@ mod tests {
         lines.push(b"want 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
         lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
         lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
-        let result = receive_request_type(lines, "want");
+        let result = receive_request_type(lines, "want", UtilError::UnexpectedRequestNotWant);
         assert!(result.is_ok());
         let wanted_hashes = result.unwrap();
         assert_eq!(
@@ -266,7 +272,7 @@ mod tests {
         let mut lines = Vec::new();
         lines.push(b"have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01".to_vec());
         lines.push(b"have 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
-        let result = receive_request_type(lines, "have");
+        let result = receive_request_type(lines, "have", UtilError::UnexpectedRequestNotHave);
         assert!(result.is_ok());
         let have_hashes = result.unwrap();
         assert_eq!(
@@ -284,14 +290,14 @@ mod tests {
         lines.push(b"have 74730d410fcb6603ace96f1dc55ea6196122532d".to_vec());
         lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
         lines.push(b"have 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
-        let result = receive_request_type(lines, "want");
+        let result = receive_request_type(lines, "want", UtilError::UnexpectedRequestNotWant);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_receive_request_empty() {
         let lines = Vec::new();
-        let result = receive_request_type(lines, "want");
+        let result = receive_request_type(lines, "want", UtilError::UnexpectedRequestNotWant);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert_eq!(result.len(), 0);
@@ -333,7 +339,7 @@ mod tests {
         lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
         lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
 
-        let result = process_received_requests(lines);
+        let result = process_received_requests_want(lines);
         assert!(result.is_ok());
         let (capabilities, request) = result.unwrap();
 
@@ -358,7 +364,7 @@ mod tests {
         lines.push(b"want 7d1665144a3a975c05f1f43902ddaf084e784dbe".to_vec());
         lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
 
-        let result = process_received_requests(lines);
+        let result = process_received_requests_want(lines);
         println!("{:?}", result);
         assert!(result.is_ok());
         let (capabilities, request) = result.unwrap();
