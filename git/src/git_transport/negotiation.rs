@@ -95,8 +95,10 @@ pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
 ///
 /// Retorna un `UtilError` en caso de cualquier problema durante la comunicación o si no se recibe el mensaje "done" esperado.
 
-pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String>, Vec<String>), UtilError> {
-    // Want    
+pub fn receive_request(
+    stream: &mut dyn Read,
+) -> Result<(Vec<String>, Vec<String>, Vec<String>), UtilError> {
+    // Want
     let lines = pkt_line::read(stream)?;
     let (capacilities, request) = process_received_requests_want(lines)?;
 
@@ -137,7 +139,9 @@ pub fn receive_request(stream: &mut dyn Read) -> Result<(Vec<String>, Vec<String
 /// y un vector de hashes de solicitudes de tipo "want" en formato de cadenas (`(Vec<String>, Vec<String>)`),
 /// o un error (`UtilError`) en caso de que falle el procesamiento de las solicitudes recibidas.
 ///
-fn process_received_requests_want(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, Vec<String>), UtilError> {
+fn process_received_requests_want(
+    lines: Vec<Vec<u8>>,
+) -> Result<(Vec<String>, Vec<String>), UtilError> {
     let mut request = Vec::new();
 
     // Want and capabilities
@@ -145,7 +149,11 @@ fn process_received_requests_want(lines: Vec<Vec<u8>>) -> Result<(Vec<String>, V
     request.push(hash);
 
     // Want
-    let want = receive_request_type(lines[1..].to_vec(), "want", UtilError::UnexpectedRequestNotWant)?;
+    let want = receive_request_type(
+        lines[1..].to_vec(),
+        "want",
+        UtilError::UnexpectedRequestNotWant,
+    )?;
     request.extend(want);
 
     Ok((capacilities, request))
@@ -221,7 +229,11 @@ fn extraction_capabilities(line: &[u8]) -> Result<(String, Vec<String>), UtilErr
 /// Devuelve un `Result` que contiene un vector de cadenas (`Vec<String>`) con los hashes extraídos,
 /// o un error (`UtilError`) en caso de que falle la extracción o validación de las solicitudes.
 ///
-fn receive_request_type(lines: Vec<Vec<u8>>, type_req: &str, error: UtilError) -> Result<Vec<String>, UtilError> {
+fn receive_request_type(
+    lines: Vec<Vec<u8>>,
+    type_req: &str,
+    error: UtilError,
+) -> Result<Vec<String>, UtilError> {
     lines.iter().try_fold(Vec::new(), |mut acc, line| {
         let line_str = String::from_utf8_lossy(line);
 
