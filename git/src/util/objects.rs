@@ -232,7 +232,7 @@ fn create_object(byte: u8) -> Result<ObjectType, UtilError> {
 }
 
 /// Creará la carpeta con los 2 primeros digitos del hash del objeto commit, y el archivo con los ultimos 38 de nombre.
-fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, GitError> {
+pub fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, GitError> {
     let objects_dir = format!(
         "{}/{}/{}/{}",
         &git_dir,
