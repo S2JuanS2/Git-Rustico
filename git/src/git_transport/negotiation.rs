@@ -1,14 +1,14 @@
 use crate::{
-    consts::{PKT_DONE, PKT_NACK},
+    consts::{PKT_DONE, PKT_NAK},
     git_server::GitServer,
     util::{
         connections::{received_message, send_flush, send_message},
         errors::UtilError,
         pkt_line,
-        validation::is_valid_obj_id,
+        validation::is_valid_obj_id, objects,
     },
 };
-use std::{io::Read, net::TcpStream};
+use std::{io::{Read, Write}, net::TcpStream};
 
 /// Realiza una solicitud de carga al servidor Git.
 ///
@@ -44,9 +44,9 @@ pub fn upload_request(socket: &mut TcpStream, advertised: &GitServer) -> Result<
     Ok(())
 }
 
-/// Recibe y procesa un mensaje de no confirmación (NACK) del flujo de entrada.
+/// Recibe y procesa un mensaje de no confirmación (NAK) del flujo de entrada.
 ///
-/// Lee del flujo `stream` un mensaje de no confirmación (NACK) con un formato esperado.
+/// Lee del flujo `stream` un mensaje de no confirmación (NAK) con un formato esperado.
 ///
 /// # Argumentos
 ///
@@ -56,23 +56,37 @@ pub fn upload_request(socket: &mut TcpStream, advertised: &GitServer) -> Result<
 ///
 /// Puede devolver un error en los siguientes casos:
 ///
-/// - Si hay un error al leer los bytes del flujo de entrada o si la lectura no coincide con el mensaje NACK,
-///   se devuelve un error `PackfileNegotiationReceiveNACK`.
+/// - Si hay un error al leer los bytes del flujo de entrada o si la lectura no coincide con el mensaje NAK,
+///   se devuelve un error `PackfileNegotiationReceiveNAK`.
 ///
 /// # Retorno
 ///
 /// Devuelve un `Result` que contiene `()` en caso de éxito o un error (`UtilError`) si falla la lectura
-/// del mensaje NACK o si el mensaje recibido no coincide con el esperado.
+/// del mensaje NAK o si el mensaje recibido no coincide con el esperado.
 ///
-pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
+pub fn receive_nak(stream: &mut dyn Read) -> Result<(), UtilError> {
     let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
     if stream.read_exact(&mut buffer).is_err() {
-        return Err(UtilError::PackfileNegotiationReceiveNACK);
+        return Err(UtilError::PackfileNegotiationReceiveNAK);
     }
     let response = String::from_utf8_lossy(&buffer);
 
-    if response != PKT_NACK {
-        return Err(UtilError::PackfileNegotiationReceiveNACK);
+    if response != PKT_NAK {
+        return Err(UtilError::PackfileNegotiationReceiveNAK);
+    }
+    Ok(())
+}
+
+
+pub fn receive_done(stream: &mut dyn Read, err: UtilError) -> Result<(), UtilError> {
+    let mut buffer = [0u8; 0]; // Tamaño suficiente para "0009done\n"
+    if stream.read_exact(&mut buffer).is_err() {
+        return Err(err);
+    }
+    let response = String::from_utf8_lossy(&buffer);
+
+    if response != PKT_DONE {
+        return Err(err);
     }
     Ok(())
 }
@@ -254,6 +268,24 @@ fn receive_request_type(
         acc.push(hash.to_string());
         Ok(acc)
     })
+}
+
+// Aqui me quede
+pub fn process_sent_requests_continue(stream: &mut dyn Write, objt_id: &Vec<String>) -> Result<(), UtilError>
+{
+    for obj in objt_id {
+        let message = format!("ACK{} continue\n", obj);
+        let message = pkt_line::add_length_prefix(&message, message.len());
+        send_message(stream, &message, UtilError::UploadRequest)?;
+    }
+    send_message(stream, PKT_NAK, UtilError::SendNAKConfirmReferences)?; // SendNAKConfirmReferences
+    Ok(())
+}
+
+pub fn send_acknowledge_last_reference(writer: &mut dyn Write, objs: &Vec<String>) -> Result<(), UtilError>
+{
+    let message = format!("ACK {}\n", objs[objs.len() - 1]);
+    send_message(writer, &message, UtilError::SendLastACKConf)
 }
 
 #[cfg(test)]

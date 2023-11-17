@@ -18,6 +18,7 @@ pub struct GitServer {
     pub capabilities: Vec<String>,
     pub shallow: Vec<String>,
     pub references: Vec<Reference>,
+    pub client_references: Vec<String>,
 }
 
 impl GitServer {
@@ -76,6 +77,7 @@ impl GitServer {
             capabilities,
             shallow,
             references,
+            client_references: Vec::new(),
         })
     }
 
@@ -119,6 +121,7 @@ impl GitServer {
             capabilities,
             shallow: Vec::new(),
             references,
+            client_references: Vec::new(),
         })
     }
 
@@ -155,6 +158,11 @@ impl GitServer {
     pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>) {
         retain_common_values(&mut self.capabilities, &capabilities);
         filter_by_hash(&mut self.references, &references);
+    }
+
+    pub fn save_references_client(&mut self, obj_hash: Vec<String>)
+    {
+        self.client_references = obj_hash;
     }
 }
 

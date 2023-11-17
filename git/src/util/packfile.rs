@@ -1,5 +1,5 @@
 use crate::{
-    consts::{PACK_BYTES, PACK_SIGNATURE, PKT_NACK},
+    consts::{PACK_BYTES, PACK_SIGNATURE, PKT_NAK},
     git_server::GitServer,
     git_transport::references::get_objects,
     util::{connections::send_message, objects::read_type_and_length_from_vec},
@@ -147,7 +147,7 @@ pub fn send_packfile(
     advertised: &GitServer,
     path_repo: &str,
 ) -> Result<(), UtilError> {
-    send_message(writer, PKT_NACK, UtilError::SendNACKPackfile)?;
+    send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
     // Envio signature
     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
 
