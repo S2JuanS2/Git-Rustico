@@ -80,7 +80,6 @@ fn load_files(directory: &str, tree_hash: &str, mode: usize, dir_path: &str) -> 
             let new_path = format!("{}/{}", dir_path, path_file);
             load_files(directory, hash, mode, &new_path)?;
         }
-
     }
     Ok(())
 }
@@ -140,7 +139,9 @@ fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<()
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a cambiar.
 pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<(), GitError> {
-    //Falta implementar que verifique si realizó commit ante la pérdida de datos.
+    //Falta implementar que verifique si realizó commit ante la pérdida de datos. <- con el status..
+    let current_branch_name = get_current_branch(directory)?;
+
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_switch_name.to_string()) {
         return Err(GitError::BranchDoesntExistError);
@@ -162,9 +163,6 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
     if file.write_all(content.as_bytes()).is_err() {
         return Err(GitError::BranchFileWriteError);
     }
-
-    let current_branch_name = get_current_branch(directory)?;
-
     load_files_tree(directory, &current_branch_name, 1)?;
     load_files_tree(directory, branch_switch_name, 0)?;
 
