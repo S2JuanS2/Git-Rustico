@@ -7,7 +7,7 @@ use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_request;
 use crate::util::errors::UtilError;
-use crate::util::packfile::send_packfile;
+use crate::util::packfile::{send_packfile, send_packfile_witch_references_client};
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
 
