@@ -8,6 +8,7 @@ pub enum CommandsError {
     CommitEmptyIndex,
     InvalidArgumentCountFetchError,
     CloneMissingRepoError,
+    RepositoryNotInitialized,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -22,6 +23,9 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         }
         CommandsError::CloneMissingRepoError => {
             write!(f, "CloneMissingRepoError: Use: git clone <repositorio>")
+        }
+        CommandsError::RepositoryNotInitialized => {
+            write!(f, "RepositoryNotInitialized: Use: git init")
         }
     }
 }

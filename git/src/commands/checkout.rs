@@ -50,33 +50,35 @@ pub fn get_tree_hash(contenido_commit: &str) -> Option<&str> {
     None
 }
 
-/// Esta función se encarga de leer los archivos de un tree
+/// Esta función se encarga de cargar los archivos de un tree en el directorio
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'tree_hash': Valor hash de 40 caracteres (SHA-1) del tree a leer.
-fn load_files(directory: &str, tree_hash: &str, mode: usize) -> Result<(), GitError> {
+fn load_files(directory: &str, tree_hash: &str, mode: usize, dir_path: &str) -> Result<(), GitError> {
     let tree = git_cat_file(directory, tree_hash, "-p")?;
-
     for line in tree.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
 
+        let file_mode = parts[0];
         let path_file = parts[1];
-        let hash_blob = parts[2];
+        let hash = parts[2];
+        let path_file_format = format!("{}/{}/{}", directory, dir_path,path_file);
+        if file_mode == FILE{
+            let content_file = git_cat_file(directory, hash, "-p")?;
 
-        let path_file_format = format!("{}/{}", directory, path_file);
-        let content_file = git_cat_file(directory, hash_blob, "-p")?;
-        let path = Path::new(&path_file_format);
+            if mode == 0 {
+                create_file_replace(&path_file_format, &content_file)?;
+            } else if mode == 1
+                && fs::metadata(&path_file_format).is_ok()
+                && fs::remove_file(&path_file_format).is_err()
+            {
+                return Err(GitError::RemoveFileError);
+            }
 
-        if let Some(parent) = path.parent() {
-            create_directory(parent)?;
-        }
-        if mode == 0 {
-            create_file_replace(&path_file_format, &content_file)?;
-        } else if mode == 1
-            && fs::metadata(&path_file_format).is_ok()
-            && fs::remove_file(&path_file_format).is_err()
-        {
-            return Err(GitError::RemoveFileError);
+        }else if file_mode == DIRECTORY {
+            create_directory(Path::new(&path_file_format))?;
+            let new_path = format!("{}/{}", dir_path, path_file);
+            load_files(directory, hash, mode, &new_path)?;
         }
     }
     Ok(())
@@ -107,10 +109,10 @@ fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result
             read_parent_commit(directory, parent_hash, mode)?;
         }
         if let Some(tree_hash) = get_tree_hash(&commit) {
-            load_files(directory, tree_hash, mode)?;
+            load_files(directory, tree_hash, mode,"")?;
         };
     } else if let Some(tree_hash) = get_tree_hash(&commit) {
-        load_files(directory, tree_hash, mode)?;
+        load_files(directory, tree_hash, mode,"")?;
     } else {
         return Err(GitError::GetHashError);
     };
@@ -137,7 +139,9 @@ fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<()
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a cambiar.
 pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<(), GitError> {
-    //Falta implementar que verifique si realizó commit ante la pérdida de datos.
+    //Falta implementar que verifique si realizó commit ante la pérdida de datos. <- con el status..
+    let current_branch_name = get_current_branch(directory)?;
+
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_switch_name.to_string()) {
         return Err(GitError::BranchDoesntExistError);
@@ -159,9 +163,6 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
     if file.write_all(content.as_bytes()).is_err() {
         return Err(GitError::BranchFileWriteError);
     }
-
-    let current_branch_name = get_current_branch(directory)?;
-
     load_files_tree(directory, &current_branch_name, 1)?;
     load_files_tree(directory, branch_switch_name, 0)?;
 

@@ -5,6 +5,21 @@ use std::io::Write;
 use std::path::Path;
 
 use crate::errors::GitError;
+
+/// Verifica si un directorio está vacío
+/// ###Parametros:
+/// 'path': url de un directorio
+pub fn is_folder_empty(path: &str) -> Result<bool, GitError> {
+    println!("{path}");
+    let contents = match fs::read_dir(path) {
+        Ok(contents) => contents,
+        Err(_) => return Err(GitError::VisitDirectoryError),
+    };
+    let is_empty = contents.count() == 0;
+
+    Ok(is_empty)
+}
+
 /// Crea un directorio si no existe
 /// ###Parametros:
 /// 'directory': dirección del directorio a crear

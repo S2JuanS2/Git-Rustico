@@ -2,8 +2,8 @@ use crate::consts::*;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::*;
-use crate::util::index::open_index;
-use crate::util::objects::{builder_object_commit, builder_object_tree};
+use crate::util::index::{open_index, recovery_index};
+use crate::util::objects::builder_object_commit;
 use chrono::{DateTime, Local};
 use std::fs;
 use std::fs::OpenOptions;
@@ -204,16 +204,14 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
     };
 
     let index_content = open_index(&git_dir)?;
-    let tree_hash = builder_object_tree(&git_dir, &index_content)?;
+    let tree_hash = recovery_index(&index_content, &git_dir)?;
+
     let commit_content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
     builder_commit_log(directory, &commit_content, &hash_commit)?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
     create_or_replace_commit_into_branch(current_branch, branch_current_path, hash_commit)?;
-
-    let index_path = format!("{}/index", git_dir);
-    create_file_replace(&index_path, "")?;
 
     Ok("Commit exitoso!".to_string())
 }
