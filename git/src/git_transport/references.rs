@@ -25,7 +25,7 @@ pub enum ReferenceType {
     Head,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Reference {
     hash: String,
     refname: String,

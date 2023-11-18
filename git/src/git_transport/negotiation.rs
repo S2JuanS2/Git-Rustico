@@ -5,7 +5,7 @@ use crate::{
         connections::{received_message, send_flush, send_message},
         errors::UtilError,
         pkt_line,
-        validation::is_valid_obj_id, objects,
+        validation::is_valid_obj_id,
     },
 };
 use std::{io::{Read, Write}, net::TcpStream};
