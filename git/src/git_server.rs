@@ -198,8 +198,7 @@ impl GitServer {
     ///
     /// * `obj_hash` - Vector que contiene los hash de objetos del cliente a ser guardados.
     ///
-    pub fn save_references_client(&mut self, obj_hash: Vec<String>)
-    {
+    pub fn save_references_client(&mut self, obj_hash: Vec<String>) {
         self.client_references = obj_hash;
     }
 }
@@ -252,9 +251,10 @@ mod tests {
     #[test]
     fn filter_by_hash_should_retain_common_references() {
         // Crear algunas referencias para el ejemplo.
-        let reference1 = Reference::new( "hash1".to_string(), "HEAD".to_string()).unwrap();
-        let reference2 = Reference::new( "hash2".to_string(), "refs/tags/v1".to_string()).unwrap();
-        let reference3 = Reference::new( "hash3".to_string(), "refs/heads/main".to_string()).unwrap();
+        let reference1 = Reference::new("hash1".to_string(), "HEAD".to_string()).unwrap();
+        let reference2 = Reference::new("hash2".to_string(), "refs/tags/v1".to_string()).unwrap();
+        let reference3 =
+            Reference::new("hash3".to_string(), "refs/heads/main".to_string()).unwrap();
 
         // Crear un vector de referencias inicial.
         let mut references = vec![reference1.clone(), reference2.clone(), reference3.clone()];
@@ -286,8 +286,16 @@ mod tests {
     #[test]
     fn retain_common_values_should_retain_common_items() {
         // Crear dos vectores con algunos elementos en común.
-        let mut vec1 = vec!["item1".to_string(), "item2".to_string(), "item3".to_string()];
-        let vec2 = vec!["item2".to_string(), "item3".to_string(), "item4".to_string()];
+        let mut vec1 = vec![
+            "item1".to_string(),
+            "item2".to_string(),
+            "item3".to_string(),
+        ];
+        let vec2 = vec![
+            "item2".to_string(),
+            "item3".to_string(),
+            "item4".to_string(),
+        ];
 
         // Retener solo los elementos comunes entre los dos vectores.
         retain_common_values(&mut vec1, &vec2);

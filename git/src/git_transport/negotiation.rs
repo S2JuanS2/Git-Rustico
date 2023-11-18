@@ -8,7 +8,10 @@ use crate::{
         validation::is_valid_obj_id,
     },
 };
-use std::{io::{Read, Write}, net::TcpStream};
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+};
 
 /// Realiza una solicitud de carga al servidor Git.
 ///
@@ -305,8 +308,10 @@ fn receive_request_type(
 ///
 /// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
 ///
-pub fn sent_references_valid_client(stream: &mut dyn Write, objt_id: &Vec<String>) -> Result<(), UtilError>
-{
+pub fn sent_references_valid_client(
+    stream: &mut dyn Write,
+    objt_id: &Vec<String>,
+) -> Result<(), UtilError> {
     for obj in objt_id {
         let message = format!("ACK{} continue\n", obj);
         let message = pkt_line::add_length_prefix(&message, message.len());
@@ -316,7 +321,7 @@ pub fn sent_references_valid_client(stream: &mut dyn Write, objt_id: &Vec<String
     Ok(())
 }
 
-/// Envia una confirmacion ACK por la última referencia al cliente, para cerrar la etapa 
+/// Envia una confirmacion ACK por la última referencia al cliente, para cerrar la etapa
 /// çde negociacion.
 ///
 /// Esta función envía un mensaje de agradecimiento al cliente por el último objeto en
@@ -334,8 +339,10 @@ pub fn sent_references_valid_client(stream: &mut dyn Write, objt_id: &Vec<String
 ///
 /// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
 ///
-pub fn send_acknowledge_last_reference(writer: &mut dyn Write, objs: &Vec<String>) -> Result<(), UtilError>
-{
+pub fn send_acknowledge_last_reference(
+    writer: &mut dyn Write,
+    objs: &Vec<String>,
+) -> Result<(), UtilError> {
     let message = format!("ACK {}\n", objs[objs.len() - 1]);
     send_message(writer, &message, UtilError::SendLastACKConf)
 }

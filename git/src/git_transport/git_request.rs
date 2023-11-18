@@ -11,7 +11,9 @@ use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
 
-use super::negotiation::{sent_references_valid_client, receive_done, send_acknowledge_last_reference};
+use super::negotiation::{
+    receive_done, send_acknowledge_last_reference, sent_references_valid_client,
+};
 use super::request_command::RequestCommand;
 
 /// # `GitRequest`
@@ -184,14 +186,11 @@ impl GitRequest {
     }
 }
 
-fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError>
-{
-    let mut server =
-        GitServer::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
+fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError> {
+    let mut server = GitServer::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
     server.send_references(stream)?;
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
-    
-    
+
     if !had_objects.is_empty() {
         // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
 
@@ -204,18 +203,17 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
         sent_references_valid_client(stream, &obj_hash)?;
 
         receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
-        send_acknowledge_last_reference(stream, &obj_hash)?; // Aqui me quede
+        send_acknowledge_last_reference(stream, &obj_hash)?;
         server.save_references_client(obj_hash);
-        // Recibo el packfile
-        return Ok(())
+        send_packfile_witch_references_client(stream, &server, &path_repo)?;
 
+        return Ok(());
     }
     // Si el cliente solicita todo, esta haciendo un CLONE
     server.update_data(capabilities, wanted_objects);
     send_packfile(stream, &server, &path_repo)?; // Debo modificarlo, el NAK no debe estar dentro
     Ok(())
-} 
-
+}
 
 /// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.
 /// Esta función toma los datos de la solicitud Git y los divide en comandos y argumentos.

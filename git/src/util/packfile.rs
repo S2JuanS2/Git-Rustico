@@ -144,7 +144,7 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
 
 pub fn send_packfile(
     writer: &mut dyn Write,
-    advertised: &GitServer,
+    server: &GitServer,
     path_repo: &str,
 ) -> Result<(), UtilError> {
     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
@@ -154,12 +154,12 @@ pub fn send_packfile(
     // Envio version
     send_bytes(
         writer,
-        &advertised.version.to_be_bytes(),
+        &server.version.to_be_bytes(),
         UtilError::SendSignaturePackfile,
     )?;
 
     // Envio numero de objetos
-    let objects = match get_objects(path_repo, &advertised.references[1..]) {
+    let objects = match get_objects(path_repo, &server.references[1..]) {
         Ok(objects) => objects,
         Err(_) => return Err(UtilError::GetObjectsPackfile),
     };
@@ -175,6 +175,34 @@ pub fn send_packfile(
     for (object_type, content) in objects {
         send_object(writer, object_type, content)?;
     }
+    Ok(())
+}
+
+pub fn send_packfile_witch_references_client(
+    writer: &mut dyn Write,
+    server: &GitServer,
+    path_repo: &str,
+) -> Result<(), UtilError> {
+    // [REFACTOR, SE REPITE CON EL HEADER CON send_packfile]
+    send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
+    // Envio signature
+    send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
+
+    // Envio version
+    send_bytes(
+        writer,
+        &server.version.to_be_bytes(),
+        UtilError::SendSignaturePackfile,
+    )?;
+
+    // Envio numero de objetos
+    // [TODO, aqui debo obtener la cantidad de objetos a enviar]
+    // Pero la diferencia de esta funcion, es que no tengo que enviar todos los objs.
+    // en el server tengo el miembro client_references que tiene un vector con las referencias
+    //  ya tiene el cliente
+    // entonces solo tengo que enviar los objetos que el cliente no tiene
+    // EN resumen, necesito el vector de objetos a enviar para poder continuar con el envio
+
     Ok(())
 }
 
