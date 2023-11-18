@@ -11,7 +11,7 @@ use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
 
-use super::negotiation::{process_sent_requests_continue, receive_done, send_acknowledge_last_reference};
+use super::negotiation::{sent_references_valid_client, receive_done, send_acknowledge_last_reference};
 use super::request_command::RequestCommand;
 
 /// # `GitRequest`
@@ -201,7 +201,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
         // Se deben filtrar las referencias que tiene el servidor
         // obj_hash = filtrar_referencias_que_tenemos(had_objects)
         let obj_hash: Vec<String> = Vec::new();
-        process_sent_requests_continue(stream, &obj_hash)?;
+        sent_references_valid_client(stream, &obj_hash)?;
 
         receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
         send_acknowledge_last_reference(stream, &obj_hash)?; // Aqui me quede

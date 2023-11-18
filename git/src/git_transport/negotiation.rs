@@ -270,8 +270,26 @@ fn receive_request_type(
     })
 }
 
-// Aqui me quede
-pub fn process_sent_requests_continue(stream: &mut dyn Write, objt_id: &Vec<String>) -> Result<(), UtilError>
+/// Envia las referencias confirmadas al cliente durante la fase de negociación.
+///
+/// Para cada identificador de objeto en el vector proporcionado, esta función envía un
+/// mensaje de agradecimiento al cliente, indicando que el objeto es reconocido y que la
+/// transferencia puede continuar. Después de procesar todos los objetos, envía un mensaje
+/// de agradecimiento negativo (NAK) para confirmar las referencias y señalar el final de
+/// la fase de agradecimiento.
+///
+/// # Argumentos
+///
+/// * `stream` - Una referencia mutable a un objeto de tipo trait que implementa el trait
+///              `Write`, que representa el flujo de salida hacia el cliente.
+/// * `objt_id` - Un vector que contiene los identificadores de objetos para los cuales
+///               se deben enviar mensajes de agradecimiento.
+///
+/// # Retorna
+///
+/// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
+///
+pub fn sent_references_valid_client(stream: &mut dyn Write, objt_id: &Vec<String>) -> Result<(), UtilError>
 {
     for obj in objt_id {
         let message = format!("ACK{} continue\n", obj);
@@ -282,6 +300,23 @@ pub fn process_sent_requests_continue(stream: &mut dyn Write, objt_id: &Vec<Stri
     Ok(())
 }
 
+/// Envia una confirmacion ACK por la última referencia al cliente, para cerrar la etapa de negociacion
+///
+/// Esta función envía un mensaje de agradecimiento al cliente por el último objeto en
+/// el vector proporcionado. El mensaje de agradecimiento indica que el objeto es reconocido
+/// y la transferencia puede continuar.
+///
+/// # Argumentos
+///
+/// * `writer` - Una referencia mutable a un objeto que implementa el trait `Write`, que
+///              representa el flujo de salida hacia el cliente.
+/// * `objs`   - Un vector que contiene los identificadores de objetos, y se asume que
+///              está ordenado de manera que el último objeto en el vector es el más reciente.
+///
+/// # Retorna
+///
+/// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
+///
 pub fn send_acknowledge_last_reference(writer: &mut dyn Write, objs: &Vec<String>) -> Result<(), UtilError>
 {
     let message = format!("ACK {}\n", objs[objs.len() - 1]);
