@@ -1,7 +1,7 @@
 use crate::errors::GitError;
 use crate::models::client::Client;
 
-use super::status::{get_index_content, get_hashes_working_directory, get_lines_in_index, get_hashes_index, check_for_deleted_files};
+use super::status::{get_index_content, get_hashes_working_directory, get_lines_in_index, get_hashes_index, check_for_deleted_files, compare_hash_lists};
 
 /// Esta función se encarga de llamar a al comando ls-files con los parametros necesarios
 /// ###Parametros:
@@ -39,17 +39,14 @@ pub fn git_ls_files(directory: &str, flag: &str) -> Result<String, GitError> {
     if flag == "-d" {
         get_deleted_files(directory, &index_content, &mut formatted_result)?;
     }
-    if flag == "-m" {
-        get_modified_files(directory, &index_content, &mut formatted_result);
-    }
-    if flag == "-o" {
-        get_other_files(directory, &index_content, &mut formatted_result);
+    if flag == "-m" || flag == "-o" {
+        get_modified_or_untracked_files(directory, &index_content, &mut formatted_result, flag)?;
     }
 
     Ok(formatted_result)
 }
 
-fn get_deleted_files(directory: &str, index_content: &str, formatted_result: &mut String) -> Result<Vec<String>, GitError> {
+fn get_deleted_files(directory: &str, index_content: &str, formatted_result: &mut String) -> Result<(), GitError> {
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
     let index_lines = get_lines_in_index(index_content.to_string());
     let index_hashes = get_hashes_index(index_lines)?;
@@ -59,15 +56,36 @@ fn get_deleted_files(directory: &str, index_content: &str, formatted_result: &mu
         formatted_result.push_str(&format!("{}\n", file));
     }
 
-    Ok(deleted_files)
+    Ok(())
 }
 
-fn get_modified_files(directory: &str, index_content: &str, formatted_result: &mut String) {
-    
-}
+fn get_modified_or_untracked_files(directory: &str, index_content: &str, formatted_result: &mut String, flag: &str) -> Result<(), GitError> {
+    let working_directory_hash_list = get_hashes_working_directory(directory)?;
+    let index_lines = get_lines_in_index(index_content.to_string());
+    let index_hashes = get_hashes_index(index_lines)?;
 
-fn get_other_files(directory: &str, index_content: &str, formatted_result: &mut String) {
-    
+    let (updated_files_list, untracked_files_list, 
+        _staged_files_list, deleted_files_list) =
+        compare_hash_lists(&working_directory_hash_list, &index_hashes, directory);
+
+    if flag == "-m" {
+        for file in updated_files_list.iter() {
+            let file_path = &file.0[directory.len() + 1..];
+            formatted_result.push_str(&format!("{}\n", file_path));
+        }
+        for file in deleted_files_list.iter() {
+            formatted_result.push_str(&format!("{}\n", file));
+        }
+    }
+
+    if flag == "-o" {
+        for file in untracked_files_list.iter() {
+            let file_path = &file.0[directory.len() + 1..];
+            formatted_result.push_str(&format!("{}\n", file_path));
+        }
+    }
+
+    Ok(())
 }
 
 
@@ -102,6 +120,66 @@ mod tests {
         let result = git_ls_files(directory, "-c").expect("Error al ejecutar el comando");
         assert_eq!(result, "file1.rs\nfile2.rs\n");
         
+        fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
+    }
+
+    #[test]
+    fn test_git_ls_files_modified() {
+        let directory = "./test_ls_files_modified";
+        git_init(directory).expect("Error al crear el repositorio");
+
+        let file_path = format!("{}/{}", directory, "file1.rs");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo file1")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "file2.rs");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2.write_all(b"Hola Mundo file2")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "file1.rs").expect("Error al agregar el archivo");
+        git_add(directory, "file2.rs").expect("Error al agregar el archivo");
+
+        let result = git_ls_files(directory, "-c").expect("Error al ejecutar el comando");
+        assert_eq!(result, "file1.rs\nfile2.rs\n");
+
+        let result = git_ls_files(directory, "-m").expect("Error al ejecutar el comando");
+        assert_eq!(result, "");
+
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo file1 modificado")
+            .expect("Error al escribir en el archivo");
+
+        let result = git_ls_files(directory, "-m").expect("Error al ejecutar el comando");
+        assert_eq!(result, "file1.rs\n");
+
+        fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
+    }
+
+    #[test]
+    fn test_git_ls_files_untracked() {
+        let directory = "./test_ls_files_untracked";
+        git_init(directory).expect("Error al crear el repositorio");
+
+        let file_path = format!("{}/{}", directory, "file1.rs");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo file1")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "file2.rs");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2.write_all(b"Hola Mundo file2")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "file1.rs").expect("Error al agregar el archivo");
+
+        let result = git_ls_files(directory, "-c").expect("Error al ejecutar el comando");
+        assert_eq!(result, "file1.rs\n");
+
+        let result = git_ls_files(directory, "-o").expect("Error al ejecutar el comando");
+        assert_eq!(result, "file2.rs\n");
+
         fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
     }
 }

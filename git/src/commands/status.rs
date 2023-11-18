@@ -68,7 +68,7 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
     let index_hashes = get_hashes_index(index_files)?;
     let (updated_files_list, untracked_files_list, 
         staged_files_list, deleted_files_list) =
-        compare_hash_lists(working_directory_hash_list, index_hashes, directory);
+        compare_hash_lists(&working_directory_hash_list, &index_hashes, directory);
     let files_not_commited_list = check_for_commit(directory, staged_files_list)?;
     let value = print_changes(updated_files_list, untracked_files_list, files_not_commited_list, deleted_files_list, directory)?;
 
@@ -239,17 +239,17 @@ fn branch_up_to_date(formatted_result: &mut String, head_branch_name: String) {
 /// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
 /// 'index_hashes': vector con los nombres de los archivos en el index y sus hashes.
 /// 'directory': directorio del repositorio local.
-fn compare_hash_lists(
-    working_directory_hash_list: HashMap<String, String>,
-    index_hashes: Vec<(String, String)>,
+pub fn compare_hash_lists(
+    working_directory_hash_list: &HashMap<String, String>,
+    index_hashes: &Vec<(String, String)>,
     directory: &str,
 ) -> (Vec<(String, String)>, Vec<(String, String)>, Vec<(String, String)>, Vec<String>) {
     let mut updated_files_list: Vec<(String, String)> = Vec::new();
     let mut untracked_files_list: Vec<(String, String)> = Vec::new();
     let mut staged_files_list: Vec<(String, String)> = Vec::new();
-    for working_dir_hash in &working_directory_hash_list {
+    for working_dir_hash in working_directory_hash_list {
         let mut found_hash_in_index = false;
-        for index_hash in &index_hashes {
+        for index_hash in index_hashes {
             let file_path = &working_dir_hash.0[directory.len() + 1..];
             if file_path == index_hash.0 {
                 // el archivo esta trackeado, debo ver si esta en su ultima version
