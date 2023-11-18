@@ -105,6 +105,7 @@ pub fn get_index_content(directory_git: &String) -> Result<String, GitError> {
 /// 'updated_files_list': vector con los archivos que se modificaron y no se actualizaron en el staging area.
 /// 'untracked_files_list': vector con los archivos que no estan trackeados.
 /// 'files_not_commited_list': vector con los archivos que estan en el staging area y se van a incluir en el proximo commit.
+/// 'deleted_files_list': vector con los archivos que se eliminaron del working directory pero siguen en el index.
 /// 'directory': directorio del repositorio local.
 fn print_changes(
     updated_files_list: Vec<(String, String)>,
@@ -134,10 +135,12 @@ fn print_changes(
     Ok(formatted_result)
 }
 
-/// Muestra los archivos que no estan en el staging area.
+/// Muestra los archivos con cambios que no estan en el staging area.
 /// ###Parámetros:
 /// 'formatted_result': string con el resultado del status formateado.
+/// 'updated_files_list': vector con los nombres de los archivos que se modificaron y no se actualizaron en el staging area.
 /// 'untracked_files_list': vector con los nombres de los archivos que no estan en el staging area.
+/// 'deleted_files_list': vector con los nombres de los archivos que se eliminaron del working directory pero siguen en el index.
 /// 'directory': directorio del repositorio local.
 fn branch_with_untracked_changes(
     formatted_result: &mut String,
@@ -168,6 +171,12 @@ fn branch_with_untracked_changes(
     }
 }
 
+/// Muestra los archivos que no estan trackeados.
+/// ###Parámetros:
+/// 'formatted_result': string con el resultado del status formateado.
+/// 'untracked_files_list': vector con los nombres de los archivos que no estan en el staging area.
+/// 'files_not_commited_list': vector con los nombres de los archivos que estan en el staging area y se van a incluir en el proximo commit.
+/// 'directory': directorio del repositorio local.
 fn branch_with_untracked_files(
     formatted_result: &mut String,
     untracked_files_list: &Vec<(String, String)>,
@@ -191,7 +200,7 @@ fn branch_with_untracked_files(
 /// Muestra los archivos que estan en el staging area y van a ser incluidos en el proximo commit.
 /// ###Parámetros:
 /// 'formatted_result': string con el resultado del status formateado.
-/// 'index_files_list': vector con los nombres de los archivos que estan en el staging area
+/// 'files_not_commited_list': vector con los nombres de los archivos que estan en el staging area y se van a incluir en el proximo commit.
 fn branch_missing_commits(
     formatted_result: &mut String,
     files_not_commited_list: &Vec<String>,
@@ -216,11 +225,15 @@ fn branch_up_to_date(formatted_result: &mut String, head_branch_name: String) {
     formatted_result.push_str("\nnothing to commit, working tree clean\n");
 }
 
-/// Compara los hashes de los archivos del directorio de trabajo con los de objects y devuelve un vector
-/// con los nombres de los archivos que se modificaron.
+/// Compara los hashes de los archivos del directorio de trabajo con los del index y devuelve cuatro vectores:
+/// - updated_files_list: vector con los archivos que se modificaron y no se actualizaron en el staging area.
+/// - untracked_files_list: vector con los archivos que no estan trackeados.
+/// - staged_files_list: vector con los archivos que estan en el staging area y se van a incluir en el proximo commit.
+/// - deleted_files_list: vector con los archivos que se eliminaron del working directory pero siguen en el index.
 /// ###Parámetros:
 /// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
-/// 'objects_hash_list': vector con los hashes de los archivos en objects.
+/// 'index_hashes': vector con los nombres de los archivos en el index y sus hashes.
+/// 'directory': directorio del repositorio local.
 fn compare_hash_lists(
     working_directory_hash_list: HashMap<String, String>,
     index_hashes: Vec<(String, String)>,
@@ -252,6 +265,11 @@ fn compare_hash_lists(
     (updated_files_list, untracked_files_list, staged_files_list, deleted_files_list)
 }
 
+/// Devuelve un vector con los nombres de los archivos que se eliminaron del working directory pero siguen en el index.
+/// ###Parámetros:
+/// 'index_hashes': vector con los nombres de los archivos en el index y sus hashes.
+/// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
+/// 'directory': directorio del repositorio local.
 fn check_for_deleted_files(
     index_hashes: &Vec<(String, String)>,
     working_directory_hash_list: &HashMap<String, String>,
@@ -277,6 +295,12 @@ fn check_for_deleted_files(
     deleted_files_list
 }
 
+/// Se para en el ultimo commit de la branch actual y reconstruye el arbol de archivos incluidos
+/// en ese commit para ver si los archivos que estan en el staging area fueron incluidos en ese commit.
+/// Si no fueron incluidos, los agrega a un vector de 'files_not_commited_list' (que devuelve).
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'staged_files_list': vector con los nombres de los archivos en el staging area y sus hashes
 fn check_for_commit(directory: &str, staged_files_list: Vec<(String, String)>) -> Result<Vec<String>, GitError> {
     let mut files_not_commited_list: Vec<String> = Vec::new();
     if !staged_files_list.is_empty() {
@@ -298,16 +322,9 @@ fn check_for_commit(directory: &str, staged_files_list: Vec<(String, String)>) -
     Ok(files_not_commited_list)
 }
 
-/// Devuelve un vector con los hashes de los archivos en objects.
+/// Devuelve un vector con los nombres de los archivos en el index y sus hashes.
 /// ###Parámetros:
-/// 'directory_git': directorio del repositorio local.
-// fn get_hashes_objects(directory_git: String) -> Result<Vec<String>, GitError> {
-//     let objects_dir = Path::new(&directory_git).join(DIR_OBJECTS);
-//     let mut objects_hash_list: Vec<String> = Vec::new();
-//     visit_objects_dir(&objects_dir, &mut objects_hash_list)?;
-//     Ok(objects_hash_list)
-// }
-
+/// 'index_files_list': vector con las lineas del index.
 fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String)>, GitError> {
     let mut index_hashes: Vec<(String, String)> = Vec::new();
     for file in index_files_list {
@@ -325,6 +342,12 @@ fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String
     Ok(index_hashes)
 }
 
+/// Reconstruye el arbol de archivos incluidos en un commit y devuelve un booleano que indica si el archivo
+/// que se le pasa como parametro fue incluido en ese commit.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'commit_actual': hash del commit actual.
+/// 'file_hash': hash del archivo que se quiere buscar.
 fn get_files_in_commit(directory: &str, commit_actual: &str, file_hash: &str) -> Result<bool, GitError> {
     let mut commited = false;
     let commit_content = git_cat_file(directory, &commit_actual, "-p")?;
@@ -345,6 +368,14 @@ fn get_files_in_commit(directory: &str, commit_actual: &str, file_hash: &str) ->
     Ok(commited)
 }
 
+/// Recorre el arbol de archivos que se le pasa como parametro y busca en ellos el hash del archivo que 
+/// se le pasa como parametro. 
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'tree_hash': hash del arbol de archivos.
+/// 'file_hash': hash del archivo que se quiere buscar.
+/// 'commited': booleano que indica si el archivo que se quiere buscar fue incluido en un commit.
+/// 'parent_commit': hash del commit padre.
 fn get_tree_content(directory: &str, tree_hash: &str, file_hash: &str, commited: &mut bool, parent_commit: &str) -> Result<(), GitError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     let tree_lines = tree_content.split('\n');
