@@ -1,5 +1,5 @@
 use crate::{
-    consts::{PKT_DONE, PKT_NAK},
+    consts::{PKT_DONE, PKT_NAK, HAVE, CONTINUE},
     git_server::GitServer,
     util::{
         connections::{received_message, send_flush, send_message},
@@ -13,33 +13,28 @@ use std::{
     net::TcpStream,
 };
 
-/// Realiza una solicitud de carga al servidor Git.
+/// Envía mensajes de tipo de solicitud (`want` o `have`) al servidor para solicitar 
+/// o confirmar referencias.
 ///
-/// Esta función toma un socket `TcpStream` y una lista de `AdvertisedRefLine` que
-/// han sido anunciadas por el servidor. Examina cada referencia y, en caso de que
-/// sea una referencia, crea y envía un mensaje "want" al servidor. Estos mensajes "want"
-/// le indican al servidor qué objetos específicos necesita el cliente para completar
-/// su trabajo.
 ///
 /// # Argumentos
 ///
-/// - `socket`: Un `TcpStream` abierto para comunicarse con el servidor Git.
-/// - `advertised`: Un vector de `AdvertisedRefLine` que contiene las referencias
-/// anunciadas por el servidor.
+/// - `socket`: Referencia mutable a un `TcpStream`, que representa el canal de comunicación con el servidor.
+/// - `server`: Referencia a un objeto `GitServer` que contiene información sobre las referencias del servidor.
+/// - `type_req`: Cadena de texto que indica el tipo de solicitud, ya sea "want" o "have".
 ///
 /// # Errores
 ///
 /// Esta función devuelve un `Result`. Si ocurre un error al enviar la solicitud
 /// de carga, se devuelve un error de tipo `UtilError` específico.
 ///
-/// En este ejemplo, se inicia una conexión al servidor Git y se envía una solicitud de carga para la referencia dada.
-///
 /// # Retorno
 ///
 /// Esta función no devuelve ningún valor. Si se completa con éxito, indica que las solicitudes "want" se han enviado al servidor correctamente.
-pub fn upload_request(socket: &mut TcpStream, advertised: &GitServer) -> Result<(), UtilError> {
-    for refs in advertised.get_references() {
-        let message = format!("want {}\n", refs.get_hash());
+/// 
+pub fn upload_request_type(socket: &mut TcpStream, server: &GitServer, type_req: &str) -> Result<(), UtilError> {
+    for refs in server.get_references() {
+        let message = format!("{} {}\n", type_req, refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
         send_message(socket, &message, UtilError::UploadRequest)?;
     }
@@ -345,6 +340,112 @@ pub fn send_acknowledge_last_reference(
 ) -> Result<(), UtilError> {
     let message = format!("ACK {}\n", objs[objs.len() - 1]);
     send_message(writer, &message, UtilError::SendLastACKConf)
+}
+
+pub fn packfile_negotiation_fetch(stream: &mut TcpStream, server: &mut GitServer, _path_repo: &str) -> Result<(), UtilError>
+{
+    // [TODO]
+    // Aqui se debe examinar las referencias que nos envio el server
+    // Estan en server->references y ver que referencias tenemos en local
+    // Asi no le pedimos lo que tenemos
+    // Para esto me podes dar un vector con las branch que ya tenemos actualizadas
+    // y yo las filtro de server->references
+
+
+    upload_request_type(stream, server, CONTINUE)?;
+    
+    // [TODO]
+    // Dado las referencias que tenemos en server->references, debemos de buscar en local
+    // los ultimos commit de cada referencia para enviarle al servidor
+    // Para esto me podes dar un vector con los ultimos commit de cada branch
+    // NOta: Si la branch no tenemos no hace falta que me lo agregues al vector porque
+    // El servidor entendera que no tenemos nada y nos enviara todo de esa branch
+    
+    upload_request_type(stream, server, HAVE)?;
+
+    // send_done(stream, UtilError::UploadRequestDone)?;
+    let _ack_references = recive_acknowledgments(stream)?;
+
+
+    // receive_nak(stream)?;
+    
+    Ok(())
+}
+
+/// Lee las respuestas ACK del servidor desde el flujo de datos.
+///
+/// # Argumentos
+///
+/// * `stream`: Un mutable referenciador al `TcpStream` para la comunicación con el servidor.
+///
+/// # Returns
+///
+/// Devuelve un `Result` que contiene un vector de cadenas de caracteres representando los hashes
+/// recibidos en las respuestas ACK si la operación fue exitosa, o un `UtilError` en caso de error.
+///
+/// # Errores
+///
+/// Posibles errores incluyen:
+/// - `UtilError::PktLineReadError`: Error al leer las líneas de datos del servidor.
+/// - `UtilError::InvalidACKFormat`: El formato de la respuesta ACK no es válido.
+/// - `UtilError::ExpectedAckMissing`: Se esperaba una respuesta ACK y no se encontró.
+/// - `UtilError::ExpectedHashInAckResponse`: Se esperaba un hash en la respuesta ACK y no se encontró.
+/// - `UtilError::ExpectedStatusInAckResponse`: Se esperaba un estado en la respuesta ACK y no se encontró.
+/// 
+pub fn recive_acknowledgments(stream: &mut TcpStream) -> Result<Vec<String>, UtilError>
+{
+    let lines = pkt_line::read(stream)?;
+    let mut acks = Vec::new();
+    for line in lines {
+        let hash = process_ack_response(line)?;
+        acks.push(hash);
+    }
+    Ok(acks)
+}
+
+/// Procesa la respuesta ACK del servidor.
+///
+/// # Argumentos
+///
+/// * `response`: Vector de bytes que representa la respuesta ACK recibida del servidor.
+///
+/// # Returns
+///
+/// Devuelve un `Result` que contiene el hash recibido en la respuesta ACK si la operación fue
+/// exitosa, o un `UtilError` en caso de error.
+///
+/// # Errores
+/// 
+/// Posibles errores incluyen:
+/// - `UtilError::PktLineReadError`: Error al leer las líneas de datos del servidor.
+/// - `UtilError::InvalidACKFormat`: El formato de la respuesta ACK no es válido.
+/// - `UtilError::ExpectedAckMissing`: Se esperaba una respuesta ACK y no se encontró.
+/// - `UtilError::ExpectedHashInAckResponse`: Se esperaba un hash en la respuesta ACK y no se encontró.
+/// - `UtilError::ExpectedStatusInAckResponse`: Se esperaba un estado en la respuesta ACK y no se encontró.
+/// 
+pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError>
+{
+    let line_str = String::from_utf8_lossy(&response);
+    let mut line_split = line_str.split_ascii_whitespace();
+    let type_request = line_split
+        .next()
+        .ok_or_else(|| UtilError::InvalidACKFormat(line_str.to_string()))?;
+    if type_request != "ACK" {
+        return Err(UtilError::ExpectedAckMissing);
+    }
+    let hash = line_split
+        .next()
+        .ok_or_else(|| UtilError::InvalidACKFormat(line_str.to_string()))?;
+    if !is_valid_obj_id(hash) {
+        return Err(UtilError::ExpectedHashInAckResponse);
+    }
+    let status = line_split
+        .next()
+        .ok_or_else(|| UtilError::InvalidACKFormat(line_str.to_string()))?;
+    if status != "continue" {
+        return Err(UtilError::ExpectedStatusInAckResponse);
+    }
+    Ok(hash.to_string())
 }
 
 #[cfg(test)]

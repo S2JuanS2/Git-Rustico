@@ -1,6 +1,7 @@
 use crate::consts::GIT_DIR;
+use crate::git_transport::negotiation::packfile_negotiation_fetch;
 use crate::models::client::Client;
-use crate::util::connections::{packfile_negotiation, receive_packfile};
+use crate::util::connections::receive_packfile;
 use crate::util::formats::{hash_generate, compressor_object};
 use crate::util::objects::{ObjectType, builder_object, ObjectEntry};
 use crate::{
@@ -59,10 +60,10 @@ pub fn git_fetch_all(
     let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
-    let server = reference_discovery(socket, message)?;
+    let mut server = reference_discovery(socket, message)?;
 
     // Packfile Negotiation
-    packfile_negotiation(socket, &server)?;
+    packfile_negotiation_fetch(socket, &mut server, &repo)?;
 
     // Packfile Data
     let content = receive_packfile(socket)?;

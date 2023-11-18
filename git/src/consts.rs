@@ -88,7 +88,11 @@ pub const SPACE: u8 = 32;
 
 pub const NULL: u8 = 0;
 
-// const MY_STR_ARRAY: [&'static str; 4] = ["HOLA", "CHAU", "COMO", "ESTAS"];
+pub const CONTINUE: &str = "continue";
+
+pub const SHALLOW: &str = "shallow";
+
+pub const HAVE: &str = "have";
 
 pub const CAPABILITIES_SERVER: [&str; 0] = [];
 
