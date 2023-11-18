@@ -72,10 +72,11 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
 
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
     let index_hashes = get_hashes_index(index_files)?;
-    let (updated_files_list, untracked_files_list, staged_files_list) =
+    let (updated_files_list, untracked_files_list, 
+        staged_files_list, deleted_files_list) =
         compare_hash_lists(working_directory_hash_list, index_hashes, directory);
     let files_not_commited_list = check_for_commit(directory, staged_files_list)?;
-    let value = print_changes(updated_files_list, untracked_files_list, files_not_commited_list, directory)?;
+    let value = print_changes(updated_files_list, untracked_files_list, files_not_commited_list, deleted_files_list, directory)?;
 
     Ok(value)
 }
@@ -109,6 +110,7 @@ fn print_changes(
     updated_files_list: Vec<(String, String)>,
     untracked_files_list: Vec<(String, String)>,
     files_not_commited_list: Vec<String>,
+    deleted_files_list: Vec<String>,
     directory: &str,
 ) -> Result<String, GitError> {
     let mut formatted_result = String::new();
@@ -116,11 +118,11 @@ fn print_changes(
 
     formatted_result.push_str("On branch ");
     formatted_result.push_str(&head_branch_name);
-    if updated_files_list.is_empty() && untracked_files_list.is_empty() && files_not_commited_list.is_empty() {
+    if updated_files_list.is_empty() && untracked_files_list.is_empty() && files_not_commited_list.is_empty() && deleted_files_list.is_empty() {
         branch_up_to_date(&mut formatted_result, head_branch_name);
     }
-    if !updated_files_list.is_empty() {
-        branch_with_untracked_changes(&mut formatted_result, &updated_files_list, &untracked_files_list, directory);
+    if !updated_files_list.is_empty() || !deleted_files_list.is_empty() {
+        branch_with_untracked_changes(&mut formatted_result, &updated_files_list, &untracked_files_list, &deleted_files_list, directory);
     }
     if !untracked_files_list.is_empty() {
         branch_with_untracked_files(&mut formatted_result, &untracked_files_list, &files_not_commited_list, directory);
@@ -141,6 +143,7 @@ fn branch_with_untracked_changes(
     formatted_result: &mut String,
     updated_files_list: &Vec<(String, String)>,
     untracked_files_list: &Vec<(String, String)>,
+    deleted_files_list: &Vec<String>,
     directory: &str,
 ) {
     formatted_result.push_str("\nChanges not staged for commit:\n");
@@ -153,6 +156,11 @@ fn branch_with_untracked_changes(
         for file in updated_files_list {
             let file_path = &file.0[directory.len() + 1..];
             formatted_result.push_str(&format!("\n\tmodified:\t\t{}\n", file_path));
+        }
+    }
+    if !deleted_files_list.is_empty() {
+        for file in deleted_files_list {
+            formatted_result.push_str(&format!("\n\tdeleted:\t\t{}\n", file));
         }
     }
     if untracked_files_list.is_empty() {
@@ -217,19 +225,18 @@ fn compare_hash_lists(
     working_directory_hash_list: HashMap<String, String>,
     index_hashes: Vec<(String, String)>,
     directory: &str,
-) -> (Vec<(String, String)>, Vec<(String, String)>, Vec<(String, String)>) {
-    // Comparo los hashes de mis archivos con los de objects para crear un vector con los archivos que se modificaron
+) -> (Vec<(String, String)>, Vec<(String, String)>, Vec<(String, String)>, Vec<String>) {
     let mut updated_files_list: Vec<(String, String)> = Vec::new();
     let mut untracked_files_list: Vec<(String, String)> = Vec::new();
     let mut staged_files_list: Vec<(String, String)> = Vec::new();
-    for working_dir_hash in working_directory_hash_list {
-        let mut found_hash = false;
+    for working_dir_hash in &working_directory_hash_list {
+        let mut found_hash_in_index = false;
         for index_hash in &index_hashes {
             let file_path = &working_dir_hash.0[directory.len() + 1..];
             if file_path == index_hash.0 {
                 // el archivo esta trackeado, debo ver si esta en su ultima version
-                found_hash = true;
-                if working_dir_hash.1 != index_hash.1 {
+                found_hash_in_index = true;
+                if working_dir_hash.1 != &index_hash.1 {
                     updated_files_list.push((working_dir_hash.0.to_string(), working_dir_hash.1.to_string()));
                 }
                 else {
@@ -237,11 +244,37 @@ fn compare_hash_lists(
                 }
             }
         }
-        if !found_hash {
+        if !found_hash_in_index {
             untracked_files_list.push((working_dir_hash.0.to_string(), working_dir_hash.1.to_string()));
         }
     }
-    (updated_files_list, untracked_files_list, staged_files_list)
+    let deleted_files_list = check_for_deleted_files(&index_hashes, &working_directory_hash_list, directory);
+    (updated_files_list, untracked_files_list, staged_files_list, deleted_files_list)
+}
+
+fn check_for_deleted_files(
+    index_hashes: &Vec<(String, String)>,
+    working_directory_hash_list: &HashMap<String, String>,
+    directory: &str,
+) -> Vec<String> {
+    let index_files_len = &index_hashes.len();
+    let working_directory_files_len = &working_directory_hash_list.len();
+    let mut deleted_files_list: Vec<String> = Vec::new();
+    if index_files_len > working_directory_files_len {
+        for index_hash in index_hashes {
+            let mut found_hash_in_index = false;
+            for working_dir_hash in working_directory_hash_list {
+                let file_path = &working_dir_hash.0[directory.len() + 1..];
+                if file_path == index_hash.0 {
+                    found_hash_in_index = true;
+                }
+            }
+            if !found_hash_in_index {
+                deleted_files_list.push(index_hash.0.to_string());
+            }
+        }
+    }
+    deleted_files_list
 }
 
 fn check_for_commit(directory: &str, staged_files_list: Vec<(String, String)>) -> Result<Vec<String>, GitError> {
@@ -458,10 +491,19 @@ mod tests {
         let result_after_commit2_ = "On branch master\nYour branch is up to date with 'origin/master'.\n\nnothing to commit, working tree clean\n";
         assert_eq!(result_after_commit2, Ok(result_after_commit2_.to_string()));
 
+        let testfile = format!("{}/{}", TEST_DIRECTORY, "testfile.rs");
+        fs::remove_file(testfile).expect("Error al intentar remover el archivo");
+
+        let result_after_remove = git_status(TEST_DIRECTORY);
+        let result_after_remove_ = "On branch master\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git checkout -- <file>...\" to discard changes in working directory)\n\n\tdeleted:\t\ttestfile.rs\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n";
+        assert_eq!(result_after_remove, Ok(result_after_remove_.to_string()));
+
         fs::remove_dir_all(TEST_DIRECTORY).expect("Error al intentar remover el directorio");
 
         assert!(result_before_add.is_ok());
         assert!(result_after_add.is_ok());
         assert!(result_after_commit.is_ok());
+        assert!(result_after_commit2.is_ok());
+        assert!(result_after_remove.is_ok());
     }
 }
