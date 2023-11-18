@@ -62,13 +62,7 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
 
     let index_content = get_index_content(&directory_git)?;
 
-    let lines: Vec<String> = index_content.lines().map(String::from).collect();
-    let mut index_files: Vec<String> = Vec::new();
-    if !lines.is_empty() {
-        for line in lines {
-            index_files.push(line);
-        }
-    }
+    let index_files = get_lines_in_index(index_content);
 
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
     let index_hashes = get_hashes_index(index_files)?;
@@ -81,10 +75,21 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
     Ok(value)
 }
 
+pub fn get_lines_in_index(index_content: String) -> Vec<String> {
+    let lines: Vec<String> = index_content.lines().map(String::from).collect();
+    let mut index_files: Vec<String> = Vec::new();
+    if !lines.is_empty() {
+        for line in lines {
+            index_files.push(line);
+        }
+    }
+    index_files
+}
+
 /// Devuelve el contenido del archivo index.
 /// ###Parámetros:
 /// 'directory_git': directorio del repositorio local.
-pub fn get_index_content(directory_git: &String) -> Result<String, GitError> {
+pub fn get_index_content(directory_git: &str) -> Result<String, GitError> {
     let index_path = format!("{}/index", directory_git);
     let index_file = File::open(index_path);
     let mut index_file = match index_file {
@@ -270,7 +275,7 @@ fn compare_hash_lists(
 /// 'index_hashes': vector con los nombres de los archivos en el index y sus hashes.
 /// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
 /// 'directory': directorio del repositorio local.
-fn check_for_deleted_files(
+pub fn check_for_deleted_files(
     index_hashes: &Vec<(String, String)>,
     working_directory_hash_list: &HashMap<String, String>,
     directory: &str,
@@ -325,7 +330,7 @@ fn check_for_commit(directory: &str, staged_files_list: Vec<(String, String)>) -
 /// Devuelve un vector con los nombres de los archivos en el index y sus hashes.
 /// ###Parámetros:
 /// 'index_files_list': vector con las lineas del index.
-fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String)>, GitError> {
+pub fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String)>, GitError> {
     let mut index_hashes: Vec<(String, String)> = Vec::new();
     for file in index_files_list {
         let parts: Vec<&str> = file.split(' ').collect();
@@ -398,7 +403,7 @@ fn get_tree_content(directory: &str, tree_hash: &str, file_hash: &str, commited:
 /// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
+pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = directory.to_string();
     calculate_directory_hashes(&working_directory, &mut working_directory_hash_list)?;

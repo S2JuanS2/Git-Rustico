@@ -25,8 +25,9 @@ pub fn handle_ls_files(args: Vec<&str>, client: Client) -> Result<String, GitErr
 
 pub fn git_ls_files(directory: &str, flag: &str) -> Result<String, GitError> {
 
+    let directory_git = format!("{}/.git", directory);
     let mut formatted_result = String::new();
-    let index_content = get_index_content(directory)?;
+    let index_content = get_index_content(&directory_git)?;
     
     if flag == "" || flag == "-c" {
         let lines_index: Vec<String> = index_content.lines().map(String::from).collect();
@@ -67,4 +68,40 @@ fn get_modified_files(directory: &str, index_content: &str, formatted_result: &m
 
 fn get_other_files(directory: &str, index_content: &str, formatted_result: &mut String) {
     
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::commands::{init::git_init, add::git_add};
+    use super::*;
+    use std::fs;
+    use std::io::Write;
+
+    #[test]
+    fn test_git_ls_files() {
+        let directory = "./test_ls_files";
+        git_init(directory).expect("Error al crear el repositorio");
+
+        let file_path = format!("{}/{}", directory, "file1.rs");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo file1")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "file2.rs");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2.write_all(b"Hola Mundo file2")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "file1.rs").expect("Error al agregar el archivo");
+        git_add(directory, "file2.rs").expect("Error al agregar el archivo");
+
+        let result = git_ls_files(directory, "").expect("Error al ejecutar el comando");
+        assert_eq!(result, "file1.rs\nfile2.rs\n");
+
+        let result = git_ls_files(directory, "-c").expect("Error al ejecutar el comando");
+        assert_eq!(result, "file1.rs\nfile2.rs\n");
+        
+        fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
+    }
 }
