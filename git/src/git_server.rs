@@ -201,6 +201,16 @@ impl GitServer {
     pub fn save_references_client(&mut self, obj_hash: Vec<String>) {
         self.client_references = obj_hash;
     }
+
+    /// Filtra las referencias del cliente manteniendo solo las que también están en el vector dado.
+    ///
+    /// # Argumentos
+    ///
+    /// * `references` - Vector de referencias a ser utilizado como filtro.
+    ///
+    pub fn filter_client_reference(&mut self, references: &Vec<String>) {
+        retain_common_values(&mut self.client_references, references);
+    }
 }
 
 /// Filtra las referencias basándose en un conjunto de hash de referencias.
@@ -212,15 +222,15 @@ impl GitServer {
 /// # Argumentos
 ///
 /// * `references` - Vector mutable de referencias a ser filtrado.
-/// * `refnames` - Vector de hash de referencias usado para filtrar.
+/// * `refs_hash` - Vector de hash de referencias usado para filtrar.
 ///
 /// # Nota
 ///
 /// Esta función es útil para mantener solo las referencias locales que también existen en el
 /// servidor durante la actualización de datos del `GitServer`.
 ///
-fn filter_by_hash(references: &mut Vec<Reference>, refnames: &[String]) {
-    references.retain(|reference| refnames.contains(reference.get_hash()));
+fn filter_by_hash(references: &mut Vec<Reference>, refs_hash: &[String]) {
+    references.retain(|reference| refs_hash.contains(reference.get_hash()));
 }
 
 /// Retiene los valores comunes entre dos vectores de cadenas.

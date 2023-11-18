@@ -1,5 +1,5 @@
 use crate::consts::GIT_DIR;
-use crate::git_transport::negotiation::packfile_negotiation_fetch;
+use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::models::client::Client;
 use crate::util::connections::receive_packfile;
 use crate::util::formats::{hash_generate, compressor_object};
@@ -63,12 +63,12 @@ pub fn git_fetch_all(
     let mut server = reference_discovery(socket, message)?;
 
     // Packfile Negotiation
-    packfile_negotiation_fetch(socket, &mut server, &repo)?;
+    packfile_negotiation_partial(socket, &mut server, &repo)?;
 
     // Packfile Data
     let content = receive_packfile(socket)?;
-
     save_objects(repo, content)?;
+
     
     // Guardar las referencias en remote refs
 

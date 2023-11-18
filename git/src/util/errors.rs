@@ -65,6 +65,8 @@ pub enum UtilError {
     ExpectedAckMissing,
     ExpectedHashInAckResponse,
     ExpectedStatusInAckResponse,
+    InvalidHashInAckResponse,
+    ExpectedStatusContinueInAckResponse,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -125,11 +127,13 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::SendNAKConfirmReferences => write!(f, "SendNAKConfirmReferencesError: Error al enviar el NAK para confirmar las referencias."),
         UtilError::ReceiveDoneConfRefs => write!(f, "ReceiveDoneConfRefsError: Error al recibir el done para confirmar las referencias."),
         UtilError::SendLastACKConf => write!(f, "SendLastACKConfError: Error al enviar el último ACK para confirmar las referencias."),
-        UtilError::InvalidACKFormat(String) => write!(f, "InvalidACKFormatError: Formato de ACK inválido. \n Se recibió: {} \n Se esperaba: ACK <hash> <status>", String),
+        UtilError::InvalidACKFormat(info) => write!(f, "InvalidACKFormatError: Formato de ACK inválido. \n Se recibió: {} \n Se esperaba: ACK <hash> <status>", info),
         UtilError::UnexpectedACKNotACK => write!(f, "UnexpectedACKNotACKError: Se recibió un ACK inesperado."),
         UtilError::ExpectedAckMissing => write!(f, "ExpectedAckMissingError: Se esperaba un ACK."),
         UtilError::ExpectedHashInAckResponse => write!(f, "ExpectedHashInAckResponseError: Se esperaba un hash en la respuesta del ACK."),
         UtilError::ExpectedStatusInAckResponse => write!(f, "ExpectedStatusInAckResponseError: Se esperaba un status en la respuesta del ACK."),
+        UtilError::InvalidHashInAckResponse => write!(f, "InvalidHashInAckResponseError: Hash inválido en la respuesta del ACK."),
+        UtilError::ExpectedStatusContinueInAckResponse => write!(f, "ExpectedStatusContinueInAckResponseError: Se esperaba un status continue en la respuesta del ACK."),
     }
 }
 

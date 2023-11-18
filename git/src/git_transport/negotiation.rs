@@ -342,7 +342,7 @@ pub fn send_acknowledge_last_reference(
     send_message(writer, &message, UtilError::SendLastACKConf)
 }
 
-pub fn packfile_negotiation_fetch(stream: &mut TcpStream, server: &mut GitServer, _path_repo: &str) -> Result<(), UtilError>
+pub fn packfile_negotiation_partial(stream: &mut TcpStream, server: &mut GitServer, _path_repo: &str) -> Result<(), UtilError>
 {
     // [TODO]
     // Aqui se debe examinar las referencias que nos envio el server
@@ -350,25 +350,25 @@ pub fn packfile_negotiation_fetch(stream: &mut TcpStream, server: &mut GitServer
     // Asi no le pedimos lo que tenemos
     // Para esto me podes dar un vector con las branch que ya tenemos actualizadas
     // y yo las filtro de server->references
-
+    // let reference_que_tenemos = tu_funcion(server.references)
+    
+    // Brayan:
+    // server.filtrar(reference_que_tenemos)
 
     upload_request_type(stream, server, CONTINUE)?;
     
     // [TODO]
-    // Dado las referencias que tenemos en server->references, debemos de buscar en local
+    // Dado las referencias que tenemos en server->references de las branch que 
+    // tenemos, debemos de buscar en local
     // los ultimos commit de cada referencia para enviarle al servidor
     // Para esto me podes dar un vector con los ultimos commit de cada branch
-    // NOta: Si la branch no tenemos no hace falta que me lo agregues al vector porque
+    // NOta: Si la branch no la tenemos no hace falta que me lo agregues al vector porque
     // El servidor entendera que no tenemos nada y nos enviara todo de esa branch
-    
     upload_request_type(stream, server, HAVE)?;
 
-    // send_done(stream, UtilError::UploadRequestDone)?;
-    let _ack_references = recive_acknowledgments(stream)?;
+    let ack_references = recive_acknowledgments(stream)?;
+    server.filter_client_reference(&ack_references);
 
-
-    // receive_nak(stream)?;
-    
     Ok(())
 }
 
@@ -435,15 +435,15 @@ pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError>
     }
     let hash = line_split
         .next()
-        .ok_or_else(|| UtilError::InvalidACKFormat(line_str.to_string()))?;
+        .ok_or_else(|| UtilError::ExpectedHashInAckResponse)?;
     if !is_valid_obj_id(hash) {
-        return Err(UtilError::ExpectedHashInAckResponse);
+        return Err(UtilError::InvalidHashInAckResponse);
     }
     let status = line_split
         .next()
-        .ok_or_else(|| UtilError::InvalidACKFormat(line_str.to_string()))?;
+        .ok_or_else(|| UtilError::ExpectedStatusInAckResponse)?;
     if status != "continue" {
-        return Err(UtilError::ExpectedStatusInAckResponse);
+        return Err(UtilError::ExpectedStatusContinueInAckResponse);
     }
     Ok(hash.to_string())
 }
@@ -526,7 +526,6 @@ mod tests {
     fn test_extraction_capabilities_empty() {
         let line = b"want 74730d410fcb6603ace96f1dc55ea6196122532d\n".to_vec();
         let result = extraction_capabilities(&line);
-        // println!("result: {:?}", result);
         assert!(result.is_ok());
         let (hash, capabilities) = result.unwrap();
         assert_eq!(hash, "74730d410fcb6603ace96f1dc55ea6196122532d");
@@ -569,7 +568,6 @@ mod tests {
         lines.push(b"want 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a".to_vec());
 
         let result = process_received_requests_want(lines);
-        println!("{:?}", result);
         assert!(result.is_ok());
         let (capabilities, request) = result.unwrap();
 
@@ -581,6 +579,60 @@ mod tests {
                 "7d1665144a3a975c05f1f43902ddaf084e784dbe",
                 "5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"
             ]
+        );
+    }
+
+    #[test]
+    fn test_process_ack_response_valid() {
+        let response = b"ACK 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a continue\n".to_vec();
+        assert_eq!(
+            process_ack_response(response),
+            Ok(String::from("5a3f6be755bbb7deae50065988cbfa1ffa9ab68a"))
+        );
+    }
+
+    #[test]
+    fn test_process_ack_response_invalid_ack_missing() {
+        let response = b"NAK\n".to_vec();
+        assert_eq!(
+            process_ack_response(response),
+            Err(UtilError::ExpectedAckMissing)
+        );
+    }
+
+    #[test]
+    fn test_process_ack_response_invalid_format() {
+        let response = b"LALA 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a continue\n".to_vec();
+        assert_eq!(
+            process_ack_response(response),
+            Err(UtilError::ExpectedAckMissing)
+        );
+    }
+
+    #[test]
+    fn test_process_ack_response_invalid_object_id() {
+        let response = b"ACK invalid_hash continue\n".to_vec();
+        assert_eq!(
+            process_ack_response(response),
+            Err(UtilError::InvalidHashInAckResponse)
+        );
+    }
+
+    #[test]
+    fn test_process_ack_response_expected_hash_missing() {
+        let response = b"ACK\n".to_vec();
+        assert_eq!(
+            process_ack_response(response),
+            Err(UtilError::ExpectedHashInAckResponse)
+        );
+    }
+
+    #[test]
+    fn test_process_ack_response_expected_status_missing() {
+        let response = b"ACK 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n".to_vec();
+        assert_eq!(
+            process_ack_response(response),
+            Err(UtilError::ExpectedStatusInAckResponse)
         );
     }
 }
