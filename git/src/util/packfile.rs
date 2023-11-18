@@ -195,11 +195,13 @@ pub fn send_packfile_witch_references_client(
         UtilError::SendSignaturePackfile,
     )?;
 
-    // Envio numero de objetos
-    // [TODO] , aqui debo obtener la cantidad de objetos a enviar]
+    // Envio el len 
+
+    // Envio los de objetos
+    // [TODO]
     // Pero la diferencia de esta funcion, es que no tengo que enviar todos los objs.
     // en el server tengo el miembro client_references que tiene un vector con las referencias
-    //  ya tiene el cliente
+    // que ya tiene el cliente
     // entonces solo tengo que enviar los objetos que el cliente no tiene
     // EN resumen, necesito el vector de objetos a enviar para poder continuar con el envio
 
