@@ -77,7 +77,23 @@ pub fn receive_nak(stream: &mut dyn Read) -> Result<(), UtilError> {
     Ok(())
 }
 
-
+/// Recibe y verifica el mensaje de finalización "done" del cliente.
+///
+/// Esta función se utiliza para recibir el mensaje de finalización "done" del cliente
+/// en el flujo de entrada proporcionado. Verifica que el mensaje recibido sea "done",
+/// y en caso de éxito, retorna `Ok(())`. En caso de error o si el mensaje no es "done",
+/// retorna un `Err(UtilError)`.
+///
+/// # Argumentos
+///
+/// * `stream` - Una referencia mutable a un objeto que implementa el trait `Read`,
+///              que representa el flujo de entrada desde el cliente.
+/// * `err`    - Un error específico que se retornará en caso de que la verificación falle.
+///
+/// # Retorna
+///
+/// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
+///
 pub fn receive_done(stream: &mut dyn Read, err: UtilError) -> Result<(), UtilError> {
     let mut buffer = [0u8; 0]; // Tamaño suficiente para "0009done\n"
     if stream.read_exact(&mut buffer).is_err() {
@@ -300,7 +316,8 @@ pub fn sent_references_valid_client(stream: &mut dyn Write, objt_id: &Vec<String
     Ok(())
 }
 
-/// Envia una confirmacion ACK por la última referencia al cliente, para cerrar la etapa de negociacion
+/// Envia una confirmacion ACK por la última referencia al cliente, para cerrar la etapa 
+/// çde negociacion.
 ///
 /// Esta función envía un mensaje de agradecimiento al cliente por el último objeto en
 /// el vector proporcionado. El mensaje de agradecimiento indica que el objeto es reconocido
