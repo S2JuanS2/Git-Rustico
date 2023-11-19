@@ -64,10 +64,13 @@ pub fn upload_request_type(socket: &mut TcpStream, server: &GitServer, type_req:
 ///
 pub fn receive_nak(stream: &mut dyn Read) -> Result<(), UtilError> {
     let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
+    println!("receive_nak | Aqui rompi");
     if stream.read_exact(&mut buffer).is_err() {
+        println!("receive_nak | exact");
         return Err(UtilError::PackfileNegotiationReceiveNAK);
     }
     let response = String::from_utf8_lossy(&buffer);
+    println!("receive_nak | response: {}", response);
 
     if response != PKT_NAK {
         return Err(UtilError::PackfileNegotiationReceiveNAK);
@@ -127,12 +130,22 @@ pub fn receive_request(
     stream: &mut dyn Read,
 ) -> Result<(Vec<String>, Vec<String>, Vec<String>), UtilError> {
     // Want
+    println!("receive_request | Ingrese");
     let lines = pkt_line::read(stream)?;
+    println!("receive_request | lines: {:?}", lines);
+    for i in 0..lines.len() {
+        let lala = String::from_utf8(lines[i].clone()).unwrap();
+        println!("receive_request | lala: {}", lala);
+    }
     let (capacilities, request) = process_received_requests_want(lines)?;
 
-    let lines = pkt_line::read(stream)?;
 
+    println!("receive_request | A punto de leer el done");
+    let lines = pkt_line::read(stream)?;
+    println!("receive_request | lines: {:?}", lines);
     if lines.len() == 1 && lines[0] == b"done" {
+
+        println!("receive_request | Aqui debe entrar por ser el clone");
         return Ok((capacilities, request, Vec::new()));
     }
 
@@ -170,11 +183,13 @@ pub fn receive_request(
 fn process_received_requests_want(
     lines: Vec<Vec<u8>>,
 ) -> Result<(Vec<String>, Vec<String>), UtilError> {
+    println!("process_received_requests_want | Ingrese");
     let mut request = Vec::new();
 
     // Want and capabilities
     let (hash, capacilities) = extraction_capabilities(&lines[0])?;
     request.push(hash);
+    println!("process_received_requests_want | Extrai las capacidades");
 
     // Want
     let want = receive_request_type(
@@ -182,8 +197,10 @@ fn process_received_requests_want(
         "want",
         UtilError::UnexpectedRequestNotWant,
     )?;
-    request.extend(want);
+    println!("process_received_requests_want | Mi referencia es want");
 
+    request.extend(want);
+    println!("process_received_requests_want | Sali");
     Ok((capacilities, request))
 }
 
@@ -211,6 +228,7 @@ fn process_received_requests_want(
 /// o validación de las capacidades y el hash.
 ///
 fn extraction_capabilities(line: &[u8]) -> Result<(String, Vec<String>), UtilError> {
+    println!("extraction_capabilities | Ingrese");
     let line_str = String::from_utf8_lossy(line);
     let mut line_split = line_str.split_ascii_whitespace();
     let type_request = line_split
@@ -355,7 +373,7 @@ pub fn packfile_negotiation_partial(stream: &mut TcpStream, server: &mut GitServ
     // Brayan:
     // server.filtrar(reference_que_tenemos)
 
-    upload_request_type(stream, server, CONTINUE)?;
+    upload_request_type(stream, server, "want")?;
     
     // [TODO]
     // Dado las referencias que tenemos en server->references de las branch que 

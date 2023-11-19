@@ -1,6 +1,7 @@
 use crate::consts::CONTINUE;
 use crate::consts::FLUSH_PKT;
 use crate::consts::PKT_DONE;
+use crate::consts::WANT;
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_nak;
 use crate::git_transport::negotiation::upload_request_type;
@@ -59,7 +60,7 @@ pub fn packfile_negotiation(
     socket: &mut TcpStream,
     advertised: &GitServer,
 ) -> Result<(), UtilError> {
-    upload_request_type(socket, advertised, CONTINUE)?;
+    upload_request_type(socket, advertised, WANT)?;
     send_done(socket, UtilError::UploadRequestDone)?;
     receive_nak(socket)?;
     Ok(())
@@ -154,6 +155,7 @@ pub fn received_message(
 ) -> Result<(), UtilError> {
     let mut buffer = vec![0u8; message.len()];
     if stream.read_exact(&mut buffer).is_err() {
+        println!("received_message| Error reading buffer");
         return Err(UtilError::PackfileNegotiationReceiveNAK);
     }
     let response = String::from_utf8_lossy(&buffer);
