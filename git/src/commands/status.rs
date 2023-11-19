@@ -62,6 +62,25 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
 
     let index_content = get_index_content(&directory_git)?;
 
+    let index_files = get_lines_in_index(index_content);
+
+    let working_directory_hash_list = get_hashes_working_directory(directory)?;
+    let index_hashes = get_hashes_index(index_files)?;
+    let (updated_files_list, untracked_files_list, staged_files_list, deleted_files_list) =
+        compare_hash_lists(&working_directory_hash_list, &index_hashes, directory);
+    let files_not_commited_list = check_for_commit(directory, staged_files_list)?;
+    let value = print_changes(
+        updated_files_list,
+        untracked_files_list,
+        files_not_commited_list,
+        deleted_files_list,
+        directory,
+    )?;
+
+    Ok(value)
+}
+
+pub fn get_lines_in_index(index_content: String) -> Vec<String> {
     let lines: Vec<String> = index_content.lines().map(String::from).collect();
     let mut index_files: Vec<String> = Vec::new();
     if !lines.is_empty() {
@@ -69,22 +88,13 @@ pub fn git_status(directory: &str) -> Result<String, GitError> {
             index_files.push(line);
         }
     }
-
-    let working_directory_hash_list = get_hashes_working_directory(directory)?;
-    let index_hashes = get_hashes_index(index_files)?;
-    let (updated_files_list, untracked_files_list, 
-        staged_files_list, deleted_files_list) =
-        compare_hash_lists(working_directory_hash_list, index_hashes, directory);
-    let files_not_commited_list = check_for_commit(directory, staged_files_list)?;
-    let value = print_changes(updated_files_list, untracked_files_list, files_not_commited_list, deleted_files_list, directory)?;
-
-    Ok(value)
+    index_files
 }
 
 /// Devuelve el contenido del archivo index.
 /// ###Parámetros:
 /// 'directory_git': directorio del repositorio local.
-pub fn get_index_content(directory_git: &String) -> Result<String, GitError> {
+pub fn get_index_content(directory_git: &str) -> Result<String, GitError> {
     let index_path = format!("{}/index", directory_git);
     let index_file = File::open(index_path);
     let mut index_file = match index_file {
@@ -119,14 +129,29 @@ fn print_changes(
 
     formatted_result.push_str("On branch ");
     formatted_result.push_str(&head_branch_name);
-    if updated_files_list.is_empty() && untracked_files_list.is_empty() && files_not_commited_list.is_empty() && deleted_files_list.is_empty() {
+    if updated_files_list.is_empty()
+        && untracked_files_list.is_empty()
+        && files_not_commited_list.is_empty()
+        && deleted_files_list.is_empty()
+    {
         branch_up_to_date(&mut formatted_result, head_branch_name);
     }
     if !updated_files_list.is_empty() || !deleted_files_list.is_empty() {
-        branch_with_untracked_changes(&mut formatted_result, &updated_files_list, &untracked_files_list, &deleted_files_list, directory);
+        branch_with_untracked_changes(
+            &mut formatted_result,
+            &updated_files_list,
+            &untracked_files_list,
+            &deleted_files_list,
+            directory,
+        );
     }
     if !untracked_files_list.is_empty() {
-        branch_with_untracked_files(&mut formatted_result, &untracked_files_list, &files_not_commited_list, directory);
+        branch_with_untracked_files(
+            &mut formatted_result,
+            &untracked_files_list,
+            &files_not_commited_list,
+            directory,
+        );
     }
     if !files_not_commited_list.is_empty() {
         branch_missing_commits(&mut formatted_result, &files_not_commited_list);
@@ -167,7 +192,8 @@ fn branch_with_untracked_changes(
         }
     }
     if untracked_files_list.is_empty() {
-        formatted_result.push_str("\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
+        formatted_result
+            .push_str("\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
     }
 }
 
@@ -184,7 +210,8 @@ fn branch_with_untracked_files(
     directory: &str,
 ) {
     formatted_result.push_str("\nUntracked files:\n");
-    formatted_result.push_str("  (use \"git add <file>...\" to include in what will be committed)\n");
+    formatted_result
+        .push_str("  (use \"git add <file>...\" to include in what will be committed)\n");
 
     if !untracked_files_list.is_empty() {
         for file in untracked_files_list {
@@ -193,7 +220,9 @@ fn branch_with_untracked_files(
         }
     }
     if files_not_commited_list.is_empty() {
-        formatted_result.push_str("\nnothing added to commit but untracked files present (use \"git add\" to track)\n");
+        formatted_result.push_str(
+            "\nnothing added to commit but untracked files present (use \"git add\" to track)\n",
+        );
     }
 }
 
@@ -201,10 +230,7 @@ fn branch_with_untracked_files(
 /// ###Parámetros:
 /// 'formatted_result': string con el resultado del status formateado.
 /// 'files_not_commited_list': vector con los nombres de los archivos que estan en el staging area y se van a incluir en el proximo commit.
-fn branch_missing_commits(
-    formatted_result: &mut String,
-    files_not_commited_list: &Vec<String>,
-) {
+fn branch_missing_commits(formatted_result: &mut String, files_not_commited_list: &Vec<String>) {
     formatted_result.push_str("\nChanges to be committed:\n");
     formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
 
@@ -234,35 +260,54 @@ fn branch_up_to_date(formatted_result: &mut String, head_branch_name: String) {
 /// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
 /// 'index_hashes': vector con los nombres de los archivos en el index y sus hashes.
 /// 'directory': directorio del repositorio local.
-fn compare_hash_lists(
-    working_directory_hash_list: HashMap<String, String>,
-    index_hashes: Vec<(String, String)>,
+pub fn compare_hash_lists(
+    working_directory_hash_list: &HashMap<String, String>,
+    index_hashes: &Vec<(String, String)>,
     directory: &str,
-) -> (Vec<(String, String)>, Vec<(String, String)>, Vec<(String, String)>, Vec<String>) {
+) -> (
+    Vec<(String, String)>,
+    Vec<(String, String)>,
+    Vec<(String, String)>,
+    Vec<String>,
+) {
     let mut updated_files_list: Vec<(String, String)> = Vec::new();
     let mut untracked_files_list: Vec<(String, String)> = Vec::new();
     let mut staged_files_list: Vec<(String, String)> = Vec::new();
-    for working_dir_hash in &working_directory_hash_list {
+    for working_dir_hash in working_directory_hash_list {
         let mut found_hash_in_index = false;
-        for index_hash in &index_hashes {
+        for index_hash in index_hashes {
             let file_path = &working_dir_hash.0[directory.len() + 1..];
             if file_path == index_hash.0 {
                 // el archivo esta trackeado, debo ver si esta en su ultima version
                 found_hash_in_index = true;
                 if working_dir_hash.1 != &index_hash.1 {
-                    updated_files_list.push((working_dir_hash.0.to_string(), working_dir_hash.1.to_string()));
-                }
-                else {
-                    staged_files_list.push((working_dir_hash.0.to_string(), working_dir_hash.1.to_string()));
+                    updated_files_list.push((
+                        working_dir_hash.0.to_string(),
+                        working_dir_hash.1.to_string(),
+                    ));
+                } else {
+                    staged_files_list.push((
+                        working_dir_hash.0.to_string(),
+                        working_dir_hash.1.to_string(),
+                    ));
                 }
             }
         }
         if !found_hash_in_index {
-            untracked_files_list.push((working_dir_hash.0.to_string(), working_dir_hash.1.to_string()));
+            untracked_files_list.push((
+                working_dir_hash.0.to_string(),
+                working_dir_hash.1.to_string(),
+            ));
         }
     }
-    let deleted_files_list = check_for_deleted_files(&index_hashes, &working_directory_hash_list, directory);
-    (updated_files_list, untracked_files_list, staged_files_list, deleted_files_list)
+    let deleted_files_list =
+        check_for_deleted_files(index_hashes, working_directory_hash_list, directory);
+    (
+        updated_files_list,
+        untracked_files_list,
+        staged_files_list,
+        deleted_files_list,
+    )
 }
 
 /// Devuelve un vector con los nombres de los archivos que se eliminaron del working directory pero siguen en el index.
@@ -270,7 +315,7 @@ fn compare_hash_lists(
 /// 'index_hashes': vector con los nombres de los archivos en el index y sus hashes.
 /// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
 /// 'directory': directorio del repositorio local.
-fn check_for_deleted_files(
+pub fn check_for_deleted_files(
     index_hashes: &Vec<(String, String)>,
     working_directory_hash_list: &HashMap<String, String>,
     directory: &str,
@@ -301,13 +346,19 @@ fn check_for_deleted_files(
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'staged_files_list': vector con los nombres de los archivos en el staging area y sus hashes
-fn check_for_commit(directory: &str, staged_files_list: Vec<(String, String)>) -> Result<Vec<String>, GitError> {
+fn check_for_commit(
+    directory: &str,
+    staged_files_list: Vec<(String, String)>,
+) -> Result<Vec<String>, GitError> {
     let mut files_not_commited_list: Vec<String> = Vec::new();
     if !staged_files_list.is_empty() {
         let head_branch = get_head_branch(directory)?;
         let head_branch = format!("{}/.git/refs/heads/{}", directory, head_branch);
         if fs::metadata(&head_branch).is_err() {
-            files_not_commited_list = staged_files_list.iter().map(|file| file.0.to_string()).collect();
+            files_not_commited_list = staged_files_list
+                .iter()
+                .map(|file| file.0.to_string())
+                .collect();
             return Ok(files_not_commited_list);
         }
         let head_branch_file = open_file(&head_branch)?;
@@ -325,7 +376,7 @@ fn check_for_commit(directory: &str, staged_files_list: Vec<(String, String)>) -
 /// Devuelve un vector con los nombres de los archivos en el index y sus hashes.
 /// ###Parámetros:
 /// 'index_files_list': vector con las lineas del index.
-fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String)>, GitError> {
+pub fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String)>, GitError> {
     let mut index_hashes: Vec<(String, String)> = Vec::new();
     for file in index_files_list {
         let parts: Vec<&str> = file.split(' ').collect();
@@ -348,9 +399,13 @@ fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String
 /// 'directory': directorio del repositorio local.
 /// 'commit_actual': hash del commit actual.
 /// 'file_hash': hash del archivo que se quiere buscar.
-fn get_files_in_commit(directory: &str, commit_actual: &str, file_hash: &str) -> Result<bool, GitError> {
+fn get_files_in_commit(
+    directory: &str,
+    commit_actual: &str,
+    file_hash: &str,
+) -> Result<bool, GitError> {
     let mut commited = false;
-    let commit_content = git_cat_file(directory, &commit_actual, "-p")?;
+    let commit_content = git_cat_file(directory, commit_actual, "-p")?;
     let commit_lines = commit_content.split('\n');
     let mut parent_commit = "";
     for line in commit_lines {
@@ -361,22 +416,34 @@ fn get_files_in_commit(directory: &str, commit_actual: &str, file_hash: &str) ->
         }
         if line.starts_with("tree") {
             if let Some(tree_hash) = line.split(' ').last() {
-                get_tree_content(directory, tree_hash, &file_hash, &mut commited, parent_commit)?;
+                get_tree_content(
+                    directory,
+                    tree_hash,
+                    file_hash,
+                    &mut commited,
+                    parent_commit,
+                )?;
             }
         }
     }
     Ok(commited)
 }
 
-/// Recorre el arbol de archivos que se le pasa como parametro y busca en ellos el hash del archivo que 
-/// se le pasa como parametro. 
+/// Recorre el arbol de archivos que se le pasa como parametro y busca en ellos el hash del archivo que
+/// se le pasa como parametro.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'tree_hash': hash del arbol de archivos.
 /// 'file_hash': hash del archivo que se quiere buscar.
 /// 'commited': booleano que indica si el archivo que se quiere buscar fue incluido en un commit.
 /// 'parent_commit': hash del commit padre.
-fn get_tree_content(directory: &str, tree_hash: &str, file_hash: &str, commited: &mut bool, parent_commit: &str) -> Result<(), GitError> {
+fn get_tree_content(
+    directory: &str,
+    tree_hash: &str,
+    file_hash: &str,
+    commited: &mut bool,
+    parent_commit: &str,
+) -> Result<(), GitError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     let tree_lines = tree_content.split('\n');
     for tree_line in tree_lines {
@@ -398,7 +465,7 @@ fn get_tree_content(directory: &str, tree_hash: &str, file_hash: &str, commited:
 /// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
+pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = directory.to_string();
     calculate_directory_hashes(&working_directory, &mut working_directory_hash_list)?;
@@ -465,7 +532,11 @@ fn create_hash_working_dir(
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::{add::git_add, init::git_init, commit::{Commit, git_commit}};
+    use crate::commands::{
+        add::git_add,
+        commit::{git_commit, Commit},
+        init::git_init,
+    };
 
     use super::*;
     use std::io::Write;
