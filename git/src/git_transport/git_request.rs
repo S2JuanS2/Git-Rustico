@@ -196,7 +196,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
 
         server.update_data(capabilities, wanted_objects);
         // [TODO]
-        // Dato las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
+        // Dado las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
         // Se deben filtrar las referencias que tiene el servidor
         // obj_hash = filtrar_referencias_que_tenemos(had_objects)
         let obj_hash: Vec<String> = Vec::new();
