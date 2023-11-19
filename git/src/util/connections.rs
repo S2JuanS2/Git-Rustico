@@ -1,8 +1,9 @@
 use crate::consts::FLUSH_PKT;
 use crate::consts::PKT_DONE;
+use crate::consts::WANT;
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_nak;
-use crate::git_transport::negotiation::upload_request;
+use crate::git_transport::negotiation::upload_request_type;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpListener;
@@ -58,7 +59,7 @@ pub fn packfile_negotiation(
     socket: &mut TcpStream,
     advertised: &GitServer,
 ) -> Result<(), UtilError> {
-    upload_request(socket, advertised)?;
+    upload_request_type(socket, advertised, WANT)?;
     send_done(socket, UtilError::UploadRequestDone)?;
     receive_nak(socket)?;
     Ok(())

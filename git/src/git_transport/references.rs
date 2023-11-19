@@ -86,9 +86,7 @@ impl Reference {
         refs.extend(refs_tag);
         refs.extend(refs_remote);
 
-        // println!("refs: {:?}", refs);
         let head = get_reference_head(&path_git, &refs)?;
-        // println!("head: {:?}", head);
         refs.insert(0, head);
         Ok(refs)
     }

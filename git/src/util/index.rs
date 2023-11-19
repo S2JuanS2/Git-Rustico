@@ -47,14 +47,29 @@ pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, GitE
             let hash = parts[2];
 
             if file_name.contains('/') {
-                handle_folder_entry(&mut tree, &mut sub_tree, &mut folder_name, file_name, mode, hash, git_dir)?;
+                handle_folder_entry(
+                    &mut tree,
+                    &mut sub_tree,
+                    &mut folder_name,
+                    file_name,
+                    mode,
+                    hash,
+                    git_dir,
+                )?;
             } else {
-                handle_file_entry(&mut tree, &mut sub_tree, &mut folder_name, file_name, mode, hash, git_dir)?;
+                handle_file_entry(
+                    &mut tree,
+                    &mut sub_tree,
+                    &mut folder_name,
+                    file_name,
+                    mode,
+                    hash,
+                    git_dir,
+                )?;
             }
-        }else{
+        } else {
             return Err(GitError::InvalidObjectLength);
         }
-
     }
     handle_last_subtree(&mut tree, &sub_tree, &folder_name, git_dir)?;
 
@@ -75,7 +90,15 @@ pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, GitE
 ///
 /// Devuelve un `Result` que contiene un () en caso de éxito o un error (GitError) en caso de fallo.
 ///
-fn handle_folder_entry(tree: &mut String, sub_tree: &mut String, folder_name: &mut String, file_name: &str, mode: &str, hash: &str, git_dir: &str) -> Result<(), GitError> {
+fn handle_folder_entry(
+    tree: &mut String,
+    sub_tree: &mut String,
+    folder_name: &mut String,
+    file_name: &str,
+    mode: &str,
+    hash: &str,
+    git_dir: &str,
+) -> Result<(), GitError> {
     let path_parts: Vec<&str> = file_name.split('/').collect();
     let new_path: Vec<&str> = path_parts.clone().into_iter().skip(1).collect();
     let new_path_str = new_path.join("/");
@@ -105,7 +128,15 @@ fn handle_folder_entry(tree: &mut String, sub_tree: &mut String, folder_name: &m
 ///
 /// Devuelve un `Result` que contiene un () en caso de éxito o un error (GitError) en caso de fallo.
 ///
-fn handle_file_entry(tree: &mut String, sub_tree: &mut String, folder_name: &mut String, file_name: &str, mode: &str, hash: &str, git_dir: &str) -> Result<(), GitError> {
+fn handle_file_entry(
+    tree: &mut String,
+    sub_tree: &mut String,
+    folder_name: &mut String,
+    file_name: &str,
+    mode: &str,
+    hash: &str,
+    git_dir: &str,
+) -> Result<(), GitError> {
     handle_subtree(tree, sub_tree, folder_name, git_dir)?;
 
     let blob = format!("{} {} {}\n", file_name, mode, hash);
@@ -127,7 +158,12 @@ fn handle_file_entry(tree: &mut String, sub_tree: &mut String, folder_name: &mut
 ///
 /// Devuelve un `Result` que contiene un () en caso de éxito o un error (GitError) en caso de fallo.
 ///
-fn handle_subtree(tree: &mut String, sub_tree: &mut String, folder_name: &str, git_dir: &str) -> Result<(), GitError> {
+fn handle_subtree(
+    tree: &mut String,
+    sub_tree: &mut String,
+    folder_name: &str,
+    git_dir: &str,
+) -> Result<(), GitError> {
     if !sub_tree.is_empty() {
         let hash_sub_tree = recovery_index(&sub_tree, git_dir)?;
         let blob = format!("{} {} {}\n", folder_name, TREE, hash_sub_tree);
@@ -150,7 +186,12 @@ fn handle_subtree(tree: &mut String, sub_tree: &mut String, folder_name: &str, g
 ///
 /// Devuelve un `Result` que contiene un () en caso de éxito o un error (GitError) en caso de fallo.
 ///
-fn handle_last_subtree(tree: &mut String, sub_tree: &str, folder_name: &str, git_dir: &str) -> Result<(), GitError> {
+fn handle_last_subtree(
+    tree: &mut String,
+    sub_tree: &str,
+    folder_name: &str,
+    git_dir: &str,
+) -> Result<(), GitError> {
     if !sub_tree.is_empty() {
         handle_subtree(tree, &mut sub_tree.to_string(), folder_name, git_dir)?;
     }
@@ -168,6 +209,6 @@ mod tests {
         let content = open_index(&git_dir).expect("Error al abrir el index");
         recovery_index(&content,&git_dir).expect("Error al recorer el index");
     }
-    
+
 }
 */
