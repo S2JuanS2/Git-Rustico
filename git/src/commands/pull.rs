@@ -1,3 +1,4 @@
+use crate::commands::config::GitConfig;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
@@ -41,7 +42,13 @@ pub fn git_pull(
     _socket: &mut TcpStream,
     _ip: &str,
     _port: &str,
-    _repo: &str,
+    repo: &str,
 ) -> Result<(), GitError> {
+    // Obtengo el repositorio remoto
+    let git_config = GitConfig::new_from_repo(repo)?;
+    let repo_remoto = git_config.get_remote_repo()?;
+
+    println!("Pull del repositorio remoto: {}", repo_remoto);
+    
     Ok(())
 }
