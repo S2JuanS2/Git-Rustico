@@ -178,7 +178,7 @@ pub fn send_packfile(
 pub fn send_packfile_witch_references_client(
     writer: &mut dyn Write,
     server: &GitServer,
-    path_repo: &str,
+    _path_repo: &str,
 ) -> Result<(), UtilError> {
     // [REFACTOR, SE REPITE CON EL HEADER CON send_packfile]
     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;

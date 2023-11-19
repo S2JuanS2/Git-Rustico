@@ -365,6 +365,7 @@ pub fn packfile_negotiation_partial(stream: &mut TcpStream, server: &mut GitServ
     // Para esto me podes dar un vector con los ultimos commit de cada branch
     // NOta: Si la branch no la tenemos no hace falta que me lo agregues al vector porque
     // El servidor entendera que no tenemos nada y nos enviara todo de esa branch
+    // Para conversar: Que pasa si el ultimo commit el local es un commit de mas adelante del servidor
     upload_request_type(stream, server, HAVE)?;
 
     let ack_references = recive_acknowledgments(stream)?;
