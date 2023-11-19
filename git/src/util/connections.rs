@@ -155,7 +155,6 @@ pub fn received_message(
 ) -> Result<(), UtilError> {
     let mut buffer = vec![0u8; message.len()];
     if stream.read_exact(&mut buffer).is_err() {
-        println!("received_message| Error reading buffer");
         return Err(UtilError::PackfileNegotiationReceiveNAK);
     }
     let response = String::from_utf8_lossy(&buffer);

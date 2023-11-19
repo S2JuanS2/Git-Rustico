@@ -15,13 +15,10 @@ use super::{
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, UtilError> {
     read_signature(reader)?;
-    // println!("Signature: {}", PACK_SIGNATURE);
 
     let _version = read_version(reader)?;
-    // println!("Version: {}", version);
 
     let number_object = read_objects_contained(reader)?;
-    // println!("Number of objects: {}", number_object);
     Ok(number_object)
 }
 
