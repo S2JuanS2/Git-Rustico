@@ -34,7 +34,7 @@ pub enum UtilError {
     InvalidObjectType,
     ObjectDeserialization,
     EmptyDecompressionError,
-    PackfileNegotiationReceiveNACK,
+    PackfileNegotiationReceiveNAK,
     InvalidPacketLineRequest,
     RequestInvalidHostFormat,
     InvalidRequestFlush,
@@ -52,11 +52,14 @@ pub enum UtilError {
     SendVersionPackfile,
     SendSignaturePackfile,
     GetObjectsPackfile,
-    SendNACKPackfile,
+    SendNAKPackfile,
     SendObjectPackfile,
     ObjectDeserializationPackfile,
     ChannelSendLog,
     UnexpectedRequestNotHave,
+    SendNAKConfirmReferences,
+    ReceiveDoneConfRefs,
+    SendLastACKConf,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -91,7 +94,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidObjectType => write!(f, "InvalidObjectTypeError: Tipo de objeto inválido."),
         UtilError::ObjectDeserialization => write!(f, "ObjectDeserializationError: Error al deserializar el objeto."),
         UtilError::EmptyDecompressionError => write!(f, "EmptyDecompressionError: Error al descomprimir el objeto, me dio un vector vacío."),
-        UtilError::PackfileNegotiationReceiveNACK => write!(f, "PackfileNegotiationReceiveNACKError: Error al recibir el NACK."),
+        UtilError::PackfileNegotiationReceiveNAK => write!(f, "PackfileNegotiationReceiveNAKError: Error al recibir el NAK."),
         UtilError::InvalidPacketLineRequest => write!(f, "InvalidPacketLineRequestError: Error al leer la solicitud de línea de paquete. No cumple con el formato establecido"),
         UtilError::RequestInvalidHostFormat => write!(f, "RequestInvalidHostFormatError: Error al leer la solicitud de línea de paquete. El formato del host es inválido"),
         UtilError::InvalidRequestFlush => write!(f, "InvalidRequestFlushError: Error al leer la solicitud de línea de paquete. La solicitud de flush es inválida"),
@@ -109,11 +112,14 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::SendVersionPackfile => write!(f, "SendVersionPackfileError: Error al enviar la versión del packfile."),
         UtilError::SendSignaturePackfile => write!(f, "SendSignaturePackfileError: Error al enviar la firma del packfile."),
         UtilError::GetObjectsPackfile => write!(f, "GetObjectsPackfileError: Error al obtener los objetos del packfile."),
-        UtilError::SendNACKPackfile => write!(f, "SendNACKPackfileError: Error al enviar el NACK para preparar el packfile."),
+        UtilError::SendNAKPackfile => write!(f, "SendNAKPackfileError: Error al enviar el NAK para preparar el packfile."),
         UtilError::SendObjectPackfile => write!(f, "SendObjectPackfileError: Error al enviar el objeto del packfile."),
         UtilError::ObjectDeserializationPackfile => write!(f, "ObjectDeserializationPackfileError: Error al deserializar el objeto para crear el packfile."),
         UtilError::ChannelSendLog => write!(f, "ChannelSendLogError: Error al enviar un mensaje de registro por el canal."),
         UtilError::UnexpectedRequestNotHave => write!(f, "UnexpectedRequestNotHaveError: Se recibió una solicitud inesperada que no es have."),
+        UtilError::SendNAKConfirmReferences => write!(f, "SendNAKConfirmReferencesError: Error al enviar el NAK para confirmar las referencias."),
+        UtilError::ReceiveDoneConfRefs => write!(f, "ReceiveDoneConfRefsError: Error al recibir el done para confirmar las referencias."),
+        UtilError::SendLastACKConf => write!(f, "SendLastACKConfError: Error al enviar el último ACK para confirmar las referencias."),
     }
 }
 

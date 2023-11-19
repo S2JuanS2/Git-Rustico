@@ -1,5 +1,5 @@
 use crate::{
-    consts::{PKT_DONE, PKT_NACK},
+    consts::{PKT_DONE, PKT_NAK},
     git_server::GitServer,
     util::{
         connections::{received_message, send_flush, send_message},
@@ -8,7 +8,10 @@ use crate::{
         validation::is_valid_obj_id,
     },
 };
-use std::{io::Read, net::TcpStream};
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+};
 
 /// Realiza una solicitud de carga al servidor Git.
 ///
@@ -44,9 +47,9 @@ pub fn upload_request(socket: &mut TcpStream, advertised: &GitServer) -> Result<
     Ok(())
 }
 
-/// Recibe y procesa un mensaje de no confirmación (NACK) del flujo de entrada.
+/// Recibe y procesa un mensaje de no confirmación (NAK) del flujo de entrada.
 ///
-/// Lee del flujo `stream` un mensaje de no confirmación (NACK) con un formato esperado.
+/// Lee del flujo `stream` un mensaje de no confirmación (NAK) con un formato esperado.
 ///
 /// # Argumentos
 ///
@@ -56,23 +59,53 @@ pub fn upload_request(socket: &mut TcpStream, advertised: &GitServer) -> Result<
 ///
 /// Puede devolver un error en los siguientes casos:
 ///
-/// - Si hay un error al leer los bytes del flujo de entrada o si la lectura no coincide con el mensaje NACK,
-///   se devuelve un error `PackfileNegotiationReceiveNACK`.
+/// - Si hay un error al leer los bytes del flujo de entrada o si la lectura no coincide con el mensaje NAK,
+///   se devuelve un error `PackfileNegotiationReceiveNAK`.
 ///
 /// # Retorno
 ///
 /// Devuelve un `Result` que contiene `()` en caso de éxito o un error (`UtilError`) si falla la lectura
-/// del mensaje NACK o si el mensaje recibido no coincide con el esperado.
+/// del mensaje NAK o si el mensaje recibido no coincide con el esperado.
 ///
-pub fn receive_nack(stream: &mut dyn Read) -> Result<(), UtilError> {
+pub fn receive_nak(stream: &mut dyn Read) -> Result<(), UtilError> {
     let mut buffer = [0u8; 8]; // Tamaño suficiente para "0008NAK\n"
     if stream.read_exact(&mut buffer).is_err() {
-        return Err(UtilError::PackfileNegotiationReceiveNACK);
+        return Err(UtilError::PackfileNegotiationReceiveNAK);
     }
     let response = String::from_utf8_lossy(&buffer);
 
-    if response != PKT_NACK {
-        return Err(UtilError::PackfileNegotiationReceiveNACK);
+    if response != PKT_NAK {
+        return Err(UtilError::PackfileNegotiationReceiveNAK);
+    }
+    Ok(())
+}
+
+/// Recibe y verifica el mensaje de finalización "done" del cliente.
+///
+/// Esta función se utiliza para recibir el mensaje de finalización "done" del cliente
+/// en el flujo de entrada proporcionado. Verifica que el mensaje recibido sea "done",
+/// y en caso de éxito, retorna `Ok(())`. En caso de error o si el mensaje no es "done",
+/// retorna un `Err(UtilError)`.
+///
+/// # Argumentos
+///
+/// * `stream` - Una referencia mutable a un objeto que implementa el trait `Read`,
+///              que representa el flujo de entrada desde el cliente.
+/// * `err`    - Un error específico que se retornará en caso de que la verificación falle.
+///
+/// # Retorna
+///
+/// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
+///
+pub fn receive_done(stream: &mut dyn Read, err: UtilError) -> Result<(), UtilError> {
+    let mut buffer = [0u8; 0]; // Tamaño suficiente para "0009done\n"
+    if stream.read_exact(&mut buffer).is_err() {
+        return Err(err);
+    }
+    let response = String::from_utf8_lossy(&buffer);
+
+    if response != PKT_DONE {
+        return Err(err);
     }
     Ok(())
 }
@@ -254,6 +287,64 @@ fn receive_request_type(
         acc.push(hash.to_string());
         Ok(acc)
     })
+}
+
+/// Envia las referencias confirmadas al cliente durante la fase de negociación.
+///
+/// Para cada identificador de objeto en el vector proporcionado, esta función envía un
+/// mensaje de agradecimiento al cliente, indicando que el objeto es reconocido y que la
+/// transferencia puede continuar. Después de procesar todos los objetos, envía un mensaje
+/// de agradecimiento negativo (NAK) para confirmar las referencias y señalar el final de
+/// la fase de agradecimiento.
+///
+/// # Argumentos
+///
+/// * `stream` - Una referencia mutable a un objeto de tipo trait que implementa el trait
+///              `Write`, que representa el flujo de salida hacia el cliente.
+/// * `objt_id` - Un vector que contiene los identificadores de objetos para los cuales
+///               se deben enviar mensajes de agradecimiento.
+///
+/// # Retorna
+///
+/// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
+///
+pub fn sent_references_valid_client(
+    stream: &mut dyn Write,
+    objt_id: &Vec<String>,
+) -> Result<(), UtilError> {
+    for obj in objt_id {
+        let message = format!("ACK{} continue\n", obj);
+        let message = pkt_line::add_length_prefix(&message, message.len());
+        send_message(stream, &message, UtilError::UploadRequest)?;
+    }
+    send_message(stream, PKT_NAK, UtilError::SendNAKConfirmReferences)?; // SendNAKConfirmReferences
+    Ok(())
+}
+
+/// Envia una confirmacion ACK por la última referencia al cliente, para cerrar la etapa
+/// çde negociacion.
+///
+/// Esta función envía un mensaje de agradecimiento al cliente por el último objeto en
+/// el vector proporcionado. El mensaje de agradecimiento indica que el objeto es reconocido
+/// y la transferencia puede continuar.
+///
+/// # Argumentos
+///
+/// * `writer` - Una referencia mutable a un objeto que implementa el trait `Write`, que
+///              representa el flujo de salida hacia el cliente.
+/// * `objs`   - Un vector que contiene los identificadores de objetos, y se asume que
+///              está ordenado de manera que el último objeto en el vector es el más reciente.
+///
+/// # Retorna
+///
+/// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
+///
+pub fn send_acknowledge_last_reference(
+    writer: &mut dyn Write,
+    objs: &Vec<String>,
+) -> Result<(), UtilError> {
+    let message = format!("ACK {}\n", objs[objs.len() - 1]);
+    send_message(writer, &message, UtilError::SendLastACKConf)
 }
 
 #[cfg(test)]

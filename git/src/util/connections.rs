@@ -1,7 +1,7 @@
 use crate::consts::FLUSH_PKT;
 use crate::consts::PKT_DONE;
 use crate::git_server::GitServer;
-use crate::git_transport::negotiation::receive_nack;
+use crate::git_transport::negotiation::receive_nak;
 use crate::git_transport::negotiation::upload_request;
 use std::io::Read;
 use std::io::Write;
@@ -60,7 +60,7 @@ pub fn packfile_negotiation(
 ) -> Result<(), UtilError> {
     upload_request(socket, advertised)?;
     send_done(socket, UtilError::UploadRequestDone)?;
-    receive_nack(socket)?;
+    receive_nak(socket)?;
     Ok(())
 }
 
@@ -153,7 +153,7 @@ pub fn received_message(
 ) -> Result<(), UtilError> {
     let mut buffer = vec![0u8; message.len()];
     if stream.read_exact(&mut buffer).is_err() {
-        return Err(UtilError::PackfileNegotiationReceiveNACK);
+        return Err(UtilError::PackfileNegotiationReceiveNAK);
     }
     let response = String::from_utf8_lossy(&buffer);
 
@@ -166,7 +166,7 @@ pub fn received_message(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::consts::{FLUSH_PKT, PKT_NACK};
+    use crate::consts::{FLUSH_PKT, PKT_NAK};
     use std::io::Cursor;
 
     #[test]
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_received_message_success() {
-        let message = PKT_NACK;
+        let message = PKT_NAK;
         let mut stream = Cursor::new(message.as_bytes().to_vec());
 
         let result = received_message(&mut stream, message, UtilError::GenericError);
