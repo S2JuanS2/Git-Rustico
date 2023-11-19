@@ -140,3 +140,5 @@ pub const FILE: &str = "100644";
 pub const PARENT_INITIAL: &str = "0000000000000000000000000000000000000000";
 
 pub const VERSION_DEFAULT: u32 = 2;
+
+pub const CONFIG_FILE: &str = "config";

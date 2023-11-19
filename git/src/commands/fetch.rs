@@ -1,3 +1,4 @@
+use crate::commands::config::GitConfig;
 use crate::consts::GIT_DIR;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::models::client::Client;
@@ -41,11 +42,11 @@ use super::errors::CommandsError;
 /// * Otros errores de `GitError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
-    if args.is_empty() {
+    if args.len() >= 1 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
     let mut socket = start_client(client.get_address())?;
-    git_fetch_all(&mut socket, client.get_ip(), client.get_port(), args[0])
+    git_fetch_all(&mut socket, client.get_ip(), client.get_port(), client.get_directory_path())
 }
 
 pub fn git_fetch_all(
@@ -54,10 +55,15 @@ pub fn git_fetch_all(
     port: &str,
     repo: &str,
 ) -> Result<String, CommandsError> {
-    println!("Fetch del repositorio remoto: {}", repo);
+    
+    // Obtengo el repositorio remoto
+    let git_config = GitConfig::new_from_repo(repo)?;
+    let repo_remoto = git_config.get_remote_repo()?;
+
+    println!("Fetch del repositorio remoto: {}", repo_remoto);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
-    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
+    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
 
     // Reference Discovery
     let mut server = reference_discovery(socket, message)?;

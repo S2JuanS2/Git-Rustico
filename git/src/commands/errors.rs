@@ -10,6 +10,8 @@ pub enum CommandsError {
     CloneMissingRepoError,
     RepositoryNotInitialized,
     CreateGitConfig,
+    FileNotFoundConfig,
+    MissingUrlConfig,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -25,10 +27,10 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::CloneMissingRepoError => {
             write!(f, "CloneMissingRepoError: Use: git clone <repositorio>")
         }
-        CommandsError::RepositoryNotInitialized => {
-            write!(f, "RepositoryNotInitialized: Use: git init")
-        }
+        CommandsError::RepositoryNotInitialized => write!(f, "RepositoryNotInitialized: Use: git init"),
         CommandsError::CreateGitConfig => write!(f, "CreateGitConfig: No se pudo crear el archivo de configuración de Git"),
+        CommandsError::FileNotFoundConfig => write!(f, "FileNotFoundConfig: No se encontró el archivo de configuración de Git"),
+        CommandsError::MissingUrlConfig => write!(f, "MissingUrlConfig: No se encontró la URL del repositorio remoto en el archivo de configuración de Git"),
     }
 }
 
