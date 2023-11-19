@@ -192,7 +192,7 @@ pub fn send_packfile_witch_references_client(
         UtilError::SendSignaturePackfile,
     )?;
 
-    // Envio el len 
+    // Envio el len
 
     // Envio los de objetos
     // [TODO]

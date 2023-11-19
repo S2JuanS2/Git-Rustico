@@ -5,8 +5,7 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
-
-use crate::consts::{GIT_DIR, CONFIG_FILE};
+use crate::consts::{CONFIG_FILE, GIT_DIR};
 
 use super::errors::CommandsError;
 
@@ -66,8 +65,7 @@ impl GitConfig {
     pub fn new_from_repo(repo: &str) -> Result<Self, CommandsError> {
         let mut git_config = GitConfig::new();
         let path = format!("{}/{}/{}", repo, GIT_DIR, CONFIG_FILE);
-        if git_config.read_git_config(&path).is_err()
-        {
+        if git_config.read_git_config(&path).is_err() {
             return Err(CommandsError::FileNotFoundConfig);
         };
         Ok(git_config)
@@ -179,17 +177,14 @@ impl GitConfig {
     /// Devuelve un resultado `io::Result` indicando si la operación fue exitosa o si se produjo un error
     /// al escribir en el archivo.
     ///
-    pub fn write_to_file(&self, file_path: &str) -> Result<(), CommandsError> 
-    {
+    pub fn write_to_file(&self, file_path: &str) -> Result<(), CommandsError> {
         match self._write_to_file(file_path) {
             Ok(_) => Ok(()),
             Err(_) => Err(CommandsError::CreateGitConfig),
-            
-        }    
+        }
     }
 
-    fn _write_to_file(&self, file_path: &str) -> io::Result<()>
-    {
+    fn _write_to_file(&self, file_path: &str) -> io::Result<()> {
         let mut file = File::create(file_path)?;
 
         // Write core section
@@ -213,8 +208,7 @@ impl GitConfig {
     }
 
     pub fn get_remote_repo(&self) -> Result<&String, CommandsError> {
-        match self.remote_origin.get("url")
-        {
+        match self.remote_origin.get("url") {
             Some(url) => Ok(url),
             None => Err(CommandsError::MissingUrlConfig),
         }

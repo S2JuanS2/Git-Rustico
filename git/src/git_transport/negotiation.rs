@@ -1,5 +1,5 @@
 use crate::{
-    consts::{PKT_DONE, PKT_NAK, HAVE},
+    consts::{HAVE, PKT_DONE, PKT_NAK},
     git_server::GitServer,
     util::{
         connections::{received_message, send_flush, send_message},
@@ -13,7 +13,7 @@ use std::{
     net::TcpStream,
 };
 
-/// Envía mensajes de tipo de solicitud (`want` o `have`) al servidor para solicitar 
+/// Envía mensajes de tipo de solicitud (`want` o `have`) al servidor para solicitar
 /// o confirmar referencias.
 ///
 ///
@@ -31,8 +31,12 @@ use std::{
 /// # Retorno
 ///
 /// Esta función no devuelve ningún valor. Si se completa con éxito, indica que las solicitudes "want" se han enviado al servidor correctamente.
-/// 
-pub fn upload_request_type(socket: &mut TcpStream, server: &GitServer, type_req: &str) -> Result<(), UtilError> {
+///
+pub fn upload_request_type(
+    socket: &mut TcpStream,
+    server: &GitServer,
+    type_req: &str,
+) -> Result<(), UtilError> {
     for refs in server.get_references() {
         let message = format!("{} {}\n", type_req, refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
@@ -130,10 +134,8 @@ pub fn receive_request(
     let lines = pkt_line::read(stream)?;
     let (capacilities, request) = process_received_requests_want(lines)?;
 
-
     let lines = pkt_line::read(stream)?;
     if lines.len() == 1 && lines[0] == b"done" {
-
         return Ok((capacilities, request, Vec::new()));
     }
 
@@ -343,8 +345,11 @@ pub fn send_acknowledge_last_reference(
     send_message(writer, &message, UtilError::SendLastACKConf)
 }
 
-pub fn packfile_negotiation_partial(stream: &mut TcpStream, server: &mut GitServer, _path_repo: &str) -> Result<(), UtilError>
-{
+pub fn packfile_negotiation_partial(
+    stream: &mut TcpStream,
+    server: &mut GitServer,
+    _path_repo: &str,
+) -> Result<(), UtilError> {
     // [TODO]
     // Aqui se debe examinar las referencias que nos envio el server
     // Estan en server->references y ver que referencias tenemos en local
@@ -352,14 +357,14 @@ pub fn packfile_negotiation_partial(stream: &mut TcpStream, server: &mut GitServ
     // Para esto me podes dar un vector con las branch que ya tenemos actualizadas
     // y yo las filtro de server->references
     // let reference_que_tenemos = tu_funcion(server.references)
-    
+
     // Brayan:
     // server.filtrar(reference_que_tenemos)
 
     upload_request_type(stream, server, "want")?;
-    
+
     // [TODO]
-    // Dado las referencias que tenemos en server->references de las branch que 
+    // Dado las referencias que tenemos en server->references de las branch que
     // tenemos, debemos de buscar en local
     // los ultimos commit de cada referencia para enviarle al servidor
     // Para esto me podes dar un vector con los ultimos commit de cada branch
@@ -393,9 +398,8 @@ pub fn packfile_negotiation_partial(stream: &mut TcpStream, server: &mut GitServ
 /// - `UtilError::ExpectedAckMissing`: Se esperaba una respuesta ACK y no se encontró.
 /// - `UtilError::ExpectedHashInAckResponse`: Se esperaba un hash en la respuesta ACK y no se encontró.
 /// - `UtilError::ExpectedStatusInAckResponse`: Se esperaba un estado en la respuesta ACK y no se encontró.
-/// 
-pub fn recive_acknowledgments(stream: &mut TcpStream) -> Result<Vec<String>, UtilError>
-{
+///
+pub fn recive_acknowledgments(stream: &mut TcpStream) -> Result<Vec<String>, UtilError> {
     let lines = pkt_line::read(stream)?;
     let mut acks = Vec::new();
     for line in lines {
@@ -417,16 +421,15 @@ pub fn recive_acknowledgments(stream: &mut TcpStream) -> Result<Vec<String>, Uti
 /// exitosa, o un `UtilError` en caso de error.
 ///
 /// # Errores
-/// 
+///
 /// Posibles errores incluyen:
 /// - `UtilError::PktLineReadError`: Error al leer las líneas de datos del servidor.
 /// - `UtilError::InvalidACKFormat`: El formato de la respuesta ACK no es válido.
 /// - `UtilError::ExpectedAckMissing`: Se esperaba una respuesta ACK y no se encontró.
 /// - `UtilError::ExpectedHashInAckResponse`: Se esperaba un hash en la respuesta ACK y no se encontró.
 /// - `UtilError::ExpectedStatusInAckResponse`: Se esperaba un estado en la respuesta ACK y no se encontró.
-/// 
-pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError>
-{
+///
+pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError> {
     let line_str = String::from_utf8_lossy(&response);
     let mut line_split = line_str.split_ascii_whitespace();
     let type_request = line_split

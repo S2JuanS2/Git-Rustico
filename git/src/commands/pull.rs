@@ -29,9 +29,13 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), GitError> {
         return Err(CommandsError::InvalidArgumentCountPull.into());
     }
     let mut socket = start_client(client.get_address())?;
-    git_pull(&mut socket, client.get_ip(), client.get_port(), client.get_directory_path())
+    git_pull(
+        &mut socket,
+        client.get_ip(),
+        client.get_port(),
+        client.get_directory_path(),
+    )
 }
-
 
 pub fn git_pull(
     _socket: &mut TcpStream,
