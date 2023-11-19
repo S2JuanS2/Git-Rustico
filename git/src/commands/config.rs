@@ -5,6 +5,10 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
+use crate::consts::{CONFIG_FILE, GIT_DIR};
+
+use super::errors::CommandsError;
+
 impl Default for GitConfig {
     fn default() -> Self {
         Self::new()
@@ -42,6 +46,29 @@ impl GitConfig {
             git_config.parse_line(&line);
         }
         git_config
+    }
+
+    /// Crea una nueva instancia de `GitConfig` basada en la configuración encontrada en el repositorio especificado.
+    ///
+    /// # Argumentos
+    ///
+    /// * `repo` - Una cadena que representa la ruta al repositorio Git.
+    ///
+    /// # Devolución
+    ///
+    /// Una instancia de `GitConfig` inicializada con la configuración leída del repositorio.
+    ///
+    /// # Pánicos
+    ///
+    /// Esta función generará un pánico si hay problemas al leer la configuración de Git desde el repositorio.
+    ///
+    pub fn new_from_repo(repo: &str) -> Result<Self, CommandsError> {
+        let mut git_config = GitConfig::new();
+        let path = format!("{}/{}/{}", repo, GIT_DIR, CONFIG_FILE);
+        if git_config.read_git_config(&path).is_err() {
+            return Err(CommandsError::FileNotFoundConfig);
+        };
+        Ok(git_config)
     }
 
     /// Analiza una línea de configuración Git y actualiza las secciones correspondientes.
@@ -150,7 +177,14 @@ impl GitConfig {
     /// Devuelve un resultado `io::Result` indicando si la operación fue exitosa o si se produjo un error
     /// al escribir en el archivo.
     ///
-    pub fn write_to_file(&self, file_path: &str) -> io::Result<()> {
+    pub fn write_to_file(&self, file_path: &str) -> Result<(), CommandsError> {
+        match self._write_to_file(file_path) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(CommandsError::CreateGitConfig),
+        }
+    }
+
+    fn _write_to_file(&self, file_path: &str) -> io::Result<()> {
         let mut file = File::create(file_path)?;
 
         // Write core section
@@ -171,6 +205,13 @@ impl GitConfig {
         }
 
         Ok(())
+    }
+
+    pub fn get_remote_repo(&self) -> Result<&String, CommandsError> {
+        match self.remote_origin.get("url") {
+            Some(url) => Ok(url),
+            None => Err(CommandsError::MissingUrlConfig),
+        }
     }
 }
 

@@ -15,13 +15,10 @@ use super::{
 
 pub fn read_packfile_header(reader: &mut dyn Read) -> Result<u32, UtilError> {
     read_signature(reader)?;
-    // println!("Signature: {}", PACK_SIGNATURE);
 
     let _version = read_version(reader)?;
-    // println!("Version: {}", version);
 
     let number_object = read_objects_contained(reader)?;
-    // println!("Number of objects: {}", number_object);
     Ok(number_object)
 }
 
@@ -181,7 +178,7 @@ pub fn send_packfile(
 pub fn send_packfile_witch_references_client(
     writer: &mut dyn Write,
     server: &GitServer,
-    path_repo: &str,
+    _path_repo: &str,
 ) -> Result<(), UtilError> {
     // [REFACTOR, SE REPITE CON EL HEADER CON send_packfile]
     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
@@ -195,7 +192,7 @@ pub fn send_packfile_witch_references_client(
         UtilError::SendSignaturePackfile,
     )?;
 
-    // Envio el len 
+    // Envio el len
 
     // Envio los de objetos
     // [TODO]

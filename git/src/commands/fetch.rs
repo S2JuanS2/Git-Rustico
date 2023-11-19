@@ -1,8 +1,10 @@
+use crate::commands::config::GitConfig;
 use crate::consts::GIT_DIR;
+use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::models::client::Client;
-use crate::util::connections::{packfile_negotiation, receive_packfile};
-use crate::util::formats::{hash_generate, compressor_object};
-use crate::util::objects::{ObjectType, builder_object, ObjectEntry};
+use crate::util::connections::receive_packfile;
+use crate::util::formats::{compressor_object, hash_generate};
+use crate::util::objects::{builder_object, ObjectEntry, ObjectType};
 use crate::{
     git_transport::{
         git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
@@ -40,11 +42,16 @@ use super::errors::CommandsError;
 /// * Otros errores de `GitError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
-    if args.is_empty() {
+    if args.len() >= 1 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
     let mut socket = start_client(client.get_address())?;
-    git_fetch_all(&mut socket, client.get_ip(), client.get_port(), args[0])
+    git_fetch_all(
+        &mut socket,
+        client.get_ip(),
+        client.get_port(),
+        client.get_directory_path(),
+    )
 }
 
 pub fn git_fetch_all(
@@ -53,22 +60,26 @@ pub fn git_fetch_all(
     port: &str,
     repo: &str,
 ) -> Result<String, CommandsError> {
-    println!("Fetch del repositorio remoto: {}", repo);
+    // Obtengo el repositorio remoto
+    let git_config = GitConfig::new_from_repo(repo)?;
+    let repo_remoto = git_config.get_remote_repo()?;
+
+    println!("Fetch del repositorio remoto: {}", repo_remoto);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
-    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
+    let message =
+        GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
 
     // Reference Discovery
-    let server = reference_discovery(socket, message)?;
+    let mut server = reference_discovery(socket, message)?;
 
     // Packfile Negotiation
-    packfile_negotiation(socket, &server)?;
+    packfile_negotiation_partial(socket, &mut server, &repo)?;
 
     // Packfile Data
     let content = receive_packfile(socket)?;
-
     save_objects(repo, content)?;
-    
+
     // Guardar las referencias en remote refs
 
     // Crear archivo FETCH_HEAD
@@ -92,16 +103,15 @@ fn save_objects(repo: &str, content: Vec<(ObjectEntry, Vec<u8>)>) -> Result<(), 
     let git_dir = format!("{}/{}", repo, GIT_DIR);
 
     // Guardar los objects
-    for object in content.iter(){
-        
+    for object in content.iter() {
         if object.0.obj_type == ObjectType::Commit {
             let commit_hash = hash_generate(&String::from_utf8_lossy(&object.1));
-            let file = match builder_object(&git_dir, &commit_hash){
+            let file = match builder_object(&git_dir, &commit_hash) {
                 Ok(file) => file,
                 Err(_) => return Err(CommandsError::RepositoryNotInitialized),
             };
-            if compressor_object(String::from_utf8_lossy(&object.1).to_string(), file).is_err(){
-                return Err(CommandsError::RepositoryNotInitialized); 
+            if compressor_object(String::from_utf8_lossy(&object.1).to_string(), file).is_err() {
+                return Err(CommandsError::RepositoryNotInitialized);
             };
         }
     }

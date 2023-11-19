@@ -54,7 +54,12 @@ pub fn get_tree_hash(contenido_commit: &str) -> Option<&str> {
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'tree_hash': Valor hash de 40 caracteres (SHA-1) del tree a leer.
-fn load_files(directory: &str, tree_hash: &str, mode: usize, dir_path: &str) -> Result<(), GitError> {
+fn load_files(
+    directory: &str,
+    tree_hash: &str,
+    mode: usize,
+    dir_path: &str,
+) -> Result<(), GitError> {
     let tree = git_cat_file(directory, tree_hash, "-p")?;
     for line in tree.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
@@ -62,8 +67,8 @@ fn load_files(directory: &str, tree_hash: &str, mode: usize, dir_path: &str) -> 
         let file_mode = parts[0];
         let path_file = parts[1];
         let hash = parts[2];
-        let path_file_format = format!("{}/{}/{}", directory, dir_path,path_file);
-        if file_mode == FILE{
+        let path_file_format = format!("{}/{}/{}", directory, dir_path, path_file);
+        if file_mode == FILE {
             let content_file = git_cat_file(directory, hash, "-p")?;
 
             if mode == 0 {
@@ -74,8 +79,7 @@ fn load_files(directory: &str, tree_hash: &str, mode: usize, dir_path: &str) -> 
             {
                 return Err(GitError::RemoveFileError);
             }
-
-        }else if file_mode == DIRECTORY {
+        } else if file_mode == DIRECTORY {
             create_directory(Path::new(&path_file_format))?;
             let new_path = format!("{}/{}", dir_path, path_file);
             load_files(directory, hash, mode, &new_path)?;
@@ -109,10 +113,10 @@ fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result
             read_parent_commit(directory, parent_hash, mode)?;
         }
         if let Some(tree_hash) = get_tree_hash(&commit) {
-            load_files(directory, tree_hash, mode,"")?;
+            load_files(directory, tree_hash, mode, "")?;
         };
     } else if let Some(tree_hash) = get_tree_hash(&commit) {
-        load_files(directory, tree_hash, mode,"")?;
+        load_files(directory, tree_hash, mode, "")?;
     } else {
         return Err(GitError::GetHashError);
     };
