@@ -33,7 +33,7 @@ pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> 
 
     let mut formatted_result = String::new();
     let content_tree = git_cat_file(directory, &tree_hash, "-p")?;
-    formatted_result.push_str(&format!("{}\n", content_tree));
+    formatted_result.push_str(content_tree.as_str());
 
     Ok(formatted_result)
 }
@@ -41,6 +41,10 @@ pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> 
 fn associated_commit(directory: &str, path_to_commit: &str) -> Result<String, GitError> {
     let path = open_file(path_to_commit)?;
     let content = read_file_string(path)?;
+    if path_to_commit.contains("HEAD") {
+        let tree = get_head_tree(directory, content)?;
+        return Ok(tree);
+    }
     if content.len() != 40 {
         return Err(GitError::InvalidTreeHashError);
     }
@@ -56,3 +60,73 @@ fn associated_tree(directory: &str, content: String) -> Result<String, GitError>
     Ok(tree.to_string())
 }
 
+fn get_head_tree(directory: &str, content: String) -> Result<String, GitError> {
+    let path_branch = content.split_whitespace().collect::<Vec<&str>>()[1];
+    let path_branch = format!("{}/.git/{}", directory, path_branch);
+    let branch = open_file(&path_branch)?;
+    let commit_branch = read_file_string(branch)?;
+    let tree = associated_tree(directory, commit_branch)?;
+    Ok(tree)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::commands::commit::Commit;
+    use crate::commands::init::git_init;
+    use crate::commands::{commit::git_commit, add::git_add};
+    use std::fs;
+    use std::io::Write;
+
+
+    #[test]
+    fn test_git_ls_tree() {
+        let directory = "./test_ls_tree";
+        git_init(directory).expect("Error al crear el repositorio");
+
+        let file_path = format!("{}/{}", directory, "file1.rs");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo file1")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "file2.rs");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2
+            .write_all(b"Hola Mundo file2")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "file1.rs").expect("Error al agregar el archivo");
+        git_add(directory, "file2.rs").expect("Error al agregar el archivo");
+
+        let test_commit1 = Commit::new(
+            "prueba".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit1).expect("Error al ejecutar el comando");
+
+        // para obtener el tree del commit y ver si funciona ls-tree
+        let branch_path = format!("{}/.git/refs/heads/master", directory);
+        let branch = open_file(&branch_path).expect("Error al abrir el archivo");
+        let commit_hash = read_file_string(branch).expect("Error al leer el archivo");
+        let tree_hash = associated_tree(directory, commit_hash).expect("Error al obtener el tree");
+        let result_tree = git_ls_tree(directory, &tree_hash);
+
+        // para obtener el tree asociado al HEAD y ver si funciona ls-tree
+        let result_head = git_ls_tree(directory, "HEAD");
+
+        // para obtener el tree asociado a una branch (master) y ver si funciona ls-tree
+        let result_master = git_ls_tree(directory, "refs/heads/master");
+        
+        fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
+
+        assert!(result_tree.is_ok());
+        assert!(result_head.is_ok());
+        assert!(result_master.is_ok());
+
+    }
+}

@@ -238,7 +238,7 @@ fn create_or_replace_commit_into_branch(
 /// Esta función chequea que el index no este vacio.
 /// ###Parametros:
 /// 'git_dir': Directorio del git
-fn check_index_content(git_dir: &String) -> Result<(), GitError> {
+fn check_index_content(git_dir: &str) -> Result<(), GitError> {
     let index_content = get_index_content(git_dir)?;
     if index_content.trim().is_empty() {
         return Err(CommandsError::CommitEmptyIndex.into());
@@ -248,7 +248,6 @@ fn check_index_content(git_dir: &String) -> Result<(), GitError> {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::Read};
 
     use crate::commands::{add::git_add, init::git_init};
 
