@@ -1,4 +1,5 @@
 use crate::commands::config::GitConfig;
+use crate::commands::fetch::git_fetch_all;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
@@ -32,12 +33,7 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), GitError> {
     git_pull(&mut socket, client.get_ip(), client.get_port(), client.get_directory_path())
 }
 
-/// actualiza el repositorio local con los cambios del repositorio remoto
-/// ###Parametros:
-/// 'directory': directorio del repositorio local
-/// 'socket': socket del cliente
-/// 'ip': ip del cliente
-/// 'port': puerto del cliente
+
 pub fn git_pull(
     _socket: &mut TcpStream,
     _ip: &str,
@@ -49,6 +45,8 @@ pub fn git_pull(
     let repo_remoto = git_config.get_remote_repo()?;
 
     println!("Pull del repositorio remoto: {}", repo_remoto);
-    
+
+    // git_fetch_all(_socket, _ip, _port, repo)?;
+
     Ok(())
 }
