@@ -1,4 +1,5 @@
 use crate::commands::commit::builder_commit_log;
+use crate::commands::config::GitConfig;
 use crate::commands::init::git_init;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR, PARENT_INITIAL, REF_HEADS};
 use crate::errors::GitError;
@@ -84,7 +85,15 @@ pub fn git_clone(
     // Packfile Data
     let content = receive_packfile(socket)?;
 
-    create_repository(advertised, content, repo)
+    let status = create_repository(advertised, content, repo)?;
+
+    // Creo el config
+    let url = format!("url = {}", repo);
+    let config = GitConfig::new_from_lines(vec![url]);
+    let path_config = format!("{}/{}/{}", repo, GIT_DIR, "config");
+    config.write_to_file(&path_config)?;
+
+    Ok(status)
 }
 
 fn create_repository(

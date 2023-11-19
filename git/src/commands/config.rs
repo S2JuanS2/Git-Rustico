@@ -5,6 +5,9 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
+
+use super::errors::CommandsError;
+
 impl Default for GitConfig {
     fn default() -> Self {
         Self::new()
@@ -150,7 +153,17 @@ impl GitConfig {
     /// Devuelve un resultado `io::Result` indicando si la operación fue exitosa o si se produjo un error
     /// al escribir en el archivo.
     ///
-    pub fn write_to_file(&self, file_path: &str) -> io::Result<()> {
+    pub fn write_to_file(&self, file_path: &str) -> Result<(), CommandsError> 
+    {
+        match self._write_to_file(file_path) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(CommandsError::CreateGitConfig),
+            
+        }    
+    }
+
+    fn _write_to_file(&self, file_path: &str) -> io::Result<()>
+    {
         let mut file = File::create(file_path)?;
 
         // Write core section

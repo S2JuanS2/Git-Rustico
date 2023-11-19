@@ -9,6 +9,7 @@ pub enum CommandsError {
     InvalidArgumentCountFetchError,
     CloneMissingRepoError,
     RepositoryNotInitialized,
+    CreateGitConfig,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -27,6 +28,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::RepositoryNotInitialized => {
             write!(f, "RepositoryNotInitialized: Use: git init")
         }
+        CommandsError::CreateGitConfig => write!(f, "CreateGitConfig: No se pudo crear el archivo de configuración de Git"),
     }
 }
 
