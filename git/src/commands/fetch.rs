@@ -69,7 +69,6 @@ pub fn git_fetch_all(
     let content = receive_packfile(socket)?;
     save_objects(repo, content)?;
 
-    
     // Guardar las referencias en remote refs
 
     // Crear archivo FETCH_HEAD
