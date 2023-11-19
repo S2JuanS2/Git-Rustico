@@ -1,5 +1,4 @@
 use crate::commands::config::GitConfig;
-use crate::commands::fetch::git_fetch_all;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;

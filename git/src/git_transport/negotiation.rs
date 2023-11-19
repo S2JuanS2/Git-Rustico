@@ -1,5 +1,5 @@
 use crate::{
-    consts::{PKT_DONE, PKT_NAK, HAVE, CONTINUE},
+    consts::{PKT_DONE, PKT_NAK, HAVE},
     git_server::GitServer,
     util::{
         connections::{received_message, send_flush, send_message},

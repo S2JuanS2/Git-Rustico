@@ -1,4 +1,3 @@
-use crate::consts::CONTINUE;
 use crate::consts::FLUSH_PKT;
 use crate::consts::PKT_DONE;
 use crate::consts::WANT;
