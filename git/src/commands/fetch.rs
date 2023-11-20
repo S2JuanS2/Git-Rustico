@@ -1,10 +1,10 @@
 use crate::commands::config::GitConfig;
-use crate::consts::GIT_DIR;
+use crate::consts::{GIT_DIR, FILE, DIRECTORY};
+use crate::errors::GitError;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::models::client::Client;
 use crate::util::connections::receive_packfile;
-use crate::util::formats::{compressor_object, hash_generate};
-use crate::util::objects::{builder_object, ObjectEntry, ObjectType};
+use crate::util::objects::{ObjectEntry, ObjectType, read_blob, builder_object_blob, read_tree, builder_object_tree, read_commit, builder_object_commit};
 use crate::{
     git_transport::{
         git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
@@ -12,6 +12,7 @@ use crate::{
     util::connections::start_client,
 };
 use std::net::TcpStream;
+use std::path::Path;
 
 use super::errors::CommandsError;
 
@@ -42,7 +43,7 @@ use super::errors::CommandsError;
 /// * Otros errores de `GitError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
-    if args.len() >= 1 {
+    if args.len() >= 2 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
     let mut socket = start_client(client.get_address())?;
@@ -78,7 +79,9 @@ pub fn git_fetch_all(
 
     // Packfile Data
     let content = receive_packfile(socket)?;
-    save_objects(repo, content)?;
+    if save_objects(content, repo).is_err(){
+        return Err(CommandsError::RepositoryNotInitialized)
+    };
 
     // Guardar las referencias en remote refs
 
@@ -99,23 +102,82 @@ pub fn git_fetch_all(
 ///
 /// Devuelve un `Result` que contiene `Ok(())` en caso de éxito o un error (CommandsError) en caso de fallo.
 ///
-fn save_objects(repo: &str, content: Vec<(ObjectEntry, Vec<u8>)>) -> Result<(), CommandsError> {
-    let git_dir = format!("{}/{}", repo, GIT_DIR);
+fn save_objects(
+    content: Vec<(ObjectEntry, Vec<u8>)>,
+    git_dir: &str,
+) -> Result<(), GitError> {
+    // Cantidad de objetos recibidos
+    let count_objects = content.len();
 
-    // Guardar los objects
-    for object in content.iter() {
-        if object.0.obj_type == ObjectType::Commit {
-            let commit_hash = hash_generate(&String::from_utf8_lossy(&object.1));
-            let file = match builder_object(&git_dir, &commit_hash) {
-                Ok(file) => file,
-                Err(_) => return Err(CommandsError::RepositoryNotInitialized),
+    let path_dir_cloned = Path::new(git_dir);
+    let git_dir = format!("{}/{}", git_dir, GIT_DIR);
+
+    let mut i = 0;
+    while i < count_objects {
+        if content[i].0.obj_type == ObjectType::Commit {
+            handle_commit(&content, &git_dir, i)?;
+            i += 1;
+        } else if content[i].0.obj_type == ObjectType::Tree {
+            i = match handle_tree(&content, &git_dir, i, path_dir_cloned) {
+                Ok(i) => i,
+                Err(e) => return Err(e),
             };
-            if compressor_object(String::from_utf8_lossy(&object.1).to_string(), file).is_err() {
-                return Err(CommandsError::RepositoryNotInitialized);
-            };
+            i += 1;
         }
     }
     Ok(())
+}
+
+fn recovery_tree(
+    tree_content: String,
+    path_dir_repo: &Path,
+    content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
+    mut i: usize,
+    repo: &str,
+) -> Result<usize, GitError> {
+    for line in tree_content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+
+        let mode = parts[0];
+        let file_name = parts[1];
+        let _hash = parts[2];
+
+        let path_dir_repo = path_dir_repo.join(file_name);
+        if mode == FILE {
+            i += 1;
+            let blob_content = read_blob(&content[i].1)?;
+            let blob_content_bytes = blob_content.clone();
+            builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
+        } else if mode == DIRECTORY {
+            i += 1;
+            let tree_content = read_tree(&content[i].1)?;
+            builder_object_tree(repo, &tree_content)?;
+            i = recovery_tree(tree_content, &path_dir_repo, content, i, repo)?;
+        }
+    }
+    Ok(i)
+}
+
+fn handle_commit(
+    content: &[(ObjectEntry, Vec<u8>)],
+    git_dir: &str,
+    i: usize,
+) -> Result<(), GitError> {
+    let commit_content = read_commit(&content[i].1)?;
+    builder_object_commit(&commit_content, git_dir)?;
+    Ok(())
+}
+
+fn handle_tree(
+    content: &Vec<(ObjectEntry, Vec<u8>)>,
+    git_dir: &str,
+    i: usize,
+    path_dir_cloned: &Path,
+) -> Result<usize, GitError> {
+    let tree_content = read_tree(&content[i].1)?;
+    builder_object_tree(git_dir, &tree_content)?;
+    let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir)?;
+    Ok(i)
 }
 
 // /// Recupera las referencias y objetos del repositorio remoto.
