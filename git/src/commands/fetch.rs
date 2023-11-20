@@ -4,6 +4,7 @@ use crate::errors::GitError;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::models::client::Client;
 use crate::util::connections::receive_packfile;
+use crate::util::files::ensure_directory_clean;
 use crate::util::objects::{ObjectEntry, ObjectType, read_blob, builder_object_blob, read_tree, builder_object_tree, read_commit, builder_object_commit};
 use crate::{
     git_transport::{
@@ -11,6 +12,7 @@ use crate::{
     },
     util::connections::start_client,
 };
+use std::fs;
 use std::net::TcpStream;
 use std::path::Path;
 
@@ -84,11 +86,56 @@ pub fn git_fetch_all(
     };
 
     // Guardar las referencias en remote refs
+    
+    // [TODO]
+    // necesito una funcion que me devuleva un vector dek tipo Vec<(String, String)>
+    // EL 1er string sera el nombre de la branch y el 2do string su ultimo commit
+    // Se puede usar el content o otro objeto
+    // let refs: Vec<(String, String)> = get_refs(content);
+    let refs: Vec<(String, String)> = vec![];
+    save_references(refs, repo)?;
 
     // Crear archivo FETCH_HEAD
+    
 
     Ok("Sucessfully!".to_string())
 }
+
+
+/// Guarda referencias (nombres y hashes) en archivos individuales dentro del directorio de referencias
+/// remotas en un repositorio Git.
+///
+/// Esta función toma un vector de tuplas `(String, String)` que representa pares de nombres y hashes de
+/// referencias. El path del repositorio `repo_path` se utiliza para construir la ruta del directorio de
+/// referencias y, a continuación, se asegura de que el directorio esté limpio. Luego, escribe cada
+/// par de nombre y hash en archivos individuales dentro del directorio.
+///
+/// # Errores
+///
+/// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
+///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
+///
+fn save_references(
+    refs: Vec<(String, String)>,
+    repo_path: &str,
+) -> Result<(), CommandsError> {
+    let refs_dir_path = format!("{}/.git/refs/origin", repo_path);
+
+    // Crea el directorio si no existe
+    ensure_directory_clean(&refs_dir_path)?;
+
+    // Escribe los hashes en archivos individuales
+    for (name, hash) in refs {
+        let file_path = format!("{}/{}", refs_dir_path, name);
+        if fs::write(&file_path, hash).is_err()
+        {
+            return Err(CommandsError::RemotoNotInitialized)
+        };
+    }
+
+    Ok(())
+}
+
 
 /// Maneja la creación y el guardado de los objetos recibidos del servidor
 ///
@@ -179,6 +226,7 @@ fn handle_tree(
     let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir)?;
     Ok(i)
 }
+
 
 // /// Recupera las referencias y objetos del repositorio remoto.
 // /// ###Parámetros:
