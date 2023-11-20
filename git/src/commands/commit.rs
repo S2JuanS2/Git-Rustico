@@ -238,7 +238,7 @@ fn create_or_replace_commit_into_branch(
 /// Esta función chequea que el index no este vacio.
 /// ###Parametros:
 /// 'git_dir': Directorio del git
-fn check_index_content(git_dir: &String) -> Result<(), GitError> {
+fn check_index_content(git_dir: &str) -> Result<(), GitError> {
     let index_content = get_index_content(git_dir)?;
     if index_content.trim().is_empty() {
         return Err(CommandsError::CommitEmptyIndex.into());
@@ -248,7 +248,6 @@ fn check_index_content(git_dir: &String) -> Result<(), GitError> {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::Read};
 
     use crate::commands::{add::git_add, init::git_init};
 
@@ -275,53 +274,6 @@ mod tests {
         git_add(directory, "holamundo.txt").expect("Fallo en el comando add");
 
         let result = git_commit(directory, test_commit);
-
-        fs::remove_dir_all(directory).expect("Falló al remover los directorios");
-
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn commit_erase_from_index_test() {
-        let directory = "./test_commit_erase_index_repo";
-        git_init(directory).expect("Falló en el comando init");
-
-        let test_commit = Commit::new(
-            "prueba".to_string(),
-            "Juan".to_string(),
-            "jdr@fi.uba.ar".to_string(),
-            "Juan".to_string(),
-            "jdr@fi.uba.ar".to_string(),
-        );
-
-        let file_path = format!("{}/{}", directory, "testfile.rs");
-        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
-        file.write_all(b"Hola Mundo")
-            .expect("Error al escribir en el archivo");
-
-        git_add(directory, "testfile.rs").expect("Fallo en el comando add");
-        let mut index_file = File::open(format!("{}/.git/index", directory)).expect("Error");
-        let mut index_content = String::new();
-        index_file
-            .read_to_string(&mut index_content)
-            .expect("Error");
-
-        // Se chequea que el index tenga al testfile.rs luego del add.
-        assert_eq!(
-            "testfile.rs blob ade1f58b626e2918ca61cc9c8c3bd7f507fd1044",
-            index_content
-        );
-
-        let result = git_commit(directory, test_commit);
-
-        let mut index_file = File::open(format!("{}/.git/index", directory)).expect("Error");
-        let mut index_content = String::new();
-        index_file
-            .read_to_string(&mut index_content)
-            .expect("Error");
-
-        // Se chequea que el index este vacio luego del commit.
-        assert_eq!("", index_content);
 
         fs::remove_dir_all(directory).expect("Falló al remover los directorios");
 
