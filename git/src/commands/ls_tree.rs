@@ -17,6 +17,10 @@ pub fn handle_ls_tree(args: Vec<&str>, client: Client) -> Result<String, GitErro
     git_ls_tree(directory, args[0])
 }
 
+/// Lista el contenido de un arbol pasado por parametro como tree-ish.
+/// ###Parametros:
+/// 'directory': directorio del repositorio local.
+/// 'tree_ish': un tree hash, un commit hash o un path a una branch que contiene un commit hash..
 pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> {
 
     let mut tree_hash = tree_ish.to_string();
@@ -38,6 +42,10 @@ pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> 
     Ok(formatted_result)
 }
 
+/// Obtiene el commit asociado a un path a una branch o a HEAD.
+/// ###Parametros:
+/// 'directory': directorio del repositorio local.
+/// 'path_to_commit': un path a una branch (o a HEAD) que contiene un commit hash.
 fn associated_commit(directory: &str, path_to_commit: &str) -> Result<String, GitError> {
     let path = open_file(path_to_commit)?;
     let content = read_file_string(path)?;
@@ -53,6 +61,10 @@ fn associated_commit(directory: &str, path_to_commit: &str) -> Result<String, Gi
     Ok(tree)
 }
 
+/// Obtiene el tree asociado a un commit hash.
+/// ###Parametros:
+/// 'directory': directorio del repositorio local.
+/// 'content': commit hash.
 fn associated_tree(directory: &str, content: String) -> Result<String, GitError> {
     let content_commit = git_cat_file(directory, &content, "-p")?;
     let parts: Vec<&str> = content_commit.split_whitespace().collect();
@@ -60,6 +72,10 @@ fn associated_tree(directory: &str, content: String) -> Result<String, GitError>
     Ok(tree.to_string())
 }
 
+/// Obtiene el tree asociado a HEAD.
+/// ###Parametros:
+/// 'directory': directorio del repositorio local.
+/// 'content': contenido del archivo HEAD.
 fn get_head_tree(directory: &str, content: String) -> Result<String, GitError> {
     let path_branch = content.split_whitespace().collect::<Vec<&str>>()[1];
     let path_branch = format!("{}/.git/{}", directory, path_branch);

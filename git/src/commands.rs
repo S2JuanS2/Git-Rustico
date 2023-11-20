@@ -29,3 +29,4 @@ pub mod remote;
 pub mod rm;
 pub mod status;
 pub mod ls_tree;
+pub mod show_ref;
