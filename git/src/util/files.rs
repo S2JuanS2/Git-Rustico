@@ -1,10 +1,13 @@
 use std::fs;
 use std::fs::File;
+use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 
 use crate::errors::GitError;
+
+use super::errors::UtilError;
 
 /// Verifica si un directorio está vacío
 /// ###Parametros:
@@ -109,4 +112,45 @@ pub fn read_file(mut file: File) -> Result<Vec<u8>, GitError> {
     }
 
     Ok(content)
+}
+
+/// Asegura que el directorio esté limpio y, si no existe, lo crea.
+///
+/// Esta función toma un path de directorio como argumento y utiliza la función auxiliar
+/// `_ensure_directory_clean` para realizar la operación. Si ocurriera un error durante
+/// la ejecución de `_ensure_directory_clean`, se devuelve un error de tipo `UtilError::CreateDir`.
+/// Si la operación se completa correctamente, se devuelve un resultado `Ok(())`.
+///
+/// # Errores
+///
+/// - Si `_ensure_directory_clean` devuelve un error al realizar operaciones de E/S
+///   (por ejemplo, al crear o eliminar archivos), se convierte en un `UtilError::CreateDir`.
+///
+/// # Notas
+///
+/// Esta función se asegura de que el directorio esté completamente limpio, eliminando todos los archivos
+/// presentes en él. Úsela con precaución, ya que puede borrar datos no deseados.
+///
+pub fn ensure_directory_clean(directory: &str) -> Result<(), UtilError> {
+    if _ensure_directory_clean(directory).is_err() {
+        return Err(UtilError::CreateDir(directory.to_string()));
+    }
+    Ok(()) // [TESTS]
+}
+
+/// Implementación interna que asegura que el directorio esté limpio.
+fn _ensure_directory_clean(directory: &str) -> io::Result<()> {
+    if !std::path::Path::new(&directory).exists() {
+        fs::create_dir_all(&directory)?;
+    } else {
+        // Elimina todos los archivos existentes en el directorio
+        for entry in fs::read_dir(&directory)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                fs::remove_file(&path)?;
+            }
+        }
+    }
+    Ok(())
 }
