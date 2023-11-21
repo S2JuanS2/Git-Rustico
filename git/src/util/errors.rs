@@ -67,6 +67,7 @@ pub enum UtilError {
     ExpectedStatusInAckResponse,
     InvalidHashInAckResponse,
     ExpectedStatusContinueInAckResponse,
+    CreateDir(String),
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -134,6 +135,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::ExpectedStatusInAckResponse => write!(f, "ExpectedStatusInAckResponseError: Se esperaba un status en la respuesta del ACK."),
         UtilError::InvalidHashInAckResponse => write!(f, "InvalidHashInAckResponseError: Hash inválido en la respuesta del ACK."),
         UtilError::ExpectedStatusContinueInAckResponse => write!(f, "ExpectedStatusContinueInAckResponseError: Se esperaba un status continue en la respuesta del ACK."),
+        UtilError::CreateDir(info) => write!(f, "CreateDirError: Error al crear el directorio {}. \n", info),
     }
 }
 

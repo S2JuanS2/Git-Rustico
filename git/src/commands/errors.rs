@@ -13,6 +13,8 @@ pub enum CommandsError {
     FileNotFoundConfig,
     MissingUrlConfig,
     InvalidArgumentCountPull,
+    RemotoNotInitialized,
+    CreateFetchHEAD,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -33,6 +35,8 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::FileNotFoundConfig => write!(f, "FileNotFoundConfig: No se encontró el archivo de configuración de Git"),
         CommandsError::MissingUrlConfig => write!(f, "MissingUrlConfig: No se encontró la URL del repositorio remoto en el archivo de configuración de Git"),
         CommandsError::InvalidArgumentCountPull => write!(f, "InvalidArgumentCountPull: Use: git pull"),
+        CommandsError::RemotoNotInitialized => write!(f, "RemotoNotInitialized: No se ha inicializado el repositorio remoto"),
+        CommandsError::CreateFetchHEAD => write!(f, "CreateFetchHEAD: No se pudo crear el archivo FETCH_HEAD"),
     }
 }
 
