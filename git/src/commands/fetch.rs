@@ -12,9 +12,10 @@ use crate::{
     },
     util::connections::start_client,
 };
-use std::fs;
+use std::{fs, io};
 use std::net::TcpStream;
 use std::path::Path;
+use std::io::Write;
 
 use super::errors::CommandsError;
 
@@ -93,10 +94,11 @@ pub fn git_fetch_all(
     // Se puede usar el content o otro objeto
     // let refs: Vec<(String, String)> = get_refs(content);
     let refs: Vec<(String, String)> = vec![];
-    save_references(refs, repo)?;
+    save_references(&refs, repo)?;
 
     // Crear archivo FETCH_HEAD
-    
+    // Aun falta terminarlo
+    create_fetch_head(&refs, repo)?;
 
     Ok("Sucessfully!".to_string())
 }
@@ -116,7 +118,7 @@ pub fn git_fetch_all(
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
 fn save_references(
-    refs: Vec<(String, String)>,
+    refs: &Vec<(String, String)>,
     repo_path: &str,
 ) -> Result<(), CommandsError> {
     let refs_dir_path = format!("{}/.git/refs/origin", repo_path);
@@ -136,6 +138,32 @@ fn save_references(
     Ok(())
 }
 
+fn create_fetch_head(
+    references: &Vec<(String, String)>,
+    repo_path: &str,
+) -> Result<(), CommandsError> {
+    let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_path);
+
+    if _create_fetch_head(references, &fetch_head_path).is_err() {
+        return Err(CommandsError::CreateFetchHEAD)
+    };
+
+    Ok(())
+}
+
+fn _create_fetch_head(
+    references: &Vec<(String, String)>,
+    path: &str,
+) -> io::Result<()> {
+    // Abre el archivo FETCH_HEAD para escritura
+    let mut fetch_head_file = fs::File::create(path)?;
+
+    // Escribe las líneas en el formato necesario en FETCH_HEAD
+    for (branch, hash) in references {
+        writeln!(fetch_head_file, "{}\t\tbranch '{}' of github.com:user/repo", hash, branch)?;
+    }
+    Ok(())
+}
 
 /// Maneja la creación y el guardado de los objetos recibidos del servidor
 ///
