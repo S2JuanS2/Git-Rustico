@@ -1,18 +1,24 @@
 use crate::commands::config::GitConfig;
-use crate::consts::{GIT_DIR, FILE, DIRECTORY};
+use crate::consts::{DIRECTORY, FILE, GIT_DIR};
 use crate::errors::GitError;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::models::client::Client;
 use crate::util::connections::receive_packfile;
-use crate::util::objects::{ObjectEntry, ObjectType, read_blob, builder_object_blob, read_tree, builder_object_tree, read_commit, builder_object_commit};
+use crate::util::files::ensure_directory_clean;
+use crate::util::objects::{
+    builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_commit,
+    read_tree, ObjectEntry, ObjectType,
+};
 use crate::{
     git_transport::{
         git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
     },
     util::connections::start_client,
 };
+use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
+use std::{fs, io};
 
 use super::errors::CommandsError;
 
@@ -79,15 +85,95 @@ pub fn git_fetch_all(
 
     // Packfile Data
     let content = receive_packfile(socket)?;
-    if save_objects(content, repo).is_err(){
-        return Err(CommandsError::RepositoryNotInitialized)
+    if save_objects(content, repo).is_err() {
+        return Err(CommandsError::RepositoryNotInitialized);
     };
 
     // Guardar las referencias en remote refs
 
+    // [TODO]
+    // necesito una funcion que me devuleva un vector dek tipo Vec<(String, String)>
+    // EL 1er string sera el nombre de la branch y el 2do string su ultimo commit
+    // Se puede usar el content o otro objeto
+    // let refs: Vec<(String, String)> = get_refs(content);
+    let refs: Vec<(String, String)> = vec![];
+    save_references(&refs, repo)?;
+
     // Crear archivo FETCH_HEAD
+    // Aun falta terminarlo
+    create_fetch_head(&refs, repo)?;
 
     Ok("Sucessfully!".to_string())
+}
+
+/// Guarda referencias (nombres y hashes) en archivos individuales dentro del directorio de referencias
+/// remotas en un repositorio Git.
+///
+/// Esta función toma un vector de tuplas `(String, String)` que representa pares de nombres y hashes de
+/// referencias. El path del repositorio `repo_path` se utiliza para construir la ruta del directorio de
+/// referencias y, a continuación, se asegura de que el directorio esté limpio. Luego, escribe cada
+/// par de nombre y hash en archivos individuales dentro del directorio.
+///
+/// # Errores
+///
+/// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
+///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
+///
+fn save_references(refs: &Vec<(String, String)>, repo_path: &str) -> Result<(), CommandsError> {
+    let refs_dir_path = format!("{}/.git/refs/origin", repo_path);
+
+    // Crea el directorio si no existe
+    ensure_directory_clean(&refs_dir_path)?;
+
+    // Escribe los hashes en archivos individuales
+    for (name, hash) in refs {
+        let file_path = format!("{}/{}", refs_dir_path, name);
+        if fs::write(&file_path, hash).is_err() {
+            return Err(CommandsError::RemotoNotInitialized);
+        };
+    }
+
+    Ok(())
+}
+
+/// Crea el archivo FETCH_HEAD en el repositorio con las referencias especificadas.
+///
+/// # Argumentos
+///
+/// * `references`: Un vector de tuplas que contiene el nombre de la rama y su hash.
+/// * `repo_path`: La ruta del repositorio donde se creará el archivo FETCH_HEAD.
+///
+/// # Errores
+///
+/// Devuelve un error del tipo `CommandsError` si hay problemas al crear FETCH_HEAD.
+///
+fn create_fetch_head(
+    references: &Vec<(String, String)>,
+    repo_path: &str,
+) -> Result<(), CommandsError> {
+    let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_path);
+
+    if _create_fetch_head(references, &fetch_head_path).is_err() {
+        return Err(CommandsError::CreateFetchHEAD);
+    };
+
+    Ok(())
+}
+
+/// Función auxiliar que implementa la lógica real para crear FETCH_HEAD.
+fn _create_fetch_head(references: &Vec<(String, String)>, path: &str) -> io::Result<()> {
+    // Abre el archivo FETCH_HEAD para escritura
+    let mut fetch_head_file = fs::File::create(path)?;
+
+    // Escribe las líneas en el formato necesario en FETCH_HEAD
+    for (branch, hash) in references {
+        writeln!(
+            fetch_head_file,
+            "{}\t\tbranch '{}' of github.com:user/repo",
+            hash, branch
+        )?;
+    }
+    Ok(())
 }
 
 /// Maneja la creación y el guardado de los objetos recibidos del servidor
@@ -102,10 +188,7 @@ pub fn git_fetch_all(
 ///
 /// Devuelve un `Result` que contiene `Ok(())` en caso de éxito o un error (CommandsError) en caso de fallo.
 ///
-fn save_objects(
-    content: Vec<(ObjectEntry, Vec<u8>)>,
-    git_dir: &str,
-) -> Result<(), GitError> {
+fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(), GitError> {
     // Cantidad de objetos recibidos
     let count_objects = content.len();
 
