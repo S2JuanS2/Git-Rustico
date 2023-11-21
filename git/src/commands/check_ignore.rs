@@ -4,13 +4,12 @@ use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
 
-
 /// Esta función se encarga de llamar a al comando check-ignore con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función check-ignore
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_check_ignore(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    if args.len() < 1 {
+    if args.is_empty() {
         return Err(GitError::InvalidArgumentCountCheckIgnoreError);
     }
     let directory = client.get_directory_path();
@@ -25,23 +24,26 @@ pub fn handle_check_ignore(args: Vec<&str>, client: Client) -> Result<String, Gi
 /// 'directory': directorio del repositorio local.
 /// 'paths': Vector de strings que contiene los paths a verificar
 pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, GitError> {
-    let mut formatted_result = String::new(); 
-    
+    let mut formatted_result = String::new();
+
     if paths.len() == 1 && paths[0] == "--stdin" {
         let stdin = std::io::stdin();
-        let mut lines = stdin.lock().lines();
-        while let Some(line) = lines.next() {
-            if let Ok(line) = line {
-                check_gitignore(&line, &mut formatted_result, directory)?;
-            }
-        }
+        let lines = stdin.lock().lines();
+        lines.flatten().for_each(|line| {
+            check_gitignore(&line, &mut formatted_result, directory).unwrap();
+        });
+        // for line in lines {
+        //     if let Ok(line) = line {
+        //         check_gitignore(&line, &mut formatted_result, directory)?;
+        //     }
+        // }
         return Ok(formatted_result);
     }
 
     for path in paths {
-        check_gitignore(&path, &mut formatted_result, directory)?;
+        check_gitignore(path, &mut formatted_result, directory)?;
     }
-    
+
     Ok(formatted_result)
 }
 
@@ -50,7 +52,11 @@ pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, Git
 /// 'path_to_check': path a verificar.
 /// 'formatted_result': resultado del git check-ignore.
 /// 'directory': directorio del repositorio local.
-fn check_gitignore(path_to_check: &str, formatted_result: &mut String, directory: &str) -> Result<(), GitError> {
+fn check_gitignore(
+    path_to_check: &str,
+    formatted_result: &mut String,
+    directory: &str,
+) -> Result<(), GitError> {
     let gitignore_path = format!("{}/.gitignore", directory);
     let gitignore = open_file(&gitignore_path)?;
     let gitignore_content = read_file_string(gitignore)?;
@@ -59,7 +65,7 @@ fn check_gitignore(path_to_check: &str, formatted_result: &mut String, directory
     if gitignore_lines.contains(&path_to_check) {
         formatted_result.push_str(format!("{}\n", path_to_check).as_str());
     }
-    
+
     Ok(())
 }
 
