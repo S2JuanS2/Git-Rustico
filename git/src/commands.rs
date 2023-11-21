@@ -30,3 +30,4 @@ pub mod rm;
 pub mod status;
 pub mod ls_tree;
 pub mod show_ref;
+pub mod check_ignore;

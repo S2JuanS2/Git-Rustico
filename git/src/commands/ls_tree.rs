@@ -5,9 +5,9 @@ use std::fs;
 
 use super::cat_file::git_cat_file;
 
-/// Esta función se encarga de llamar a al comando ls-files con los parametros necesarios
+/// Esta función se encarga de llamar a al comando ls-tree con los parametros necesarios
 /// ###Parametros:
-/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función ls-files
+/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función ls-tree
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_ls_tree(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     if args.len() > 1 {
