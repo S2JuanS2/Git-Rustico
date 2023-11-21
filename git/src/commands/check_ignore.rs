@@ -1,3 +1,5 @@
+use std::io::BufRead;
+
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
@@ -25,6 +27,17 @@ pub fn handle_check_ignore(args: Vec<&str>, client: Client) -> Result<String, Gi
 pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, GitError> {
     let mut formatted_result = String::new(); 
     
+    if paths.len() == 1 && paths[0] == "--stdin" {
+        let stdin = std::io::stdin();
+        let mut lines = stdin.lock().lines();
+        while let Some(line) = lines.next() {
+            if let Ok(line) = line {
+                check_gitignore(&line, &mut formatted_result, directory)?;
+            }
+        }
+        return Ok(formatted_result);
+    }
+
     for path in paths {
         check_gitignore(&path, &mut formatted_result, directory)?;
     }
@@ -58,8 +71,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_git_check_ignore() {
-        let directory = "./test_check_ignore";
+    fn test_git_check_ignore_paths() {
+        let directory = "./test_check_ignore_paths";
         fs::create_dir_all(directory).expect("Error al crear el directorio");
         let path = format!("{}/.gitignore", directory);
         create_file_replace(&path, "target/\nCargo.lock\n").expect("Error al crear el archivo");
