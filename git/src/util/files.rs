@@ -131,18 +131,15 @@ pub fn read_file(mut file: File) -> Result<Vec<u8>, GitError> {
 /// Esta función se asegura de que el directorio esté completamente limpio, eliminando todos los archivos
 /// presentes en él. Úsela con precaución, ya que puede borrar datos no deseados.
 ///
-pub fn ensure_directory_clean(directory: &str) -> Result<(), UtilError>
-{
-    if _ensure_directory_clean(directory).is_err()
-    {
+pub fn ensure_directory_clean(directory: &str) -> Result<(), UtilError> {
+    if _ensure_directory_clean(directory).is_err() {
         return Err(UtilError::CreateDir(directory.to_string()));
     }
     Ok(()) // [TESTS]
 }
 
 /// Implementación interna que asegura que el directorio esté limpio.
-fn _ensure_directory_clean(directory: &str) -> io::Result<()>
-{
+fn _ensure_directory_clean(directory: &str) -> io::Result<()> {
     if !std::path::Path::new(&directory).exists() {
         fs::create_dir_all(&directory)?;
     } else {

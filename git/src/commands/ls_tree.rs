@@ -18,7 +18,6 @@ pub fn handle_ls_tree(args: Vec<&str>, client: Client) -> Result<String, GitErro
 }
 
 pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> {
-
     let mut tree_hash = tree_ish.to_string();
     let directory_tree = format!("{}/.git/{}", directory, tree_ish);
     if fs::metadata(&directory_tree).is_ok() {
@@ -27,7 +26,7 @@ pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> 
     if git_cat_file(directory, &tree_hash, "-t")? == "blob" {
         return Err(GitError::InvalidTreeHashError);
     }
-    if git_cat_file(directory, &tree_hash, "-t")? == "commit"  {
+    if git_cat_file(directory, &tree_hash, "-t")? == "commit" {
         tree_hash = associated_tree(directory, tree_hash)?;
     }
 
@@ -69,16 +68,14 @@ fn get_head_tree(directory: &str, content: String) -> Result<String, GitError> {
     Ok(tree)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::commands::commit::Commit;
     use crate::commands::init::git_init;
-    use crate::commands::{commit::git_commit, add::git_add};
+    use crate::commands::{add::git_add, commit::git_commit};
     use std::fs;
     use std::io::Write;
-
 
     #[test]
     fn test_git_ls_tree() {
@@ -121,12 +118,11 @@ mod tests {
 
         // para obtener el tree asociado a una branch (master) y ver si funciona ls-tree
         let result_master = git_ls_tree(directory, "refs/heads/master");
-        
+
         fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
 
         assert!(result_tree.is_ok());
         assert!(result_head.is_ok());
         assert!(result_master.is_ok());
-
     }
 }
