@@ -21,7 +21,7 @@ pub fn handle_ls_files(args: Vec<&str>, client: Client) -> Result<String, GitErr
     if args.is_empty() {
         git_ls_files(directory, "")
     } else {
-        git_ls_files(directory, args[1])
+        git_ls_files(directory, args[0])
     }
 }
 
