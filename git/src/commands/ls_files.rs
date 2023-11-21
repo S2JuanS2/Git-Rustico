@@ -14,14 +14,14 @@ pub fn handle_ls_files(args: Vec<&str>, client: Client) -> Result<String, GitErr
     if args.len() > 1 {
         return Err(GitError::InvalidArgumentCountLsFilesError);
     }
-    if args.len() == 1 && args[1] != "-c" && args[1] != "-d" && args[1] != "-m" && args[1] != "-o" {
+    if args.len() == 1 && args[0] != "-c" && args[0] != "-d" && args[0] != "-m" && args[0] != "-o" {
         return Err(GitError::FlagLsFilesNotRecognizedError);
     }
     let directory = client.get_directory_path();
     if args.is_empty() {
         git_ls_files(directory, "")
     } else {
-        git_ls_files(directory, args[1])
+        git_ls_files(directory, args[0])
     }
 }
 
