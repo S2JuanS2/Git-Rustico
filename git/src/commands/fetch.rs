@@ -136,6 +136,17 @@ fn save_references(refs: &Vec<(String, String)>, repo_path: &str) -> Result<(), 
     Ok(())
 }
 
+/// Crea el archivo FETCH_HEAD en el repositorio con las referencias especificadas.
+///
+/// # Argumentos
+///
+/// * `references`: Un vector de tuplas que contiene el nombre de la rama y su hash.
+/// * `repo_path`: La ruta del repositorio donde se creará el archivo FETCH_HEAD.
+///
+/// # Errores
+///
+/// Devuelve un error del tipo `CommandsError` si hay problemas al crear FETCH_HEAD.
+///
 fn create_fetch_head(
     references: &Vec<(String, String)>,
     repo_path: &str,
@@ -149,6 +160,7 @@ fn create_fetch_head(
     Ok(())
 }
 
+/// Función auxiliar que implementa la lógica real para crear FETCH_HEAD.
 fn _create_fetch_head(references: &Vec<(String, String)>, path: &str) -> io::Result<()> {
     // Abre el archivo FETCH_HEAD para escritura
     let mut fetch_head_file = fs::File::create(path)?;
