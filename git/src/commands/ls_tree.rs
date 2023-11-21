@@ -5,7 +5,6 @@ use std::fs;
 
 use super::cat_file::git_cat_file;
 
-
 /// Esta función se encarga de llamar a al comando ls-tree con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función ls-tree
@@ -41,7 +40,6 @@ pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> 
 
     Ok(formatted_result)
 }
-
 
 /// Obtiene el commit asociado a un path a una branch o a HEAD.
 /// ###Parametros:

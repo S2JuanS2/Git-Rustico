@@ -84,16 +84,12 @@ mod tests {
         create_file_replace(&file_head, "18782jhbdshiu299wue2901hsd02wi982hoq8910")
             .expect("Error al crear el archivo");
 
-        let remotes_dir = format!("{}/.git/refs/remotes", directory);
-        fs::create_dir_all(remotes_dir).expect("Error al crear el directorio");
         let origin_dir = format!("{}/.git/refs/remotes/origin", directory);
         fs::create_dir_all(origin_dir).expect("Error al crear el directorio");
         let file_remote = format!("{}/.git/refs/remotes/origin/master", directory);
         create_file_replace(&file_remote, "sjlk28989d8io02100w8uo8iwendof32e33ewr03")
             .expect("Error al crear el archivo");
 
-        let tags_dir = format!("{}/.git/refs/tags", directory);
-        fs::create_dir_all(tags_dir).expect("Error al crear el directorio");
         let file_tag = format!("{}/.git/refs/tags/v0.1.0", directory);
         create_file_replace(&file_tag, "2309kh489982094hoif8402jk48209jh843f4392")
             .expect("Error al crear el archivo");
@@ -101,6 +97,6 @@ mod tests {
         let result = git_show_ref(directory);
         assert!(result.is_ok());
 
-        fs::remove_dir_all(directory).expect("Error al borrar el directorio");
+        // fs::remove_dir_all(directory).expect("Error al borrar el directorio");
     }
 }
