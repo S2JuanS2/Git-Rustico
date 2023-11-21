@@ -32,11 +32,6 @@ pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, Git
         lines.flatten().for_each(|line| {
             check_gitignore(&line, &mut formatted_result, directory).unwrap();
         });
-        // for line in lines {
-        //     if let Ok(line) = line {
-        //         check_gitignore(&line, &mut formatted_result, directory)?;
-        //     }
-        // }
         return Ok(formatted_result);
     }
 
