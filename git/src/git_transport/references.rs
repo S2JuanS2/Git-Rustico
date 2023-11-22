@@ -104,6 +104,17 @@ impl Reference {
     }
 }
 
+/// Extrae el contenido de un objeto a partir de su hash
+///
+/// # Argumentos
+///
+/// * `hash_object` - Hash del objeto
+/// * `directory` - directorio del repositorio
+///
+/// # Retorna
+///
+/// Un resultado con el contenido del objeto si la operación es exitosa.
+/// En caso de error, retorna un error de tipo UtilError.
 fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError> {
     let path_object = format!(
         "{}/{}/objects/{}/{}",
@@ -118,29 +129,53 @@ fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError>
     Ok(content_object)
 }
 
-// CONTINUAR DESPUES DE CORREGIR EL INDEX
+/// Recorre los sub-tree recursivamente y los agrega al vector objects
+///
+/// # Argumentos
+///
+/// * `directory` - directorio del repositorio
+/// * `tree_hash` - Hash del tree
+/// * `objects` - Vector para guardar los objetos a enviar
+///
+/// # Retorna
+///
+/// En caso de error, retorna un error de tipo UtilError.
 pub fn recovery_tree(
     directory: &str,
     tree_hash: &str,
-    mut objects: Vec<(ObjectType, Vec<u8>)>,
-) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
+    objects: &mut Vec<(ObjectType, Vec<u8>)>,
+) -> Result<(), GitError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
 
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
         let mode = parts[0];
-        //let file_name = parts[1];
-        let hash_blob = parts[2];
+        let hash = parts[2];
         if mode == FILE {
             let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
-            object_blob.1 = get_content(directory, hash_blob)?;
+            object_blob.1 = get_content(directory, hash)?;
             objects.push(object_blob);
         } else if mode == DIRECTORY {
+            let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+            object_tree.1 = get_content(directory, hash)?;
+            objects.push(object_tree);
+            recovery_tree(directory, hash, objects)?;
         }
     }
-    Ok(objects)
+    Ok(())
 }
 
+/// Extrae los objetos de un repositorio para guardar los mismos en un vector
+///
+/// # Argumentos
+///
+/// * `directory` - directorio del repositorio
+/// * `references` - Rama actual del directorio
+///
+/// # Retorna
+///
+/// Un vector con el contenido de los objetos si la operación es exitosa.
+/// En caso de error, retorna un error de tipo UtilError.
 pub fn get_objects(
     directory: &str,
     references: &[Reference],
@@ -165,12 +200,22 @@ pub fn get_objects(
 
             objects.push(object_tree);
 
-            objects = recovery_tree(directory, tree_hash, objects)?;
+            recovery_tree(directory, tree_hash, &mut objects)?;
         };
     }
     Ok(objects)
 }
 
+/// Extrae la branch actual y el hash del ultimo commit.
+///
+/// # Argumentos
+///
+/// * `directory` - directorio del repositorio
+///
+/// # Retorna
+///
+/// Una referencia de la rama si la operación es exitosa.
+/// En caso de error, retorna un error de tipo UtilError.
 pub fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
     let current_branch = get_current_branch(directory).expect("Error");
     let refname = format!("refs/heads/{}", current_branch);
