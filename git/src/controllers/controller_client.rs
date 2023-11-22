@@ -1,6 +1,7 @@
 use crate::commands::add::handle_add;
 use crate::commands::branch::handle_branch;
 use crate::commands::cat_file::handle_cat_file;
+use crate::commands::check_ignore::handle_check_ignore;
 use crate::commands::checkout::handle_checkout;
 use crate::commands::clone::handle_clone;
 use crate::commands::commit::handle_commit;
@@ -8,11 +9,14 @@ use crate::commands::fetch::handle_fetch;
 use crate::commands::hash_object::handle_hash_object;
 use crate::commands::init::handle_init;
 use crate::commands::log::handle_log;
+use crate::commands::ls_files::handle_ls_files;
+use crate::commands::ls_tree::handle_ls_tree;
 use crate::commands::merge::handle_merge;
 use crate::commands::pull::handle_pull;
 use crate::commands::push::handle_push;
 use crate::commands::remote::handle_remote;
 use crate::commands::rm::handle_rm;
+use crate::commands::show_ref::handle_show_ref;
 use crate::commands::status::handle_status;
 
 use crate::errors::GitError;
@@ -136,6 +140,18 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
             }
             "rm" => {
                 result = handle_rm(rest_of_command, client.clone())?;
+            }
+            "ls-files" => {
+                result = handle_ls_files(rest_of_command, client.clone())?;
+            }
+            "ls-tree" => {
+                result = handle_ls_tree(rest_of_command, client.clone())?;
+            }
+            "check-ignore" => {
+                result = handle_check_ignore(rest_of_command, client.clone())?;
+            }
+            "show-ref" => {
+                result = handle_show_ref(rest_of_command, client.clone())?;
             }
             _ => {
                 return Err(GitError::CommandNotRecognizedError);
