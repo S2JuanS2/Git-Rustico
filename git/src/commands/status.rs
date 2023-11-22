@@ -405,24 +405,26 @@ fn get_files_in_commit(
     file_hash: &str,
 ) -> Result<bool, GitError> {
     let mut commited = false;
-    let commit_content = git_cat_file(directory, commit_actual, "-p")?;
-    let commit_lines = commit_content.split('\n');
-    let mut parent_commit = "";
-    for line in commit_lines {
-        if line.starts_with("parent") {
-            if let Some(parent_hash) = line.split(' ').last() {
-                parent_commit = parent_hash;
+    if commit_actual != "" {
+        let commit_content = git_cat_file(directory, commit_actual, "-p")?;
+        let commit_lines = commit_content.split('\n');
+        let mut parent_commit = "";
+        for line in commit_lines {
+            if line.starts_with("parent") {
+                if let Some(parent_hash) = line.split(' ').last() {
+                    parent_commit = parent_hash;
+                }
             }
-        }
-        if line.starts_with("tree") {
-            if let Some(tree_hash) = line.split(' ').last() {
-                get_tree_content(
-                    directory,
-                    tree_hash,
-                    file_hash,
-                    &mut commited,
-                    parent_commit,
-                )?;
+            if line.starts_with("tree") {
+                if let Some(tree_hash) = line.split(' ').last() {
+                    get_tree_content(
+                        directory,
+                        tree_hash,
+                        file_hash,
+                        &mut commited,
+                        parent_commit,
+                    )?;
+                }
             }
         }
     }
@@ -447,13 +449,15 @@ fn get_tree_content(
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     let tree_lines = tree_content.split('\n');
     for tree_line in tree_lines {
-        let tree_parts: Vec<&str> = tree_line.split_whitespace().collect();
-        if git_cat_file(directory, tree_parts[2], "-t")? == "tree" {
-            get_tree_content(directory, tree_parts[2], file_hash, commited, parent_commit)?;
-        }
-        if tree_parts[2] == file_hash {
-            *commited = true;
-            return Ok(());
+        if !tree_line.is_empty(){
+            let tree_parts: Vec<&str> = tree_line.split_whitespace().collect();
+            if git_cat_file(directory, tree_parts[2], "-t")? == "tree" {
+                get_tree_content(directory, tree_parts[2], file_hash, commited, parent_commit)?;
+            }
+            if tree_parts[2] == file_hash {
+                *commited = true;
+                return Ok(());
+            }
         }
     }
     if !*commited && parent_commit != "0000000000000000000000000000000000000000" {

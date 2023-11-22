@@ -103,7 +103,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<String, GitError> {
 /// 'git_dir': directorio donde esta el directory/.git
 /// 'file_name': Nombre del archivo que se le hizo add
 /// 'hash_object': Hash del objeto que se creó al hacer add
-fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result<(), GitError> {
+pub fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result<(), GitError> {
     let index_path = format!("{}/{}", &git_dir, INDEX);
 
     let index_file = open_file(index_path.as_str())?;

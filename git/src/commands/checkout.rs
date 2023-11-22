@@ -1,3 +1,4 @@
+use super::add::add_to_index;
 use super::branch::get_branch;
 use super::branch::get_current_branch;
 use super::branch::git_branch_create;
@@ -10,6 +11,7 @@ use crate::util::files::create_directory;
 use crate::util::files::create_file_replace;
 use crate::util::files::open_file;
 use crate::util::files::read_file_string;
+use crate::util::index::empty_index;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -63,7 +65,6 @@ fn load_files(
     let tree = git_cat_file(directory, tree_hash, "-p")?;
     for line in tree.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-
         let file_mode = parts[0];
         let path_file = parts[1];
         let hash = parts[2];
@@ -73,6 +74,9 @@ fn load_files(
 
             if mode == 0 {
                 create_file_replace(&path_file_format, &content_file)?;
+                let git_dir = format!("{}/{}", directory, GIT_DIR);
+                let file_name = format!("{}/{}", dir_path, path_file);
+                add_to_index(git_dir, &file_name[1..], hash.to_string())?;
             } else if mode == 1
                 && fs::metadata(&path_file_format).is_ok()
                 && fs::remove_file(&path_file_format).is_err()
@@ -167,6 +171,7 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
     if file.write_all(content.as_bytes()).is_err() {
         return Err(GitError::BranchFileWriteError);
     }
+    empty_index(directory)?;
     load_files_tree(directory, &current_branch_name, 1)?;
     load_files_tree(directory, branch_switch_name, 0)?;
 
