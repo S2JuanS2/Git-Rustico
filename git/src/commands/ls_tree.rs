@@ -10,7 +10,7 @@ use super::cat_file::git_cat_file;
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función ls-tree
 /// 'client': Cliente que contiene la información del cliente que se conectó
 pub fn handle_ls_tree(args: Vec<&str>, client: Client) -> Result<String, GitError> {
-    if args.len() > 1 {
+    if args.len() > 1 || args.is_empty() {
         return Err(GitError::InvalidArgumentCountLsTreeError);
     }
     let directory = client.get_directory_path();
