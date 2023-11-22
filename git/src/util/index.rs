@@ -1,5 +1,5 @@
-use super::files::{open_file, read_file_string};
-use crate::consts::{INDEX, TREE};
+use super::files::{open_file, read_file_string, create_file_replace};
+use crate::consts::{INDEX, TREE, GIT_DIR};
 use crate::errors::GitError;
 use crate::util::objects::builder_object_tree;
 
@@ -18,6 +18,22 @@ pub fn open_index(git_dir: &str) -> Result<String, GitError> {
 
     let index_file = open_file(&path_index)?;
     read_file_string(index_file)
+}
+
+/// Maneja el index del repositorio del cliente, vacía el contenido del mismo
+///
+/// # Argumentos
+///
+/// * `directory`: Contiene la dirección del repositorio.
+///
+/// # Retorno
+///
+/// Devuelve un error (CommandsError) en caso de fallo.
+///
+pub fn empty_index(directory: &str) -> Result<(), GitError> {
+    let path_index = format!("{}/{}/{}", directory, GIT_DIR, INDEX);
+    create_file_replace(&path_index, "")?;
+    Ok(())
 }
 
 /// Maneja el contenido del index del repositorio del cliente, creando los tree y sub tree correspondientes.
