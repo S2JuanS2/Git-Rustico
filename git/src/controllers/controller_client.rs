@@ -16,6 +16,7 @@ use crate::commands::pull::handle_pull;
 use crate::commands::push::handle_push;
 use crate::commands::remote::handle_remote;
 use crate::commands::rm::handle_rm;
+use crate::commands::show_ref::handle_show_ref;
 use crate::commands::status::handle_status;
 
 use crate::errors::GitError;
@@ -148,6 +149,9 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
             }
             "check-ignore" => {
                 result = handle_check_ignore(rest_of_command, client.clone())?;
+            }
+            "show-ref" => {
+                result = handle_show_ref(rest_of_command, client.clone())?;
             }
             _ => {
                 return Err(GitError::CommandNotRecognizedError);
