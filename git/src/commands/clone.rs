@@ -1,7 +1,7 @@
 use crate::commands::commit::builder_commit_log;
 use crate::commands::config::GitConfig;
 use crate::commands::init::git_init;
-use crate::consts::{DIRECTORY, FILE, GIT_DIR, PARENT_INITIAL, REF_HEADS};
+use crate::consts::{DIRECTORY, FILE, GIT_DIR, REF_HEADS, PARENT_INITIAL};
 use crate::errors::GitError;
 use crate::git_server::GitServer;
 use crate::git_transport::git_request::GitRequest;
@@ -18,6 +18,7 @@ use crate::util::objects::{ObjectEntry, ObjectType};
 use std::net::TcpStream;
 use std::path::Path;
 
+use super::add::add_to_index;
 use super::errors::CommandsError;
 
 /// Maneja la ejecución del comando "clone" en el cliente Git.
@@ -104,7 +105,6 @@ fn create_repository(
     // Cantidad de objetos recibidos
     let count_objects = content.len();
 
-    // ARREGLAR EL CONFIG PARA OBTENER EL PATH
     let path_dir_cloned = Path::new(repo);
     git_init(repo)?;
     let git_dir = format!("{}/{}", repo, GIT_DIR);
@@ -134,15 +134,15 @@ fn recovery_tree(
 ) -> Result<usize, GitError> {
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-
         let mode = parts[0];
         let file_name = parts[1];
-        let _hash = parts[2];
+        let hash = parts[2];
 
         let path_dir_cloned = path_dir_cloned.join(file_name);
         if mode == FILE {
             i += 1;
             let blob_content = read_blob(&content[i].1)?;
+            add_to_index(repo.to_string(), file_name, hash.to_string())?;
             let blob_content_bytes = blob_content.clone();
             builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
 
@@ -160,6 +160,7 @@ fn recovery_tree(
     }
     Ok(i)
 }
+
 
 fn insert_line_between_lines(
     original_string: &str,
@@ -183,6 +184,7 @@ fn insert_line_between_lines(
     result
 }
 
+
 fn handle_commit(
     content: &[(ObjectEntry, Vec<u8>)],
     repo: &str,
@@ -190,8 +192,8 @@ fn handle_commit(
     git_dir: &str,
     i: usize,
 ) -> Result<(), GitError> {
-    let commit_content = read_commit(&content[i].1)?;
-    let commit_result = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
+    let mut commit_content = read_commit(&content[i].1)?;
+    
     builder_object_commit(&commit_content, git_dir)?;
 
     if let Some(refs) = advertised.get_reference(i + 1) {
@@ -202,7 +204,10 @@ fn handle_commit(
             let branch_dir = format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
             create_file(&branch_dir, hash)?;
         }
-        builder_commit_log(repo, &commit_result, hash)?;
+        if commit_content.lines().count() == 5{
+            commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
+        }
+        builder_commit_log(repo, &commit_content, hash)?;
     }
 
     Ok(())

@@ -65,8 +65,15 @@ fn load_files(
     let tree = git_cat_file(directory, tree_hash, "-p")?;
     for line in tree.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let file_mode = parts[0];
-        let path_file = parts[1];
+        let file_mode;
+        let path_file;
+        if parts[0] == FILE || parts[0] == DIRECTORY {
+            file_mode = parts[0];
+            path_file = parts[1];
+        }else{
+            path_file = parts[0];
+            file_mode = parts[1];
+        }
         let hash = parts[2];
         let path_file_format = format!("{}/{}/{}", directory, dir_path, path_file);
         if file_mode == FILE {
@@ -149,6 +156,10 @@ fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<()
 pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<(), GitError> {
     //Falta implementar que verifique si realizó commit ante la pérdida de datos. <- con el status..
     let current_branch_name = get_current_branch(directory)?;
+
+    if current_branch_name == branch_switch_name {
+        return Err(GitError::AlreadyOnThatBranch)
+    }
 
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_switch_name.to_string()) {
