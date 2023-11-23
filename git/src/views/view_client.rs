@@ -16,6 +16,7 @@ pub struct View {
     window_dialog_clone: gtk::Window,
     window_dialog_cat_file: gtk::Window,
     window_dialog_hash_object: gtk::Window,
+    window_dialog_fetch: gtk::Window,
     buttons: HashMap<String, gtk::Button>,
     entries: HashMap<String, Rc<gtk::Entry>>,
     response: Rc<gtk::TextView>,
@@ -62,6 +63,9 @@ impl View {
         let window_dialog_cat_file: gtk::Window = builder
             .object("window_dialog_cat-file")
             .ok_or(GitError::ObjectBuildFailed)?;
+        let window_dialog_fetch: gtk::Window = builder
+            .object("window_dialog_fetch")
+            .ok_or(GitError::ObjectBuildFailed)?;
         let response: Rc<gtk::TextView> = Rc::new(
             builder
                 .object("console")
@@ -76,6 +80,7 @@ impl View {
             window_dialog_clone,
             window_dialog_hash_object,
             window_dialog_cat_file,
+            window_dialog_fetch,
             buttons,
             entries,
             response,
@@ -158,6 +163,17 @@ impl View {
             });
         }
     }
+
+    fn connect_button_fetch(&self) {
+        let dialog = self.window_dialog_fetch.clone();
+
+        if let Some(button) = self.buttons.get(BUTTON_FETCH) {
+            button.connect_clicked(move |_| {
+                dialog.show_all();
+            });
+        }
+    }
+
     fn connect_button_send(&self) {
         let response = Rc::clone(&self.response);
         let controller = Rc::clone(&self.controller);
@@ -212,17 +228,16 @@ impl View {
         self.connect_button_with_entry(ENTRY_CHECKOUT, BUTTON_CHECKOUT, "git checkout".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_ADD, "git add".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_RM, "git rm".to_string());
-        self.connect_button_with_entry(ENTRY_COMMIT, BUTTON_COMMIT, "git commit".to_string());
+        self.connect_button_with_entry(ENTRY_COMMIT, BUTTON_COMMIT, "git commit -m".to_string());
         self.connect_button_with_entry(ENTRY_MERGE, BUTTON_MERGE, "git merge".to_string());
         self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH, "git branch".to_string());
+        self.connect_button_with_entry(ENTRY_REMOTE, BUTTON_REMOTE, "git remote".to_string());
 
         let commands = [
             (BUTTON_INIT, "git init".to_string()),
             (BUTTON_STATUS, "git status".to_string()),
             (BUTTON_PULL, "git pull".to_string()),
             (BUTTON_PUSH, "git push".to_string()),
-            (BUTTON_FETCH, "git fetch".to_string()),
-            (BUTTON_REMOTE, "git remote".to_string()),
             (BUTTON_LOG, "git log".to_string()),
         ];
 
@@ -235,11 +250,19 @@ impl View {
         self.connect_button_clone();
         self.connect_button_cat_file();
         self.connect_button_hash_object();
+        self.connect_button_fetch();
 
         let window_clone = self.window_dialog_clone.clone();
         let window_cat_file = self.window_dialog_cat_file.clone();
         let window_hash_object = self.window_dialog_hash_object.clone();
+        let window_fetch = self.window_dialog_fetch.clone();
 
+        self.connect_button_cmd(
+            ENTRY_FETCH,
+            BUTTON_CMD_FETCH,
+            "git fetch".to_string(),
+            window_fetch,
+        );
         self.connect_button_cmd(
             ENTRY_CLONE,
             BUTTON_CMD_CLONE,

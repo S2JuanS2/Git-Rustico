@@ -7,6 +7,8 @@ pub const ENTRY_MERGE: &str = "entry_merge";
 pub const ENTRY_CLONE: &str = "entry_clone";
 pub const ENTRY_HASH_OBJECT: &str = "entry_hash-object";
 pub const ENTRY_CAT_FILE: &str = "entry_cat-file";
+pub const ENTRY_FETCH: &str = "entry_fetch";
+pub const ENTRY_REMOTE: &str = "entry_remote";
 
 pub fn get_entries() -> Vec<String> {
     let entries: Vec<String> = vec![
@@ -19,6 +21,8 @@ pub fn get_entries() -> Vec<String> {
         ENTRY_CLONE.to_string(),
         ENTRY_HASH_OBJECT.to_string(),
         ENTRY_CAT_FILE.to_string(),
+        ENTRY_FETCH.to_string(),
+        ENTRY_REMOTE.to_string(),
     ];
     entries
 }
