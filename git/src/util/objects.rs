@@ -313,9 +313,9 @@ fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, GitError> {
             })
             .collect::<Vec<u8>>();
 
-        format_tree.extend_from_slice(mode.as_bytes());
-        format_tree.push(SPACE);
         format_tree.extend_from_slice(file_name.as_bytes());
+        format_tree.push(SPACE);
+        format_tree.extend_from_slice(mode.as_bytes());
         format_tree.push(NULL);
         format_tree.extend_from_slice(&bytes);
     }
