@@ -16,10 +16,14 @@ pub struct View {
     window_dialog_clone: gtk::Window,
     window_dialog_cat_file: gtk::Window,
     window_dialog_hash_object: gtk::Window,
+    window_dialog_fetch: gtk::Window,
+    window_dialog_push: gtk::Window,
+    window_dialog_pull: gtk::Window,
     buttons: HashMap<String, gtk::Button>,
     entries: HashMap<String, Rc<gtk::Entry>>,
     response: Rc<gtk::TextView>,
     label_user: gtk::Label,
+    label_branch: gtk::Label,
 }
 
 impl View {
@@ -62,12 +66,22 @@ impl View {
         let window_dialog_cat_file: gtk::Window = builder
             .object("window_dialog_cat-file")
             .ok_or(GitError::ObjectBuildFailed)?;
+        let window_dialog_fetch: gtk::Window = builder
+            .object("window_dialog_fetch")
+            .ok_or(GitError::ObjectBuildFailed)?;
+        let window_dialog_push: gtk::Window = builder
+            .object("window_dialog_push")
+            .ok_or(GitError::ObjectBuildFailed)?;
+        let window_dialog_pull: gtk::Window = builder
+            .object("window_dialog_pull")
+            .ok_or(GitError::ObjectBuildFailed)?;
         let response: Rc<gtk::TextView> = Rc::new(
             builder
                 .object("console")
                 .ok_or(GitError::ObjectBuildFailed)?,
         );
         let label_user: gtk::Label = builder.object("user").ok_or(GitError::ObjectBuildFailed)?;
+        let label_branch: gtk::Label = builder.object("label_branch").ok_or(GitError::ObjectBuildFailed)?;
 
         let controller = Rc::new(RefCell::new(controller));
         Ok(View {
@@ -76,10 +90,14 @@ impl View {
             window_dialog_clone,
             window_dialog_hash_object,
             window_dialog_cat_file,
+            window_dialog_fetch,
+            window_dialog_push,
+            window_dialog_pull,
             buttons,
             entries,
             response,
             label_user,
+            label_branch,
         })
     }
 
@@ -88,6 +106,14 @@ impl View {
         let binding = controller.borrow_mut();
         let user_name = binding.get_name_client();
         self.label_user.set_text(user_name);
+    }
+
+    fn set_label_branch(&mut self) {
+        let controller = Rc::clone(&self.controller);
+        let binding = controller.borrow_mut();
+        let current_branch = binding.get_current_branch();
+        let text_format = format!("Current branch: {}", current_branch);
+        self.label_branch.set_text(&text_format);
     }
 
     fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>) {
@@ -158,6 +184,33 @@ impl View {
             });
         }
     }
+    fn connect_button_fetch(&self) {
+        let dialog = self.window_dialog_fetch.clone();
+
+        if let Some(button) = self.buttons.get(BUTTON_FETCH) {
+            button.connect_clicked(move |_| {
+                dialog.show_all();
+            });
+        }
+    }
+    fn connect_button_push(&self) {
+        let dialog = self.window_dialog_push.clone();
+
+        if let Some(button) = self.buttons.get(BUTTON_PUSH) {
+            button.connect_clicked(move |_| {
+                dialog.show_all();
+            });
+        }
+    }
+    fn connect_button_pull(&self) {
+        let dialog = self.window_dialog_pull.clone();
+
+        if let Some(button) = self.buttons.get(BUTTON_PULL) {
+            button.connect_clicked(move |_| {
+                dialog.show_all();
+            });
+        }
+    }
     fn connect_button_send(&self) {
         let response = Rc::clone(&self.response);
         let controller = Rc::clone(&self.controller);
@@ -212,17 +265,20 @@ impl View {
         self.connect_button_with_entry(ENTRY_CHECKOUT, BUTTON_CHECKOUT, "git checkout".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_ADD, "git add".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_RM, "git rm".to_string());
-        self.connect_button_with_entry(ENTRY_COMMIT, BUTTON_COMMIT, "git commit".to_string());
+        self.connect_button_with_entry(ENTRY_COMMIT, BUTTON_COMMIT, "git commit -m".to_string());
         self.connect_button_with_entry(ENTRY_MERGE, BUTTON_MERGE, "git merge".to_string());
         self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH, "git branch".to_string());
+        self.connect_button_with_entry(ENTRY_REMOTE, BUTTON_REMOTE, "git remote".to_string());
+        self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_FILES, "git ls-files".to_string());
+        self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_TREE, "git ls-tree".to_string());
+        self.connect_button_with_entry(ENTRY_CHECK_IGNORE, BUTTON_CHECK_IGNORE, "git check-ignore".to_string());
+        self.connect_button_with_entry(ENTRY_TAG, BUTTON_TAG, "git tag".to_string());
+        self.connect_button_with_entry(ENTRY_REBASE, BUTTON_REBASE, "git rebase".to_string());
 
         let commands = [
             (BUTTON_INIT, "git init".to_string()),
             (BUTTON_STATUS, "git status".to_string()),
-            (BUTTON_PULL, "git pull".to_string()),
-            (BUTTON_PUSH, "git push".to_string()),
-            (BUTTON_FETCH, "git fetch".to_string()),
-            (BUTTON_REMOTE, "git remote".to_string()),
+            (BUTTON_SHOW_REF, "git show-ref".to_string()),
             (BUTTON_LOG, "git log".to_string()),
         ];
 
@@ -235,11 +291,23 @@ impl View {
         self.connect_button_clone();
         self.connect_button_cat_file();
         self.connect_button_hash_object();
+        self.connect_button_fetch();
+        self.connect_button_push();
+        self.connect_button_pull();
 
         let window_clone = self.window_dialog_clone.clone();
         let window_cat_file = self.window_dialog_cat_file.clone();
         let window_hash_object = self.window_dialog_hash_object.clone();
+        let window_fetch = self.window_dialog_fetch.clone();
+        let window_push = self.window_dialog_push.clone();
+        let window_pull = self.window_dialog_pull.clone();
 
+        self.connect_button_cmd(
+            ENTRY_FETCH,
+            BUTTON_CMD_FETCH,
+            "git fetch".to_string(),
+            window_fetch,
+        );
         self.connect_button_cmd(
             ENTRY_CLONE,
             BUTTON_CMD_CLONE,
@@ -258,6 +326,18 @@ impl View {
             "git hash-object".to_string(),
             window_hash_object,
         );
+        self.connect_button_cmd(
+            ENTRY_PUSH,
+            BUTTON_CMD_PUSH,
+            "git push".to_string(),
+            window_push,
+        );
+        self.connect_button_cmd(
+            ENTRY_PULL,
+            BUTTON_CMD_PULL,
+            "git pull".to_string(),
+            window_pull,
+        );
     }
     pub fn start_view(&mut self) -> Result<(), GitError> {
         self.connect_buttons();
@@ -267,6 +347,7 @@ impl View {
         });
 
         self.set_label_user();
+        self.set_label_branch();
 
         self.window.show_all();
         gtk::main();

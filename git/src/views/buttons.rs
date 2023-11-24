@@ -16,9 +16,18 @@ pub const BUTTON_CHECKOUT: &str = "button_checkout";
 pub const BUTTON_COMMIT: &str = "button_commit";
 pub const BUTTON_MERGE: &str = "button_merge";
 pub const BUTTON_CLONE: &str = "button_clone";
+pub const BUTTON_SHOW_REF: &str = "button_show_ref";
+pub const BUTTON_LS_TREE: &str = "button_ls_tree";
+pub const BUTTON_LS_FILES: &str = "button_ls_files";
+pub const BUTTON_CHECK_IGNORE: &str = "button_check_ignore";
+pub const BUTTON_TAG: &str = "button_tag";
+pub const BUTTON_REBASE: &str = "button_rebase";
 pub const BUTTON_CMD_CLONE: &str = "button_cmd_clone";
 pub const BUTTON_CMD_HASH_OBJECT: &str = "button_cmd_hash-object";
 pub const BUTTON_CMD_CAT_FILE: &str = "button_cmd_cat-file";
+pub const BUTTON_CMD_FETCH: &str = "button_cmd_fetch";
+pub const BUTTON_CMD_PUSH: &str = "button_cmd_push";
+pub const BUTTON_CMD_PULL: &str = "button_cmd_pull";
 
 pub fn get_buttons() -> Vec<String> {
     let buttons: Vec<String> = vec![
@@ -40,9 +49,18 @@ pub fn get_buttons() -> Vec<String> {
         BUTTON_COMMIT.to_string(),
         BUTTON_MERGE.to_string(),
         BUTTON_CLONE.to_string(),
+        BUTTON_SHOW_REF.to_string(),
+        BUTTON_LS_TREE.to_string(),
+        BUTTON_LS_FILES.to_string(),
+        BUTTON_CHECK_IGNORE.to_string(),
+        BUTTON_TAG.to_string(),
+        BUTTON_REBASE.to_string(),
         BUTTON_CMD_CLONE.to_string(),
         BUTTON_CMD_HASH_OBJECT.to_string(),
         BUTTON_CMD_CAT_FILE.to_string(),
+        BUTTON_CMD_FETCH.to_string(),
+        BUTTON_CMD_PUSH.to_string(),
+        BUTTON_CMD_PULL.to_string(),
     ];
     buttons
 }

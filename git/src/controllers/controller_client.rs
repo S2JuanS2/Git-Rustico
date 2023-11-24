@@ -27,11 +27,13 @@ use crate::util::logger::write_client_log;
 #[derive(Clone)]
 pub struct Controller {
     client: Client,
+    current_branch: String,
 }
 
 impl Controller {
     pub fn new(client: Client) -> Controller {
-        Controller { client }
+        let current_branch = "None".to_string();
+        Controller { client, current_branch }
     }
     pub fn send_command(&mut self, command: &str) -> Result<String, GitError> {
         match handle_command(command.to_string().clone(), &mut self.client) {
@@ -65,6 +67,9 @@ impl Controller {
     }
     pub fn get_name_client(&self) -> &str {
         self.client.get_name()
+    }
+    pub fn get_current_branch(&self) -> &str {
+        &self.current_branch
     }
 }
 
