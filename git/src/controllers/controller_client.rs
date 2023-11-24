@@ -19,6 +19,7 @@ use crate::commands::rm::handle_rm;
 use crate::commands::show_ref::handle_show_ref;
 use crate::commands::status::handle_status;
 
+use crate::commands::tag::handle_tag;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::logger::write_client_log;
@@ -152,6 +153,9 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
             }
             "show-ref" => {
                 result = handle_show_ref(rest_of_command, client.clone())?;
+            }
+            "tag" => {
+                result = handle_tag(rest_of_command, client.clone())?;
             }
             _ => {
                 return Err(GitError::CommandNotRecognizedError);
