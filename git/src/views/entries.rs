@@ -9,6 +9,10 @@ pub const ENTRY_HASH_OBJECT: &str = "entry_hash-object";
 pub const ENTRY_CAT_FILE: &str = "entry_cat-file";
 pub const ENTRY_FETCH: &str = "entry_fetch";
 pub const ENTRY_REMOTE: &str = "entry_remote";
+pub const ENTRY_LS: &str = "entry_ls";
+pub const ENTRY_TAG: &str = "entry_tag";
+pub const ENTRY_CHECK_IGNORE: &str = "entry_ignore";
+pub const ENTRY_REBASE: &str = "entry_rebase";
 
 pub fn get_entries() -> Vec<String> {
     let entries: Vec<String> = vec![
@@ -23,6 +27,10 @@ pub fn get_entries() -> Vec<String> {
         ENTRY_CAT_FILE.to_string(),
         ENTRY_FETCH.to_string(),
         ENTRY_REMOTE.to_string(),
+        ENTRY_LS.to_string(),
+        ENTRY_TAG.to_string(),
+        ENTRY_REBASE.to_string(),
+        ENTRY_CHECK_IGNORE.to_string(),
     ];
     entries
 }

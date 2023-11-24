@@ -232,10 +232,16 @@ impl View {
         self.connect_button_with_entry(ENTRY_MERGE, BUTTON_MERGE, "git merge".to_string());
         self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH, "git branch".to_string());
         self.connect_button_with_entry(ENTRY_REMOTE, BUTTON_REMOTE, "git remote".to_string());
+        self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_FILES, "git ls-files".to_string());
+        self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_TREE, "git ls-tree".to_string());
+        self.connect_button_with_entry(ENTRY_CHECK_IGNORE, BUTTON_CHECK_IGNORE, "git check-ignore".to_string());
+        self.connect_button_with_entry(ENTRY_TAG, BUTTON_TAG, "git tag".to_string());
+        self.connect_button_with_entry(ENTRY_REBASE, BUTTON_REBASE, "git rebase".to_string());
 
         let commands = [
             (BUTTON_INIT, "git init".to_string()),
             (BUTTON_STATUS, "git status".to_string()),
+            (BUTTON_SHOW_REF, "git show-ref".to_string()),
             (BUTTON_PULL, "git pull".to_string()),
             (BUTTON_PUSH, "git push".to_string()),
             (BUTTON_LOG, "git log".to_string()),

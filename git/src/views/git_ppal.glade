@@ -52,7 +52,7 @@
   <object class="GtkImage" id="hash">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="stock">gtk-info</property>
+    <property name="stock">gtk-dialog-info</property>
   </object>
   <object class="GtkImage" id="help">
     <property name="visible">True</property>
@@ -457,11 +457,6 @@
     <property name="can_focus">False</property>
     <property name="stock">gtk-info</property>
   </object>
-  <object class="GtkImage" id="ta">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-disconnect</property>
-  </object>
   <object class="GtkWindow" id="window_ppal">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Client Git</property>
@@ -488,7 +483,7 @@
             <property name="always_show_image">True</property>
           </object>
           <packing>
-            <property name="x">836</property>
+            <property name="x">963</property>
             <property name="y">740</property>
           </packing>
         </child>
@@ -520,7 +515,7 @@
             <property name="placeholder_text" translatable="yes">Ingrese un comando</property>
           </object>
           <packing>
-            <property name="x">162</property>
+            <property name="x">295</property>
             <property name="y">743</property>
           </packing>
         </child>
@@ -531,18 +526,81 @@
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
             <child>
-              <placeholder/>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkButton" id="button_check_ignore">
+                    <property name="label" translatable="yes">check-ignore   </property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="image">checkignore</property>
+                    <property name="image_position">right</property>
+                    <property name="always_show_image">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="entry_ignore">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="placeholder_text" translatable="yes">file name</property>
+                    <property name="input_purpose">terminal</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">5</property>
+                <property name="position">1</property>
+              </packing>
             </child>
             <child>
-              <object class="GtkButton" id="button_check_ignore">
-                <property name="label" translatable="yes">check-ignore</property>
+              <object class="GtkBox">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="halign">end</property>
-                <property name="image">checkignore</property>
-                <property name="image_position">right</property>
-                <property name="always_show_image">True</property>
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkButton" id="button_tag">
+                    <property name="label" translatable="yes">Tag </property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="image">tag</property>
+                    <property name="image_position">right</property>
+                    <property name="always_show_image">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="entry_tag">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="placeholder_text" translatable="yes">name version</property>
+                    <property name="input_purpose">terminal</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -551,69 +609,15 @@
                 <property name="position">2</property>
               </packing>
             </child>
-            <child>
-              <object class="GtkButton" id="show_ref">
-                <property name="label" translatable="yes">show-ref</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="halign">end</property>
-                <property name="image">showref</property>
-                <property name="image_position">right</property>
-                <property name="always_show_image">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="padding">5</property>
-                <property name="position">5</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="rebase">
-                <property name="label" translatable="yes">rebase </property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="halign">end</property>
-                <property name="image">rebas</property>
-                <property name="image_position">right</property>
-                <property name="always_show_image">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="padding">5</property>
-                <property name="position">6</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="tag">
-                <property name="label" translatable="yes">Tag </property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="halign">end</property>
-                <property name="image">ta</property>
-                <property name="image_position">right</property>
-                <property name="always_show_image">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="padding">5</property>
-                <property name="position">7</property>
-              </packing>
-            </child>
           </object>
           <packing>
-            <property name="x">15</property>
-            <property name="y">77</property>
+            <property name="x">4</property>
+            <property name="y">459</property>
           </packing>
         </child>
         <child>
           <object class="GtkScrolledWindow" id="scrolledwindow_console">
-            <property name="width_request">760</property>
+            <property name="width_request">863</property>
             <property name="height_request">650</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
@@ -635,7 +639,7 @@
             </child>
           </object>
           <packing>
-            <property name="x">158</property>
+            <property name="x">180</property>
             <property name="y">82</property>
           </packing>
         </child>
@@ -955,9 +959,50 @@
                 <property name="position">7</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkButton" id="button_rebase">
+                    <property name="label" translatable="yes">rebase </property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="image">rebas</property>
+                    <property name="always_show_image">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="entry_rebase">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="placeholder_text" translatable="yes">Name branch</property>
+                    <property name="input_purpose">terminal</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">5</property>
+                <property name="position">8</property>
+              </packing>
+            </child>
           </object>
           <packing>
-            <property name="x">934</property>
+            <property name="x">1050</property>
             <property name="y">83</property>
           </packing>
         </child>
@@ -1000,6 +1045,19 @@
               </packing>
             </child>
             <child>
+              <object class="GtkIconView">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="margin">6</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">36</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkButton" id="button_fetch">
                 <property name="label" translatable="yes">Fetch</property>
                 <property name="width_request">72</property>
@@ -1014,7 +1072,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">2</property>
+                <property name="position">3</property>
               </packing>
             </child>
             <child>
@@ -1032,7 +1090,7 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">3</property>
+                <property name="position">4</property>
               </packing>
             </child>
             <child>
@@ -1050,12 +1108,12 @@
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">4</property>
+                <property name="position">5</property>
               </packing>
             </child>
           </object>
           <packing>
-            <property name="x">290</property>
+            <property name="x">335</property>
             <property name="y">28</property>
           </packing>
         </child>
@@ -1100,7 +1158,7 @@
             </child>
           </object>
           <packing>
-            <property name="x">950</property>
+            <property name="x">1068</property>
             <property name="y">10</property>
           </packing>
         </child>
@@ -1134,14 +1192,13 @@
             </attributes>
           </object>
           <packing>
-            <property name="x">1059</property>
+            <property name="x">1176</property>
             <property name="y">750</property>
           </packing>
         </child>
         <child>
           <object class="GtkBox">
             <property name="width_request">100</property>
-            <property name="height_request">80</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
@@ -1183,8 +1240,8 @@
             </child>
           </object>
           <packing>
-            <property name="x">50</property>
-            <property name="y">646</property>
+            <property name="x">73</property>
+            <property name="y">650</property>
           </packing>
         </child>
         <child>
@@ -1200,9 +1257,8 @@
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">Información</property>
                 <attributes>
-                  <attribute name="font-desc" value="System-ui Bold 15"/>
-                  <attribute name="foreground" value="#eeeeeeeeecec"/>
-                  <attribute name="background" value="#20204a4a8787"/>
+                  <attribute name="font-desc" value="Sans Bold 15"/>
+                  <attribute name="foreground" value="#20204a4a8787"/>
                 </attributes>
               </object>
               <packing>
@@ -1214,11 +1270,12 @@
             </child>
             <child>
               <object class="GtkButton" id="button_status">
-                <property name="label" translatable="yes">Status</property>
+                <property name="label" translatable="yes">Status             </property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="halign">end</property>
                 <property name="image">status</property>
                 <property name="image_position">right</property>
                 <property name="always_show_image">True</property>
@@ -1236,6 +1293,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="halign">end</property>
                 <property name="image">hash</property>
                 <property name="image_position">right</property>
                 <property name="always_show_image">True</property>
@@ -1249,11 +1307,12 @@
             </child>
             <child>
               <object class="GtkButton" id="button_cat-file">
-                <property name="label" translatable="yes">Cat-file  </property>
+                <property name="label" translatable="yes">Cat-file          </property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="halign">end</property>
                 <property name="image">catfile</property>
                 <property name="image_position">right</property>
                 <property name="always_show_image">True</property>
@@ -1266,8 +1325,26 @@
               </packing>
             </child>
             <child>
+              <object class="GtkButton" id="button_show_ref">
+                <property name="label" translatable="yes">show-ref       </property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="halign">end</property>
+                <property name="image">showref</property>
+                <property name="image_position">right</property>
+                <property name="always_show_image">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">5</property>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkButton" id="button_log">
-                <property name="label" translatable="yes">Log </property>
+                <property name="label" translatable="yes">Log   </property>
                 <property name="width_request">72</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
@@ -1281,52 +1358,103 @@
                 <property name="expand">False</property>
                 <property name="fill">True</property>
                 <property name="padding">5</property>
-                <property name="position">4</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="ls_files">
-                <property name="label" translatable="yes">ls-files  </property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="halign">end</property>
-                <property name="image">lsfiles</property>
-                <property name="image_position">right</property>
-                <property name="always_show_image">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="padding">5</property>
                 <property name="position">5</property>
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="ls_tree">
-                <property name="label" translatable="yes">ls-tree  </property>
+              <object class="GtkBox">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="halign">end</property>
-                <property name="image">lstree</property>
-                <property name="image_position">right</property>
-                <property name="always_show_image">True</property>
+                <property name="can_focus">False</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <object class="GtkButton" id="button_ls_tree">
+                            <property name="label" translatable="yes">ls-tree  </property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <property name="image">lstree</property>
+                            <property name="image_position">right</property>
+                            <property name="always_show_image">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="button_ls_files">
+                            <property name="label" translatable="yes">ls-files  </property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <property name="image">lsfiles</property>
+                            <property name="image_position">right</property>
+                            <property name="always_show_image">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="entry_ls">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="placeholder_text" translatable="yes">Here</property>
+                        <property name="input_purpose">terminal</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="padding">5</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="padding">5</property>
                 <property name="position">6</property>
               </packing>
             </child>
           </object>
           <packing>
-            <property name="x">11</property>
-            <property name="y">320</property>
+            <property name="x">3</property>
+            <property name="y">82</property>
           </packing>
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkImage" id="tag">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-disconnect</property>
   </object>
 </interface>
