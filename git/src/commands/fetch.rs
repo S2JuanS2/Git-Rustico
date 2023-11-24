@@ -65,10 +65,10 @@ pub fn git_fetch_all(
     socket: &mut TcpStream,
     ip: &str,
     port: &str,
-    repo: &str,
+    repo_local: &str,
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
-    let git_config = GitConfig::new_from_repo(repo)?;
+    let git_config = GitConfig::new_from_repo(repo_local)?;
     let repo_remoto = git_config.get_remote_repo()?;
 
     println!("Fetch del repositorio remoto: {}", repo_remoto);
@@ -81,11 +81,11 @@ pub fn git_fetch_all(
     let mut server = reference_discovery(socket, message)?;
 
     // Packfile Negotiation
-    packfile_negotiation_partial(socket, &mut server, &repo)?;
+    packfile_negotiation_partial(socket, &mut server, &repo_local)?;
 
     // Packfile Data
     let content = receive_packfile(socket)?;
-    if save_objects(content, repo).is_err() {
+    if save_objects(content, repo_local).is_err() {
         return Err(CommandsError::RepositoryNotInitialized);
     };
 
@@ -97,11 +97,10 @@ pub fn git_fetch_all(
     // Se puede usar el content o otro objeto
     // let refs: Vec<(String, String)> = get_refs(content);
     let refs: Vec<(String, String)> = vec![];
-    save_references(&refs, repo)?;
+    save_references(&refs, repo_local)?;
 
     // Crear archivo FETCH_HEAD
-    // Aun falta terminarlo
-    create_fetch_head(&refs, repo)?;
+    create_fetch_head(&refs, repo_local, repo_remoto)?;
 
     Ok("Sucessfully!".to_string())
 }
@@ -141,7 +140,7 @@ fn save_references(refs: &Vec<(String, String)>, repo_path: &str) -> Result<(), 
 /// # Argumentos
 ///
 /// * `references`: Un vector de tuplas que contiene el nombre de la rama y su hash.
-/// * `repo_path`: La ruta del repositorio donde se creará el archivo FETCH_HEAD.
+/// * `repo_local`: La ruta del repositorio donde se creará el archivo FETCH_HEAD.
 ///
 /// # Errores
 ///
@@ -149,11 +148,12 @@ fn save_references(refs: &Vec<(String, String)>, repo_path: &str) -> Result<(), 
 ///
 fn create_fetch_head(
     references: &Vec<(String, String)>,
-    repo_path: &str,
+    repo_local: &str,
+    repo_remoto: &str
 ) -> Result<(), CommandsError> {
-    let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_path);
+    let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_local);
 
-    if _create_fetch_head(references, &fetch_head_path).is_err() {
+    if _create_fetch_head(references, &fetch_head_path, repo_remoto).is_err() {
         return Err(CommandsError::CreateFetchHEAD);
     };
 
@@ -161,16 +161,16 @@ fn create_fetch_head(
 }
 
 /// Función auxiliar que implementa la lógica real para crear FETCH_HEAD.
-fn _create_fetch_head(references: &Vec<(String, String)>, path: &str) -> io::Result<()> {
+fn _create_fetch_head(references: &Vec<(String, String)>, repo_local: &str, repo_remoto: &str) -> io::Result<()> {
     // Abre el archivo FETCH_HEAD para escritura
-    let mut fetch_head_file = fs::File::create(path)?;
+    let mut fetch_head_file = fs::File::create(repo_local)?;
 
     // Escribe las líneas en el formato necesario en FETCH_HEAD
     for (branch, hash) in references {
         writeln!(
             fetch_head_file,
-            "{}\t\tbranch '{}' of github.com:user/repo",
-            hash, branch
+            "{}\tnot-for-merge\tbranch '{}' of github.com:{}",
+            hash,branch, repo_remoto
         )?;
     }
     Ok(())
