@@ -17,6 +17,8 @@ pub struct View {
     window_dialog_cat_file: gtk::Window,
     window_dialog_hash_object: gtk::Window,
     window_dialog_fetch: gtk::Window,
+    window_dialog_push: gtk::Window,
+    window_dialog_pull: gtk::Window,
     buttons: HashMap<String, gtk::Button>,
     entries: HashMap<String, Rc<gtk::Entry>>,
     response: Rc<gtk::TextView>,
@@ -66,6 +68,12 @@ impl View {
         let window_dialog_fetch: gtk::Window = builder
             .object("window_dialog_fetch")
             .ok_or(GitError::ObjectBuildFailed)?;
+        let window_dialog_push: gtk::Window = builder
+            .object("window_dialog_push")
+            .ok_or(GitError::ObjectBuildFailed)?;
+        let window_dialog_pull: gtk::Window = builder
+            .object("window_dialog_pull")
+            .ok_or(GitError::ObjectBuildFailed)?;
         let response: Rc<gtk::TextView> = Rc::new(
             builder
                 .object("console")
@@ -81,6 +89,8 @@ impl View {
             window_dialog_hash_object,
             window_dialog_cat_file,
             window_dialog_fetch,
+            window_dialog_push,
+            window_dialog_pull,
             buttons,
             entries,
             response,
@@ -93,6 +103,10 @@ impl View {
         let binding = controller.borrow_mut();
         let user_name = binding.get_name_client();
         self.label_user.set_text(user_name);
+    }
+
+    fn set_branch(&mut self) {
+        
     }
 
     fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>) {
@@ -163,7 +177,6 @@ impl View {
             });
         }
     }
-
     fn connect_button_fetch(&self) {
         let dialog = self.window_dialog_fetch.clone();
 
@@ -173,7 +186,24 @@ impl View {
             });
         }
     }
+    fn connect_button_push(&self) {
+        let dialog = self.window_dialog_push.clone();
 
+        if let Some(button) = self.buttons.get(BUTTON_PUSH) {
+            button.connect_clicked(move |_| {
+                dialog.show_all();
+            });
+        }
+    }
+    fn connect_button_pull(&self) {
+        let dialog = self.window_dialog_pull.clone();
+
+        if let Some(button) = self.buttons.get(BUTTON_PULL) {
+            button.connect_clicked(move |_| {
+                dialog.show_all();
+            });
+        }
+    }
     fn connect_button_send(&self) {
         let response = Rc::clone(&self.response);
         let controller = Rc::clone(&self.controller);
@@ -242,8 +272,6 @@ impl View {
             (BUTTON_INIT, "git init".to_string()),
             (BUTTON_STATUS, "git status".to_string()),
             (BUTTON_SHOW_REF, "git show-ref".to_string()),
-            (BUTTON_PULL, "git pull".to_string()),
-            (BUTTON_PUSH, "git push".to_string()),
             (BUTTON_LOG, "git log".to_string()),
         ];
 
@@ -257,11 +285,15 @@ impl View {
         self.connect_button_cat_file();
         self.connect_button_hash_object();
         self.connect_button_fetch();
+        self.connect_button_push();
+        self.connect_button_pull();
 
         let window_clone = self.window_dialog_clone.clone();
         let window_cat_file = self.window_dialog_cat_file.clone();
         let window_hash_object = self.window_dialog_hash_object.clone();
         let window_fetch = self.window_dialog_fetch.clone();
+        let window_push = self.window_dialog_push.clone();
+        let window_pull = self.window_dialog_pull.clone();
 
         self.connect_button_cmd(
             ENTRY_FETCH,
@@ -286,6 +318,18 @@ impl View {
             BUTTON_CMD_HASH_OBJECT,
             "git hash-object".to_string(),
             window_hash_object,
+        );
+        self.connect_button_cmd(
+            ENTRY_PUSH,
+            BUTTON_CMD_PUSH,
+            "git push".to_string(),
+            window_push,
+        );
+        self.connect_button_cmd(
+            ENTRY_PULL,
+            BUTTON_CMD_PULL,
+            "git pull".to_string(),
+            window_pull,
         );
     }
     pub fn start_view(&mut self) -> Result<(), GitError> {

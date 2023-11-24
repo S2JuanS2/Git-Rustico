@@ -13,6 +13,8 @@ pub const ENTRY_LS: &str = "entry_ls";
 pub const ENTRY_TAG: &str = "entry_tag";
 pub const ENTRY_CHECK_IGNORE: &str = "entry_ignore";
 pub const ENTRY_REBASE: &str = "entry_rebase";
+pub const ENTRY_PULL: &str = "entry_pull";
+pub const ENTRY_PUSH: &str = "entry_push";
 
 pub fn get_entries() -> Vec<String> {
     let entries: Vec<String> = vec![
@@ -31,6 +33,8 @@ pub fn get_entries() -> Vec<String> {
         ENTRY_TAG.to_string(),
         ENTRY_REBASE.to_string(),
         ENTRY_CHECK_IGNORE.to_string(),
+        ENTRY_PUSH.to_string(),
+        ENTRY_PULL.to_string(),
     ];
     entries
 }
