@@ -23,6 +23,7 @@ pub struct View {
     entries: HashMap<String, Rc<gtk::Entry>>,
     response: Rc<gtk::TextView>,
     label_user: gtk::Label,
+    label_branch: gtk::Label,
 }
 
 impl View {
@@ -80,6 +81,7 @@ impl View {
                 .ok_or(GitError::ObjectBuildFailed)?,
         );
         let label_user: gtk::Label = builder.object("user").ok_or(GitError::ObjectBuildFailed)?;
+        let label_branch: gtk::Label = builder.object("label_branch").ok_or(GitError::ObjectBuildFailed)?;
 
         let controller = Rc::new(RefCell::new(controller));
         Ok(View {
@@ -95,6 +97,7 @@ impl View {
             entries,
             response,
             label_user,
+            label_branch,
         })
     }
 
@@ -105,8 +108,12 @@ impl View {
         self.label_user.set_text(user_name);
     }
 
-    fn set_branch(&mut self) {
-        
+    fn set_label_branch(&mut self) {
+        let controller = Rc::clone(&self.controller);
+        let binding = controller.borrow_mut();
+        let current_branch = binding.get_current_branch();
+        let text_format = format!("Current branch: {}", current_branch);
+        self.label_branch.set_text(&text_format);
     }
 
     fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>) {
@@ -340,6 +347,7 @@ impl View {
         });
 
         self.set_label_user();
+        self.set_label_branch();
 
         self.window.show_all();
         gtk::main();

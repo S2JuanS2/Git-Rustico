@@ -749,10 +749,13 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="branches">
+              <object class="GtkLabel" id="label_branch">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">Current branch</property>
+                <attributes>
+                  <attribute name="font-desc" value="Sawasdee Bold 15"/>
+                </attributes>
               </object>
               <packing>
                 <property name="expand">False</property>
