@@ -174,6 +174,24 @@ fn _create_fetch_head(references: &Vec<(String, String)>, repo_local: &str, repo
     Ok(())
 }
 
+/// Lee el contenido del archivo FETCH_HEAD y devuelve un vector con las referencias.
+///
+/// # Argumentos
+///
+/// * `repo_path` - Ruta del repositorio.
+/// 
+/// # Retorno
+/// 
+/// Devuelve un vector con las referencias del repositorio.
+/// Vec<(String_1, String_2, String_3)>
+/// * String_1: Hash del commit
+/// * String_2: Modo de merge
+/// * String_3: Nombre de la rama en github
+///
+/// # Errores
+///
+/// Devuelve un error de tipo `CommandsError` si no puede leer o interpretar el contenido del archivo.
+///
 pub fn read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>, CommandsError> {
     match _read_fetch_head(&repo_path)
     {
@@ -182,6 +200,16 @@ pub fn read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>,
     }
 }
 
+/// Función auxiliar que implementa la lógica real para leer FETCH_HEAD.
+///
+/// # Argumentos
+///
+/// * `repo_path` - Ruta del repositorio.
+///
+/// # Errores
+///
+/// Devuelve un error de tipo `io::Error` si no puede abrir o leer el archivo FETCH_HEAD.
+///
 pub fn _read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>, io::Error> {
     let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_path);
     let file = fs::File::open(fetch_head_path)?;
