@@ -193,7 +193,8 @@ fn _create_fetch_head(references: &Vec<(String, String)>, repo_local: &str, repo
 /// Devuelve un error de tipo `CommandsError` si no puede leer o interpretar el contenido del archivo.
 ///
 pub fn read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>, CommandsError> {
-    match _read_fetch_head(&repo_path)
+    let repo = format!("{}/.git", repo_path);
+    match _read_fetch_head(&repo)
     {
         Ok(result) => Ok(result),
         Err(_) => Err(CommandsError::ReadFetchHEAD),
@@ -204,14 +205,14 @@ pub fn read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>,
 ///
 /// # Argumentos
 ///
-/// * `repo_path` - Ruta del repositorio.
+/// * `path` - Ruta donde se encuentra el archivo FETCH_HEAD.
 ///
 /// # Errores
 ///
 /// Devuelve un error de tipo `io::Error` si no puede abrir o leer el archivo FETCH_HEAD.
 ///
-pub fn _read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>, io::Error> {
-    let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_path);
+pub fn _read_fetch_head(path: &str) -> Result<Vec<(String, String, String)>, io::Error> {
+    let fetch_head_path = format!("{}/FETCH_HEAD", path);
     let file = fs::File::open(fetch_head_path)?;
 
     let mut result = Vec::new();
@@ -232,6 +233,17 @@ pub fn _read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>
     }
 
     Ok(result)
+}
+
+pub fn get_references_not_for_merge(repo_path: &str) -> Result<Vec<(String, String)>, CommandsError> {
+    let references = read_fetch_head(repo_path)?;
+    let mut filter = Vec::new();
+    for (hash, mode_merge, branch_github) in references {
+        if mode_merge == "not-for-merge" {
+            filter.push((hash, branch_github));
+        }
+    }
+    Ok(filter)
 }
 
 
