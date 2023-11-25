@@ -2,7 +2,7 @@ use crate::commands::config::GitConfig;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR};
 use crate::errors::GitError;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
-use crate::git_transport::references::{Reference, reference_discovery};
+use crate::git_transport::references::reference_discovery;
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{receive_packfile, start_client};
