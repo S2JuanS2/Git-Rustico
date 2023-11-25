@@ -1,6 +1,7 @@
 use crate::commands::config::GitConfig;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR};
 use crate::errors::GitError;
+use crate::git_server::GitServer;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::models::client::Client;
 use crate::util::connections::receive_packfile;
@@ -90,13 +91,7 @@ pub fn git_fetch_all(
     };
 
     // Guardar las referencias en remote refs
-
-    // [TODO]
-    // necesito una funcion que me devuleva un vector dek tipo Vec<(String, String)>
-    // EL 1er string sera el nombre de la branch y el 2do string su ultimo commit
-    // Se puede usar el content o otro objeto
-    // let refs: Vec<(String, String)> = get_refs(content);
-    let refs: Vec<(String, String)> = vec![];
+    let refs = get_branches(&server)?;
     save_references(&refs, repo)?;
 
     // Crear archivo FETCH_HEAD
@@ -105,6 +100,32 @@ pub fn git_fetch_all(
 
     Ok("Sucessfully!".to_string())
 }
+
+/// Devuelve las referencias (nombres de las branches y hashes)
+///  
+/// # Argumentos
+///
+/// * `server`: Contiene las referencias recibidas del servidor
+///
+/// # Errores
+///
+/// Devuelve un error del tipo `CommandsError` si hay problemas
+///
+pub fn get_branches(server: &GitServer) -> Result<Vec<(String,String)>,CommandsError> {
+
+    let mut references: Vec<(String,String)> = vec![];
+
+    for reference in server.get_references().iter().skip(1){
+        let hash = reference.get_hash();
+        let branch = reference.get_name();
+            if let Some(current_branch) = branch.rsplit('/').next() {
+                let new_ref:(String,String) = (current_branch.to_string(),hash.to_string());
+                references.push(new_ref);
+            }
+    }
+    Ok(references)
+}
+
 
 /// Guarda referencias (nombres y hashes) en archivos individuales dentro del directorio de referencias
 /// remotas en un repositorio Git.
