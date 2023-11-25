@@ -1,4 +1,5 @@
 use crate::commands::config::GitConfig;
+use crate::commands::fetch::git_fetch_all;
 use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
@@ -38,18 +39,26 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), GitError> {
 }
 
 pub fn git_pull(
-    _socket: &mut TcpStream,
-    _ip: &str,
-    _port: &str,
-    repo: &str,
+    socket: &mut TcpStream,
+    ip: &str,
+    port: &str,
+    repo_local: &str,
 ) -> Result<(), GitError> {
     // Obtengo el repositorio remoto
-    let git_config = GitConfig::new_from_repo(repo)?;
+    let git_config = GitConfig::new_from_repo(repo_local)?;
     let repo_remoto = git_config.get_remote_repo()?;
 
     println!("Pull del repositorio remoto: {}", repo_remoto);
 
-    // git_fetch_all(_socket, _ip, _port, repo)?;
+    match git_fetch_all(socket, ip, port, repo_local)
+    {
+        Ok(_) => print!("Se descargo las actualizaciones del repositorio remoto con exito"),
+        Err(e) => return Err(e.into()),
+    }
+
+    // TODO: Implementar el merge de los cambios
+        
+
 
     Ok(())
 }

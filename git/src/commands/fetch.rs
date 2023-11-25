@@ -2,23 +2,21 @@ use crate::commands::config::GitConfig;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR};
 use crate::errors::GitError;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
+use crate::git_transport::references::{Reference, reference_discovery};
+use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
-use crate::util::connections::receive_packfile;
+use crate::util::connections::{receive_packfile, start_client};
 use crate::util::files::ensure_directory_clean;
 use crate::util::objects::{
     builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_commit,
     read_tree, ObjectEntry, ObjectType,
 };
-use crate::{
-    git_transport::{
-        git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
-    },
-    util::connections::start_client,
-};
+use crate::git_transport::git_request::GitRequest;
 use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
 use std::{fs, io};
+use std::io::BufRead;
 
 use super::errors::CommandsError;
 
@@ -175,6 +173,39 @@ fn _create_fetch_head(references: &Vec<(String, String)>, repo_local: &str, repo
     }
     Ok(())
 }
+
+pub fn read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>, CommandsError> {
+    match _read_fetch_head(&repo_path)
+    {
+        Ok(result) => Ok(result),
+        Err(_) => Err(CommandsError::ReadFetchHEAD),
+    }
+}
+
+pub fn _read_fetch_head(repo_path: &str) -> Result<Vec<(String, String, String)>, io::Error> {
+    let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_path);
+    let file = fs::File::open(fetch_head_path)?;
+
+    let mut result = Vec::new();
+    for line in io::BufReader::new(file).lines() {
+        let line = line?;
+        let parts: Vec<&str> = line.split('\t').collect();
+
+        if parts.len() != 3 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "FETCH_HEAD file is corrupted",
+            ));
+        }
+        let hash = parts[0].to_string();
+        let mode_merge = parts[1].to_string();
+        let branch_github = parts[2].to_string();
+        result.push((hash, mode_merge, branch_github));
+    }
+
+    Ok(result)
+}
+
 
 /// Maneja la creación y el guardado de los objetos recibidos del servidor
 ///
