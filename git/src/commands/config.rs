@@ -10,8 +10,8 @@ use super::errors::CommandsError;
 
 #[derive(Debug)]
 struct BranchInfo {
-    remote: Option<String>,
-    merge: Option<String>,
+    pub remote: Option<String>,
+    pub merge: Option<String>,
 }
 
 impl Default for GitConfig {
@@ -35,6 +35,35 @@ impl BranchInfo {
             _ => return Err(CommandsError::InvalidEntryConfigFile),
         };
         Ok(())
+    }
+
+    fn format(&self) -> String
+    {
+        let mut format = String::new();
+        match &self.remote {
+            Some(value) => {
+                let s = format!("\tremote = {}\n", value);
+                format.extend(vec![s]);
+            },
+            None => (),
+        }
+        match &self.merge {
+            Some(value) => {
+                let s = format!("\tmerge = {}\n", value);
+                format.extend(vec![s]);
+            },
+            None => (),
+        }
+        format
+    }
+
+    pub fn valid_attribute(attribute: &str) -> bool
+    {
+        match attribute 
+        {
+            "remote" | "merge" => true,
+            _ => false,
+        }
     }
 }
 
@@ -72,6 +101,20 @@ impl GitConfig {
     //     git_config
     // }
 
+    /// Crea una nueva instancia de `GitConfig` basada en la configuración encontrada en el repositorio especificado.
+    ///
+    /// # Argumentos
+    ///
+    /// * `repo` - Una cadena que representa la ruta al repositorio Git.
+    ///
+    /// # Devolución
+    ///
+    /// Una instancia de `GitConfig` inicializada con la configuración leída del repositorio.
+    ///
+    /// # Pánicos
+    ///
+    /// Esta función generará un pánico si hay problemas al leer la configuración de Git desde el repositorio.
+    ///
     pub fn new_from_file(repo: &str) -> Result<Self, CommandsError> {
         let path = format!("{}/{}/{}", repo, GIT_DIR, CONFIG_FILE);
         GitConfig::_new_from_file(&path)
@@ -114,57 +157,6 @@ impl GitConfig {
     //     }
     // }
 
-    /// Analiza una línea de configuración Git y actualiza las secciones correspondientes.
-    ///
-    /// # Argumentos
-    ///
-    /// * `line`: Una cadena que representa una línea de configuración Git en el formato "clave=valor".
-    ///
-    // pub fn parse_line(&mut self, line: &str) {
-    //     let parts: Vec<&str> = line.splitn(2, '=').collect();
-    //     if parts.len() == 2 {
-    //         let key = parts[0].trim();
-    //         let value = parts[1].trim();
-
-    //         match key {
-    //             "repositoryformatversion" | "filemode" | "bare" | "logallrefupdates" => {
-    //                 self.core.insert(key.to_string(), value.to_string());
-    //             }
-    //             "url" | "fetch" => {
-    //                 self.remote_origin
-    //                     .insert(key.to_string(), value.to_string());
-    //             }
-    //             "remote" | "merge" => {
-    //                 self.branch.insert(key.to_string(), value.to_string());
-    //             }
-    //             _ => {}
-    //         }
-    //     }
-    // }
-
-    /// Crea un GitConfig desde un archivo.
-    ///
-    /// # Argumentos
-    ///
-    /// * `file_path`: La ruta del archivo que contiene la configuración Git.
-    ///
-    /// # Errores
-    ///
-    /// Devuelve un resultado `Result` indicando si la operación fue exitosa o si se produjo un error
-    /// al leer el archivo.
-    ///
-    // fn read_git_config(file_path: &str) -> Result<Self, std::io::Error> {
-    //     let mut git_config = GitConfig::new();
-    //     if Path::new(file_path).exists() {
-    //         let content = fs::read_to_string(file_path)?;
-
-    //         for line in content.lines() {
-    //             git_config.parse_line(line);
-    //         }
-    //     }
-
-    //     Ok(git_config)
-    // }
 
     /// Agrega una entrada a una sección específica de la configuración Git.
     ///
@@ -192,6 +184,10 @@ impl GitConfig {
             "branch" => {
                 let name = parts[1].trim();
                 if !name.starts_with("\"") || !name.ends_with("\"")
+                {
+                    return Err(CommandsError::InvalidEntryConfigFile);
+                }
+                if !BranchInfo::valid_attribute(key)
                 {
                     return Err(CommandsError::InvalidEntryConfigFile);
                 }
@@ -241,40 +237,106 @@ impl GitConfig {
     /// Devuelve un resultado `io::Result` indicando si la operación fue exitosa o si se produjo un error
     /// al escribir en el archivo.
     ///
-    // pub fn write_to_file(&self, file_path: &str) -> Result<(), CommandsError> {
-    //     match self._write_to_file(file_path) {
-    //         Ok(_) => Ok(()),
-    //         Err(_) => Err(CommandsError::CreateGitConfig),
-    //     }
-    // }
+    pub fn write_to_file(&self, file_path: &str) -> Result<(), CommandsError> {
+        match self._write_to_file(file_path) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(CommandsError::CreateGitConfig),
+        }
+    }
 
-    // fn _write_to_file(&self, file_path: &str) -> io::Result<()> {
-    //     let mut file = File::create(file_path)?;
+    fn _write_to_file(&self, file_path: &str) -> io::Result<()> {
+        let mut file = File::create(file_path)?;
 
-    //     // Write core section
-    //     for (key, value) in &self.core {
-    //         writeln!(file, "{} = {}", key, value)?;
-    //     }
+        // Write core section
+        writeln!(file, "[core]")?;
+        for (key, value) in &self.core {
+            writeln!(file, "\t{} = {}", key, value)?;
+        }
 
-    //     // Write remote "origin" section
-    //     for (key, value) in &self.remote_origin {
-    //         writeln!(file, "[remote \"origin\"]")?;
-    //         writeln!(file, "    {} = {}", key, value)?;
-    //     }
+        // Write remote "origin" section
+        writeln!(file, "[remote \"origin\"]")?;
+        for (key, value) in &self.remote_origin {
+            writeln!(file, "\t{} = {}", key, value)?;
+        }
 
-    //     // Write branch "main" section
-    //     for (key, value) in &self.branch {
-    //         writeln!(file, "[branch \"main\"]")?;
-    //         writeln!(file, "    {} = {}", key, value)?;
-    //     }
+        // Write branch "main" section
+        for (name, value) in &self.branch {
+            writeln!(file, "[branch \"{}\"]", name)?;
+            write!(file, "{}", value.format())?;
+        }
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     pub fn get_remote_repo(&self) -> Result<&String, CommandsError> {
         match self.remote_origin.get("url") {
             Some(url) => Ok(url),
             None => Err(CommandsError::MissingUrlConfig),
+        }
+    }
+
+    pub fn get_remote_from_branch(&self, name: &str) -> Option<&str>
+    {
+        let branch = match self.branch.get(name)
+        {
+            Some(b) => b,
+            None => return None,
+        };
+
+        match &branch.remote
+        {
+            Some(remote) => Some(&remote),
+            None => None,
+        }
+    }
+
+    /// Obtiene el valor asociado a una clave en una sección específica de la configuración Git.
+    ///
+    /// # Argumentos
+    ///
+    /// * `section`: La sección a la que pertenece la entrada.
+    /// * `key`: La clave de la entrada cuyo valor se va a obtener.
+    ///
+    /// # Retorno
+    ///
+    /// Devuelve `Some(&String)` si la entrada existe, o `None` si no se encuentra.
+    ///
+    pub fn get_value(&self, section: &str, key: &str) -> Option<&str>
+    {
+        if section == "core"
+        {
+            return self.core.get(key).map(|x| x.as_str())
+        }
+        let parts: Vec<&str> = section.split_whitespace().collect();
+        if parts.len() != 2 {
+            println!("parts: {:?}", parts);
+            return None;
+        }
+        match parts[0].trim() {
+            "remote" => {
+                self.remote_origin.get(key).map(|x| x.as_str())
+            }
+            "branch" => {
+                let name = parts[1].trim();
+                if !name.starts_with("\"") || !name.ends_with("\"")
+                {
+                    return None;
+                }
+                let name = name[1..name.len() - 1].to_string();
+                match self.branch.get(&name)
+                {
+                    Some(b) => {
+                        match key
+                        {
+                            "remote" => b.remote.as_deref(),
+                            "merge" => b.merge.as_deref(),
+                            _ => None,
+                        }
+                    },
+                    None => None,
+                }
+            }
+            _ => None,
         }
     }
 }
@@ -354,276 +416,140 @@ fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, Stri
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::io::Read;
 
-    // #[test]
-    // fn parse_line_valid_core_key_value() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.parse_line("repositoryformatversion = 0");
-    //     assert_eq!(
-    //         git_config.core.get("repositoryformatversion"),
-    //         Some(&"0".to_string())
-    //     );
-    // }
-
-    // #[test]
-    // fn parse_line_valid_remote_origin_key_value() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.parse_line("url = git@github.com:example/repo.git");
-    //     assert_eq!(
-    //         git_config.remote_origin.get("url"),
-    //         Some(&"git@github.com:example/repo.git".to_string())
-    //     );
-    // }
-
-    // #[test]
-    // fn parse_line_valid_branch_key_value() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.parse_line("remote = origin");
-    //     assert_eq!(
-    //         git_config.branch.get("remote"),
-    //         Some(&"origin".to_string())
-    //     );
-    // }
-
-    // #[test]
-    // fn parse_line_invalid_key_value() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.parse_line("invalid_key = invalid_value");
-    //     assert!(git_config.core.is_empty());
-    //     assert!(git_config.remote_origin.is_empty());
-    //     assert!(git_config.branch.is_empty());
-    // }
-
-    // #[test]
-    // fn parse_line_invalid_syntax() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.parse_line("invalid_syntax_without_equal_sign");
-    //     assert!(git_config.core.is_empty());
-    //     assert!(git_config.remote_origin.is_empty());
-    //     assert!(git_config.branch.is_empty());
-    // }
-
-    // #[test]
-    // fn test_read_git_config() {
-    //     // Crea un archivo de prueba temporal con contenido de configuración Git
-    //     let temp_file_path = "./test_files/config_2";
-    //     let mut temp_file =
-    //         std::fs::File::create(temp_file_path).expect("Failed to create temp file");
-    //     writeln!(temp_file, "repositoryformatversion = 0").expect("Failed to write to temp file");
-    //     writeln!(temp_file, "[remote \"origin\"]").expect("Failed to write to temp file");
-    //     writeln!(temp_file, "   url = git@github.com:example/repo.git")
-    //         .expect("Failed to write to temp file");
-    //     writeln!(temp_file, "[branch \"main\"]").expect("Failed to write to temp file");
-    //     writeln!(temp_file, "   remote = origin").expect("Failed to write to temp file");
-
-    //     // Crea una instancia de GitConfig y lee la configuración desde el archivo temporal
-    //     let result = GitConfig::read_git_config(temp_file_path);
-    //     // Verifica que la lectura sea exitosa y que las secciones se hayan analizado correctamente
-    //     assert!(result.is_ok());
-    //     let git_config = result.unwrap();
-    //     assert_eq!(git_config.core["repositoryformatversion"], "0");
-    //     assert_eq!(
-    //         git_config.remote_origin["url"],
-    //         "git@github.com:example/repo.git"
-    //     );
-    //     assert_eq!(git_config.branch["remote"], "origin");
-
-    //     // Limpia el archivo temporal después de las pruebas
-    //     fs::remove_file(temp_file_path).expect("Failed to remove temp file");
-    // }
-
-    // #[test]
-    // fn test_read_git_config_nonexistent_file() {
-    //     let result = GitConfig::read_git_config("nonexistent_file.txt");
-    //     assert!(result.is_ok());
-    //     let git_config = result.unwrap();
-    //     assert!(git_config.core.is_empty());
-    //     assert!(git_config.remote_origin.is_empty());
-    //     assert!(git_config.branch.is_empty());
-    // }
-
-    // #[test]
-    // fn test_add_entry_core() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("repositoryformatversion", "0", "core");
-
-    //     assert_eq!(git_config.core["repositoryformatversion"], "0");
-    //     assert!(git_config.remote_origin.is_empty());
-    //     assert!(git_config.branch.is_empty());
-    // }
-
-    // #[test]
-    // fn test_add_entry_remote_origin() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("url", "git@github.com:example/repo.git", "remote.origin");
-
-    //     assert!(git_config.core.is_empty());
-    //     assert_eq!(
-    //         git_config.remote_origin["url"],
-    //         "git@github.com:example/repo.git"
-    //     );
-    //     assert!(git_config.branch.is_empty());
-    // }
-
-    // #[test]
-    // fn test_add_entry_branch() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("remote", "origin", "branch.main");
-
-    //     assert!(git_config.core.is_empty());
-    //     assert!(git_config.remote_origin.is_empty());
-    //     assert_eq!(git_config.branch["remote"], "origin");
-    // }
-
-    // #[test]
-    // fn test_add_entry_unknown_section() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("key", "value", "unknown_section");
-
-    //     assert!(git_config.core.is_empty());
-    //     assert!(git_config.remote_origin.is_empty());
-    //     assert!(git_config.branch.is_empty());
-    // }
-
-    // #[test]
-    // fn test_get_value_core() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("repositoryformatversion", "0", "core");
-
-    //     assert_eq!(
-    //         git_config.get_value("repositoryformatversion", "core"),
-    //         Some(&"0".to_string())
-    //     );
-    //     assert_eq!(git_config.get_value("filemode", "core"), None);
-    // }
-
-    // #[test]
-    // fn test_get_value_remote_origin() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("url", "git@github.com:example/repo.git", "remote.origin");
-
-    //     assert_eq!(
-    //         git_config.get_value("url", "remote.origin"),
-    //         Some(&"git@github.com:example/repo.git".to_string())
-    //     );
-    //     assert_eq!(git_config.get_value("fetch", "remote.origin"), None);
-    // }
-
-    // #[test]
-    // fn test_get_value_branch() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("remote", "origin", "branch.main");
-
-    //     assert_eq!(
-    //         git_config.get_value("remote", "branch.main"),
-    //         Some(&"origin".to_string())
-    //     );
-    //     assert_eq!(git_config.get_value("merge", "branch.main"), None);
-    // }
-
-    // #[test]
-    // fn test_get_value_unknown_section() {
-    //     let git_config = GitConfig::new();
-    //     assert_eq!(git_config.get_value("key", "unknown_section"), None);
-    // }
-
-    // #[test]
-    // fn test_write_to_file() {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("url", "git@github.com:example/repo.git", "remote.origin");
-    //     git_config.add_entry("remote", "origin", "branch.main");
-
-    //     let file_path = "./test_files/config_2";
-    //     let _ = git_config.write_to_file(file_path);
-
-    //     let mut file_content = String::new();
-    //     let mut file = File::open(file_path).expect("Could not open file");
-    //     file.read_to_string(&mut file_content)
-    //         .expect("Could not read file");
-
-    //     let expected_content = "[remote \"origin\"]\n    \
-    //                             url = git@github.com:example/repo.git\n\
-    //                             [branch \"main\"]\n    \
-    //                             remote = origin\n";
-                                
-    //     // Cleanup
-    //     // fs::remove_file(file_path).expect("Could not remove file");
-    //     assert_eq!(file_content, expected_content);
-    // }
-
-    // #[test]
-    // fn test_read_git_config_from_file_1() {
-    //     let file_path = "./test_files/config_3";
-    //     let config = GitConfig::read_git_config(file_path).unwrap();
-    //     assert!(config.core.is_empty());
-    //     assert_eq!(
-    //         config.remote_origin["url"],
-    //         "git@github.com:example/repo.git");
-    //     assert_eq!(config.branch["remote"], "origin");
-    // }
-
-    // #[test]
-    // fn test_read_git_config_from_file_2() {
-    //     let file_path = "./test_files/config_4";
-    //     let config = GitConfig::read_git_config(file_path).unwrap();
-    //     println!("{:?}", config);
-    //     assert_eq!(config.core["repositoryformatversion"], "0");
-    //     assert_eq!(config.core["filemode"], "true");
-    //     assert_eq!(
-    //         config.remote_origin["url"],
-    //         "git@github.com:example/repo.git");
-    //     assert_eq!(config.remote_origin["fetch"], "+refs/heads/*:refs/remotes/origin/*");
-    //     assert_eq!(config.branch["remote"], "origin");
-    //     assert_eq!(config.branch["merge"], "refs/heads/main");
-    // }
+    use super::*;
 
     #[test]
-    fn test_read_git_config_from_file_3() {
-        let file_path = "./test_files/config_5";
+    fn add_entry_valid_core() {
+        let mut git_config = GitConfig::new();
+        git_config.add_entry("repositoryformatversion", "0", "core").unwrap();
+        assert_eq!(
+            git_config.core.get("repositoryformatversion"),
+            Some(&"0".to_string())
+        );
+    }
+
+    #[test]
+    fn add_entry_valid_remote_origin() {
+        let mut git_config = GitConfig::new();
+        git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin").unwrap();
+        assert_eq!(
+            git_config.remote_origin.get("url"),
+            Some(&"git@github.com:example/repo.git".to_string())
+        );
+    }
+
+    #[test]
+    fn add_entry_valid_branch() {
+        let mut git_config = GitConfig::new();
+        git_config.add_entry("remote", "origin", "branch \"main\"").unwrap();
+        assert_eq!(
+            git_config.get_remote_from_branch("main"),
+            Some("origin")
+        );
+        assert!(true)
+    }
+
+    #[test]
+    fn add_entry_invalid_key() {
+        let mut git_config = GitConfig::new();
+        let _ = git_config.add_entry("invalid", "origin", "branch \"main\"");
+        assert!(git_config.core.is_empty());
+        assert!(git_config.remote_origin.is_empty());
+        assert!(git_config.branch.is_empty());
+    }
+
+    #[test]
+    fn add_entry_invalid_section() {
+        let mut git_config = GitConfig::new();
+        let _ = git_config.add_entry("bare", "false", "invalid");
+        assert!(git_config.core.is_empty());
+        assert!(git_config.remote_origin.is_empty());
+        assert!(git_config.branch.is_empty());
+    }
+
+    #[test]
+    fn add_entry_error() {
+        let mut git_config = GitConfig::new();
+        assert!(git_config.add_entry("bare", "false", "invalid").is_err());
+    }
+
+    #[test]
+    fn test_new_from_file_nonexistent_file() {
+        let result = GitConfig::new_from_file("nonexistent_file.txt");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_value_core() {
+        let mut git_config = GitConfig::new();
+        let _ = git_config.add_entry("repositoryformatversion", "0", "core");
+        assert_eq!(
+            git_config.get_value("core", "repositoryformatversion").unwrap(),
+            "0"
+        );
+    }
+
+    #[test]
+    fn test_get_value_remote_origin() {
+        let mut git_config = GitConfig::new();
+        let _ = git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin");
+        assert_eq!(
+            git_config.get_value("remote origin", "url").unwrap(),
+            "git@github.com:example/repo.git"
+        );
+    }
+
+    #[test]
+    fn test_get_value_branch_remote() {
+        let mut git_config = GitConfig::new();
+        let _ = git_config.add_entry("remote", "origin", "branch \"main\"");
+        println!("{:?}", git_config);
+        assert_eq!(
+            git_config.get_value("branch \"main\"", "remote").unwrap(),
+            "origin"
+        );
+    }
+
+    #[test]
+    fn test_get_value_unknown_section() {
+        let git_config = GitConfig::new();
+        assert_eq!(git_config.get_value("unknown_section", "key"), None);
+    }
+
+    #[test]
+    fn test_write_to_file() {
+        let mut git_config = GitConfig::new();
+        let _ = git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin");
+        let _ = git_config.add_entry("remote", "origin", "branch \"main\"");
+
+        let file_path = "./test_files/test_config";
+        let _ = git_config.write_to_file(file_path);
+
+        let mut file_content = String::new();
+        let mut file = File::open(file_path).expect("Could not open file");
+        file.read_to_string(&mut file_content)
+            .expect("Could not read file");
+
+        let expected_content = "[core]\n\
+                                [remote \"origin\"]\n\
+                                \turl = git@github.com:example/repo.git\n\
+                                [branch \"main\"]\n\
+                                \tremote = origin\n";
+                                
+        // Cleanup
+        fs::remove_file(file_path).expect("No se pudo eliminar el config del tests");
+        assert_eq!(file_content, expected_content);
+    }
+
+    #[test]
+    fn test_read_git_config_from_file() {
+        let file_path = "./test_files/config";
         let config = GitConfig::_new_from_file(file_path).unwrap();
-        println!("core => {:?}", config.core);
-        println!("remote => {:?}", config.remote_origin);
-        println!("branch => {:?}", config.branch);
-        // println!("{:?}", config);
-        // println!("HolaaAAAAA");
-        assert!(true);
+
+        assert_eq!(config.branch.len(), 5);
+        assert!(!config.remote_origin.is_empty());
+        assert!(!config.remote_origin.is_empty());
     }
 }
-
-// fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, String>>, io::Error> {
-//     let content = fs::read_to_string(path)?;
-//     let mut result = HashMap::new();
-//     let mut current_key = String::new();
-//     let mut current_values = HashMap::new();
-
-//     for line in content.lines() {
-//         let line = line.trim();
-
-//         if line.is_empty() || line.starts_with('#') {
-//             continue;
-//         }
-
-//         let parts: Vec<&str> = line.splitn(2, '=').collect();
-
-//         if parts.len() == 2 {
-//             let key = parts[0].trim();
-
-//             if key.starts_with('[') && key.ends_with(']') {
-//                 if !current_key.is_empty() {
-//                     result.insert(current_key.clone(), current_values.clone());
-//                 }
-
-//                 current_key = key[1..key.len() - 1].to_string();
-//                 current_values.clear();
-//             } else {
-//                 let value = parts[1].trim();
-//                 #[cfg(test)]
-
-//     if !current_key.is_empty() {
-//         result.insert(current_key, current_values);
-//     }
-
-//     Ok(result)
-// }

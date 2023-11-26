@@ -1,4 +1,0 @@
-[remote "origin"]
-    url = git@github.com:example/repo.git
-[branch "main"]
-    remote = origin

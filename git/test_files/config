@@ -1,17 +1,11 @@
 [core]
-	repositoryformatversion = 0
 	filemode = true
 	bare = false
 	logallrefupdates = true
+	repositoryformatversion = 0
 [remote "origin"]
 	url = git@github.com:Brubrux/Proyecto-AnInfo-.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
-[branch "main"]
-	remote = origin
-	merge = refs/heads/main
-[branch "6-feature-menu-principal-interfaz-del-juego"]
-	remote = origin
-	merge = refs/heads/6-feature-menu-principal-interfaz-del-juego
 [branch "7-feature-mensajes-para-informar-el-estado-del-juego"]
 	remote = origin
 	merge = refs/heads/7-feature-mensajes-para-informar-el-estado-del-juego
@@ -21,3 +15,9 @@
 [branch "brunoBranch"]
 	remote = origin
 	merge = refs/heads/brunoBranch
+[branch "6-feature-menu-principal-interfaz-del-juego"]
+	remote = origin
+	merge = refs/heads/6-feature-menu-principal-interfaz-del-juego
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
