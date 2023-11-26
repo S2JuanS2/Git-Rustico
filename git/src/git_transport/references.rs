@@ -180,7 +180,6 @@ pub fn get_objects(
     directory: &str,
     references: &[Reference],
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
-    println!("DEBUG");
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
     for reference in references.iter() {
         let parts: Vec<&str> = reference.get_name().split('/').collect();
