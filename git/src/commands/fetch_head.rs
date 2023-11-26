@@ -4,6 +4,7 @@ use super::errors::CommandsError;
 
 
 /// Enum que representa las posibles etiquetas para FetchHeadEntry.
+#[derive(Debug, PartialEq)]
 pub enum Label {
     NotForMerge,
     Merge,
@@ -19,6 +20,7 @@ impl fmt::Display for Label {
 }
 
 /// Struct que representa una entrada en el archivo FETCH_HEAD.
+#[derive(Debug, PartialEq)]
 pub struct FetchHeadEntry {
     commit_hash: String,
     branch_name: String,
@@ -273,3 +275,63 @@ fn _read_fetch_head(path: &str) -> Result<FetchHead, CommandsError> {
 // //     }
 // //     Ok(filter)
 // // }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_branch_info_valid() {
+        let branch_info = "branch 'my-branch' of github.com:example/repo";
+        let result = extract_branch_info(branch_info);
+        assert!(result.is_ok());
+
+        let (branch_name, rest) = result.unwrap();
+        assert_eq!(branch_name, "my-branch");
+        assert_eq!(rest, "example/repo");
+    }
+
+    #[test]
+    fn test_extract_branch_info_invalid() {
+        let branch_info = "invalid_format";
+        let result = extract_branch_info(branch_info);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), CommandsError::InvalidFetchHeadEntry);
+    }
+
+    #[test]
+    fn test_fetch_head_entry_new_from_line_not_for_merge() {
+        let line = "d3214e19f4736504392664d579ce1ef2d15b5581	not-for-merge	branch 'main' of github.com:example/repo";
+        let result = FetchHeadEntry::new_from_line(line);
+        print!("{:?}", result);
+        assert!(result.is_ok());
+
+        let entry = result.unwrap();
+        assert_eq!(entry.commit_hash, "d3214e19f4736504392664d579ce1ef2d15b5581");
+        assert_eq!(entry.branch_name, "main");
+        assert_eq!(entry.label, Label::NotForMerge);
+        assert_eq!(entry.remote_repo, "example/repo");
+    }
+
+    #[test]
+    fn test_fetch_head_entry_new_from_line_merge() {
+        let line = "d3214e19f4736504392664d579ce1ef2d15b5581		branch 'main' of github.com:example/repo";
+        let result = FetchHeadEntry::new_from_line(line);
+        assert!(result.is_ok());
+
+        let entry = result.unwrap();
+        assert_eq!(entry.commit_hash, "d3214e19f4736504392664d579ce1ef2d15b5581");
+        assert_eq!(entry.branch_name, "main");
+        assert_eq!(entry.label, Label::Merge);
+        assert_eq!(entry.remote_repo, "example/repo");
+    }
+
+    #[test]
+    fn test_fetch_head_entry_new_from_line_invalid() {
+        let line = "invalid_format";
+        let result = FetchHeadEntry::new_from_line(line);
+        assert!(result.is_err());
+        assert!(result.is_err());
+    }
+}

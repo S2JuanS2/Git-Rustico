@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::{errors::GitError, util::errors::UtilError};
 
+#[derive(Clone, PartialEq)]
 pub enum CommandsError {
     CommandsFromUtil(String), // Para tener polimofismo con UtilError
     CloneMissingRepo,
