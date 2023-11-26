@@ -26,7 +26,7 @@ use super::errors::CommandsError;
 /// * `GitError` - Indica varios errores relacionados con Git que podrían ocurrir durante la operación de pull.
 ///
 pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), GitError> {
-    if args.len() >= 1 {
+    if !args.is_empty() {
         return Err(CommandsError::InvalidArgumentCountPull.into());
     }
     let mut socket = start_client(client.get_address())?;

@@ -30,7 +30,7 @@ pub struct FetchHeadEntry {
 
 impl fmt::Display for FetchHeadEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}\t{}\tbranch '{}' of github.com:{}\n", self.commit_hash, self.label, self.branch_name, self.remote_repo)
+        writeln!(f, "{}\t{}\tbranch '{}' of github.com:{}", self.commit_hash, self.label, self.branch_name, self.remote_repo)
     }
 }
 

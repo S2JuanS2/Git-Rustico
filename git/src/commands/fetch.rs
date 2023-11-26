@@ -78,7 +78,7 @@ pub fn git_fetch_all(
     let mut server = reference_discovery(socket, message)?;
 
     // Packfile Negotiation
-    packfile_negotiation_partial(socket, &mut server, &repo_local)?;
+    packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
     // Packfile Data
     let content = receive_packfile(socket)?;
@@ -97,7 +97,7 @@ pub fn git_fetch_all(
     save_references(&refs, repo_local)?;
 
     // Crear archivo FETCH_HEAD
-    let fetch_head = FetchHead::new(refs, &repo_remoto)?;
+    let fetch_head = FetchHead::new(refs, repo_remoto)?;
     fetch_head.write(repo_local)?;
 
 
