@@ -148,21 +148,25 @@ fn recovery_tree(
         let path_dir_cloned = path_dir_cloned.join(file_name);
         if mode == FILE {
             i += 1;
-            let blob_content = read_blob(&content[i].1)?;
-            add_to_index(repo.to_string(), file_name, hash.to_string())?;
-            let blob_content_bytes = blob_content.clone();
-            builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
-
-            if let Some(str_path) = path_dir_cloned.to_str() {
-                create_file_replace(str_path, &blob_content)?;
+            if i < content.len(){
+                let blob_content = read_blob(&content[i].1)?;
+                add_to_index(repo.to_string(), file_name, hash.to_string())?;
+                let blob_content_bytes = blob_content.clone();
+                builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
+    
+                if let Some(str_path) = path_dir_cloned.to_str() {
+                    create_file_replace(str_path, &blob_content)?;
+                }
             }
         } else if mode == DIRECTORY {
-            create_directory(&path_dir_cloned).expect("Error");
             i += 1;
-
-            let tree_content = read_tree(&content[i].1)?;
-            builder_object_tree(repo, &tree_content)?;
-            i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo)?;
+            if i < content.len(){
+                create_directory(&path_dir_cloned)?;
+    
+                let tree_content = read_tree(&content[i].1)?;
+                builder_object_tree(repo, &tree_content)?;
+                i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo)?;
+            }
         }
     }
     Ok(i)
