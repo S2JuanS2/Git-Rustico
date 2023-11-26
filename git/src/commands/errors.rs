@@ -16,6 +16,7 @@ pub enum CommandsError {
     RemotoNotInitialized,
     CreateFetchHEAD,
     ReadFetchHEAD,
+    WriteFetchHEAD,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -39,6 +40,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::RemotoNotInitialized => write!(f, "RemotoNotInitialized: No se ha inicializado el repositorio remoto"),
         CommandsError::CreateFetchHEAD => write!(f, "CreateFetchHEAD: No se pudo crear el archivo FETCH_HEAD"),
         CommandsError::ReadFetchHEAD => write!(f, "ReadFetchHEAD: No se pudo leer el archivo FETCH_HEAD"),
+        CommandsError::WriteFetchHEAD => write!(f, "WriteFetchHEAD: No se pudo escribir el archivo FETCH_HEAD"),
     }
 }
 
