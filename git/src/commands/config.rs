@@ -93,14 +93,6 @@ impl GitConfig {
         }
     }
 
-    // pub fn new_from_lines(lines: Vec<String>) -> Self {
-    //     let mut git_config = GitConfig::new();
-    //     for line in lines {
-    //         git_config.parse_line(&line);
-    //     }
-    //     git_config
-    // }
-
     /// Crea una nueva instancia de `GitConfig` basada en la configuración encontrada en el repositorio especificado.
     ///
     /// # Argumentos
@@ -134,29 +126,6 @@ impl GitConfig {
             Err(_) => Err(CommandsError::FileNotFoundConfig),
         }
     }
-
-    /// Crea una nueva instancia de `GitConfig` basada en la configuración encontrada en el repositorio especificado.
-    ///
-    /// # Argumentos
-    ///
-    /// * `repo` - Una cadena que representa la ruta al repositorio Git.
-    ///
-    /// # Devolución
-    ///
-    /// Una instancia de `GitConfig` inicializada con la configuración leída del repositorio.
-    ///
-    /// # Pánicos
-    ///
-    /// Esta función generará un pánico si hay problemas al leer la configuración de Git desde el repositorio.
-    ///
-    // pub fn new_from_file(repo: &str) -> Result<Self, CommandsError> {
-    //     let path = format!("{}/{}/{}", repo, GIT_DIR, CONFIG_FILE);
-    //     match GitConfig::read_git_config(&path)  {
-    //         Ok(config) => Ok(config),
-    //         Err(_) => Err(CommandsError::FileNotFoundConfig),
-    //     }
-    // }
-
 
     /// Agrega una entrada a una sección específica de la configuración Git.
     ///
@@ -206,25 +175,6 @@ impl GitConfig {
             _ => Err(CommandsError::InvalidEntryConfigFile),
         }
     }
-    /// Obtiene el valor asociado a una clave en una sección específica de la configuración Git.
-    ///
-    /// # Argumentos
-    ///
-    /// * `key`: La clave de la entrada cuyo valor se va a obtener.
-    /// * `section`: La sección a la que pertenece la entrada.
-    ///
-    /// # Retorno
-    ///
-    /// Devuelve `Some(&String)` si la entrada existe, o `None` si no se encuentra.
-    ///
-    // pub fn get_value(&self, key: &str, section: &str) -> Option<&String> {
-    //     match section {
-    //         "core" => self.core.get(key),
-    //         "remote.origin" => self.remote_origin.get(key),
-    //         "branch.main" => self.branch.get(key),
-    //         _ => None,
-    //     }
-    // }
 
     /// Escribe la configuración Git en un archivo especificado.
     ///
