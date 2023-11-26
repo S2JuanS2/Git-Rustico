@@ -45,7 +45,7 @@ pub fn git_pull(
     repo_local: &str,
 ) -> Result<(), GitError> {
     // Obtengo el repositorio remoto
-    let git_config = GitConfig::new_from_repo(repo_local)?;
+    let git_config = GitConfig::new_from_file(repo_local)?;
     let repo_remoto = git_config.get_remote_repo()?;
 
     println!("Pull del repositorio remoto: {}", repo_remoto);

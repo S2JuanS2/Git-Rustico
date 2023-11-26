@@ -66,7 +66,7 @@ pub fn git_fetch_all(
     repo_local: &str,
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
-    let git_config = GitConfig::new_from_repo(repo_local)?;
+    let git_config = GitConfig::new_from_file(repo_local)?;
     let repo_remoto = git_config.get_remote_repo()?;
 
     println!("Fetch del repositorio remoto: {}", repo_remoto);

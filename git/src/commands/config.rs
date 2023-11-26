@@ -62,7 +62,7 @@ impl GitConfig {
     ///
     /// Esta función generará un pánico si hay problemas al leer la configuración de Git desde el repositorio.
     ///
-    pub fn new_from_repo(repo: &str) -> Result<Self, CommandsError> {
+    pub fn new_from_file(repo: &str) -> Result<Self, CommandsError> {
         let mut git_config = GitConfig::new();
         let path = format!("{}/{}/{}", repo, GIT_DIR, CONFIG_FILE);
         if git_config.read_git_config(&path).is_err() {
