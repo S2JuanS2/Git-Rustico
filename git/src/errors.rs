@@ -88,6 +88,8 @@ pub enum GitError {
     RemoteAlreadyExistsError,
     RemoteDoesNotExistError,
     GitServerError(String),
+    InvalidArgumentCountTagError,
+    DeleteFileError,
 }
 
 impl GitError {
@@ -185,6 +187,8 @@ impl GitError {
             GitError::RemoteAlreadyExistsError => "El repositorio remoto ya existe",
             GitError::RemoteDoesNotExistError => "El repositorio remoto no existe",
             GitError::GitServerError(msg) => msg,
+            GitError::InvalidArgumentCountTagError => "Número de argumentos inválido para el comando tag.\nUsar: git tag ..",
+            GitError::DeleteFileError => "No se pudo encontrar el archivo",
         }
     }
 }
