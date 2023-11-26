@@ -1,4 +1,4 @@
-use std::{io::{self, BufRead, Write}, fs};
+use std::{io::{self, Write}, fs};
 
 use super::errors::CommandsError;
 
@@ -76,7 +76,6 @@ impl FetchHead {
     /// 
     pub fn new(
         references: Vec<(String, String)>,
-        repo_local: &str,
         repo_remoto: &str
     ) -> Result<FetchHead, CommandsError> {
         let mut entries = Vec::new();

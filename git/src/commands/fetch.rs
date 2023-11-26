@@ -1,4 +1,5 @@
 use crate::commands::config::GitConfig;
+use crate::commands::fetch_head::FetchHead;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR};
 use crate::errors::GitError;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
@@ -12,11 +13,9 @@ use crate::util::objects::{
     read_tree, ObjectEntry, ObjectType,
 };
 use crate::git_transport::git_request::GitRequest;
-use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
-use std::{fs, io};
-use std::io::BufRead;
+use std::fs;
 
 use super::errors::CommandsError;
 
@@ -98,7 +97,9 @@ pub fn git_fetch_all(
     save_references(&refs, repo_local)?;
 
     // Crear archivo FETCH_HEAD
-    create_fetch_head(&refs, repo_local, repo_remoto)?;
+    let fetch_head = FetchHead::new(refs, &repo_remoto)?;
+    fetch_head.write(repo_local)?;
+
 
     Ok("Sucessfully!".to_string())
 }
