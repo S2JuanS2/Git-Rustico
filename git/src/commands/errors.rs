@@ -17,6 +17,8 @@ pub enum CommandsError {
     CreateFetchHEAD,
     ReadFetchHEAD,
     WriteFetchHEAD,
+    InvalidFetchHeadEntry,
+    FetchHeadFileNotFound,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -41,6 +43,8 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::CreateFetchHEAD => write!(f, "CreateFetchHEAD: No se pudo crear el archivo FETCH_HEAD"),
         CommandsError::ReadFetchHEAD => write!(f, "ReadFetchHEAD: No se pudo leer el archivo FETCH_HEAD"),
         CommandsError::WriteFetchHEAD => write!(f, "WriteFetchHEAD: No se pudo escribir el archivo FETCH_HEAD"),
+        CommandsError::InvalidFetchHeadEntry => write!(f, "InvalidFetchHeadEntry: Entrada inválida en FETCH_HEAD"),
+        CommandsError::FetchHeadFileNotFound => write!(f, "FetchHeadFileNotFound: No se encontró el archivo FETCH_HEAD"),
     }
 }
 

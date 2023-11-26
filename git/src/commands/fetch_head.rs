@@ -1,4 +1,4 @@
-use std::{io::{self, Write}, fs};
+use std::{io::{self, Write, BufRead}, fs};
 
 use super::errors::CommandsError;
 
@@ -23,6 +23,7 @@ pub struct FetchHeadEntry {
     commit_hash: String,
     branch_name: String,
     label: Label,
+    remote_repo: String,
 }
 
 impl FetchHeadEntry {
@@ -38,22 +39,41 @@ impl FetchHeadEntry {
     ///
     /// Una nueva FetchHeadEntry.
     /// 
-    pub fn new(commit_hash: String, branch_name: String, label: String) -> Self {
+    pub fn new(commit_hash: String, branch_name: String, label: String, remote_repo: String) -> Result<Self, CommandsError> {
         let label = match label.as_str() {
             "not-for-merge" => Label::NotForMerge,
             "" => Label::Merge,
+            _ => Err(CommandsError::InvalidFetchHeadEntry)?,
         };
-        FetchHeadEntry {
+        Ok(FetchHeadEntry {
             commit_hash,
             branch_name,
             label,
+            remote_repo,
+        })
+    }
+
+    pub fn new_from_line(line: &str) -> Result<Self, CommandsError> {
+        let parts: Vec<&str> = line.split('\t').collect();
+
+        if parts.len() != 3 {
+            return Err(CommandsError::InvalidFetchHeadEntry);
         }
+        let hash = parts[0].to_string();
+        let mode_merge = parts[1].to_string();
+        let branch_info = parts[2].to_string();
+        let (name, remote) = match extract_branch_info(&branch_info)
+        {
+            Ok((branch_name, remote_repo)) => (branch_name, remote_repo),
+            Err(_) => return Err(CommandsError::InvalidFetchHeadEntry),
+        };
+
+        FetchHeadEntry::new(hash, name, mode_merge, remote)
     }
 }
 
 pub struct FetchHead {
     entries: Vec<FetchHeadEntry>,
-    repo_remoto: String,
 }
 
 impl FetchHead {
@@ -64,7 +84,7 @@ impl FetchHead {
     ///
     /// * `references` - Vec de tuplas que contienen el hash del commit y el nombre de la rama.
     /// * `repo_local` - Ruta local del repositorio.
-    /// * `repo_remoto` - Ruta remota del repositorio remoto.
+    /// * `remote_repo` - Ruta remota del repositorio remoto.
     ///
     /// # Retorno
     ///
@@ -76,16 +96,15 @@ impl FetchHead {
     /// 
     pub fn new(
         references: Vec<(String, String)>,
-        repo_remoto: &str
+        remote_repo: &str
     ) -> Result<FetchHead, CommandsError> {
         let mut entries = Vec::new();
         for (commit_hash, branch_name) in references {
-            let entry = FetchHeadEntry::new(commit_hash, branch_name, Label::Merge.to_string());
-            entries.push(entry);
+            let entry = FetchHeadEntry::new(commit_hash, branch_name, Label::Merge.to_string(), remote_repo.to_string());
+            entries.push(entry?);
         }
         Ok(FetchHead {
             entries,
-            repo_remoto: repo_remoto.to_string(),
         })
     }
 
@@ -123,14 +142,17 @@ impl FetchHead {
                 entry.commit_hash,
                 entry.label.to_string(),
                 entry.branch_name,
-                self.repo_remoto
+                entry.remote_repo
             );
             file.write_all(line.as_bytes())?;
         }
         Ok(())
     }
 
-    
+    pub fn new_from_file(repo_path: &str) -> Result<FetchHead, CommandsError> {
+    let repo = format!("{}/.git", repo_path);
+    _read_fetch_head(&repo)
+}
 }
 
 
@@ -173,29 +195,47 @@ impl FetchHead {
 // ///
 // /// Devuelve un error de tipo `io::Error` si no puede abrir o leer el archivo FETCH_HEAD.
 // ///
-// // pub fn _read_fetch_head(path: &str) -> Result<Vec<FetchHead>, io::Error> {
-// //     let fetch_head_path = format!("{}/FETCH_HEAD", path);
-// //     let file = fs::File::open(fetch_head_path)?;
+pub fn _read_fetch_head(path: &str) -> Result<FetchHead, CommandsError> {
+    let fetch_head_path = format!("{}/FETCH_HEAD", path);
+    let file = match fs::File::open(fetch_head_path)
+    {
+        Ok(file) => file,
+        Err(_) => return Err(CommandsError::FetchHeadFileNotFound),
+    };
 
-// //     let mut result = Vec::new();
-// //     for line in io::BufReader::new(file).lines() {
-// //         let line = line?;
-// //         let parts: Vec<&str> = line.split('\t').collect();
+    let mut entries = Vec::new();
+    for line in io::BufReader::new(file).lines() {
+        let line = match line
+        {
+            Ok(line) => line,
+            Err(_) => return Err(CommandsError::ReadFetchHEAD),
+        };
+        let entrie = FetchHeadEntry::new_from_line(&line)?;
+        entries.push(entrie);
+    }
 
-// //         if parts.len() != 3 {
-// //             return Err(io::Error::new(
-// //                 io::ErrorKind::InvalidData,
-// //                 "FETCH_HEAD file is corrupted",
-// //             ));
-// //         }
-// //         let hash = parts[0].to_string();
-// //         let mode_merge = parts[1].to_string();
-// //         let branch_github = parts[2].to_string();
-// //         result.push(FetchHead::new(hash, mode_merge, branch_github));
-// //     }
+    Ok(FetchHead {
+        entries,
+    })
 
-// //     Ok(result)
-// // }
+}
+
+
+fn extract_branch_info(branch_info: &str) -> Result<(String, String), CommandsError> {
+    let prefix = "branch '";
+    let suffix = "' of github.com:";
+
+    if let Some(start_pos) = branch_info.find(prefix) {
+        let start_pos = start_pos + prefix.len();
+        if let Some(end_pos) = branch_info[start_pos..].find(suffix) {
+            let branch_name = &branch_info[start_pos..start_pos + end_pos];
+            let rest = &branch_info[start_pos + end_pos + suffix.len()..];
+            return Ok((branch_name.to_string(), rest.to_string()));
+        }
+    }
+    Err(CommandsError::InvalidFetchHeadEntry)
+}
+
 
 // /// Obtiene las referencias del archivo FETCH_HEAD que tienen el modo de fusión "not-for-merge".
 // ///
