@@ -1,24 +1,21 @@
 use crate::commands::config::GitConfig;
+use crate::commands::fetch_head::FetchHead;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR};
 use crate::errors::GitError;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
+use crate::git_transport::references::reference_discovery;
+use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
-use crate::util::connections::receive_packfile;
+use crate::util::connections::{receive_packfile, start_client};
 use crate::util::files::ensure_directory_clean;
 use crate::util::objects::{
     builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_commit,
     read_tree, ObjectEntry, ObjectType,
 };
-use crate::{
-    git_transport::{
-        git_request::GitRequest, references::reference_discovery, request_command::RequestCommand,
-    },
-    util::connections::start_client,
-};
-use std::io::Write;
+use crate::git_transport::git_request::GitRequest;
 use std::net::TcpStream;
 use std::path::Path;
-use std::{fs, io};
+use std::fs;
 
 use super::errors::CommandsError;
 
@@ -65,10 +62,10 @@ pub fn git_fetch_all(
     socket: &mut TcpStream,
     ip: &str,
     port: &str,
-    repo: &str,
+    repo_local: &str,
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
-    let git_config = GitConfig::new_from_repo(repo)?;
+    let git_config = GitConfig::new_from_repo(repo_local)?;
     let repo_remoto = git_config.get_remote_repo()?;
 
     println!("Fetch del repositorio remoto: {}", repo_remoto);
@@ -81,11 +78,11 @@ pub fn git_fetch_all(
     let mut server = reference_discovery(socket, message)?;
 
     // Packfile Negotiation
-    packfile_negotiation_partial(socket, &mut server, &repo)?;
+    packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
     // Packfile Data
     let content = receive_packfile(socket)?;
-    if save_objects(content, repo).is_err() {
+    if save_objects(content, repo_local).is_err() {
         return Err(CommandsError::RepositoryNotInitialized);
     };
 
@@ -97,11 +94,12 @@ pub fn git_fetch_all(
     // Se puede usar el content o otro objeto
     // let refs: Vec<(String, String)> = get_refs(content);
     let refs: Vec<(String, String)> = vec![];
-    save_references(&refs, repo)?;
+    save_references(&refs, repo_local)?;
 
     // Crear archivo FETCH_HEAD
-    // Aun falta terminarlo
-    create_fetch_head(&refs, repo)?;
+    let fetch_head = FetchHead::new(refs, repo_remoto)?;
+    fetch_head.write(repo_local)?;
+
 
     Ok("Sucessfully!".to_string())
 }
@@ -133,46 +131,6 @@ fn save_references(refs: &Vec<(String, String)>, repo_path: &str) -> Result<(), 
         };
     }
 
-    Ok(())
-}
-
-/// Crea el archivo FETCH_HEAD en el repositorio con las referencias especificadas.
-///
-/// # Argumentos
-///
-/// * `references`: Un vector de tuplas que contiene el nombre de la rama y su hash.
-/// * `repo_path`: La ruta del repositorio donde se creará el archivo FETCH_HEAD.
-///
-/// # Errores
-///
-/// Devuelve un error del tipo `CommandsError` si hay problemas al crear FETCH_HEAD.
-///
-fn create_fetch_head(
-    references: &Vec<(String, String)>,
-    repo_path: &str,
-) -> Result<(), CommandsError> {
-    let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_path);
-
-    if _create_fetch_head(references, &fetch_head_path).is_err() {
-        return Err(CommandsError::CreateFetchHEAD);
-    };
-
-    Ok(())
-}
-
-/// Función auxiliar que implementa la lógica real para crear FETCH_HEAD.
-fn _create_fetch_head(references: &Vec<(String, String)>, path: &str) -> io::Result<()> {
-    // Abre el archivo FETCH_HEAD para escritura
-    let mut fetch_head_file = fs::File::create(path)?;
-
-    // Escribe las líneas en el formato necesario en FETCH_HEAD
-    for (branch, hash) in references {
-        writeln!(
-            fetch_head_file,
-            "{}\t\tbranch '{}' of github.com:user/repo",
-            hash, branch
-        )?;
-    }
     Ok(())
 }
 
