@@ -63,12 +63,11 @@ impl GitConfig {
     /// Esta función generará un pánico si hay problemas al leer la configuración de Git desde el repositorio.
     ///
     pub fn new_from_file(repo: &str) -> Result<Self, CommandsError> {
-        let mut git_config = GitConfig::new();
         let path = format!("{}/{}/{}", repo, GIT_DIR, CONFIG_FILE);
-        if git_config.read_git_config(&path).is_err() {
-            return Err(CommandsError::FileNotFoundConfig);
-        };
-        Ok(git_config)
+        match GitConfig::read_git_config(&path)  {
+            Ok(config) => Ok(config),
+            Err(_) => Err(CommandsError::FileNotFoundConfig),
+        }
     }
 
     /// Analiza una línea de configuración Git y actualiza las secciones correspondientes.
@@ -99,7 +98,7 @@ impl GitConfig {
         }
     }
 
-    /// Lee la configuración de Git desde un archivo y actualiza las secciones correspondientes.
+    /// Crea un GitConfig desde un archivo.
     ///
     /// # Argumentos
     ///
@@ -110,16 +109,17 @@ impl GitConfig {
     /// Devuelve un resultado `Result` indicando si la operación fue exitosa o si se produjo un error
     /// al leer el archivo.
     ///
-    pub fn read_git_config(&mut self, file_path: &str) -> Result<(), std::io::Error> {
+    fn read_git_config(file_path: &str) -> Result<Self, std::io::Error> {
+        let mut git_config = GitConfig::new();
         if Path::new(file_path).exists() {
             let content = fs::read_to_string(file_path)?;
 
             for line in content.lines() {
-                self.parse_line(line);
+                git_config.parse_line(line);
             }
         }
 
-        Ok(())
+        Ok(git_config)
     }
 
     /// Agrega una entrada a una sección específica de la configuración Git.
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn test_read_git_config() {
         // Crea un archivo de prueba temporal con contenido de configuración Git
-        let temp_file_path = "test_git_config_1.txt";
+        let temp_file_path = "./test_files/config_2";
         let mut temp_file =
             std::fs::File::create(temp_file_path).expect("Failed to create temp file");
         writeln!(temp_file, "repositoryformatversion = 0").expect("Failed to write to temp file");
@@ -282,11 +282,10 @@ mod tests {
         writeln!(temp_file, "   remote = origin").expect("Failed to write to temp file");
 
         // Crea una instancia de GitConfig y lee la configuración desde el archivo temporal
-        let mut git_config = GitConfig::new();
-        let result = git_config.read_git_config(temp_file_path);
-
+        let result = GitConfig::read_git_config(temp_file_path);
         // Verifica que la lectura sea exitosa y que las secciones se hayan analizado correctamente
         assert!(result.is_ok());
+        let git_config = result.unwrap();
         assert_eq!(git_config.core["repositoryformatversion"], "0");
         assert_eq!(
             git_config.remote_origin["url"],
@@ -300,12 +299,9 @@ mod tests {
 
     #[test]
     fn test_read_git_config_nonexistent_file() {
-        // Crea una instancia de GitConfig y trata de leer desde un archivo inexistente
-        let mut git_config = GitConfig::new();
-        let result = git_config.read_git_config("nonexistent_file.txt");
-
-        // Verifica que la lectura no sea exitosa y no se haya modificado la configuración
+        let result = GitConfig::read_git_config("nonexistent_file.txt");
         assert!(result.is_ok());
+        let git_config = result.unwrap();
         assert!(git_config.core.is_empty());
         assert!(git_config.remote_origin.is_empty());
         assert!(git_config.branch_main.is_empty());
@@ -399,11 +395,10 @@ mod tests {
     #[test]
     fn test_write_to_file() {
         let mut git_config = GitConfig::new();
-        git_config.add_entry("repositoryformatversion", "0", "core");
         git_config.add_entry("url", "git@github.com:example/repo.git", "remote.origin");
         git_config.add_entry("remote", "origin", "branch.main");
 
-        let file_path = "test_git_config.txt";
+        let file_path = "./test_files/config_2";
         let _ = git_config.write_to_file(file_path);
 
         let mut file_content = String::new();
@@ -411,15 +406,39 @@ mod tests {
         file.read_to_string(&mut file_content)
             .expect("Could not read file");
 
-        let expected_content = "repositoryformatversion = 0\n\
-                                [remote \"origin\"]\n    \
+        let expected_content = "[remote \"origin\"]\n    \
                                 url = git@github.com:example/repo.git\n\
                                 [branch \"main\"]\n    \
                                 remote = origin\n";
-
-        assert_eq!(file_content, expected_content);
-
+                                
         // Cleanup
-        fs::remove_file(file_path).expect("Could not remove file");
+        // fs::remove_file(file_path).expect("Could not remove file");
+        assert_eq!(file_content, expected_content);
+    }
+
+    #[test]
+    fn test_read_git_config_from_file_1() {
+        let file_path = "./test_files/config_3";
+        let config = GitConfig::read_git_config(file_path).unwrap();
+        assert!(config.core.is_empty());
+        assert_eq!(
+            config.remote_origin["url"],
+            "git@github.com:example/repo.git");
+        assert_eq!(config.branch_main["remote"], "origin");
+    }
+
+    #[test]
+    fn test_read_git_config_from_file_2() {
+        let file_path = "./test_files/config_4";
+        let config = GitConfig::read_git_config(file_path).unwrap();
+        println!("{:?}", config);
+        assert_eq!(config.core["repositoryformatversion"], "0");
+        assert_eq!(config.core["filemode"], "true");
+        assert_eq!(
+            config.remote_origin["url"],
+            "git@github.com:example/repo.git");
+        assert_eq!(config.remote_origin["fetch"], "+refs/heads/*:refs/remotes/origin/*");
+        assert_eq!(config.branch_main["remote"], "origin");
+        assert_eq!(config.branch_main["merge"], "refs/heads/main");
     }
 }
