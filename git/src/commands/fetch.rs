@@ -134,47 +134,6 @@ fn save_references(refs: &Vec<(String, String)>, repo_path: &str) -> Result<(), 
     Ok(())
 }
 
-/// Crea el archivo FETCH_HEAD en el repositorio con las referencias especificadas.
-///
-/// # Argumentos
-///
-/// * `references`: Un vector de tuplas que contiene el nombre de la rama y su hash.
-/// * `repo_local`: La ruta del repositorio donde se creará el archivo FETCH_HEAD.
-///
-/// # Errores
-///
-/// Devuelve un error del tipo `CommandsError` si hay problemas al crear FETCH_HEAD.
-///
-// fn create_fetch_head(
-//     references: &Vec<(String, String)>,
-//     repo_local: &str,
-//     repo_remoto: &str
-// ) -> Result<(), CommandsError> {
-//     let fetch_head_path = format!("{}/.git/FETCH_HEAD", repo_local);
-
-//     if _create_fetch_head(references, &fetch_head_path, repo_remoto).is_err() {
-//         return Err(CommandsError::CreateFetchHEAD);
-//     };
-
-//     Ok(())
-// }
-
-// /// Función auxiliar que implementa la lógica real para crear FETCH_HEAD.
-// fn _create_fetch_head(references: &Vec<(String, String)>, repo_local: &str, repo_remoto: &str) -> io::Result<()> {
-//     // Abre el archivo FETCH_HEAD para escritura
-//     let mut fetch_head_file = fs::File::create(repo_local)?;
-
-//     // Escribe las líneas en el formato necesario en FETCH_HEAD
-//     for (branch, hash) in references {
-//         writeln!(
-//             fetch_head_file,
-//             "{}\tnot-for-merge\tbranch '{}' of github.com:{}",
-//             hash,branch, repo_remoto
-//         )?;
-//     }
-//     Ok(())
-// }
-
 /// Maneja la creación y el guardado de los objetos recibidos del servidor
 ///
 /// # Argumentos
