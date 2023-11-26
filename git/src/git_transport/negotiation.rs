@@ -1,12 +1,12 @@
 use crate::{
-    consts::{HAVE, PKT_DONE, PKT_NAK},
+    consts::{HAVE, PKT_DONE, PKT_NAK, GIT_DIR, REFS_HEADS},
     git_server::GitServer,
     util::{
         connections::{received_message, send_flush, send_message},
         errors::UtilError,
         pkt_line,
-        validation::is_valid_obj_id,
-    },
+        validation::is_valid_obj_id, files::{open_file, read_file_string},
+    }, commands::{branch::get_branch, fetch::get_branches},
 };
 use std::{
     io::{Read, Write},
@@ -348,22 +348,49 @@ pub fn send_acknowledge_last_reference(
 pub fn packfile_negotiation_partial(
     stream: &mut TcpStream,
     server: &mut GitServer,
-    _path_repo: &str,
+    path_repo: &str,
 ) -> Result<(), UtilError> {
-    // [TODO]
+
+    // [TODO N#1]
+    let sv_references = get_branches(server)?;
+    let local_references = get_local_references(path_repo)?;
+    // Brayan:
+    // server.filtrar(reference_que_tenemos)
+
+    upload_request_type(stream, server, "want")?;
+
+    //[TODO N#2]
+    let _commit_branches = get_commits(sv_references, local_references)?;
+
+    upload_request_type(stream, server, HAVE)?;
+
+    let ack_references = recive_acknowledgments(stream)?;
+    server.filter_client_reference(&ack_references);
+
+    Ok(())
+}
+
+    // [TODO N#1]
     // Aqui se debe examinar las referencias que nos envio el server
     // Estan en server->references y ver que referencias tenemos en local
     // Asi no le pedimos lo que tenemos
     // Para esto me podes dar un vector con las branch que ya tenemos actualizadas
     // y yo las filtro de server->references
     // let reference_que_tenemos = tu_funcion(server.references)
+fn get_local_references(path_repo: &str) -> Result<Vec<(String,String)>, UtilError>{
+    let mut result_branches: Vec<(String,String)> = vec![];
 
-    // Brayan:
-    // server.filtrar(reference_que_tenemos)
-
-    upload_request_type(stream, server, "want")?;
-
-    // [TODO]
+    let branches = get_branch(path_repo).expect("Error");
+    for branch in branches.iter(){
+        let path_branch = format!("{}/{}/{}/{}", path_repo, GIT_DIR, REFS_HEADS, branch);
+        let file_branch = open_file(&path_branch).expect("Error");
+        let hash_branch = read_file_string(file_branch).expect("Err");
+        let new_branch: (String, String) = (branch.to_string(), hash_branch);
+        result_branches.push(new_branch);
+    }
+    Ok(result_branches)
+}
+    // [TODO N#2]
     // Dado las referencias que tenemos en server->references de las branch que
     // tenemos, debemos de buscar en local
     // los ultimos commit de cada referencia para enviarle al servidor
@@ -371,12 +398,21 @@ pub fn packfile_negotiation_partial(
     // NOta: Si la branch no la tenemos no hace falta que me lo agregues al vector porque
     // El servidor entendera que no tenemos nada y nos enviara todo de esa branch
     // Para conversar: Que pasa si el ultimo commit el local es un commit de mas adelante del servidor
-    upload_request_type(stream, server, HAVE)?;
+fn get_commits(
+    sv_references: Vec<(String,String)>,
+    local_references: Vec<(String,String)>
+) -> Result<Vec<(String,String)>, UtilError> {
+    let mut result_commit: Vec<(String,String)> = vec![];
 
-    let ack_references = recive_acknowledgments(stream)?;
-    server.filter_client_reference(&ack_references);
-
-    Ok(())
+    for local_reference in local_references.iter(){
+        for sv_reference in sv_references.iter(){
+            if local_reference.0 == sv_reference.0 {
+                let new_commit:(String, String) = (local_reference.0.clone(), local_reference.1.clone());
+                result_commit.push(new_commit);
+            }
+        }
+    }
+    Ok(result_commit)
 }
 
 /// Lee las respuestas ACK del servidor desde el flujo de datos.
@@ -639,5 +675,21 @@ mod tests {
             process_ack_response(response),
             Err(UtilError::ExpectedStatusInAckResponse)
         );
+    }
+
+    #[test]
+    fn test_get_commit(){
+        let sv_references = vec![
+            ("branch1".to_string(), "commit_hash1".to_string()),
+            ("branch2".to_string(), "commit_hash2".to_string()),
+        ];
+        let local_references = vec![
+            ("branch1".to_string(), "commit_hash1".to_string()),
+            ("branch3".to_string(), "commit_hash3".to_string()),
+        ];
+        let result = get_commits(sv_references, local_references).expect("Error al obtener los commits");
+        for i in result {
+            assert_eq!("branch1",i.0);
+        }
     }
 }
