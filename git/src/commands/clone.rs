@@ -89,10 +89,10 @@ pub fn git_clone(
     let status = create_repository(advertised, content, repo)?;
 
     // Creo el config
-    let url = format!("url = {}", repo);
-    let config = GitConfig::new_from_lines(vec![url]);
-    let path_config = format!("{}/{}/{}", repo, GIT_DIR, "config");
-    config.write_to_file(&path_config)?;
+    // let url = format!("url = {}", repo);
+    // let config = GitConfig::new_from_lines(vec![url]);
+    // let path_config = format!("{}/{}/{}", repo, GIT_DIR, "config");
+    // config.write_to_file(&path_config)?;
 
     Ok(status)
 }

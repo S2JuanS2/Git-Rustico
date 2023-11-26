@@ -20,6 +20,8 @@ pub enum CommandsError {
     WriteFetchHEAD,
     InvalidFetchHeadEntry,
     FetchHeadFileNotFound,
+    InvalidConfigFile,
+    InvalidEntryConfigFile,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -46,6 +48,8 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::WriteFetchHEAD => write!(f, "WriteFetchHEAD: No se pudo escribir el archivo FETCH_HEAD"),
         CommandsError::InvalidFetchHeadEntry => write!(f, "InvalidFetchHeadEntry: Entrada inválida en FETCH_HEAD"),
         CommandsError::FetchHeadFileNotFound => write!(f, "FetchHeadFileNotFound: No se encontró el archivo FETCH_HEAD"),
+        CommandsError::InvalidConfigFile => write!(f, "InvalidConfigFile: Archivo de configuración inválido"),
+        CommandsError::InvalidEntryConfigFile => write!(f, "InvalidEntryConfigFile: Entrada inválida en el archivo de configuración"),
     }
 }
 
