@@ -1,4 +1,4 @@
-use std::{io::{self, Write, BufRead}, fs};
+use std::{io::{self, Write, BufRead}, fs, fmt};
 
 use super::errors::CommandsError;
 
@@ -9,11 +9,11 @@ pub enum Label {
     Merge,
 }
 
-impl ToString for Label {
-    fn to_string(&self) -> String {
+impl fmt::Display for Label {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Label::NotForMerge => "not-for-merge".to_string(),
-            Label::Merge => "".to_string(),
+            Label::NotForMerge => write!(f, "not-for-merge"),
+            Label::Merge => write!(f, ""),
         }
     }
 }
@@ -26,19 +26,29 @@ pub struct FetchHeadEntry {
     remote_repo: String,
 }
 
+impl fmt::Display for FetchHeadEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}\t{}\tbranch '{}' of github.com:{}\n", self.commit_hash, self.label, self.branch_name, self.remote_repo)
+    }
+}
+
 impl FetchHeadEntry {
-    /// Crea una nueva FetchHeadEntry.
+    /// Crea una nueva entrada FETCH_HEAD.
     ///
-    /// # Argumentos
+    /// # Arguments
     ///
-    /// * `commit_hash` - El hash del commit asociado con la entrada.
-    /// * `branch_name` - El nombre de la rama asociada con la entrada.
-    /// * `label` - Una cadena que representa la etiqueta de la entrada ("not-for-merge" o "").
+    /// * `commit_hash` - Hash del commit.
+    /// * `branch_name` - Nombre de la rama.
+    /// * `label` - Etiqueta que indica si la entrada está marcada como "not-for-merge" o "merge".
+    /// * `remote_repo` - Path del repositorio remoto asociado.
     ///
-    /// # Retorno
+    /// # Returns
     ///
-    /// Una nueva FetchHeadEntry.
-    /// 
+    /// Retorna un resultado que contiene la nueva entrada FETCH_HEAD o un error.
+    ///
+    /// # Errors
+    ///
+    /// Retorna un error si la etiqueta proporcionada no es válida.
     pub fn new(commit_hash: String, branch_name: String, label: String, remote_repo: String) -> Result<Self, CommandsError> {
         let label = match label.as_str() {
             "not-for-merge" => Label::NotForMerge,
@@ -53,6 +63,19 @@ impl FetchHeadEntry {
         })
     }
 
+    /// Crea una nueva entrada FETCH_HEAD a partir de una línea del archivo FETCH_HEAD.
+    ///
+    /// # Arguments
+    ///
+    /// * `line` - Línea del archivo FETCH_HEAD.
+    ///
+    /// # Returns
+    ///
+    /// Retorna un resultado que contiene la nueva entrada FETCH_HEAD o un error.
+    ///
+    /// # Errors
+    ///
+    /// Retorna un error si la línea proporcionada no tiene el formato correcto.
     pub fn new_from_line(line: &str) -> Result<Self, CommandsError> {
         let parts: Vec<&str> = line.split('\t').collect();
 
@@ -78,21 +101,20 @@ pub struct FetchHead {
 
 impl FetchHead {
 
-    /// Crea una nueva instancia de FetchHead a partir de las referencias dadas.
+    /// Crea un nuevo archivo FETCH_HEAD a partir de referencias locales.
     ///
-    /// # Argumentos
+    /// # Arguments
     ///
-    /// * `references` - Vec de tuplas que contienen el hash del commit y el nombre de la rama.
-    /// * `repo_local` - Ruta local del repositorio.
-    /// * `remote_repo` - Ruta remota del repositorio remoto.
+    /// * `references` - Referencias locales en forma de tuplas (nombre, hash).
+    /// * `remote_repo` - Path del repositorio remoto.
     ///
-    /// # Retorno
+    /// # Returns
     ///
-    /// Una instancia de FetchHead creada a partir de las referencias proporcionadas.
+    /// Retorna un resultado que contiene el nuevo archivo FETCH_HEAD o un error.
     ///
-    /// # Errores
+    /// # Errors
     ///
-    /// Devuelve un error de tipo CommandsError si ocurre algún problema durante la creación.
+    /// Retorna un error si hay algún problema al crear las entradas FETCH_HEAD.
     /// 
     pub fn new(
         references: Vec<(String, String)>,
@@ -137,90 +159,48 @@ impl FetchHead {
     {
         let mut file = fs::File::create(fetch_head_path)?;
         for entry in &self.entries {
-            let line = format!(
-                "{}\t{}\tbranch '{}' of github.com:{}\n",
-                entry.commit_hash,
-                entry.label.to_string(),
-                entry.branch_name,
-                entry.remote_repo
-            );
+            let line = format!("{}", entry);
             file.write_all(line.as_bytes())?;
         }
+        file.flush()?;
         Ok(())
     }
 
+    /// Crea una nueva instancia de `FetchHead` leyendo el contenido del archivo FETCH_HEAD en el repositorio.
+    ///
+    /// # Arguments
+    ///
+    /// * `repo_path` - Ruta al directorio del repositorio local.
+    ///
+    /// # Returns
+    ///
+    /// Retorna un resultado que contiene la estructura `FetchHead` o un error si no se puede leer el archivo.
+    ///
+    /// # Errors
+    ///
+    /// Retorna un error si el archivo FETCH_HEAD no se encuentra o si hay problemas al leer su contenido.
     pub fn new_from_file(repo_path: &str) -> Result<FetchHead, CommandsError> {
-    let repo = format!("{}/.git", repo_path);
-    _read_fetch_head(&repo)
-}
-}
-
-
-// fn 
-
-// /// Lee el contenido del archivo FETCH_HEAD y devuelve un vector con las referencias.
-// ///
-// /// # Argumentos
-// ///
-// /// * `repo_path` - Ruta del repositorio.
-// /// 
-// /// # Retorno
-// /// 
-// /// Devuelve un vector con las referencias del repositorio.
-// /// Vec<(String_1, String_2, String_3)>
-// /// * String_1: Hash del commit
-// /// * String_2: Modo de merge
-// /// * String_3: Nombre de la rama en github
-// ///
-// /// # Errores
-// ///
-// /// Devuelve un error de tipo `CommandsError` si no puede leer o interpretar el contenido del archivo.
-// ///
-// // pub fn read_fetch_head(repo_path: &str) -> Result<Vec<FetchHead>, CommandsError> {
-// //     let repo = format!("{}/.git", repo_path);
-// //     match _read_fetch_head(&repo)
-// //     {
-// //         Ok(result) => Ok(result),
-// //         Err(_) => Err(CommandsError::ReadFetchHEAD),
-// //     }
-// // }
-
-// /// Función auxiliar que implementa la lógica real para leer FETCH_HEAD.
-// ///
-// /// # Argumentos
-// ///
-// /// * `path` - Ruta donde se encuentra el archivo FETCH_HEAD.
-// ///
-// /// # Errores
-// ///
-// /// Devuelve un error de tipo `io::Error` si no puede abrir o leer el archivo FETCH_HEAD.
-// ///
-pub fn _read_fetch_head(path: &str) -> Result<FetchHead, CommandsError> {
-    let fetch_head_path = format!("{}/FETCH_HEAD", path);
-    let file = match fs::File::open(fetch_head_path)
-    {
-        Ok(file) => file,
-        Err(_) => return Err(CommandsError::FetchHeadFileNotFound),
-    };
-
-    let mut entries = Vec::new();
-    for line in io::BufReader::new(file).lines() {
-        let line = match line
-        {
-            Ok(line) => line,
-            Err(_) => return Err(CommandsError::ReadFetchHEAD),
-        };
-        let entrie = FetchHeadEntry::new_from_line(&line)?;
-        entries.push(entrie);
+        let repo = format!("{}/.git", repo_path);
+        _read_fetch_head(&repo)
     }
-
-    Ok(FetchHead {
-        entries,
-    })
-
 }
 
 
+
+/// Extrae la información de la rama y el repositorio remoto desde una cadena de información de la rama.
+///
+/// # Arguments
+///
+/// * `branch_info` - Información de la rama en el formato específico del archivo FETCH_HEAD.
+///
+/// # Returns
+///
+/// Retorna un resultado que contiene una tupla con el nombre de la rama y la URL del repositorio remoto o un error.
+///
+/// # Errors
+///
+/// Retorna un error si la cadena no sigue el formato esperado.
+/// 
 fn extract_branch_info(branch_info: &str) -> Result<(String, String), CommandsError> {
     let prefix = "branch '";
     let suffix = "' of github.com:";
@@ -234,6 +214,42 @@ fn extract_branch_info(branch_info: &str) -> Result<(String, String), CommandsEr
         }
     }
     Err(CommandsError::InvalidFetchHeadEntry)
+}
+
+/// Lee el contenido del archivo FETCH_HEAD y crea una instancia de `FetchHead` con las entradas correspondientes.
+///
+/// # Arguments
+///
+/// * `path` - Ruta al archivo FETCH_HEAD en el repositorio.
+///
+/// # Returns
+///
+/// Retorna un resultado que contiene la estructura `FetchHead` o un error si no se puede leer el archivo.
+///
+/// # Errors
+///
+/// Retorna un error si el archivo FETCH_HEAD no se encuentra o si hay problemas al leer su contenido.
+/// 
+fn _read_fetch_head(path: &str) -> Result<FetchHead, CommandsError> {
+    let fetch_head_path = format!("{}/FETCH_HEAD", path);
+    let file = match fs::File::open(fetch_head_path)
+    {
+        Ok(file) => file,
+        Err(_) => return Err(CommandsError::FetchHeadFileNotFound),
+    };
+    let mut entries = Vec::new();
+    for line in io::BufReader::new(file).lines() {
+        let line = match line
+        {
+            Ok(line) => line,
+            Err(_) => return Err(CommandsError::ReadFetchHEAD),
+        };
+        let entrie = FetchHeadEntry::new_from_line(&line)?;
+        entries.push(entrie);
+    }
+    Ok(FetchHead {
+        entries,
+    })
 }
 
 
