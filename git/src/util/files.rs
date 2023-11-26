@@ -114,6 +114,21 @@ pub fn read_file(mut file: File) -> Result<Vec<u8>, GitError> {
     Ok(content)
 }
 
+/// Elimina un archivo
+/// ###Parametros:
+/// 'file': ruta del archivo a eliminar.
+pub fn delete_file(path_file: &str) -> Result<(),GitError> {
+    if fs::metadata(&path_file).is_ok() {
+        match fs::remove_file(&path_file) {
+            Ok(_) => (),
+            Err(_) => return Err(GitError::DeleteFileError),
+        }
+    } else {
+        return Err(GitError::DeleteFileError);
+    }
+    Ok(())
+}
+
 /// Asegura que el directorio esté limpio y, si no existe, lo crea.
 ///
 /// Esta función toma un path de directorio como argumento y utiliza la función auxiliar

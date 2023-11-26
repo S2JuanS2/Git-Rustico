@@ -257,6 +257,24 @@ pub fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, GitError
 /// ###Parametros:
 /// 'git_dir': Directorio del git
 /// 'content': contenido del archivo a comprimir
+pub fn builder_object_tag(content: &str, git_dir: &str) -> Result<String,GitError> {
+    let content_bytes = content.as_bytes();
+    let content_size = content_bytes.len().to_string();
+    let header = format!("{} {}\0", TAG, content_size);
+    let store = header + content;
+    
+    let tag_hash = hash_generate(&content);
+    
+    let file_object = builder_object(git_dir, &tag_hash)?;
+    compressor_object(store, file_object)?;
+
+    Ok(tag_hash)
+}
+
+/// comprimirá el contenido y lo escribirá en el archivo
+/// ###Parametros:
+/// 'git_dir': Directorio del git
+/// 'content': contenido del archivo a comprimir
 pub fn builder_object_blob(content: Vec<u8>, git_dir: &str) -> Result<String, GitError> {
     let header = format!("{} {}\0", BLOB, content.len());
     let store = header + String::from_utf8_lossy(&content).as_ref();
@@ -390,6 +408,34 @@ pub fn read_size(decompressed_data: &[u8]) -> Result<String, GitError> {
         index += 1;
     }
     Ok(String::from_utf8_lossy(&size).to_string())
+}
+
+/// Lee desde el contenido descomprimido el tipo de objeto de tipo tag.
+///
+/// # Argumentos
+///
+/// * `decompressed_data`: El contenido de un objeto en bytes de tipo tag.
+///
+/// # Retorno
+///
+/// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el contenido del objeto (tag) con el nombre
+///     del archivo y su hash
+/// * `Err(GitError)`: .
+///
+pub fn read_tag(decompressed_data: &[u8]) -> Result<String, GitError> {
+    let result_tag = decompressed_data;
+
+    let tag: Vec<u8> = vec![116, 97, 103];
+    if result_tag.starts_with(&tag) {
+        let mut index = 0;
+        while index < result_tag.len() && result_tag[index] != NULL {
+            index += 1;
+        }
+        index += 1;
+        Ok(String::from_utf8_lossy(&decompressed_data[index..]).to_string())
+    } else {
+        Ok(String::from_utf8_lossy(decompressed_data).to_string())
+    }
 }
 
 /// Lee desde el contenido descomprimido el tipo de objeto de tipo tree.
