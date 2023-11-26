@@ -34,6 +34,8 @@ pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, Git
         content = read_commit(&bytes)?;
     } else if type_object == TREE {
         content = read_tree(&bytes)?;
+    }else if type_object == TAG {
+        content = read_tag(&bytes)?;
     }
 
     Ok(content)
@@ -51,7 +53,7 @@ pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<St
     let path = format!("{}/{}/objects/{}", directory, GIT_DIR, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
-
+    
     let content = decompression_object(&file_path)?;
 
     let mut result = read_type(&content)?;

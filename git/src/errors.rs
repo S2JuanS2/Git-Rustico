@@ -90,6 +90,10 @@ pub enum GitError {
     GitServerError(String),
     InvalidArgumentCountTagError,
     DeleteFileError,
+    TagDirectoryOpenError,
+    ReadTagsError,
+    TagAlreadyExistsError,
+    TagNotExistsError,
 }
 
 impl GitError {
@@ -189,6 +193,10 @@ impl GitError {
             GitError::GitServerError(msg) => msg,
             GitError::InvalidArgumentCountTagError => "Número de argumentos inválido para el comando tag.\nUsar: git tag ..",
             GitError::DeleteFileError => "No se pudo encontrar el archivo",
+            GitError::TagDirectoryOpenError => "No se pudo abrir el directorio de la tag",
+            GitError::ReadTagsError => "Error al leer la tag",
+            GitError::TagAlreadyExistsError => "Ya existe una tag con ese nombre",
+            GitError::TagNotExistsError => "La tag no existe",
         }
     }
 }

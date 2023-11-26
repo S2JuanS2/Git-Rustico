@@ -131,6 +131,8 @@ pub const TREE: &str = "tree";
 
 pub const COMMIT: &str = "commit";
 
+pub const TAG: &str = "tag";
+
 pub const ALL: &str = ".";
 
 pub const DIRECTORY: &str = "40000";
