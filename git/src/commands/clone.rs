@@ -134,10 +134,17 @@ fn recovery_tree(
 ) -> Result<usize, GitError> {
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let mode = parts[0];
-        let file_name = parts[1];
+        let mode;
+        let file_name;
+        if parts[0] == FILE || parts[0] == DIRECTORY {
+            mode = parts[0];
+            file_name = parts[1];
+        }else{
+            file_name = parts[0];
+            mode = parts[1];
+        }
         let hash = parts[2];
-
+        
         let path_dir_cloned = path_dir_cloned.join(file_name);
         if mode == FILE {
             i += 1;

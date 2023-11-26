@@ -146,10 +146,10 @@ pub fn recovery_tree(
     objects: &mut Vec<(ObjectType, Vec<u8>)>,
 ) -> Result<(), GitError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
-
+    
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let mode = parts[0];
+        let mode = parts[1];
         let hash = parts[2];
         if mode == FILE {
             let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
@@ -180,6 +180,7 @@ pub fn get_objects(
     directory: &str,
     references: &[Reference],
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
+    println!("DEBUG");
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
     for reference in references.iter() {
         let parts: Vec<&str> = reference.get_name().split('/').collect();
