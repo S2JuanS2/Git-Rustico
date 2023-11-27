@@ -1,4 +1,4 @@
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{create_file_replace, open_file, read_file_string};
 
@@ -6,9 +6,9 @@ use crate::util::files::{create_file_replace, open_file, read_file_string};
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función remote
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_remote(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_remote(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() > 3 {
-        return Err(GitError::InvalidArgumentCountRemoteError);
+        return Err(CommandsError::InvalidArgumentCountRemoteError);
     }
     let mut action = "none";
     let mut remote_name = "none";
@@ -39,7 +39,7 @@ pub fn git_remote(
     action: &str,
     remote_name: &str,
     remote_url: &str,
-) -> Result<String, GitError> {
+) -> Result<String, CommandsError> {
     let config_path = format!("{}/.git/config", directory);
     let config_file = open_file(&config_path)?;
     let config_content = read_file_string(config_file)?;
@@ -68,7 +68,7 @@ pub fn git_remote(
 /// Obtiene los repositorios remotos del archivo de configuración.
 /// ###Parametros:
 /// 'config_path': ruta del archivo de configuración
-fn get_remotes(config_content: &str) -> Result<Vec<String>, GitError> {
+fn get_remotes(config_content: &str) -> Result<Vec<String>, CommandsError> {
     let mut remotes = Vec::new();
     for line in config_content.lines() {
         if line.starts_with("[remote ") {
@@ -94,10 +94,10 @@ fn add_remote(
     config_content: &String,
     remote_name: &str,
     remote_url: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let remote_exists = check_if_remote_exists(config_content.as_str(), remote_name);
     if remote_exists {
-        return Err(GitError::RemoteAlreadyExistsError);
+        return Err(CommandsError::RemoteAlreadyExistsError);
     }
     let remote = format!(
         "[remote \"{}\"]\nurl = {}\nfetch = +refs/heads/*:refs/remotes/{}/*\n",
@@ -138,10 +138,10 @@ fn remove_remote(
     config_path: &str,
     config_content: &str,
     remote_name: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let remote_exists = check_if_remote_exists(config_content, remote_name);
     if !remote_exists {
-        return Err(GitError::RemoteDoesNotExistError);
+        return Err(CommandsError::RemoteDoesNotExistError);
     }
 
     let mut new_config_content = String::new();

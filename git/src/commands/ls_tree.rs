@@ -1,4 +1,5 @@
-use crate::errors::GitError;
+use super::errors::CommandsError;
+use crate::consts::{BLOB, TAG, COMMIT};
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
 use std::fs;
@@ -9,9 +10,9 @@ use super::cat_file::git_cat_file;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función ls-tree
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_ls_tree(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_ls_tree(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() > 1 || args.is_empty() {
-        return Err(GitError::InvalidArgumentCountLsTreeError);
+        return Err(CommandsError::InvalidArgumentCountLsTreeError);
     }
     let directory = client.get_directory_path();
     git_ls_tree(directory, args[0])
@@ -21,16 +22,17 @@ pub fn handle_ls_tree(args: Vec<&str>, client: Client) -> Result<String, GitErro
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'tree_ish': un tree hash, un commit hash o un path a una branch que contiene un commit hash..
-pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> {
+pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, CommandsError> {
     let mut tree_hash = tree_ish.to_string();
     let directory_tree = format!("{}/.git/{}", directory, tree_ish);
     if fs::metadata(&directory_tree).is_ok() {
         tree_hash = associated_commit(directory, &directory_tree)?;
     }
-    if git_cat_file(directory, &tree_hash, "-t")? == "blob" {
-        return Err(GitError::InvalidTreeHashError);
+    if git_cat_file(directory, &tree_hash, "-t")? == BLOB || 
+       git_cat_file(directory, &tree_hash, "-t")? == TAG{
+        return Err(CommandsError::InvalidTreeHashError);
     }
-    if git_cat_file(directory, &tree_hash, "-t")? == "commit" {
+    if git_cat_file(directory, &tree_hash, "-t")? == COMMIT {
         tree_hash = associated_tree(directory, tree_hash)?;
     }
 
@@ -45,7 +47,7 @@ pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, GitError> 
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'path_to_commit': un path a una branch (o a HEAD) que contiene un commit hash.
-fn associated_commit(directory: &str, path_to_commit: &str) -> Result<String, GitError> {
+fn associated_commit(directory: &str, path_to_commit: &str) -> Result<String, CommandsError> {
     let path = open_file(path_to_commit)?;
     let content = read_file_string(path)?;
     if path_to_commit.contains("HEAD") {
@@ -53,7 +55,7 @@ fn associated_commit(directory: &str, path_to_commit: &str) -> Result<String, Gi
         return Ok(tree);
     }
     if content.len() != 40 {
-        return Err(GitError::InvalidTreeHashError);
+        return Err(CommandsError::InvalidTreeHashError);
     }
     let tree = associated_tree(directory, content)?;
 
@@ -64,7 +66,7 @@ fn associated_commit(directory: &str, path_to_commit: &str) -> Result<String, Gi
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'content': commit hash.
-fn associated_tree(directory: &str, content: String) -> Result<String, GitError> {
+fn associated_tree(directory: &str, content: String) -> Result<String, CommandsError> {
     let content_commit = git_cat_file(directory, &content, "-p")?;
     let parts: Vec<&str> = content_commit.split_whitespace().collect();
     let tree = parts[1];
@@ -75,7 +77,7 @@ fn associated_tree(directory: &str, content: String) -> Result<String, GitError>
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'content': contenido del archivo HEAD.
-fn get_head_tree(directory: &str, content: String) -> Result<String, GitError> {
+fn get_head_tree(directory: &str, content: String) -> Result<String, CommandsError> {
     let path_branch = content.split_whitespace().collect::<Vec<&str>>()[1];
     let path_branch = format!("{}/.git/{}", directory, path_branch);
     let branch = open_file(&path_branch)?;

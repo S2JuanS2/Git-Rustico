@@ -68,6 +68,18 @@ pub enum UtilError {
     InvalidHashInAckResponse,
     ExpectedStatusContinueInAckResponse,
     CreateDir(String),
+    OpenFileError,
+    ReadFileError,
+    CreateFileError,
+    DeleteFileError,
+    ReadDirError,
+    RemoveFileError,
+    WriteFileError,
+    CopyFileError,
+    CreateDirError,
+    VisitDirectoryError,
+    DirEntryError,
+    InvalidObjectLength,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -136,6 +148,18 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidHashInAckResponse => write!(f, "InvalidHashInAckResponseError: Hash inválido en la respuesta del ACK."),
         UtilError::ExpectedStatusContinueInAckResponse => write!(f, "ExpectedStatusContinueInAckResponseError: Se esperaba un status continue en la respuesta del ACK."),
         UtilError::CreateDir(info) => write!(f, "CreateDirError: Error al crear el directorio {}. \n", info),
+        UtilError::OpenFileError => write!(f, "No se pudo abrir el archivo"),
+        UtilError::ReadFileError => write!(f, "No se pudo leer el archivo"),
+        UtilError::CreateFileError => write!(f, "No se pudo crear el archivo"),
+        UtilError::RemoveFileError => write!(f, "No se pudo eliminar el archivo"),
+        UtilError::WriteFileError => write!(f, "Fallo al escribir en el archivo"),
+        UtilError::CopyFileError => write!(f, "Fallo al copiar el archivo"),
+        UtilError::CreateDirError => write!(f, "Fallo al crear el directorio"),
+        UtilError::ReadDirError => write!(f, "Falló al leer el directorio"),
+        UtilError::DirEntryError => write!(f, "Falló al obtener la entrada del directorio"),
+        UtilError::VisitDirectoryError => write!(f, "No se pudo recorrer el directorio"),
+        UtilError::InvalidObjectLength => write!(f, "Fallo al leer en el header, se leyo una longitud de objecto invalido"),
+        UtilError::DeleteFileError => write!(f, "No se pudo encontrar el archivo"),
     }
 }
 

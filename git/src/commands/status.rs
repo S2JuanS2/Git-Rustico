@@ -1,5 +1,5 @@
 use crate::consts::*;
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file, read_file_string};
 use crate::util::formats::hash_generate;
@@ -15,9 +15,9 @@ use super::cat_file::git_cat_file;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if !args.is_empty() {
-        return Err(GitError::InvalidArgumentCountStatusError);
+        return Err(CommandsError::InvalidArgumentCountStatusError);
     }
     let directory = client.get_directory_path();
     git_status(directory)
@@ -26,7 +26,7 @@ pub fn handle_status(args: Vec<&str>, client: Client) -> Result<String, GitError
 /// Devuelve el nombre de la rama actual.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-fn get_head_branch(directory: &str) -> Result<String, GitError> {
+fn get_head_branch(directory: &str) -> Result<String, CommandsError> {
     // "directory/.git/HEAD"
     let directory_git = format!("{}/{}", directory, GIT_DIR);
     let head_file_path = Path::new(&directory_git).join(HEAD);
@@ -34,18 +34,18 @@ fn get_head_branch(directory: &str) -> Result<String, GitError> {
     let head_file = File::open(head_file_path);
     let mut head_file = match head_file {
         Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(CommandsError::OpenFileError),
     };
     let mut head_branch: String = String::new();
     let read_head_file = head_file.read_to_string(&mut head_branch);
     let _ = match read_head_file {
         Ok(file) => file,
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(CommandsError::ReadFileError),
     };
     let head_branch_name = head_branch.split('/').last();
     let head_branch_name = match head_branch_name {
         Some(name) => name,
-        None => return Err(GitError::HeadBranchError),
+        None => return Err(CommandsError::HeadBranchError),
     };
     let head_branch_name = head_branch_name.trim().to_string();
 
@@ -57,7 +57,7 @@ fn get_head_branch(directory: &str) -> Result<String, GitError> {
 /// fueron agregados al staging area.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn git_status(directory: &str) -> Result<String, GitError> {
+pub fn git_status(directory: &str) -> Result<String, CommandsError> {
     let directory_git = format!("{}/{}", directory, GIT_DIR);
 
     let index_content = get_index_content(&directory_git)?;
@@ -94,18 +94,18 @@ pub fn get_lines_in_index(index_content: String) -> Vec<String> {
 /// Devuelve el contenido del archivo index.
 /// ###Parámetros:
 /// 'directory_git': directorio del repositorio local.
-pub fn get_index_content(directory_git: &str) -> Result<String, GitError> {
+pub fn get_index_content(directory_git: &str) -> Result<String, CommandsError> {
     let index_path = format!("{}/index", directory_git);
     let index_file = File::open(index_path);
     let mut index_file = match index_file {
         Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(CommandsError::OpenFileError),
     };
     let mut index_content: String = String::new();
     let read_index_file = index_file.read_to_string(&mut index_content);
     let _ = match read_index_file {
         Ok(file) => file,
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(CommandsError::ReadFileError),
     };
     Ok(index_content)
 }
@@ -123,7 +123,7 @@ fn print_changes(
     files_not_commited_list: Vec<String>,
     deleted_files_list: Vec<String>,
     directory: &str,
-) -> Result<String, GitError> {
+) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
     let head_branch_name = get_head_branch(directory)?;
 
@@ -349,7 +349,7 @@ pub fn check_for_deleted_files(
 fn check_for_commit(
     directory: &str,
     staged_files_list: Vec<(String, String)>,
-) -> Result<Vec<String>, GitError> {
+) -> Result<Vec<String>, CommandsError> {
     let mut files_not_commited_list: Vec<String> = Vec::new();
     if !staged_files_list.is_empty() {
         let head_branch = get_head_branch(directory)?;
@@ -376,17 +376,17 @@ fn check_for_commit(
 /// Devuelve un vector con los nombres de los archivos en el index y sus hashes.
 /// ###Parámetros:
 /// 'index_files_list': vector con las lineas del index.
-pub fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String)>, GitError> {
+pub fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String)>, CommandsError> {
     let mut index_hashes: Vec<(String, String)> = Vec::new();
     for file in index_files_list {
         let parts: Vec<&str> = file.split(' ').collect();
         let file_name = match parts.first() {
             Some(name) => name,
-            None => return Err(GitError::GenericError),
+            None => return Err(CommandsError::GenericError),
         };
         let file_hash = match parts.last() {
             Some(hash) => hash,
-            None => return Err(GitError::GenericError),
+            None => return Err(CommandsError::GenericError),
         };
         index_hashes.push((file_name.to_string(), file_hash.to_string()));
     }
@@ -403,7 +403,7 @@ fn get_files_in_commit(
     directory: &str,
     commit_actual: &str,
     file_hash: &str,
-) -> Result<bool, GitError> {
+) -> Result<bool, CommandsError> {
     let mut commited = false;
     if commit_actual != "" {
         let commit_content = git_cat_file(directory, commit_actual, "-p")?;
@@ -445,7 +445,7 @@ fn get_tree_content(
     file_hash: &str,
     commited: &mut bool,
     parent_commit: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     let tree_lines = tree_content.split('\n');
     for tree_line in tree_lines {
@@ -469,7 +469,7 @@ fn get_tree_content(
 /// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, GitError> {
+pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, CommandsError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = directory.to_string();
     calculate_directory_hashes(&working_directory, &mut working_directory_hash_list)?;
@@ -484,16 +484,16 @@ pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, S
 pub fn calculate_directory_hashes(
     directory: &str,
     hash_list: &mut HashMap<String, String>,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
-        Err(_) => return Err(GitError::ReadDirError),
+        Err(_) => return Err(CommandsError::ReadDirError),
     };
 
     for entry in entries {
         let entry = match entry {
             Ok(entry) => entry,
-            Err(_) => return Err(GitError::DirEntryError),
+            Err(_) => return Err(CommandsError::DirEntryError),
         };
         let path = entry.path();
 
@@ -516,7 +516,7 @@ pub fn calculate_directory_hashes(
 fn create_hash_working_dir(
     path: PathBuf,
     hash_list: &mut HashMap<String, String>,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     if path.is_dir() {
         if let Some(path_str) = path.to_str() {
             calculate_directory_hashes(path_str, hash_list)?;

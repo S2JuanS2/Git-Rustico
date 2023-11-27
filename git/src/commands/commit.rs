@@ -1,5 +1,5 @@
 use crate::consts::*;
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::*;
 use crate::util::index::{open_index, recovery_index};
@@ -13,7 +13,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::commands::branch::get_current_branch;
 
-use super::errors::CommandsError;
 use super::status::get_index_content;
 
 const COMMIT_EDITMSG: &str = "COMMIT_EDITMSG";
@@ -78,12 +77,12 @@ impl Commit {
 /// ###Parametros:
 /// 'args': Vector de Strings que contiene los parametros que se le pasaran al comando commit
 /// 'client': Cliente que contiene el directorio del repositorio local
-pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() != 2 {
-        return Err(GitError::InvalidArgumentCountCommitError);
+        return Err(CommandsError::InvalidArgumentCountCommitError);
     }
     if args[0] != "-m" {
-        return Err(GitError::FlagCommitNotRecognizedError);
+        return Err(CommandsError::FlagCommitNotRecognizedError);
     }
     let directory = client.get_directory_path();
 
@@ -104,15 +103,15 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, GitError
 /// ###Parametros:
 /// 'directory': Directorio del git
 /// 'msg': mensaje del commit
-fn builder_commit_msg_edit(directory: &str, msg: String) -> Result<(), GitError> {
+fn builder_commit_msg_edit(directory: &str, msg: String) -> Result<(), CommandsError> {
     let commit_msg_path = format!("{}/{}/{}", directory, GIT_DIR, COMMIT_EDITMSG);
     let mut file = match fs::File::create(commit_msg_path) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::CreateFileError),
+        Err(_) => return Err(CommandsError::CreateFileError),
     };
     match file.write_all(msg.as_bytes()) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::WriteFileError),
+        Err(_) => return Err(CommandsError::WriteFileError),
     };
 
     Ok(())
@@ -126,12 +125,12 @@ pub fn builder_commit_log(
     directory: &str,
     content: &str,
     hash_commit: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let logs_path = format!("{}/{}/logs/refs/heads", directory, GIT_DIR);
     if !Path::new(&logs_path).exists() {
         match fs::create_dir_all(logs_path.clone()) {
             Ok(_) => (),
-            Err(_) => return Err(GitError::CreateDirError),
+            Err(_) => return Err(CommandsError::CreateDirError),
         };
     }
     let mut lines: Vec<&str> = content.lines().collect();
@@ -144,11 +143,11 @@ pub fn builder_commit_log(
     let logs_path = format!("{}/{}", logs_path, current_branch);
     let mut file = match OpenOptions::new().append(true).create(true).open(logs_path) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(CommandsError::OpenFileError),
     };
     match file.write_all(content_mod_with_newline.as_bytes()) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::WriteFileError),
+        Err(_) => return Err(CommandsError::WriteFileError),
     };
     Ok(())
 }
@@ -185,7 +184,7 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
 /// ###Parametros:
 /// 'directory': Directorio del git
 /// 'commit': Estructura que contiene la información del commit
-pub fn git_commit(directory: &str, commit: Commit) -> Result<String, GitError> {
+pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsError> {
     let git_dir = format!("{}/{}", directory, GIT_DIR);
     check_index_content(&git_dir)?;
 
@@ -226,7 +225,7 @@ fn create_or_replace_commit_into_branch(
     current_branch: String,
     branch_current_path: String,
     hash_commit: String,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     if current_branch == INITIAL_BRANCH && fs::metadata(&branch_current_path).is_err() {
         create_file(&branch_current_path, &hash_commit)?;
     } else {
@@ -238,7 +237,7 @@ fn create_or_replace_commit_into_branch(
 /// Esta función chequea que el index no este vacio.
 /// ###Parametros:
 /// 'git_dir': Directorio del git
-fn check_index_content(git_dir: &str) -> Result<(), GitError> {
+fn check_index_content(git_dir: &str) -> Result<(), CommandsError> {
     let index_content = get_index_content(git_dir)?;
     if index_content.trim().is_empty() {
         return Err(CommandsError::CommitEmptyIndex.into());

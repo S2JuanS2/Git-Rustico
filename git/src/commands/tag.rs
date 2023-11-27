@@ -1,5 +1,5 @@
 use crate::consts::{GIT_DIR, REFS_TAGS};
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string, create_file, delete_file};
 use crate::util::objects::builder_object_tag;
@@ -19,7 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función tag
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_tag(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_tag(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     let directory = client.get_directory_path();
     if args.is_empty() {
         git_tag(client.get_directory_path())
@@ -28,21 +28,21 @@ pub fn handle_tag(args: Vec<&str>, client: Client) -> Result<String, GitError> {
     }else if args.len() == 2 && args[0] == "-d" {
         git_tag_delete(directory, args[1])
     }else{
-        return Err(GitError::InvalidArgumentCountTagError)
+        return Err(CommandsError::InvalidArgumentCountTagError)
     }
 }
 
 // Devuelve un vector con los nombres de las tags
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn get_tags(directory: &str) -> Result<Vec<String>, GitError> {
+pub fn get_tags(directory: &str) -> Result<Vec<String>, CommandsError> {
     // "directory/.git/refs/heads"
     let directory_git = format!("{}/{}", directory, GIT_DIR);
     let tag_dir = Path::new(&directory_git).join(REFS_TAGS);
 
     let entries = match fs::read_dir(tag_dir) {
         Ok(entries) => entries,
-        Err(_) => return Err(GitError::TagDirectoryOpenError),
+        Err(_) => return Err(CommandsError::TagDirectoryOpenError),
     };
 
     let mut tags: Vec<String> = Vec::new();
@@ -52,11 +52,11 @@ pub fn get_tags(directory: &str) -> Result<Vec<String>, GitError> {
             Ok(entry) => {
                 let tag = match entry.file_name().into_string() {
                     Ok(tag) => tag,
-                    Err(_) => return Err(GitError::ReadTagsError),
+                    Err(_) => return Err(CommandsError::ReadTagsError),
                 };
                 tags.push(tag);
             }
-            Err(_) => return Err(GitError::ReadTagsError),
+            Err(_) => return Err(CommandsError::ReadTagsError),
         }
     }
     Ok(tags)
@@ -66,7 +66,7 @@ pub fn get_tags(directory: &str) -> Result<Vec<String>, GitError> {
 /// uso: git tag -> muestra todas las tags
 /// ###Parametros:
 /// 'directory': directory del repositorio que contiene la tag
-fn git_tag(directory: &str) -> Result<String, GitError> {
+fn git_tag(directory: &str) -> Result<String, CommandsError> {
 
     let tags = get_tags(directory)?;
     let mut formatted_tags = String::new();
@@ -80,7 +80,7 @@ fn git_tag(directory: &str) -> Result<String, GitError> {
 /// ###Parametros:
 /// 'directory': Directorio del git
 /// 'msg': mensaje del commit
-fn builder_tag_msg_edit(directory: &str, msg: &str) -> Result<(), GitError> {
+fn builder_tag_msg_edit(directory: &str, msg: &str) -> Result<(), CommandsError> {
     let commit_msg_path = format!("{}/{}/{}", directory, GIT_DIR, TAG_EDITMSG);
 
     let format_content = format!("\n#\n# Write a message for tag:\n# {}\n# Lines starting with '#' will be ignored", msg);
@@ -97,11 +97,11 @@ fn builder_tag_msg_edit(directory: &str, msg: &str) -> Result<(), GitError> {
 /// 'client': Cliente que crea la tag.
 /// 'tag_name': nombre de la tag.
 /// 'version_name': comentario de la tag.
-pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_name: &str) -> Result<String, GitError> {
+pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_name: &str) -> Result<String, CommandsError> {
     
     let tags = get_tags(directory)?;
     if tags.contains(&tag_name.to_string()) {
-        return Err(GitError::TagAlreadyExistsError);
+        return Err(CommandsError::TagAlreadyExistsError);
     }
 
     let git_dir = format!("{}/{}", directory, GIT_DIR);
@@ -113,7 +113,7 @@ pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_n
         let file = open_file(&branch_current_path)?;
         commit_hash = read_file_string(file)?;
     }else{
-        return Err(GitError::OpenFileError)
+        return Err(CommandsError::OpenFileError)
     }
 
     let timestamp = SystemTime::now()
@@ -147,11 +147,11 @@ pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_n
 /// ###Parametros:
 /// 'directory': directory del repositorio que contiene la tag
 /// 'tag_name_delete': nombre de la tag a eliminar
-fn git_tag_delete(directory: &str, tag_name_delete: &str) -> Result<String, GitError> {
+fn git_tag_delete(directory: &str, tag_name_delete: &str) -> Result<String, CommandsError> {
 
     let tags = get_tags(directory)?;
     if !tags.contains(&tag_name_delete.to_string()) {
-        return Err(GitError::TagNotExistsError);
+        return Err(CommandsError::TagNotExistsError);
     }
     let dir_tag = format!("{}/.git/refs/tags/{}", directory, tag_name_delete);
 

@@ -1,5 +1,5 @@
-use crate::errors::GitError;
 use crate::models::client::Client;
+use super::errors::CommandsError;
 use crate::util::files::{create_file_replace, open_file, read_file_string};
 use std::fs;
 
@@ -12,9 +12,9 @@ use super::log::git_log;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función merge
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() != 1 {
-        return Err(GitError::InvalidArgumentCountMergeError);
+        return Err(CommandsError::InvalidArgumentCountMergeError);
     }
     let directory = client.get_directory_path();
     let branch_name = args[0];
@@ -25,7 +25,7 @@ pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, GitError>
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
-pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, GitError> {
+pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, CommandsError> {
     let current_branch = get_current_branch(directory)?;
     let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
     let path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
@@ -114,7 +114,7 @@ fn get_first_commit_of_each_branch(
 fn get_branches_hashes(
     path_current_branch: &str,
     path_branch_to_merge: &str,
-) -> Result<(String, String), GitError> {
+) -> Result<(String, String), CommandsError> {
     let current_branch_file = open_file(path_current_branch)?;
     let current_branch_hash = read_file_string(current_branch_file)?;
     let merge_branch_file = open_file(path_branch_to_merge)?;
@@ -131,7 +131,7 @@ fn get_logs_from_branches(
     directory: &str,
     branch_name: &str,
     current_branch: String,
-) -> Result<(Vec<String>, Vec<String>), GitError> {
+) -> Result<(Vec<String>, Vec<String>), CommandsError> {
     let log_current_branch = git_log(directory)?;
     let log_current_branch = get_commits_from_log(log_current_branch);
     git_checkout_switch(directory, branch_name)?;
@@ -155,7 +155,7 @@ fn get_result_depending_on_strategy(
     current_branch_hash: String,
     branch_to_merge_hash: String,
     path_current_branch: String,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     if strategy.0 == "recursive" && strategy.1 == "ok" {
         formatted_result.push_str("Merge made by the 'recursive' strategy.");
     } else if strategy.0 == "fast-forward" {
@@ -249,7 +249,7 @@ fn merge_depending_on_strategy(
     log_merge_branch: Vec<String>,
     directory: &str,
     branch_to_merge: &str,
-) -> Result<(String, String), GitError> {
+) -> Result<(String, String), CommandsError> {
     let mut strategy: (String, String) = ("".to_string(), "".to_string());
     for commit in log_merge_branch {
         let content_commit = git_cat_file(directory, &commit, "-p")?;
@@ -290,7 +290,7 @@ fn merge_depending_on_strategy(
 /// ###Parametros:
 /// 'content_commit': String que contiene el contenido del commit
 /// 'directory': directorio del repositorio local
-fn get_tree_of_commit(content_commit: String, directory: &str) -> Result<String, GitError> {
+fn get_tree_of_commit(content_commit: String, directory: &str) -> Result<String, CommandsError> {
     let mut content_tree = String::new();
     for line in content_commit.lines() {
         if line.starts_with("tree ") {
@@ -314,7 +314,7 @@ fn compare_files(
     content_file: &str,
     branch_to_merge: &str,
     strategy: &mut (String, String),
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let file = open_file(path_file_format)?;
     let content_file_local = read_file_string(file)?;
     if content_file_local != content_file {
@@ -363,7 +363,7 @@ fn check_each_line(
     content_file_local: String,
     content_file: &str,
     branch_to_merge: &str,
-) -> Result<String, GitError> {
+) -> Result<String, CommandsError> {
     let mut content_file_local_lines = content_file_local.lines();
     let mut content_file_lines = content_file.lines();
     let mut line_local = content_file_local_lines.next();

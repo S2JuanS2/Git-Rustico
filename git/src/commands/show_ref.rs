@@ -1,4 +1,4 @@
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
 use std::fs;
@@ -7,9 +7,9 @@ use std::fs;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función ls-files
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_show_ref(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_show_ref(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if !args.is_empty() {
-        return Err(GitError::InvalidArgumentShowRefError);
+        return Err(CommandsError::InvalidArgumentShowRefError);
     }
     let directory = client.get_directory_path();
     git_show_ref(directory)
@@ -18,7 +18,7 @@ pub fn handle_show_ref(args: Vec<&str>, client: Client) -> Result<String, GitErr
 /// Muestra las referencias de un repositorio local con sus commits.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
-pub fn git_show_ref(directory: &str) -> Result<String, GitError> {
+pub fn git_show_ref(directory: &str) -> Result<String, CommandsError> {
     let refs_heads_path = format!("{}/.git/refs/heads", directory);
     let refs_remotes_path = format!("{}/.git/refs/remotes", directory);
     let refs_tags_path = format!("{}/.git/refs/tags", directory);
@@ -40,18 +40,18 @@ fn visit_refs_dirs(
     refs_path: String,
     formatted_result: &mut String,
     directory: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let git_dir = format!("{}/.git/", directory);
     let refs = &refs_path[git_dir.len()..];
     if fs::metadata(&refs_path).is_ok() {
         let entries = match fs::read_dir(&refs_path) {
             Ok(entries) => entries,
-            Err(_) => return Err(GitError::ReadDirError),
+            Err(_) => return Err(CommandsError::ReadDirError),
         };
         for entry in entries {
             let entry = match entry {
                 Ok(entry) => entry,
-                Err(_) => return Err(GitError::GenericError),
+                Err(_) => return Err(CommandsError::ReadDirError),
             };
             if entry.path().is_dir() {
                 if let Some(entry) = entry.path().to_str() {
