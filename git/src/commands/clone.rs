@@ -78,7 +78,7 @@ pub fn git_clone(
     let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
-    let advertised = reference_discovery(socket, message)?;
+    let advertised = reference_discovery(socket, message, repo)?;
 
     // Packfile Negotiation
     packfile_negotiation(socket, &advertised)?;
@@ -89,10 +89,11 @@ pub fn git_clone(
     let status = create_repository(advertised, content, repo)?;
 
     // Creo el config
+    // let git_config = GitConfig::new_from_server();
+    // config.write_to_file(&path_config)?;
     // let url = format!("url = {}", repo);
     // let config = GitConfig::new_from_lines(vec![url]);
     // let path_config = format!("{}/{}/{}", repo, GIT_DIR, "config");
-    // config.write_to_file(&path_config)?;
 
     Ok(status)
 }

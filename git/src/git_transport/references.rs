@@ -243,10 +243,11 @@ pub fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
 pub fn reference_discovery(
     stream: &mut TcpStream,
     message: String,
+    src_repo: &str,
 ) -> Result<GitServer, UtilError> {
     send_message(stream, &message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(stream)?;
-    GitServer::new(&lines)
+    GitServer::new(&lines, src_repo)
 }
 
 /// Extrae referencias de un subdirectorio de un directorio base, creando un vector de Referencias.

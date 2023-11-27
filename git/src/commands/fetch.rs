@@ -76,7 +76,7 @@ pub fn git_fetch_all(
         GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
 
     // Reference Discovery
-    let mut server = reference_discovery(socket, message)?;
+    let mut server = reference_discovery(socket, message, repo_remoto)?;
 
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;

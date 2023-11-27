@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io;
 use std::io::Write;
 
-use crate::consts::{CONFIG_FILE, GIT_DIR};
+use crate::{consts::{CONFIG_FILE, GIT_DIR}, git_server::GitServer};
 
 use super::errors::CommandsError;
 
@@ -188,6 +188,17 @@ impl GitConfig {
             Err(_) => Err(CommandsError::FileNotFoundConfig),
         }
     }
+
+    // pub fn new_from_server(server: &GitServer, path_remoto: &str) -> Self
+    // {
+    //     let mut git_config = GitConfig::new();
+    //     git_config.add_entry("url", path_remoto, "remote origin");
+    //     // for refs in server.get_references()
+    //     // {
+    //     //     let branch = 
+    //     // }
+    //     git_config
+    // }
 
     /// Agrega una entrada a una sección específica de la configuración Git.
     ///
