@@ -53,11 +53,7 @@ impl BranchInfo {
 
     pub fn valid_attribute(attribute: &str) -> bool
     {
-        match attribute 
-        {
-            "remote" | "merge" => true,
-            _ => false,
-        }
+        matches!(attribute, "remote" | "merge")
     }
 
     fn get_value(&self, key: &str) -> Option<&str>
@@ -146,6 +142,12 @@ pub struct GitConfig {
     branch: HashMap<String, BranchInfo>,
 }
 
+impl Default for GitConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GitConfig {
     pub fn new() -> Self {
         Self {
@@ -176,7 +178,7 @@ impl GitConfig {
 
     fn _new_from_file(path: &str) -> Result<Self, CommandsError> {
         let mut git_config = GitConfig::new();
-        match read_format_config(&path) {
+        match read_format_config(path) {
             Ok(section) => {
                 for (name, attributes) in section {
                     for (key, value) in attributes {
@@ -239,7 +241,7 @@ impl GitConfig {
             }
             "branch" => {
                 let name = parts[1].trim();
-                if !name.starts_with("\"") || !name.ends_with("\"")
+                if !name.starts_with('\"') || !name.ends_with('\"')
                 {
                     return Err(CommandsError::InvalidEntryConfigFile);
                 }
@@ -320,7 +322,7 @@ impl GitConfig {
     /// 
     pub fn get_remote_repo(&self) -> Result<&str, CommandsError> {
         match &self.remote_origin.url {
-            Some(url) => Ok(&url),
+            Some(url) => Ok(url),
             None => Err(CommandsError::MissingUrlConfig),
         }
     }
@@ -343,7 +345,7 @@ impl GitConfig {
 
         match &branch.remote
         {
-            Some(remote) => Some(&remote),
+            Some(remote) => Some(remote),
             None => None,
         }
     }
@@ -374,7 +376,7 @@ impl GitConfig {
             "remote" => self.remote_origin.get_value(key),
             "branch" => {
                 let name = parts[1].trim();
-                if !name.starts_with("\"") || !name.ends_with("\"")
+                if !name.starts_with('\"') || !name.ends_with('\"')
                 {
                     return None;
                 }
@@ -440,7 +442,7 @@ fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, Stri
             continue;
         }
 
-        if line.starts_with("[") && line.ends_with("]") {
+        if line.starts_with('[') && line.ends_with(']') {
             if !current_section.is_empty() {
                 result.insert(current_section, current_attributes);
             }

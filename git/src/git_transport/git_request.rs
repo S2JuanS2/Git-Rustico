@@ -187,7 +187,7 @@ impl GitRequest {
 }
 
 fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError> {
-    let mut server = GitServer::create_from_path(&path_repo, VERSION_DEFAULT, Vec::new())?;
+    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, Vec::new())?;
     server.send_references(stream)?;
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
 
@@ -205,13 +205,13 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
         receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
         send_acknowledge_last_reference(stream, &obj_hash)?;
         server.save_references_client(obj_hash);
-        send_packfile_witch_references_client(stream, &server, &path_repo)?;
+        send_packfile_witch_references_client(stream, &server, path_repo)?;
 
         return Ok(());
     }
     // Si el cliente solicita todo, esta haciendo un CLONE
     server.update_data(capabilities, wanted_objects);
-    send_packfile(stream, &server, &path_repo)?; // Debo modificarlo, el NAK no debe estar dentro
+    send_packfile(stream, &server, path_repo)?; // Debo modificarlo, el NAK no debe estar dentro
     Ok(())
 }
 

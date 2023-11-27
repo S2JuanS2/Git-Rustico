@@ -111,7 +111,7 @@ fn create_repository(
     let mut i = 0;
     while i < count_objects {
         if content[i].0.obj_type == ObjectType::Commit {
-            handle_commit(&content, repo, &advertised, &git_dir, i)?;
+            handle_commit(&content, repo, advertised, &git_dir, i)?;
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
             i = match handle_tree(&content, &git_dir, i, path_dir_cloned) {
