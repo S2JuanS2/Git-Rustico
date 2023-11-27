@@ -18,7 +18,6 @@ use crate::commands::remote::handle_remote;
 use crate::commands::rm::handle_rm;
 use crate::commands::show_ref::handle_show_ref;
 use crate::commands::status::handle_status;
-
 use crate::commands::tag::handle_tag;
 use crate::errors::GitError;
 use crate::models::client::Client;
@@ -67,6 +66,9 @@ impl Controller {
     }
     pub fn get_name_client(&self) -> &str {
         self.client.get_name()
+    }
+    pub fn get_mail_client(&self) -> &str {
+        self.client.get_email()
     }
     pub fn get_current_branch(&self) -> &str {
         &self.current_branch
