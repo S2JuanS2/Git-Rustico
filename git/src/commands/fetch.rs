@@ -120,7 +120,7 @@ pub fn get_branches(server: &GitServer) -> Result<Vec<(String,String)>,CommandsE
 
     for reference in server.get_references().iter().skip(1){
         let hash = reference.get_hash();
-        let branch = reference.get_name();
+        let branch = reference.get_ref_path();
             if let Some(current_branch) = branch.rsplit('/').next() {
                 let new_ref:(String,String) = (current_branch.to_string(),hash.to_string());
                 references.push(new_ref);

@@ -189,16 +189,20 @@ impl GitConfig {
         }
     }
 
-    // pub fn new_from_server(server: &GitServer, path_remoto: &str) -> Self
-    // {
-    //     let mut git_config = GitConfig::new();
-    //     git_config.add_entry("url", path_remoto, "remote origin");
-    //     // for refs in server.get_references()
-    //     // {
-    //     //     let branch = 
-    //     // }
-    //     git_config
-    // }
+    pub fn new_from_server(server: &GitServer) -> Self
+    {
+        let mut git_config = GitConfig::new();
+        git_config.add_entry("url", &server.src_repo.to_string(), "remote origin");
+        for refs in server.get_references()
+        {
+            // let name = refs.name.to_string();
+            // let mut branch_info = BranchInfo::new();
+            // branch_info.update_info("remote", "origin").unwrap();
+            // branch_info.update_info("merge", &name).unwrap();
+            // git_config.branch.insert(name, branch_info);
+        }
+        git_config
+    }
 
     /// Agrega una entrada a una sección específica de la configuración Git.
     ///

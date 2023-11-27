@@ -28,34 +28,34 @@ pub enum ReferenceType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Reference {
     hash: String,
-    refname: String,
+    ref_path: String,
     reference_type: ReferenceType,
 }
 
 impl Reference {
-    pub fn new(hash: String, name: String) -> Result<Reference, UtilError> {
-        if name == "HEAD" {
+    pub fn new(hash: String, ref_path: String) -> Result<Reference, UtilError> {
+        if ref_path == "HEAD" {
             Ok(Reference {
                 hash,
-                refname: name,
+                ref_path,
                 reference_type: ReferenceType::Head,
             })
-        } else if name.starts_with("refs/tags/") {
+        } else if ref_path.starts_with("refs/tags/") {
             Ok(Reference {
                 hash,
-                refname: name,
+                ref_path,
                 reference_type: ReferenceType::Tag,
             })
-        } else if name.starts_with("refs/heads/") {
+        } else if ref_path.starts_with("refs/heads/") {
             Ok(Reference {
                 hash,
-                refname: name,
+                ref_path,
                 reference_type: ReferenceType::Branch,
             })
-        } else if name.starts_with("refs/remotes/") {
+        } else if ref_path.starts_with("refs/remotes/") {
             Ok(Reference {
                 hash,
-                refname: name,
+                ref_path,
                 reference_type: ReferenceType::Remote,
             })
         } else {
@@ -95,12 +95,17 @@ impl Reference {
         &self.hash
     }
 
-    pub fn get_name(&self) -> &String {
-        &self.refname
+    pub fn get_ref_path(&self) -> &String {
+        &self.ref_path
     }
 
     pub fn get_type(&self) -> &ReferenceType {
         &self.reference_type
+    }
+
+    pub fn get_name(&self) -> &str {
+        let parts: Vec<&str> = self.ref_path.split('/').collect();
+        parts.last().map_or("", |&x| x)
     }
 }
 
@@ -182,7 +187,7 @@ pub fn get_objects(
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
     for reference in references.iter() {
-        let parts: Vec<&str> = reference.get_name().split('/').collect();
+        let parts: Vec<&str> = reference.get_ref_path().split('/').collect();
         let branch = parts.last().map_or("", |&x| x);
         let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
         let file_current_branch = open_file(&branch_current_path)?;
@@ -218,7 +223,7 @@ pub fn get_objects(
 /// En caso de error, retorna un error de tipo UtilError.
 pub fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
     let current_branch = get_current_branch(directory).expect("Error");
-    let refname = format!("refs/heads/{}", current_branch);
+    let ref_path = format!("refs/heads/{}", current_branch);
     let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, current_branch);
     if fs::metadata(&branch_current_path).is_err() {
         return Err(UtilError::GenericError);
@@ -226,7 +231,7 @@ pub fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
     let file_current_branch = open_file(&branch_current_path).expect("Error");
     let hash_current_branch = read_file_string(file_current_branch).expect("Error");
 
-    Reference::new(hash_current_branch, refname)
+    Reference::new(hash_current_branch, ref_path)
 }
 
 /// Realiza un proceso de descubrimiento de referencias (refs) enviando un mensaje al servidor
@@ -369,7 +374,7 @@ fn extract_hash_head_from_path(
     name_head: &str,
 ) -> Result<String, UtilError> {
     for reference in refs {
-        if reference.get_name() == name_head {
+        if reference.get_ref_path() == name_head {
             return Ok(reference.get_hash().to_string());
         }
     }
@@ -407,7 +412,7 @@ mod tests {
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
-            assert_eq!(reference.get_name(), &"HEAD".to_string());
+            assert_eq!(reference.get_ref_path(), &"HEAD".to_string());
             assert_eq!(*reference.get_type(), ReferenceType::Head);
         }
     }
@@ -418,7 +423,7 @@ mod tests {
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
-            assert_eq!(reference.get_name(), &"refs/tags/version-1.0".to_string());
+            assert_eq!(reference.get_ref_path(), &"refs/tags/version-1.0".to_string());
             assert_eq!(*reference.get_type(), ReferenceType::Tag);
         }
     }
@@ -429,7 +434,7 @@ mod tests {
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
-            assert_eq!(reference.get_name(), &"refs/heads/main".to_string());
+            assert_eq!(reference.get_ref_path(), &"refs/heads/main".to_string());
             assert_eq!(*reference.get_type(), ReferenceType::Branch);
         }
     }
@@ -444,7 +449,7 @@ mod tests {
 
         if let Ok(reference) = result {
             assert_eq!(
-                reference.get_name(),
+                reference.get_ref_path(),
                 &"refs/remotes/origin/main".to_string()
             );
             assert_eq!(*reference.get_type(), ReferenceType::Remote);
@@ -461,29 +466,77 @@ mod tests {
     fn test_get_hash() {
         let reference = Reference {
             hash: "some_hash".to_string(),
-            refname: "refs/heads/main".to_string(),
+            ref_path: "refs/heads/main".to_string(),
             reference_type: ReferenceType::Branch,
         };
         assert_eq!(*reference.get_hash(), "some_hash".to_string());
     }
 
     #[test]
-    fn test_get_name() {
+    fn test_get_ref_path() {
         let reference = Reference {
             hash: "some_hash".to_string(),
-            refname: "refs/tags/version-1.0".to_string(),
+            ref_path: "refs/tags/version-1.0".to_string(),
             reference_type: ReferenceType::Tag,
         };
-        assert_eq!(*reference.get_name(), "refs/tags/version-1.0".to_string());
+        assert_eq!(*reference.get_ref_path(), "refs/tags/version-1.0".to_string());
     }
 
     #[test]
     fn test_get_type() {
         let reference = Reference {
             hash: "some_hash".to_string(),
-            refname: "refs/remotes/origin/main".to_string(),
+            ref_path: "refs/remotes/origin/main".to_string(),
             reference_type: ReferenceType::Remote,
         };
         assert_eq!(*reference.get_type(), ReferenceType::Remote);
+    }
+
+    #[test]
+    fn test_get_name() {
+        // Arrange
+        let reference = Reference {
+            hash: String::from("abc123"),
+            ref_path: String::from("refs/heads/main"),
+            reference_type: ReferenceType::Branch,
+        };
+
+        // Act
+        let name = reference.get_name();
+
+        // Assert
+        assert_eq!(name, "main");
+    }
+
+    #[test]
+    fn test_get_name_with_empty_path() {
+        // Arrange
+        let reference = Reference {
+            hash: String::from("abc123"),
+            ref_path: String::from(""),
+            reference_type: ReferenceType::Branch,
+        };
+
+        // Act
+        let name = reference.get_name();
+
+        // Assert
+        assert_eq!(name, "");
+    }
+
+    #[test]
+    fn test_get_name_with_single_component_path() {
+        // Arrange
+        let reference = Reference {
+            hash: String::from("abc123"),
+            ref_path: String::from("refs/tags/version1"),
+            reference_type: ReferenceType::Tag,
+        };
+
+        // Act
+        let name = reference.get_name();
+
+        // Assert
+        assert_eq!(name, "version1");
     }
 }
