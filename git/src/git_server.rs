@@ -14,6 +14,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct GitServer {
+    pub src_repo: String,
     pub version: u32,
     pub capabilities: Vec<String>,
     pub shallow: Vec<String>,
@@ -36,9 +37,9 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    pub fn new(content: &Vec<Vec<u8>>) -> Result<GitServer, UtilError> {
+    pub fn new(content: &Vec<Vec<u8>>, src_repo: &str) -> Result<GitServer, UtilError> {
         let classified = AdvertisedRefLine::classify_vec(content)?;
-        GitServer::from_classified(classified)
+        GitServer::from_classified(classified, src_repo)
     }
 
     /// Construye una estructura `GitServer` a partir de líneas de referencia clasificadas.
@@ -55,7 +56,7 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    fn from_classified(classified: Vec<AdvertisedRefLine>) -> Result<GitServer, UtilError> {
+    fn from_classified(classified: Vec<AdvertisedRefLine>, src_repo: &str) -> Result<GitServer, UtilError> {
         let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
@@ -73,6 +74,7 @@ impl GitServer {
         }
 
         Ok(GitServer {
+            src_repo: src_repo.to_string(),
             version,
             capabilities,
             shallow,
@@ -134,6 +136,7 @@ impl GitServer {
     ) -> Result<GitServer, UtilError> {
         let references = Reference::extract_references_from_git(path_repo)?;
         Ok(GitServer {
+            src_repo: path_repo.to_string(),
             version,
             capabilities,
             shallow: Vec::new(),
@@ -155,7 +158,7 @@ impl GitServer {
         // Send references
         // HEAD lo inserte 1ero en el vector
         for reference in &self.references {
-            let reference = format!("{} {}\n", reference.get_hash(), reference.get_name());
+            let reference = format!("{} {}\n", reference.get_hash(), reference.get_ref_path());
             let reference = pkt_line::add_length_prefix(&reference, reference.len());
             // println!("Sending reference: {}", reference);
             send_message(writer, &reference, UtilError::ReferencesObtaining)?;

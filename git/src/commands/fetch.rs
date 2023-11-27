@@ -65,7 +65,7 @@ pub fn git_fetch_all(
     repo_local: &str,
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
-    let git_config = GitConfig::new_from_repo(repo_local)?;
+    let git_config = GitConfig::new_from_file(repo_local)?;
     let repo_remoto = git_config.get_remote_repo()?;
 
     println!("Fetch del repositorio remoto: {}", repo_remoto);
@@ -75,7 +75,7 @@ pub fn git_fetch_all(
         GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
 
     // Reference Discovery
-    let mut server = reference_discovery(socket, message)?;
+    let mut server = reference_discovery(socket, message, repo_remoto)?;
 
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
@@ -119,7 +119,7 @@ pub fn get_branches(server: &GitServer) -> Result<Vec<(String,String)>,CommandsE
 
     for reference in server.get_references().iter().skip(1){
         let hash = reference.get_hash();
-        let branch = reference.get_name();
+        let branch = reference.get_ref_path();
             if let Some(current_branch) = branch.rsplit('/').next() {
                 let new_ref:(String,String) = (current_branch.to_string(),hash.to_string());
                 references.push(new_ref);
