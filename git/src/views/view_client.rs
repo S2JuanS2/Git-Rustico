@@ -23,6 +23,7 @@ pub struct View {
     entries: HashMap<String, Rc<gtk::Entry>>,
     response: Rc<gtk::TextView>,
     label_user: gtk::Label,
+    label_mail: gtk::Label,
     label_branch: gtk::Label,
 }
 
@@ -82,6 +83,7 @@ impl View {
         );
         let label_user: gtk::Label = builder.object("user").ok_or(GitError::ObjectBuildFailed)?;
         let label_branch: gtk::Label = builder.object("label_branch").ok_or(GitError::ObjectBuildFailed)?;
+        let label_mail: gtk::Label = builder.object("mail").ok_or(GitError::ObjectBuildFailed)?;
 
         let controller = Rc::new(RefCell::new(controller));
         Ok(View {
@@ -97,6 +99,7 @@ impl View {
             entries,
             response,
             label_user,
+            label_mail,
             label_branch,
         })
     }
@@ -106,6 +109,13 @@ impl View {
         let binding = controller.borrow_mut();
         let user_name = binding.get_name_client();
         self.label_user.set_text(user_name);
+    }
+
+    fn set_label_mail(&mut self) {
+        let controller = Rc::clone(&self.controller);
+        let binding = controller.borrow_mut();
+        let user_mail = binding.get_mail_client();
+        self.label_mail.set_text(user_mail);
     }
 
     fn set_label_branch(&mut self) {
@@ -235,6 +245,17 @@ impl View {
             }
         }
     }
+
+    fn connect_button_help(&self) {
+        if let Some(button) = self.buttons.get(BUTTON_HELP) {
+            if let Some(buffer) = self.response.buffer() {
+                button.connect_clicked(move |_| {
+                    buffer.set_text("Desarrollado por: [INTEGRANTES DEL EQUIPO]");
+                });
+            }
+        }
+    }
+
     fn connect_button_with_entry(&self, entry_cmd: &str, button_cmd: &str, git_cmd: String) {
         let controller = Rc::clone(&self.controller);
         let response = Rc::clone(&self.response);
@@ -288,6 +309,7 @@ impl View {
 
         self.connect_button_send();
         self.connect_button_clear();
+        self.connect_button_help();
         self.connect_button_clone();
         self.connect_button_cat_file();
         self.connect_button_hash_object();
@@ -347,6 +369,7 @@ impl View {
         });
 
         self.set_label_user();
+        self.set_label_mail();
         self.set_label_branch();
 
         self.window.show_all();
