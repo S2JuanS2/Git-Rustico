@@ -1,6 +1,6 @@
 use super::files::{open_file, read_file_string, create_file_replace};
 use crate::consts::{INDEX, TREE, GIT_DIR};
-use crate::errors::GitError;
+use crate::util::errors::UtilError;
 use crate::util::objects::builder_object_tree;
 
 /// Maneja el index del repositorio del cliente, lo abre y devuelve su contenido
@@ -13,7 +13,7 @@ use crate::util::objects::builder_object_tree;
 ///
 /// Devuelve un `Result` que contiene un (String) en caso de éxito o un error (CommandsError) en caso de fallo.
 ///
-pub fn open_index(git_dir: &str) -> Result<String, GitError> {
+pub fn open_index(git_dir: &str) -> Result<String, UtilError> {
     let path_index = format!("{}/{}", git_dir, INDEX);
 
     let index_file = open_file(&path_index)?;
@@ -30,7 +30,7 @@ pub fn open_index(git_dir: &str) -> Result<String, GitError> {
 ///
 /// Devuelve un error (CommandsError) en caso de fallo.
 ///
-pub fn empty_index(directory: &str) -> Result<(), GitError> {
+pub fn empty_index(directory: &str) -> Result<(), UtilError> {
     let path_index = format!("{}/{}/{}", directory, GIT_DIR, INDEX);
     create_file_replace(&path_index, "")?;
     Ok(())
@@ -45,9 +45,9 @@ pub fn empty_index(directory: &str) -> Result<(), GitError> {
 ///
 /// # Retorno
 ///
-/// Devuelve un `Result` que contiene un (String) en caso de éxito o un error (GitError) en caso de fallo.
+/// Devuelve un `Result` que contiene un (String) en caso de éxito o un error (UtilError) en caso de fallo.
 ///
-pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, GitError> {
+pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, UtilError> {
     let mut lines: Vec<String> = index_content.lines().map(String::from).collect();
     lines.sort();
 
@@ -84,7 +84,7 @@ pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, GitE
                 )?;
             }
         } else {
-            return Err(GitError::InvalidObjectLength);
+            return Err(UtilError::InvalidObjectLength);
         }
     }
     handle_last_subtree(&mut tree, &sub_tree, &folder_name, git_dir)?;
@@ -104,7 +104,7 @@ pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, GitE
 ///
 /// # Retorno
 ///
-/// Devuelve un `Result` que contiene un () en caso de éxito o un error (GitError) en caso de fallo.
+/// Devuelve un `Result` que contiene un () en caso de éxito o un error (UtilError) en caso de fallo.
 ///
 fn handle_folder_entry(
     tree: &mut String,
@@ -114,7 +114,7 @@ fn handle_folder_entry(
     mode: &str,
     hash: &str,
     git_dir: &str,
-) -> Result<(), GitError> {
+) -> Result<(), UtilError> {
     let path_parts: Vec<&str> = file_name.split('/').collect();
     let new_path: Vec<&str> = path_parts.clone().into_iter().skip(1).collect();
     let new_path_str = new_path.join("/");
@@ -142,7 +142,7 @@ fn handle_folder_entry(
 ///
 /// # Retorno
 ///
-/// Devuelve un `Result` que contiene un () en caso de éxito o un error (GitError) en caso de fallo.
+/// Devuelve un `Result` que contiene un () en caso de éxito o un error (UtilError) en caso de fallo.
 ///
 fn handle_file_entry(
     tree: &mut String,
@@ -152,7 +152,7 @@ fn handle_file_entry(
     mode: &str,
     hash: &str,
     git_dir: &str,
-) -> Result<(), GitError> {
+) -> Result<(), UtilError> {
     handle_subtree(tree, sub_tree, folder_name, git_dir)?;
 
     let blob = format!("{} {} {}\n", file_name, mode, hash);
@@ -172,14 +172,14 @@ fn handle_file_entry(
 ///
 /// # Retorno
 ///
-/// Devuelve un `Result` que contiene un () en caso de éxito o un error (GitError) en caso de fallo.
+/// Devuelve un `Result` que contiene un () en caso de éxito o un error (UtilError) en caso de fallo.
 ///
 fn handle_subtree(
     tree: &mut String,
     sub_tree: &mut String,
     folder_name: &str,
     git_dir: &str,
-) -> Result<(), GitError> {
+) -> Result<(), UtilError> {
     if !sub_tree.is_empty() {
         let hash_sub_tree = recovery_index(&sub_tree, git_dir)?;
         let blob = format!("{} {} {}\n", folder_name, TREE, hash_sub_tree);
@@ -200,14 +200,14 @@ fn handle_subtree(
 ///
 /// # Retorno
 ///
-/// Devuelve un `Result` que contiene un () en caso de éxito o un error (GitError) en caso de fallo.
+/// Devuelve un `Result` que contiene un () en caso de éxito o un error (UtilError) en caso de fallo.
 ///
 fn handle_last_subtree(
     tree: &mut String,
     sub_tree: &str,
     folder_name: &str,
     git_dir: &str,
-) -> Result<(), GitError> {
+) -> Result<(), UtilError> {
     if !sub_tree.is_empty() {
         handle_subtree(tree, &mut sub_tree.to_string(), folder_name, git_dir)?;
     }

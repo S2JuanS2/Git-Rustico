@@ -1,4 +1,4 @@
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 
 use super::status::{
@@ -10,12 +10,12 @@ use super::status::{
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función ls-files
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_ls_files(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_ls_files(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() > 1 {
-        return Err(GitError::InvalidArgumentCountLsFilesError);
+        return Err(CommandsError::InvalidArgumentCountLsFilesError);
     }
     if args.len() == 1 && args[0] != "-c" && args[0] != "-d" && args[0] != "-m" && args[0] != "-o" {
-        return Err(GitError::FlagLsFilesNotRecognizedError);
+        return Err(CommandsError::FlagLsFilesNotRecognizedError);
     }
     let directory = client.get_directory_path();
     if args.is_empty() {
@@ -29,7 +29,7 @@ pub fn handle_ls_files(args: Vec<&str>, client: Client) -> Result<String, GitErr
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'flag': flag que se pasa por parametro.
-pub fn git_ls_files(directory: &str, flag: &str) -> Result<String, GitError> {
+pub fn git_ls_files(directory: &str, flag: &str) -> Result<String, CommandsError> {
     let directory_git = format!("{}/.git", directory);
     let mut formatted_result = String::new();
     let index_content = get_index_content(&directory_git)?;
@@ -61,7 +61,7 @@ fn get_deleted_files(
     directory: &str,
     index_content: &str,
     formatted_result: &mut String,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
     let index_lines = get_lines_in_index(index_content.to_string());
     let index_hashes = get_hashes_index(index_lines)?;
@@ -87,7 +87,7 @@ fn get_modified_or_untracked_files(
     index_content: &str,
     formatted_result: &mut String,
     flag: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
     let index_lines = get_lines_in_index(index_content.to_string());
     let index_hashes = get_hashes_index(index_lines)?;

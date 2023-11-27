@@ -5,18 +5,16 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 
-use crate::errors::GitError;
-
 use super::errors::UtilError;
 
 /// Verifica si un directorio está vacío
 /// ###Parametros:
 /// 'path': url de un directorio
-pub fn is_folder_empty(path: &str) -> Result<bool, GitError> {
+pub fn is_folder_empty(path: &str) -> Result<bool, UtilError> {
     println!("{path}");
     let contents = match fs::read_dir(path) {
         Ok(contents) => contents,
-        Err(_) => return Err(GitError::VisitDirectoryError),
+        Err(_) => return Err(UtilError::VisitDirectoryError),
     };
     let is_empty = contents.count() == 0;
 
@@ -26,11 +24,11 @@ pub fn is_folder_empty(path: &str) -> Result<bool, GitError> {
 /// Crea un directorio si no existe
 /// ###Parametros:
 /// 'directory': dirección del directorio a crear
-pub fn create_directory(directory: &Path) -> Result<(), GitError> {
+pub fn create_directory(directory: &Path) -> Result<(), UtilError> {
     if !directory.exists() {
         match fs::create_dir_all(directory) {
             Ok(_) => (),
-            Err(_) => return Err(GitError::CreateDirError),
+            Err(_) => return Err(UtilError::CreateDirError),
         };
     }
     Ok(())
@@ -40,14 +38,14 @@ pub fn create_directory(directory: &Path) -> Result<(), GitError> {
 /// ###Parametros:
 /// 'file': archivo a crear.
 /// 'content': contenido que se escribirá en el archivo.
-pub fn create_file_replace(file: &str, content: &str) -> Result<(), GitError> {
+pub fn create_file_replace(file: &str, content: &str) -> Result<(), UtilError> {
     let mut file = match fs::File::create(file) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::CreateFileError),
+        Err(_) => return Err(UtilError::CreateFileError),
     };
     match file.write_all(content.as_bytes()) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::WriteFileError),
+        Err(_) => return Err(UtilError::WriteFileError),
     };
 
     Ok(())
@@ -57,18 +55,18 @@ pub fn create_file_replace(file: &str, content: &str) -> Result<(), GitError> {
 /// ###Parametros:
 /// 'file': archivo a crear.
 /// 'content': contenido que se escribirá en el archivo.
-pub fn create_file(file: &str, content: &str) -> Result<(), GitError> {
+pub fn create_file(file: &str, content: &str) -> Result<(), UtilError> {
     if fs::metadata(file).is_ok() {
         return Ok(());
     }
 
     let mut file = match fs::File::create(file) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::CreateFileError),
+        Err(_) => return Err(UtilError::CreateFileError),
     };
     match file.write_all(content.as_bytes()) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::WriteFileError),
+        Err(_) => return Err(UtilError::WriteFileError),
     };
 
     Ok(())
@@ -77,10 +75,10 @@ pub fn create_file(file: &str, content: &str) -> Result<(), GitError> {
 /// Abre un archivo
 /// ###Parametros:
 /// 'file': archivo a abrir.
-pub fn open_file(file_path: &str) -> Result<File, GitError> {
+pub fn open_file(file_path: &str) -> Result<File, UtilError> {
     let file = match File::open(file_path) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(UtilError::OpenFileError),
     };
 
     Ok(file)
@@ -89,12 +87,12 @@ pub fn open_file(file_path: &str) -> Result<File, GitError> {
 /// Lee un archivo y devuelve el contenido del mismo en String
 /// ###Parametros:
 /// 'file': archivo a leer.
-pub fn read_file_string(mut file: File) -> Result<String, GitError> {
+pub fn read_file_string(mut file: File) -> Result<String, UtilError> {
     let mut content = String::new();
 
     match file.read_to_string(&mut content) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(UtilError::ReadFileError),
     }
 
     Ok(content)
@@ -103,12 +101,12 @@ pub fn read_file_string(mut file: File) -> Result<String, GitError> {
 /// Lee un archivo y devuelve el contenido del mismo en un vector
 /// ###Parametros:
 /// 'file': archivo a leer.
-pub fn read_file(mut file: File) -> Result<Vec<u8>, GitError> {
+pub fn read_file(mut file: File) -> Result<Vec<u8>, UtilError> {
     let mut content = Vec::new();
 
     match file.read_to_end(&mut content) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(UtilError::ReadFileError),
     }
 
     Ok(content)
@@ -117,14 +115,14 @@ pub fn read_file(mut file: File) -> Result<Vec<u8>, GitError> {
 /// Elimina un archivo
 /// ###Parametros:
 /// 'file': ruta del archivo a eliminar.
-pub fn delete_file(path_file: &str) -> Result<(),GitError> {
+pub fn delete_file(path_file: &str) -> Result<(),UtilError> {
     if fs::metadata(&path_file).is_ok() {
         match fs::remove_file(&path_file) {
             Ok(_) => (),
-            Err(_) => return Err(GitError::DeleteFileError),
+            Err(_) => return Err(UtilError::DeleteFileError),
         }
     } else {
-        return Err(GitError::DeleteFileError);
+        return Err(UtilError::DeleteFileError);
     }
     Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::consts::*;
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
 use crate::util::formats::hash_generate;
@@ -10,9 +10,9 @@ use std::io::Write;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función rm
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() != 1 {
-        return Err(GitError::InvalidArgumentCountRmError);
+        return Err(CommandsError::InvalidArgumentCountRmError);
     }
     let directory = client.get_directory_path();
     let file_name = args[0];
@@ -23,7 +23,7 @@ pub fn handle_rm(args: Vec<&str>, client: Client) -> Result<String, GitError> {
 /// ###Parametros
 /// 'directory': directorio del repositorio local.
 /// 'file_name': nombre del archivo a remover.
-pub fn git_rm(directory: &str, file_name: &str) -> Result<String, GitError> {
+pub fn git_rm(directory: &str, file_name: &str) -> Result<String, CommandsError> {
     let result = compare_hash(file_name, directory)?;
 
     Ok(result)
@@ -33,7 +33,7 @@ pub fn git_rm(directory: &str, file_name: &str) -> Result<String, GitError> {
 /// ###Parametros
 /// 'file_name': nombre del archivo a remover.
 /// 'directory': directorio del repositorio local.
-fn compare_hash(file_name: &str, directory: &str) -> Result<String, GitError> {
+fn compare_hash(file_name: &str, directory: &str) -> Result<String, CommandsError> {
     let file_path = format!("{}/{}", directory, file_name);
     let file = open_file(&file_path)?;
     let file_content = read_file_string(file)?;
@@ -57,7 +57,7 @@ fn remove_from_index(
     directory: &str,
     file_name: &str,
     hash_file: &str,
-) -> Result<String, GitError> {
+) -> Result<String, CommandsError> {
     let directory_git = format!("{}/{}", directory, GIT_DIR);
     let index_file_path = format!("{}/{}", directory_git, INDEX);
 
@@ -74,7 +74,7 @@ fn remove_from_index(
             // Se remueve del working directory
             match fs::remove_file(file_path) {
                 Ok(_) => {}
-                Err(_) => return Err(GitError::RemoveFileError),
+                Err(_) => return Err(CommandsError::RemoveFileError),
             };
         } else {
             return Ok(
@@ -93,15 +93,15 @@ fn remove_from_index(
 /// ###Parametros
 /// 'index_file_path': path del index.
 /// 'lines': lineas que se quieren escribir en el index.
-fn update_index(index_file_path: String, lines: Vec<String>) -> Result<(), GitError> {
+fn update_index(index_file_path: String, lines: Vec<String>) -> Result<(), CommandsError> {
     let mut index_file = match File::create(index_file_path) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::CreateFileError),
+        Err(_) => return Err(CommandsError::CreateFileError),
     };
 
     for line in &lines {
         if writeln!(index_file, "{}", line).is_err() {
-            return Err(GitError::WriteFileError);
+            return Err(CommandsError::WriteFileError);
         };
     }
     Ok(())

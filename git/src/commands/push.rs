@@ -1,4 +1,4 @@
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
 use std::net::TcpStream;
@@ -7,11 +7,11 @@ use std::net::TcpStream;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función push
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_push(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+pub fn handle_push(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
     let client_clone = client.clone();
     let address = client_clone.get_address();
     if args.len() != 2 {
-        return Err(GitError::InvalidArgumentCountPushError);
+        return Err(CommandsError::InvalidArgumentCountPushError);
     }
     let directory = client.get_directory_path();
     let mut socket = start_client(address)?;
@@ -38,6 +38,6 @@ pub fn git_push(
     _port: String,
     _remote_name: &str,
     _branch_name: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     Ok(())
 }

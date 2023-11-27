@@ -1,5 +1,4 @@
 use crate::consts::*;
-use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::{create_file_replace, open_file, read_file, read_file_string};
 use crate::util::objects::builder_object_blob;
@@ -7,13 +6,15 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
 
+use super::errors::CommandsError;
+
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función add
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() != 1 {
-        return Err(GitError::InvalidArgumentCountAddError);
+        return Err(CommandsError::InvalidArgumentCountAddError);
     }
     let directory = client.get_directory_path();
     let file_name = args[0];
@@ -27,16 +28,16 @@ pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, GitError> {
 /// Esta función crea todos los objetos y los guarda
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
-pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
+pub fn git_add_all(directory: &Path) -> Result<String, CommandsError> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
-        Err(_) => return Err(GitError::ReadDirError),
+        Err(_) => return Err(CommandsError::ReadDirError),
     };
 
     for entry in entries {
         let entry = match entry {
             Ok(entry) => entry,
-            Err(_) => return Err(GitError::DirEntryError),
+            Err(_) => return Err(CommandsError::DirEntryError),
         };
 
         let file_name = entry.file_name();
@@ -45,7 +46,7 @@ pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
         if full_path.is_file() {
             add_file(&full_path, &file_name)?;
         } else if full_path.is_dir() {
-            let path_str = file_name.to_str().ok_or(GitError::PathToStringError)?;
+            let path_str = file_name.to_str().ok_or(CommandsError::PathToStringError)?;
             if !path_str.starts_with('.') {
                 git_add_all(&full_path)?;
             }
@@ -59,8 +60,8 @@ pub fn git_add_all(directory: &Path) -> Result<String, GitError> {
 /// ###Parametros:
 /// 'full_path': PathBuf que contiene el path completo del archivo
 /// 'file_name': Nombre del archivo que se le hizo add
-fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), GitError> {
-    let full_path_str = full_path.to_str().ok_or(GitError::PathToStringError)?;
+fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), CommandsError> {
+    let full_path_str = full_path.to_str().ok_or(CommandsError::PathToStringError)?;
     let parts: Vec<&str> = full_path_str.split('/').collect();
     let directory = format!("{}/", parts[0]);
     if parts.len() >= 3 {
@@ -83,7 +84,7 @@ fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), GitError> {
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
 /// 'file_name': Nombre del archivo del cual se leera el contenido para luego comprimirlo y generar el objeto
-pub fn git_add(directory: &str, file_name: &str) -> Result<String, GitError> {
+pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError> {
     let file_path = format!("{}/{}", directory, file_name);
     let file = open_file(&file_path)?;
     let content = read_file(file)?;
@@ -103,7 +104,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<String, GitError> {
 /// 'git_dir': directorio donde esta el directory/.git
 /// 'file_name': Nombre del archivo que se le hizo add
 /// 'hash_object': Hash del objeto que se creó al hacer add
-pub fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result<(), GitError> {
+pub fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result<(), CommandsError> {
     let index_path = format!("{}/{}", &git_dir, INDEX);
 
     let index_file = open_file(index_path.as_str())?;

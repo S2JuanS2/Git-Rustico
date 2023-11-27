@@ -1,4 +1,4 @@
-use crate::errors::GitError;
+use crate::util::errors::UtilError;
 extern crate flate2;
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
@@ -35,22 +35,22 @@ pub fn hash_generate(content: &str) -> String {
 /// ###Parametros:
 /// 'store': contenido que se comprimirá
 /// 'file_object': archivo donde se guardará el contenido comprimido
-pub fn compressor_object_with_bytes(store: Vec<u8>, mut file_object: File) -> Result<(), GitError> {
+pub fn compressor_object_with_bytes(store: Vec<u8>, mut file_object: File) -> Result<(), UtilError> {
     let mut compressor = ZlibEncoder::new(Vec::new(), Compression::default());
 
     match compressor.write_all(&store) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(UtilError::ReadFileError),
     }
 
     let compressed_bytes = match compressor.finish() {
         Ok(compressed_bytes) => compressed_bytes,
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(UtilError::ReadFileError),
     };
 
     match file_object.write_all(&compressed_bytes) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(UtilError::ReadFileError),
     }
 
     Ok(())
@@ -60,22 +60,22 @@ pub fn compressor_object_with_bytes(store: Vec<u8>, mut file_object: File) -> Re
 /// ###Parametros:
 /// 'store': contenido que se comprimirá
 /// 'file_object': archivo donde se guardará el contenido comprimido
-pub fn compressor_object(store: String, mut file_object: File) -> Result<(), GitError> {
+pub fn compressor_object(store: String, mut file_object: File) -> Result<(), UtilError> {
     let mut compressor = ZlibEncoder::new(Vec::new(), Compression::default());
 
     match compressor.write_all(store.as_bytes()) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(UtilError::ReadFileError),
     }
 
     let compressed_bytes = match compressor.finish() {
         Ok(compressed_bytes) => compressed_bytes,
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(UtilError::ReadFileError),
     };
 
     match file_object.write_all(&compressed_bytes) {
         Ok(_) => (),
-        Err(_) => return Err(GitError::ReadFileError),
+        Err(_) => return Err(UtilError::ReadFileError),
     }
 
     Ok(())
@@ -84,17 +84,17 @@ pub fn compressor_object(store: String, mut file_object: File) -> Result<(), Git
 /// Dado un directorio lo descomprime y lo guarda
 /// ###Parametros:
 /// 'content': directorio del archivo comprimido a descomprimir
-pub fn decompression_object(path: &str) -> Result<Vec<u8>, GitError> {
+pub fn decompression_object(path: &str) -> Result<Vec<u8>, UtilError> {
     let file = match File::open(path) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
+        Err(_) => return Err(UtilError::OpenFileError),
     };
 
     let mut reader = ZlibDecoder::new(file);
 
     let mut uncompressed_content = Vec::new();
     if reader.read_to_end(&mut uncompressed_content).is_err() {
-        return Err(GitError::ReadFileError);
+        return Err(UtilError::ReadFileError);
     };
 
     Ok(uncompressed_content)
