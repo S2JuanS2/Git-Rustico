@@ -13,7 +13,7 @@ fn main() -> Result<(), GitError> {
 
     let address = format!("{}:{}", config.ip, config.port);
 
-    let mut client = Client::new(
+    let client = Client::new(
         config.name,
         config.email,
         config.ip,

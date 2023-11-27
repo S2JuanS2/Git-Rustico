@@ -72,13 +72,13 @@ pub fn git_fetch_all(
 
     println!("Fetch del repositorio remoto: {}", repo_remoto);
 
-    // // Prepara la solicitud "git-upload-pack" para el servidor
-    // let message =
-    //     GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
+    // Prepara la solicitud "git-upload-pack" para el servidor
+    let message =
+        GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
 
-    // // Reference Discovery
-    // let mut server = reference_discovery(socket, message, repo_remoto)?;
-
+    // Reference Discovery
+    let mut server = reference_discovery(socket, message, repo_remoto)?;
+    println!("server: {:?}", server);
     // // Packfile Negotiation
     // packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
