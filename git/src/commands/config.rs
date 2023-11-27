@@ -189,6 +189,16 @@ impl GitConfig {
         }
     }
 
+    /// Crea una nueva instancia de `GitConfig` a partir de la configuración del servidor remoto.
+    ///
+    /// # Parámetros
+    ///
+    /// - `server`: La configuración del servidor remoto representada por un objeto `GitServer`.
+    ///
+    /// # Errores
+    ///
+    /// Devuelve un error [`CommandsError`] si hay algún problema al configurar el `GitConfig`.
+    ///
     pub fn new_from_server(server: &GitServer) -> Result<Self, CommandsError>
     {
         let mut git_config = GitConfig::new();
@@ -302,6 +312,12 @@ impl GitConfig {
         Ok(())
     }
 
+    /// Obtener la URL remota del repositorio.
+    ///
+    /// # Errores
+    ///
+    /// Devuelve un error [`CommandsError::MissingUrlConfig`] si la URL remota no está configurada.
+    /// 
     pub fn get_remote_repo(&self) -> Result<&str, CommandsError> {
         match &self.remote_origin.url {
             Some(url) => Ok(&url),
@@ -309,6 +325,14 @@ impl GitConfig {
         }
     }
 
+    /// Obtener el remoto asociado a una rama específica.
+    ///
+    /// # Parámetros
+    /// - `name`: El nombre de la rama.
+    ///
+    /// # Retorno
+    /// Devuelve `Some(remote)` si la rama tiene un remoto asociado, o `None` si no tiene remoto.
+    ///
     pub fn get_remote_from_branch(&self, name: &str) -> Option<&str>
     {
         let branch = match self.branch.get(name)
