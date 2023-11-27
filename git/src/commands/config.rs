@@ -14,12 +14,6 @@ struct BranchInfo {
     pub merge: Option<String>,
 }
 
-impl Default for GitConfig {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl BranchInfo {
     fn new() -> Self {
         Self {
@@ -65,8 +59,76 @@ impl BranchInfo {
             _ => false,
         }
     }
+
+    fn get_value(&self, key: &str) -> Option<&str>
+    {
+        match key
+        {
+            "remote" => self.remote.as_deref(),
+            "merge" => self.merge.as_deref(),
+            _ => None,
+        }
+    }
 }
 
+#[derive(Debug)]
+struct RemoteInfo {
+    pub url: Option<String>,
+    pub fetch: Option<String>,
+}
+
+impl RemoteInfo {
+    fn new() -> Self {
+        Self {
+            url: None,
+            fetch: None,
+        }
+    }
+
+    fn update_info(&mut self, key: &str, value: &str) -> Result<(), CommandsError>{
+        match key {
+            "url" => self.url = Some(value.to_string()),
+            "fetch" => self.fetch = Some(value.to_string()),
+            _ => return Err(CommandsError::InvalidEntryConfigFile),
+        };
+        Ok(())
+    }
+
+    fn format(&self) -> String
+    {
+        let mut format = String::new();
+        match &self.url {
+            Some(value) => {
+                let s = format!("\turl = {}\n", value);
+                format.extend(vec![s]);
+            },
+            None => (),
+        }
+        match &self.fetch {
+            Some(value) => {
+                let s = format!("\tfetch = {}\n", value);
+                format.extend(vec![s]);
+            },
+            None => (),
+        }
+        format
+    }
+
+    fn get_value(&self, key: &str) -> Option<&str>
+    {
+        match key
+        {
+            "url" => self.url.as_deref(),
+            "fetch" => self.fetch.as_deref(),
+            _ => None,
+        }
+    }
+
+    fn is_empty(&self) -> bool
+    {
+        self.url.is_none() && self.fetch.is_none()
+    }
+}
 
 /// Representa la configuración de Git con secciones específicas.
 ///
@@ -80,7 +142,7 @@ impl BranchInfo {
 #[derive(Debug)]
 pub struct GitConfig {
     core: HashMap<String, String>,
-    remote_origin: HashMap<String, String>,
+    remote_origin: RemoteInfo,
     branch: HashMap<String, BranchInfo>,
 }
 
@@ -88,7 +150,7 @@ impl GitConfig {
     pub fn new() -> Self {
         Self {
             core: HashMap::new(),
-            remote_origin: HashMap::new(),
+            remote_origin: RemoteInfo::new(),
             branch: HashMap::new(),
         }
     }
@@ -147,7 +209,7 @@ impl GitConfig {
         }
         match parts[0].trim() {
             "remote" => {
-                self.remote_origin.insert(key.to_string(), value.to_string());
+                self.remote_origin.update_info(key, value)?;
                 Ok(())
             }
             "branch" => {
@@ -156,11 +218,11 @@ impl GitConfig {
                 {
                     return Err(CommandsError::InvalidEntryConfigFile);
                 }
+                let name = name[1..name.len() - 1].to_string();
                 if !BranchInfo::valid_attribute(key)
                 {
                     return Err(CommandsError::InvalidEntryConfigFile);
                 }
-                let name = name[1..name.len() - 1].to_string();
                 if !self.branch.contains_key(&name) {
                     self.branch.insert(name.clone(), BranchInfo::new());
                 }
@@ -198,29 +260,36 @@ impl GitConfig {
         let mut file = File::create(file_path)?;
 
         // Write core section
-        writeln!(file, "[core]")?;
-        for (key, value) in &self.core {
-            writeln!(file, "\t{} = {}", key, value)?;
-        }
+        if !self.core.is_empty()
+        {
+            writeln!(file, "[core]")?;
+            for (key, value) in &self.core {
+                writeln!(file, "\t{} = {}", key, value)?;
+            }
+        };
 
         // Write remote "origin" section
-        writeln!(file, "[remote \"origin\"]")?;
-        for (key, value) in &self.remote_origin {
-            writeln!(file, "\t{} = {}", key, value)?;
+        if !self.remote_origin.is_empty()
+        {
+            writeln!(file, "[remote \"origin\"]")?;
+            write!(file, "{}", self.remote_origin.format())?;
         }
 
         // Write branch "main" section
-        for (name, value) in &self.branch {
-            writeln!(file, "[branch \"{}\"]", name)?;
-            write!(file, "{}", value.format())?;
+        if !self.branch.is_empty()
+        {        
+            for (name, value) in &self.branch {
+                writeln!(file, "[branch \"{}\"]", name)?;
+                write!(file, "{}", value.format())?;
+            }
         }
 
         Ok(())
     }
 
-    pub fn get_remote_repo(&self) -> Result<&String, CommandsError> {
-        match self.remote_origin.get("url") {
-            Some(url) => Ok(url),
+    pub fn get_remote_repo(&self) -> Result<&str, CommandsError> {
+        match &self.remote_origin.url {
+            Some(url) => Ok(&url),
             None => Err(CommandsError::MissingUrlConfig),
         }
     }
@@ -263,9 +332,7 @@ impl GitConfig {
             return None;
         }
         match parts[0].trim() {
-            "remote" => {
-                self.remote_origin.get(key).map(|x| x.as_str())
-            }
+            "remote" => self.remote_origin.get_value(key),
             "branch" => {
                 let name = parts[1].trim();
                 if !name.starts_with("\"") || !name.ends_with("\"")
@@ -275,14 +342,7 @@ impl GitConfig {
                 let name = name[1..name.len() - 1].to_string();
                 match self.branch.get(&name)
                 {
-                    Some(b) => {
-                        match key
-                        {
-                            "remote" => b.remote.as_deref(),
-                            "merge" => b.merge.as_deref(),
-                            _ => None,
-                        }
-                    },
+                    Some(b) => b.get_value(key),
                     None => None,
                 }
             }
@@ -385,8 +445,8 @@ mod tests {
         let mut git_config = GitConfig::new();
         git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin").unwrap();
         assert_eq!(
-            git_config.remote_origin.get("url"),
-            Some(&"git@github.com:example/repo.git".to_string())
+            git_config.remote_origin.get_value("url").unwrap(),
+            "git@github.com:example/repo.git".to_string()
         );
     }
 
@@ -482,7 +542,7 @@ mod tests {
         file.read_to_string(&mut file_content)
             .expect("Could not read file");
 
-        let expected_content = "[core]\n\
+        let expected_content = "\
                                 [remote \"origin\"]\n\
                                 \turl = git@github.com:example/repo.git\n\
                                 [branch \"main\"]\n\
