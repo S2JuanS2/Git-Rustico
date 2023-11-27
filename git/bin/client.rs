@@ -23,11 +23,11 @@ fn main() -> Result<(), GitError> {
         config.path_log,
     );
 
-    let init = is_git_initialized()?;
+    let _ = is_git_initialized(client.get_directory_path())?;
 
-    if init.0 {
-        client.set_directory_path(init.1);
-    }
+    // if init.0 {
+    //     client.set_directory_path(init.1);
+    // }
     
     let controller = Controller::new(client);
 
