@@ -40,6 +40,7 @@ pub enum GitError {
     GitServerError(String),
     ReadDirError,
     DirEntryError,
+    NotAGitRepository,
 }
 
 impl GitError {
@@ -89,6 +90,7 @@ impl GitError {
             GitError::GitServerError(msg) => msg,
             GitError::ReadDirError => "Falló al leer el directorio",
             GitError::DirEntryError => "Falló al obtener la entrada del directorio",
+            GitError::NotAGitRepository => "No hay un repositorio Git inicializado",
         }
     }
 }

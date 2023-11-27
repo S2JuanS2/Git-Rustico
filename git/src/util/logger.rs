@@ -42,25 +42,28 @@ fn send_message_channel(
 }
 
 pub fn write_client_log(directory: &str, content: String, path_log: &str) -> Result<(), GitError> {
-    let dir_path = format!("{}/{}", directory, GIT_DIR);
-    create_directory(Path::new(&dir_path))?;
-    let log_path = format!("{}/{}/{}", directory, GIT_DIR, path_log);
+    
+    let git_dir = format!("{}/{}", directory, GIT_DIR);
+    let dir_path = Path::new(&git_dir);
+    if dir_path.exists() {
+        create_directory(dir_path)?;
+        let log_path = format!("{}/{}/{}", directory, GIT_DIR, path_log);
 
-    let file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .append(true)
-        .open(log_path);
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(log_path);
 
-    let mut file = match file {
-        Ok(file) => file,
-        Err(_) => return Err(GitError::OpenFileError),
-    };
+        let mut file = match file {
+            Ok(file) => file,
+            Err(_) => return Err(GitError::OpenFileError),
+        };
 
-    if writeln!(file, "Client => {}", content).is_err() {
-        return Err(GitError::WriteFileError);
+        if writeln!(file, "Client => {}", content).is_err() {
+            return Err(GitError::WriteFileError);
+        }
     }
-
     Ok(())
 }
 

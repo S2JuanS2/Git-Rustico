@@ -21,6 +21,7 @@ use crate::commands::status::handle_status;
 use crate::commands::tag::handle_tag;
 use crate::errors::GitError;
 use crate::models::client::Client;
+use crate::util::files::is_git_initialized;
 use crate::util::logger::write_client_log;
 
 #[derive(Clone)]
@@ -91,6 +92,11 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
 
     if command.split_whitespace().count() == 1 {
         return Err(GitError::NonGitCommandError);
+    }
+
+    let init = is_git_initialized()?;
+    if !init.0 && commands[1] != "init" && commands[1] != "clone"{
+        return Err(GitError::NotAGitRepository)
     }
 
     if commands[0] == "git" {
