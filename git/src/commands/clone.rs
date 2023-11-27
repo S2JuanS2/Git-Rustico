@@ -78,28 +78,26 @@ pub fn git_clone(
     let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
 
     // Reference Discovery
-    let advertised = reference_discovery(socket, message, repo)?;
+    let git_server = reference_discovery(socket, message, repo)?;
 
     // Packfile Negotiation
-    packfile_negotiation(socket, &advertised)?;
+    packfile_negotiation(socket, &git_server)?;
 
     // Packfile Data
     let content = receive_packfile(socket)?;
 
-    let status = create_repository(advertised, content, repo)?;
+    let status = create_repository(&git_server, content, repo)?;
 
     // Creo el config
-    // let git_config = GitConfig::new_from_server();
-    // let path_config = format!("{}/{}/{}", repo, GIT_DIR, "config");
-    // git_config.write_to_file(&path_config)?;
-    // let url = format!("url = {}", repo);
-    // let config = GitConfig::new_from_lines(vec![url]);
+    let git_config = GitConfig::new_from_server(&git_server)?;
+    let path_config = format!("{}/{}/{}", repo, GIT_DIR, "config");
+    git_config.write_to_file(&path_config)?;
 
     Ok(status)
 }
 
 fn create_repository(
-    advertised: GitServer,
+    advertised: &GitServer,
     content: Vec<(ObjectEntry, Vec<u8>)>,
     repo: &str,
 ) -> Result<String, GitError> {
