@@ -3,18 +3,18 @@ use crate::models::client::Client;
 use crate::util::formats::decompression_object;
 use crate::util::objects::*;
 
-use crate::errors::GitError;
+use super::errors::CommandsError;
 
 /// Esta función se encarga de llamar a al comando cat-file con los parametros necesarios
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función cat-file
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() != 2 {
-        return Err(GitError::InvalidArgumentCountCatFileError);
+        return Err(CommandsError::InvalidArgumentCountCatFileError);
     }
     if args[0] != "-t" && args[0] != "-p" {
-        return Err(GitError::FlagCatFileNotRecognizedError);
+        return Err(CommandsError::FlagCatFileNotRecognizedError);
     }
 
     let directory = client.get_directory_path();
@@ -25,7 +25,7 @@ pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, GitErr
 /// ###Parametros:
 /// 'bytes': Vector de bytes que contiene el contenido del objeto
 /// 'type_object': Tipo de objeto que se va a leer
-pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, GitError> {
+pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, CommandsError> {
     let mut content = String::new();
 
     if type_object == BLOB {
@@ -34,6 +34,8 @@ pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, Git
         content = read_commit(&bytes)?;
     } else if type_object == TREE {
         content = read_tree(&bytes)?;
+    }else if type_object == TAG {
+        content = read_tag(&bytes)?;
     }
 
     Ok(content)
@@ -43,15 +45,15 @@ pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, Git
 /// ###Parametros:
 /// 'directory': dirección donde se encuentra inicializado el repositorio.
 /// 'object_hash': Valor hash de 40 caracteres (SHA-1) del objeto a leer.
-pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<String, GitError> {
+pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<String, CommandsError> {
     if object_hash.len() != 40 {
-        return Err(GitError::HashObjectInvalid);
+        return Err(CommandsError::HashObjectInvalid);
     }
     //Lee los primeros 2 digitos del hash contenidos en el nombre de la carpeta.
     let path = format!("{}/{}/objects/{}", directory, GIT_DIR, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
-
+    
     let content = decompression_object(&file_path)?;
 
     let mut result = read_type(&content)?;

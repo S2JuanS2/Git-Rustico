@@ -1,6 +1,6 @@
 use std::io::BufRead;
 
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
 
@@ -8,9 +8,9 @@ use crate::util::files::{open_file, read_file_string};
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función check-ignore
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_check_ignore(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_check_ignore(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.is_empty() {
-        return Err(GitError::InvalidArgumentCountCheckIgnoreError);
+        return Err(CommandsError::InvalidArgumentCountCheckIgnoreError);
     }
     let directory = client.get_directory_path();
     if args.len() == 1 {
@@ -23,7 +23,7 @@ pub fn handle_check_ignore(args: Vec<&str>, client: Client) -> Result<String, Gi
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'paths': Vector de strings que contiene los paths a verificar
-pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, GitError> {
+pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
 
     if paths.len() == 1 && paths[0] == "--stdin" {
@@ -51,7 +51,7 @@ fn check_gitignore(
     path_to_check: &str,
     formatted_result: &mut String,
     directory: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let gitignore_path = format!("{}/.gitignore", directory);
     let gitignore = open_file(&gitignore_path)?;
     let gitignore_content = read_file_string(gitignore)?;

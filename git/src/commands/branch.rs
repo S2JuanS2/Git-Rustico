@@ -1,5 +1,5 @@
 use crate::consts::*;
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{create_file, open_file, read_file, read_file_string};
 use std::fs;
@@ -11,7 +11,7 @@ use std::path::Path;
 /// ###Parametros:
 /// 'args': Vector de Strings que contiene los argumentos que se le pasaran al comando branch
 /// 'client': Cliente que contiene el directorio del repositorio local
-pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     let directory = client.get_directory_path();
     if args.is_empty() {
         git_branch_list(directory)
@@ -20,18 +20,18 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, GitError
     } else if (args.len() == 2 && args[0] == "-d") || (args.len() == 2 && args[0] == "-D") {
         git_branch_delete(directory, args[1])
     } else {
-        return Err(GitError::InvalidArgumentCountBranchError);
+        return Err(CommandsError::InvalidArgumentCountBranchError);
     }
 }
 
 /// Devuelve el nombre de la branch actual.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn get_current_branch(directory: &str) -> Result<String, GitError> {
+pub fn get_current_branch(directory: &str) -> Result<String, CommandsError> {
     let head_path = format!("{}/{}/HEAD", directory, GIT_DIR);
     let head_file = match File::open(head_path) {
         Ok(file) => file,
-        Err(_) => return Err(GitError::BranchDirectoryOpenError),
+        Err(_) => return Err(CommandsError::BranchDirectoryOpenError),
     };
 
     let reader = BufReader::new(head_file);
@@ -39,7 +39,7 @@ pub fn get_current_branch(directory: &str) -> Result<String, GitError> {
     for line in reader.lines() {
         let line = match line {
             Ok(line) => line,
-            Err(_) => return Err(GitError::BranchFileReadError),
+            Err(_) => return Err(CommandsError::BranchFileReadError),
         };
         let line_split: Vec<&str> = line.split('/').collect();
         branch = line_split[line_split.len() - 1].to_string();
@@ -51,7 +51,7 @@ pub fn get_current_branch(directory: &str) -> Result<String, GitError> {
 /// Muestra por pantalla las branch existentes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn git_branch_list(directory: &str) -> Result<String, GitError> {
+pub fn git_branch_list(directory: &str) -> Result<String, CommandsError> {
     let branches = get_branch(directory)?;
     let current_branch = get_current_branch(directory)?;
     let mut formatted_branches = String::new();
@@ -71,7 +71,7 @@ pub fn git_branch_list(directory: &str) -> Result<String, GitError> {
 /// 'directory': directorio del repositorio local.
 /// 'current_branch': Nombre de la branch actual.
 /// 'branch_name': Nombre de la branch a crear.
-pub fn copy_log(directory: &str, current_branch: &str, branch_name: &str) -> Result<(), GitError> {
+pub fn copy_log(directory: &str, current_branch: &str, branch_name: &str) -> Result<(), CommandsError> {
     let current_branch_log_path = format!(
         "{}/{}/logs/refs/heads/{}",
         directory, GIT_DIR, current_branch
@@ -89,22 +89,22 @@ pub fn copy_log(directory: &str, current_branch: &str, branch_name: &str) -> Res
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a crear.
 /// 'commit_hash': Contiene el hash del ultimo commit.
-pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, GitError> {
+pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, CommandsError> {
     let branches = get_branch(directory)?;
     if branches.contains(&branch_name.to_string()) {
-        return Err(GitError::BranchAlreadyExistsError);
+        return Err(CommandsError::BranchAlreadyExistsError);
     }
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, current_branch);
     if fs::metadata(&branch_current_path).is_err() {
-        return Err(GitError::BranchDoesntExistError);
+        return Err(CommandsError::BranchNotFoundError);
     }
     let file_current_branch = open_file(&branch_current_path)?;
     let hash_current_branch = read_file(file_current_branch)?;
 
     let commit_current_branch = match String::from_utf8(hash_current_branch) {
         Ok(commit_current_branch) => commit_current_branch,
-        Err(_) => return Err(GitError::GenericError),
+        Err(_) => return Err(CommandsError::GenericError),
     };
     // Crear un nuevo archivo en .git/refs/heads/ con el nombre de la rama y el contenido es el hash del commit actual.
     let branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
@@ -121,14 +121,14 @@ pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, G
 // Devuelve un vector con los nombres de las branchs
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
+pub fn get_branch(directory: &str) -> Result<Vec<String>, CommandsError> {
     // "directory/.git/refs/heads"
     let directory_git = format!("{}/{}", directory, GIT_DIR);
     let branch_dir = Path::new(&directory_git).join(REF_HEADS);
 
     let entries = match fs::read_dir(branch_dir) {
         Ok(entries) => entries,
-        Err(_) => return Err(GitError::BranchDirectoryOpenError),
+        Err(_) => return Err(CommandsError::BranchDirectoryOpenError),
     };
 
     let mut branches: Vec<String> = Vec::new();
@@ -138,11 +138,11 @@ pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
             Ok(entry) => {
                 let branch = match entry.file_name().into_string() {
                     Ok(branch) => branch,
-                    Err(_) => return Err(GitError::ReadBranchesError),
+                    Err(_) => return Err(CommandsError::ReadBranchesError),
                 };
                 branches.push(branch);
             }
-            Err(_) => return Err(GitError::ReadBranchesError),
+            Err(_) => return Err(CommandsError::ReadBranchesError),
         }
     }
 
@@ -153,21 +153,21 @@ pub fn get_branch(directory: &str) -> Result<Vec<String>, GitError> {
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a eliminar.
-pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<String, GitError> {
+pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<String, CommandsError> {
     if get_current_branch(directory) == Ok(branch_name.to_string()) {
-        return Err(GitError::DeleteBranchError);
+        return Err(CommandsError::DeleteBranchError);
     }
 
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_name.to_string()) {
-        return Err(GitError::BranchNotFoundError);
+        return Err(CommandsError::BranchNotFoundError);
     }
 
     // Crear un nuevo archivo en .git/refs/heads/ con el nombre de la rama y el contenido es el hash del commit actual.
     let branch_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
 
     if fs::remove_file(branch_path).is_err() {
-        return Err(GitError::DeleteBranchError);
+        return Err(CommandsError::DeleteBranchError);
     }
 
     Ok("Rama eliminada con éxito".to_string())

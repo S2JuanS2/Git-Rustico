@@ -232,7 +232,7 @@ fn create_object(byte: u8) -> Result<ObjectType, UtilError> {
 }
 
 /// Creará la carpeta con los 2 primeros digitos del hash del objeto commit, y el archivo con los ultimos 38 de nombre.
-pub fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, GitError> {
+pub fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, UtilError> {
     let objects_dir = format!(
         "{}/{}/{}/{}",
         &git_dir,
@@ -247,7 +247,7 @@ pub fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, GitError
 
     let file_object = match File::create(objects_dir) {
         Ok(file_object) => file_object,
-        Err(_) => return Err(GitError::CreateFileError),
+        Err(_) => return Err(UtilError::CreateFileError),
     };
 
     Ok(file_object)
@@ -257,7 +257,25 @@ pub fn builder_object(git_dir: &str, hash_object: &str) -> Result<File, GitError
 /// ###Parametros:
 /// 'git_dir': Directorio del git
 /// 'content': contenido del archivo a comprimir
-pub fn builder_object_blob(content: Vec<u8>, git_dir: &str) -> Result<String, GitError> {
+pub fn builder_object_tag(content: &str, git_dir: &str) -> Result<String, UtilError> {
+    let content_bytes = content.as_bytes();
+    let content_size = content_bytes.len().to_string();
+    let header = format!("{} {}\0", TAG, content_size);
+    let store = header + content;
+    
+    let tag_hash = hash_generate(&content);
+    
+    let file_object = builder_object(git_dir, &tag_hash)?;
+    compressor_object(store, file_object)?;
+
+    Ok(tag_hash)
+}
+
+/// comprimirá el contenido y lo escribirá en el archivo
+/// ###Parametros:
+/// 'git_dir': Directorio del git
+/// 'content': contenido del archivo a comprimir
+pub fn builder_object_blob(content: Vec<u8>, git_dir: &str) -> Result<String, UtilError> {
     let header = format!("{} {}\0", BLOB, content.len());
     let store = header + String::from_utf8_lossy(&content).as_ref();
 
@@ -274,7 +292,7 @@ pub fn builder_object_blob(content: Vec<u8>, git_dir: &str) -> Result<String, Gi
 /// ###Parametros:
 /// 'git_dir': Directorio del git
 /// 'hash_commit': hash del objeto commit previamente generado
-pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, GitError> {
+pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, UtilError> {
     let content_bytes = content.as_bytes();
     let content_size = content_bytes.len().to_string();
     let header = format!("commit {}\0", content_size);
@@ -290,7 +308,7 @@ pub fn builder_object_commit(content: &str, git_dir: &str) -> Result<String, Git
 }
 
 /// Construye el formato del objeto tree
-fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, GitError> {
+fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, UtilError> {
     let mut format_tree = Vec::new();
 
     for line in index_content.lines() {
@@ -322,7 +340,7 @@ fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, GitError> {
     Ok(format_tree)
 }
 
-pub fn builder_object_tree(git_dir: &str, content: &str) -> Result<String, GitError> {
+pub fn builder_object_tree(git_dir: &str, content: &str) -> Result<String, UtilError> {
     let format_tree = builder_format_tree(content)?;
 
     let content_size = format_tree.len().to_string();
@@ -350,9 +368,9 @@ pub fn builder_object_tree(git_dir: &str, content: &str) -> Result<String, GitEr
 /// # Retorno
 ///
 /// * `Ok(String::from_utf8_lossy(&type_object).to_string())`: Devuelve el tipo de objeto
-/// * `Err(GitError)`: .
+/// * `Err(UtilError)`: .
 ///
-pub fn read_type(decompressed_data: &[u8]) -> Result<String, GitError> {
+pub fn read_type(decompressed_data: &[u8]) -> Result<String, UtilError> {
     let content = decompressed_data;
 
     let mut type_object: Vec<u8> = Vec::new();
@@ -374,9 +392,9 @@ pub fn read_type(decompressed_data: &[u8]) -> Result<String, GitError> {
 /// # Retorno
 ///
 /// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el tamaño del objeto
-/// * `Err(GitError)`: .
+/// * `Err(UtilError)`: .
 ///
-pub fn read_size(decompressed_data: &[u8]) -> Result<String, GitError> {
+pub fn read_size(decompressed_data: &[u8]) -> Result<String, UtilError> {
     let content = decompressed_data;
 
     let mut size: Vec<u8> = Vec::new();
@@ -392,6 +410,34 @@ pub fn read_size(decompressed_data: &[u8]) -> Result<String, GitError> {
     Ok(String::from_utf8_lossy(&size).to_string())
 }
 
+/// Lee desde el contenido descomprimido el tipo de objeto de tipo tag.
+///
+/// # Argumentos
+///
+/// * `decompressed_data`: El contenido de un objeto en bytes de tipo tag.
+///
+/// # Retorno
+///
+/// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el contenido del objeto (tag) con el nombre
+///     del archivo y su hash
+/// * `Err(UtilError)`: .
+///
+pub fn read_tag(decompressed_data: &[u8]) -> Result<String, UtilError> {
+    let result_tag = decompressed_data;
+
+    let tag: Vec<u8> = vec![116, 97, 103];
+    if result_tag.starts_with(&tag) {
+        let mut index = 0;
+        while index < result_tag.len() && result_tag[index] != NULL {
+            index += 1;
+        }
+        index += 1;
+        Ok(String::from_utf8_lossy(&decompressed_data[index..]).to_string())
+    } else {
+        Ok(String::from_utf8_lossy(decompressed_data).to_string())
+    }
+}
+
 /// Lee desde el contenido descomprimido el tipo de objeto de tipo tree.
 ///
 /// # Argumentos
@@ -402,9 +448,9 @@ pub fn read_size(decompressed_data: &[u8]) -> Result<String, GitError> {
 ///
 /// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el contenido del objeto (blobs o sub-tree) con el nombre
 ///     del archivo y su hash
-/// * `Err(GitError)`: .
+/// * `Err(UtilError)`: .
 ///
-pub fn read_tree(decompressed_data: &[u8]) -> Result<String, GitError> {
+pub fn read_tree(decompressed_data: &[u8]) -> Result<String, UtilError> {
     let content = decompressed_data;
 
     let mut index = 0;
@@ -465,9 +511,9 @@ pub fn read_tree(decompressed_data: &[u8]) -> Result<String, GitError> {
 /// # Retorno
 ///
 /// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el contenido del objeto
-/// * `Err(GitError)`: .
+/// * `Err(UtilError)`: .
 ///
-pub fn read_commit(decompressed_data: &[u8]) -> Result<String, GitError> {
+pub fn read_commit(decompressed_data: &[u8]) -> Result<String, UtilError> {
     let result_commit = decompressed_data;
 
     let commit: Vec<u8> = vec![99, 111, 109, 109, 105, 116];
@@ -492,9 +538,9 @@ pub fn read_commit(decompressed_data: &[u8]) -> Result<String, GitError> {
 /// # Retorno
 ///
 /// * `Ok(String::from_utf8_lossy(&size).to_string())`: Devuelve el contenido del objeto
-/// * `Err(GitError)`: .
+/// * `Err(UtilError)`: .
 ///
-pub fn read_blob(decompressed_data: &[u8]) -> Result<String, GitError> {
+pub fn read_blob(decompressed_data: &[u8]) -> Result<String, UtilError> {
     let result_blob = decompressed_data;
     let blob: Vec<u8> = vec![98, 108, 111, 98];
 

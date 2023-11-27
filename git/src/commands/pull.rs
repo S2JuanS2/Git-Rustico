@@ -1,10 +1,8 @@
 use crate::commands::fetch::git_fetch_all;
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
 use std::net::TcpStream;
-
-use super::errors::CommandsError;
 
 /// Maneja el comando "pull".
 ///
@@ -17,14 +15,14 @@ use super::errors::CommandsError;
 ///
 /// # Devuelve
 ///
-/// * `Result<(), GitError>` - Un resultado que indica el éxito o un error encontrado durante la operación de pull.
+/// * `Result<(), CommandsError>` - Un resultado que indica el éxito o un error encontrado durante la operación de pull.
 ///
 /// # Errores
 ///
 /// * `CommandsError::InvalidArgumentCountPull` - Indica que se proporcionó un número incorrecto de argumentos para el comando pull.
-/// * `GitError` - Indica varios errores relacionados con Git que podrían ocurrir durante la operación de pull.
+/// * `CommandsError` - Indica varios errores relacionados con Git que podrían ocurrir durante la operación de pull.
 ///
-pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), GitError> {
+pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
     if !args.is_empty() {
         return Err(CommandsError::InvalidArgumentCountPull.into());
     }
@@ -42,7 +40,8 @@ pub fn git_pull(
     ip: &str,
     port: &str,
     repo_local: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
+    // Obtengo el repositorio remoto
     println!("Pull del repositorio remoto ...");
 
     match git_fetch_all(socket, ip, port, repo_local)

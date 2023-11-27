@@ -1,5 +1,5 @@
 use crate::consts::*;
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::*;
 use std::path::Path;
@@ -8,9 +8,9 @@ use std::path::Path;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función init
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if !args.is_empty() {
-        return Err(GitError::InvalidArgumentCountInitError);
+        return Err(CommandsError::InvalidArgumentCountInitError);
     }
     let result = git_init(client.get_directory_path())?;
 
@@ -20,7 +20,7 @@ pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, GitError> 
 /// Esta función inicia un repositorio git creando los directorios y archivos necesarios.
 /// ###Parametros:
 /// 'directory': dirección donde se inicializará el repositorio.
-pub fn git_init(directory: &str) -> Result<String, GitError> {
+pub fn git_init(directory: &str) -> Result<String, CommandsError> {
     create_directory(Path::new(directory))?;
 
     let git_dir = format!("{}/{}", directory, GIT_DIR);

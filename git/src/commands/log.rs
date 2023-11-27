@@ -1,4 +1,4 @@
-use crate::errors::GitError;
+use super::errors::CommandsError;
 use crate::models::client::Client;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -9,9 +9,9 @@ use super::branch::get_current_branch;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función log
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn handle_log(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_log(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() > 1 {
-        return Err(GitError::InvalidArgumentCountLogError);
+        return Err(CommandsError::InvalidArgumentCountLogError);
     }
     let directory = client.get_directory_path();
     git_log(directory)
@@ -20,7 +20,7 @@ pub fn handle_log(args: Vec<&str>, client: Client) -> Result<String, GitError> {
 /// Muestra el log de los commits
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
-pub fn git_log(directory: &str) -> Result<String, GitError> {
+pub fn git_log(directory: &str) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
 
     let logs_path = format!("{}/.git/logs/refs/heads", directory);
@@ -33,7 +33,7 @@ pub fn git_log(directory: &str) -> Result<String, GitError> {
         let lines: Vec<String> = reader
             .lines()
             .map(|line| {
-                line.map_err(|_| GitError::ReadFileError)
+                line.map_err(|_| CommandsError::ReadFileError)
                     .unwrap_or_else(|_| String::new())
             })
             .collect();

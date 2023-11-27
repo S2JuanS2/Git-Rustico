@@ -1,7 +1,6 @@
 use crate::commands::config::GitConfig;
 use crate::commands::fetch_head::FetchHead;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR};
-use crate::errors::GitError;
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::git_transport::references::reference_discovery;
@@ -40,11 +39,11 @@ use super::errors::CommandsError;
 ///
 /// # Retorno
 ///
-/// Devuelve un `Result` que contiene `Ok(())` en caso de éxito o un error (GitError) en caso de fallo.
+/// Devuelve un `Result` que contiene `Ok(())` en caso de éxito o un error (CommandsError) en caso de fallo.
 ///
 /// # Errores
 ///
-/// * Otros errores de `GitError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
+/// * Otros errores de `CommandsError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if args.len() >= 2 {
@@ -172,7 +171,7 @@ fn save_references(refs: &Vec<(String, String)>, repo_path: &str) -> Result<(), 
 ///
 /// Devuelve un `Result` que contiene `Ok(())` en caso de éxito o un error (CommandsError) en caso de fallo.
 ///
-fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(), GitError> {
+fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(), CommandsError> {
     // Cantidad de objetos recibidos
     let count_objects = content.len();
 
@@ -185,10 +184,7 @@ fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(
             handle_commit(&content, &git_dir, i)?;
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
-            i = match handle_tree(&content, &git_dir, i, path_dir_cloned) {
-                Ok(i) => i,
-                Err(e) => return Err(e),
-            };
+            i = handle_tree(&content, &git_dir, i, path_dir_cloned)?;
             i += 1;
         }
     }
@@ -201,7 +197,7 @@ fn recovery_tree(
     content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
     mut i: usize,
     repo: &str,
-) -> Result<usize, GitError> {
+) -> Result<usize, CommandsError> {
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
 
@@ -229,7 +225,7 @@ fn handle_commit(
     content: &[(ObjectEntry, Vec<u8>)],
     git_dir: &str,
     i: usize,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let commit_content = read_commit(&content[i].1)?;
     builder_object_commit(&commit_content, git_dir)?;
     Ok(())
@@ -240,7 +236,7 @@ fn handle_tree(
     git_dir: &str,
     i: usize,
     path_dir_cloned: &Path,
-) -> Result<usize, GitError> {
+) -> Result<usize, CommandsError> {
     let tree_content = read_tree(&content[i].1)?;
     builder_object_tree(git_dir, &tree_content)?;
     let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir)?;
@@ -251,13 +247,13 @@ fn handle_tree(
 // /// ###Parámetros:
 // /// 'directory': directorio del repositorio local.
 // /// 'remote_name': nombre del repositorio remoto.
-// pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), GitError> {
+// pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), CommandsError> {
 //     // Verifica si el repositorio remoto existe
 //     let remote_dir = format!("{}{}", REMOTES_DIR, remote_name);
 //     let remote_refs_dir = format!("{}{}", directory, remote_dir);
 
 //     if !Path::new(&remote_refs_dir).exists() {
-//         return Err(GitError::RemoteDoesntExistError);
+//         return Err(CommandsError::RemoteDoesntExistError);
 //     }
 
 //     // Copia las referencias del repositorio remoto al directorio local
@@ -267,12 +263,12 @@ fn handle_tree(
 //         .join(remote_name);
 
 //     if fs::create_dir_all(&local_refs_dir).is_err() {
-//         return Err(GitError::OpenFileError);
+//         return Err(CommandsError::OpenFileError);
 //     }
 
 //     let entries = match fs::read_dir(&remote_refs_dir) {
 //         Ok(entries) => entries,
-//         Err(_) => return Err(GitError::ReadFileError),
+//         Err(_) => return Err(CommandsError::ReadFileError),
 //     };
 
 //     for entry in entries {
@@ -283,11 +279,11 @@ fn handle_tree(
 //                 let remote_ref_path = entry.path();
 
 //                 if fs::copy(remote_ref_path, local_ref_path).is_err() {
-//                     return Err(GitError::CopyFileError);
+//                     return Err(CommandsError::CopyFileError);
 //                 }
 //             }
 //             Err(_) => {
-//                 return Err(GitError::ReadFileError);
+//                 return Err(CommandsError::ReadFileError);
 //             }
 //         }
 //     }
@@ -297,7 +293,7 @@ fn handle_tree(
 
 //     let objects = match fs::read_dir(&objects_dir) {
 //         Ok(objects) => objects,
-//         Err(_) => return Err(GitError::ReadFileError),
+//         Err(_) => return Err(CommandsError::ReadFileError),
 //     };
 
 //     for entry in objects {
@@ -309,7 +305,7 @@ fn handle_tree(
 //                 git_cat_file(directory, &object_hash, "-p")?;
 //             }
 //             Err(_) => {
-//                 return Err(GitError::ReadFileError);
+//                 return Err(CommandsError::ReadFileError);
 //             }
 //         }
 //     }

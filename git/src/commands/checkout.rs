@@ -4,7 +4,7 @@ use super::branch::get_current_branch;
 use super::branch::git_branch_create;
 use super::cat_file::git_cat_file;
 use crate::consts::*;
-use crate::errors::GitError;
+use super::errors::CommandsError;
 
 use crate::models::client::Client;
 use crate::util::files::create_directory;
@@ -21,7 +21,7 @@ use std::path::Path;
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función checkout
 /// 'client': Cliente que contiene el directorio del repositorio local.
-pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, GitError> {
+pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     let directory = client.get_directory_path();
     if args.len() == 1 {
         git_checkout_switch(directory, args[0])?;
@@ -30,10 +30,10 @@ pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, GitErr
             git_branch_create(directory, args[1])?;
             git_checkout_switch(directory, args[1])?;
         } else {
-            return Err(GitError::FlagCheckoutNotRecognisedError);
+            return Err(CommandsError::FlagCheckoutNotRecognisedError);
         }
     } else {
-        return Err(GitError::InvalidArgumentCountCheckoutError);
+        return Err(CommandsError::InvalidArgumentCountCheckoutError);
     }
     Ok("Rama cambiada con éxito".to_string())
 }
@@ -61,7 +61,7 @@ fn load_files(
     tree_hash: &str,
     mode: usize,
     dir_path: &str,
-) -> Result<(), GitError> {
+) -> Result<(), CommandsError> {
     let tree = git_cat_file(directory, tree_hash, "-p")?;
     for line in tree.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
@@ -88,7 +88,7 @@ fn load_files(
                 && fs::metadata(&path_file_format).is_ok()
                 && fs::remove_file(&path_file_format).is_err()
             {
-                return Err(GitError::RemoveFileError);
+                return Err(CommandsError::RemoveFileError);
             }
         } else if file_mode == DIRECTORY {
             create_directory(Path::new(&path_file_format))?;
@@ -116,7 +116,7 @@ fn extract_parent_hash(commit: &str) -> Option<&str> {
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'hash_commit': Valor hash de 40 caracteres (SHA-1) del commit a leer.
-fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result<(), GitError> {
+fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result<(), CommandsError> {
     let commit = git_cat_file(directory, hash_commit, "-p")?;
 
     if let Some(parent_hash) = extract_parent_hash(&commit) {
@@ -129,7 +129,7 @@ fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result
     } else if let Some(tree_hash) = get_tree_hash(&commit) {
         load_files(directory, tree_hash, mode, "")?;
     } else {
-        return Err(GitError::GetHashError);
+        return Err(CommandsError::GetHashError);
     };
 
     Ok(())
@@ -139,7 +139,7 @@ fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a cambiar.
-fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<(), GitError> {
+fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<(), CommandsError> {
     let branch = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch_name);
 
     let file = open_file(&branch)?;
@@ -153,17 +153,17 @@ fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<()
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a cambiar.
-pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<(), GitError> {
+pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<(), CommandsError> {
     //Falta implementar que verifique si realizó commit ante la pérdida de datos. <- con el status..
     let current_branch_name = get_current_branch(directory)?;
 
     if current_branch_name == branch_switch_name {
-        return Err(GitError::AlreadyOnThatBranch)
+        return Err(CommandsError::AlreadyOnThatBranch)
     }
 
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_switch_name.to_string()) {
-        return Err(GitError::BranchDoesntExistError);
+        return Err(CommandsError::BranchNotFoundError);
     }
     let directory_git = format!("{}/{}", directory, GIT_DIR);
     let head_file_path = Path::new(&directory_git).join(HEAD);
@@ -175,12 +175,12 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
         .open(head_file_path)
     {
         Ok(file) => file,
-        Err(_) => return Err(GitError::BranchDirectoryOpenError),
+        Err(_) => return Err(CommandsError::BranchDirectoryOpenError),
     };
 
     let content = format!("ref: /refs/heads/{}\n", branch_switch_name);
     if file.write_all(content.as_bytes()).is_err() {
-        return Err(GitError::BranchFileWriteError);
+        return Err(CommandsError::BranchFileWriteError);
     }
     empty_index(directory)?;
     load_files_tree(directory, &current_branch_name, 1)?;

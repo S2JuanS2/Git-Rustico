@@ -28,6 +28,7 @@ pub const BUTTON_CMD_CAT_FILE: &str = "button_cmd_cat-file";
 pub const BUTTON_CMD_FETCH: &str = "button_cmd_fetch";
 pub const BUTTON_CMD_PUSH: &str = "button_cmd_push";
 pub const BUTTON_CMD_PULL: &str = "button_cmd_pull";
+pub const BUTTON_HELP: &str = "button_help";
 
 pub fn get_buttons() -> Vec<String> {
     let buttons: Vec<String> = vec![
@@ -61,6 +62,7 @@ pub fn get_buttons() -> Vec<String> {
         BUTTON_CMD_FETCH.to_string(),
         BUTTON_CMD_PUSH.to_string(),
         BUTTON_CMD_PULL.to_string(),
+        BUTTON_HELP.to_string(),
     ];
     buttons
 }
