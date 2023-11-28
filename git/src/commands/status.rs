@@ -1,4 +1,5 @@
 use crate::consts::*;
+use super::check_ignore::check_gitignore;
 use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file, read_file_string};
@@ -405,7 +406,7 @@ fn get_files_in_commit(
     file_hash: &str,
 ) -> Result<bool, CommandsError> {
     let mut commited = false;
-    if commit_actual != "" {
+    if !commit_actual.is_empty() {
         let commit_content = git_cat_file(directory, commit_actual, "-p")?;
         let commit_lines = commit_content.split('\n');
         let mut parent_commit = "";
@@ -489,6 +490,7 @@ pub fn calculate_directory_hashes(
         Ok(entries) => entries,
         Err(_) => return Err(CommandsError::ReadDirError),
     };
+    let mut ignored_files: Vec<String> = Vec::new();
 
     for entry in entries {
         let entry = match entry {
@@ -500,6 +502,10 @@ pub fn calculate_directory_hashes(
         let file_name = entry.file_name();
         if let Some(file_name) = file_name.to_str() {
             if file_name.starts_with('.') {
+                continue;
+            }
+            check_gitignore(file_name, &mut ignored_files, directory)?;
+            if !ignored_files.is_empty() && ignored_files.contains(&file_name.to_string()) {
                 continue;
             }
         }
@@ -536,11 +542,11 @@ fn create_hash_working_dir(
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::{
+    use crate::{commands::{
         add::git_add,
         commit::{git_commit, Commit},
         init::git_init,
-    };
+    }, util::files::create_file_replace};
 
     use super::*;
     use std::io::Write;
@@ -611,5 +617,31 @@ mod tests {
         assert!(result_after_commit.is_ok());
         assert!(result_after_commit2.is_ok());
         assert!(result_after_remove.is_ok());
+    }
+
+    #[test]
+    fn skip_gitignore_files_status() {
+        let directory = "./test_status_skips_gitignore_files";
+        git_init(directory).expect("Error al ejecutar git init");
+
+        let gitignore_path = format!("{}/.gitignore", directory);
+        create_file_replace(&gitignore_path, "target/\nCargo.lock\n").expect("Error al crear el archivo");
+
+        let file_path = format!("{}/{}", directory, "testfile.rs");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo")
+            .expect("Error al escribir en el archivo");
+        
+        let file_path2 = format!("{}/{}", directory, "Cargo.lock");
+        let mut file = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file.write_all(b"Chau Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let result = git_status(directory);
+        let expected_result = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\ttestfile.rs\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n";
+        assert_eq!(result, Ok(expected_result.to_string()));
+
+        fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
+        assert!(result.is_ok());
     }
 }

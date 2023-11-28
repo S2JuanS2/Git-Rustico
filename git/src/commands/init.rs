@@ -38,11 +38,13 @@ pub fn git_init(directory: &str) -> Result<String, CommandsError> {
     let head_file = format!("{}/{}", &git_dir, HEAD);
     let head_content = format!("{}{}\n", HEAD_POINTER_REF, INITIAL_BRANCH);
     let index_file = format!("{}/{}", &git_dir, INDEX);
-    let config_file = format!("{}/{}", &git_dir, "config");
+    let config_file = format!("{}/{}", &git_dir, CONFIG_FILE);
+    let gitignore_file = format!("{}/{}", &directory, GITIGNORE_FILE);
 
     create_file(&head_file, &head_content)?;
     create_file(&index_file, CONTENT_EMPTY)?;
     create_file(&config_file, CONTENT_EMPTY)?;
+    create_file(&gitignore_file, CONTENT_EMPTY)?;
 
     let result = format!(
         "Repositorio vacío inicializado en la direcección: {}",
