@@ -1,3 +1,4 @@
+use std::fs;
 use std::io::BufRead;
 
 use super::errors::CommandsError;
@@ -27,11 +28,13 @@ pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, Com
     let mut ignored_files = Vec::<String>::new();
     let mut formatted_result = String::new();
 
+    let gitignore_content = get_gitignore_content(directory)?;
+
     if paths.len() == 1 && paths[0] == "--stdin" {
         let stdin = std::io::stdin();
         let lines = stdin.lock().lines();
         lines.flatten().for_each(|line| {
-            check_gitignore(&line, &mut ignored_files, directory).unwrap();
+            check_gitignore(&line, &mut ignored_files, &gitignore_content).unwrap();
         });
         for ignored_file in ignored_files {
             formatted_result.push_str(format!("{}\n", ignored_file).as_str());
@@ -40,13 +43,26 @@ pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, Com
     }
 
     for path in paths {
-        check_gitignore(path, &mut ignored_files, directory)?;
+        check_gitignore(path, &mut ignored_files, &gitignore_content)?;
     }
 
     for ignored_file in ignored_files {
         formatted_result.push_str(format!("{}\n", ignored_file).as_str());
     }
     Ok(formatted_result)
+}
+
+/// Obtiene el contenido del archivo .gitignore.
+/// ###Parametros:
+/// 'directory': directorio del repositorio local.
+pub fn get_gitignore_content(directory: &str) -> Result<String, CommandsError> {
+    let gitignore_path = format!("{}/.gitignore", directory);
+    if fs::metadata(&gitignore_path).is_err() {
+        return Ok(String::new());
+    }
+    let gitignore = open_file(&gitignore_path)?;
+    let gitignore_content = read_file_string(gitignore)?;
+    Ok(gitignore_content)
 }
 
 /// Verifica si un path esta incluido en .gitignore.
@@ -57,11 +73,8 @@ pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, Com
 pub fn check_gitignore(
     path_to_check: &str,
     ignored_files: &mut Vec<String>,
-    directory: &str,
+    gitignore_content: &str,
 ) -> Result<(), CommandsError> {
-    let gitignore_path = format!("{}/.gitignore", directory);
-    let gitignore = open_file(&gitignore_path)?;
-    let gitignore_content = read_file_string(gitignore)?;
     let gitignore_lines: Vec<&str> = gitignore_content.lines().collect();
 
     if gitignore_lines.contains(&path_to_check) {
