@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use crate::git_server::client_references::ClientReferences;
+use crate::git_server::client_references::HandleReferences;
 
 #[derive(Debug)]
 pub struct GitServer {
@@ -22,7 +22,7 @@ pub struct GitServer {
     pub capabilities: Vec<String>,
     pub shallow: Vec<String>,
     pub available_references: Vec<Reference>,
-    client_references: ClientReferences, // No tendra el Head
+    client_references: HandleReferences, // No tendra el Head
 }
 
 impl GitServer {
@@ -81,7 +81,7 @@ impl GitServer {
             version,
             capabilities,
             shallow,
-            client_references: ClientReferences::new_from_references(&available_references),
+            client_references: HandleReferences::new_from_references(&available_references),
             available_references,
         })
     }
@@ -143,7 +143,7 @@ impl GitServer {
             version,
             capabilities,
             shallow: Vec::new(),
-            client_references: ClientReferences::new_from_references(&available_references),
+            client_references: HandleReferences::new_from_references(&available_references),
             available_references,
         })
     }

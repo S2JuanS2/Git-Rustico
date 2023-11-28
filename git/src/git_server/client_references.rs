@@ -5,11 +5,11 @@ use crate::{git_transport::references::{Reference, ReferenceType}, util::errors:
 use super::reference_information::ReferenceInformation;
 
 #[derive(Debug)]
-pub struct ClientReferences {
+pub struct HandleReferences {
     references: HashMap<String, ReferenceInformation>,
 }
 
-impl ClientReferences {
+impl HandleReferences {
     pub fn new_from_references(references: &Vec<Reference>) -> Self {
         let mut references_map: HashMap<String, ReferenceInformation> = HashMap::new();
 
@@ -25,7 +25,7 @@ impl ClientReferences {
             );
         }
 
-        ClientReferences {
+        HandleReferences {
             references: references_map,
         }
     }
