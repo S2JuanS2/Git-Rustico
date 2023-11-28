@@ -136,6 +136,33 @@ fn create_repository(
     Ok("Clonación exitosa!".to_string())
 }
 
+fn recovery_blob(
+    hash: &str,
+    path_dir_cloned: &Path,
+    content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
+    mut i: usize,
+    repo: &str,
+) -> Result<usize, CommandsError> {
+    if i < content.len(){
+        let route: Vec<_> = path_dir_cloned.components().skip(1)
+        .map(|c| c.as_os_str().to_str())
+        .filter_map(|s| s)
+        .collect();
+        let blob_content = read_blob(&content[i].1)?;
+        let blob_content_bytes = blob_content.clone();
+        if !path_dir_cloned.exists(){
+            add_to_index(repo.to_string(), &route.join("/"), hash.to_string())?;
+            builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
+            if let Some(str_path) = path_dir_cloned.to_str() {
+                create_file_replace(str_path, &blob_content)?;
+            }
+        }else{
+            i -= 1;
+        }
+    }
+    Ok(i)
+}
+
 fn recovery_tree(
     tree_content: String,
     path_dir_cloned: &Path,
@@ -159,21 +186,12 @@ fn recovery_tree(
         let path_dir_cloned = path_dir_cloned.join(file_name);
         if mode == FILE {
             i += 1;
-            if i < content.len(){
-                let blob_content = read_blob(&content[i].1)?;
-                add_to_index(repo.to_string(), file_name, hash.to_string())?;
-                let blob_content_bytes = blob_content.clone();
-                builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
-    
-                if let Some(str_path) = path_dir_cloned.to_str() {
-                    create_file_replace(str_path, &blob_content)?;
-                }
-            }
+            i = recovery_blob(hash, &path_dir_cloned, content, i, repo)?;
+            
         } else if mode == DIRECTORY {
             i += 1;
             if i < content.len(){
                 create_directory(&path_dir_cloned)?;
-    
                 let tree_content = read_tree(&content[i].1)?;
                 builder_object_tree(repo, &tree_content)?;
                 i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo)?;
@@ -182,7 +200,6 @@ fn recovery_tree(
     }
     Ok(i)
 }
-
 
 fn insert_line_between_lines(
     original_string: &str,
