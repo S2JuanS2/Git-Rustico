@@ -355,10 +355,11 @@ pub fn packfile_negotiation_partial(
 ) -> Result<(), UtilError> {
 
     // [TODO N#1]
-    let sv_references = get_branches(server)?;
-    println!("sv_references: {:?}", sv_references);
+    // let sv_references = get_branches(server)?;
+    // println!("sv_references: {:?}", sv_references);
     let local_references = get_local_references(path_repo)?;
     println!("local_references: {:?}", local_references);
+    server.update_client_references(&local_references);
     // Brayan:
     // server.filtrar(reference_que_tenemos)
 
@@ -370,7 +371,7 @@ pub fn packfile_negotiation_partial(
     upload_request_type(stream, server, HAVE)?;
 
     let ack_references = recive_acknowledgments(stream)?;
-    server.filter_client_reference(&ack_references);
+    // server.filter_client_reference(&ack_references); // UPDATE
 
     Ok(())
 }

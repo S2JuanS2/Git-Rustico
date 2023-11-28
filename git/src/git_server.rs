@@ -1,3 +1,6 @@
+pub mod client_references;
+pub mod reference_information;
+
 use std::io::Write;
 
 use crate::{
@@ -10,7 +13,7 @@ use crate::{
     },
 };
 
-// use super::errors::UtilError;
+use crate::git_server::client_references::ClientReferences;
 
 #[derive(Debug)]
 pub struct GitServer {
@@ -18,8 +21,8 @@ pub struct GitServer {
     pub version: u32,
     pub capabilities: Vec<String>,
     pub shallow: Vec<String>,
-    pub references: Vec<Reference>,
-    pub client_references: Vec<String>,
+    pub available_references: Vec<Reference>,
+    client_references: ClientReferences, // No tendra el Head
 }
 
 impl GitServer {
@@ -60,7 +63,7 @@ impl GitServer {
         let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
-        let mut references: Vec<Reference> = Vec::new();
+        let mut available_references: Vec<Reference> = Vec::new();
 
         for line in classified {
             match line {
@@ -68,7 +71,7 @@ impl GitServer {
                 AdvertisedRefLine::Capabilities(c) => capabilities = c,
                 AdvertisedRefLine::Shallow { obj_id } => shallow.push(obj_id),
                 AdvertisedRefLine::Ref { obj_id, ref_name } => {
-                    references.push(Reference::new(obj_id, ref_name)?)
+                    available_references.push(Reference::new(obj_id, ref_name)?)
                 }
             }
         }
@@ -78,8 +81,8 @@ impl GitServer {
             version,
             capabilities,
             shallow,
-            references,
-            client_references: Vec::new(),
+            client_references: ClientReferences::new_from_references(&available_references),
+            available_references,
         })
     }
 
@@ -92,7 +95,7 @@ impl GitServer {
     /// Devuelve una referencia al vector que contiene las referencias disponibles.
     ///
     pub fn get_references(&self) -> &Vec<Reference> {
-        &self.references
+        &self.available_references
     }
 
     /// Obtiene una referencia a una referencia específica en la lista por su índice.
@@ -109,7 +112,7 @@ impl GitServer {
     /// de lo contrario, devuelve `None`.
     ///
     pub fn get_reference(&self, index: usize) -> Option<&Reference> {
-        self.references.get(index)
+        self.available_references.get(index)
     }
 
     /// Crea una instancia de `GitServer` a partir de la ruta del repositorio y otros parámetros.
@@ -134,14 +137,14 @@ impl GitServer {
         version: u32,
         capabilities: Vec<String>,
     ) -> Result<GitServer, UtilError> {
-        let references = Reference::extract_references_from_git(path_repo)?;
+        let available_references = Reference::extract_references_from_git(path_repo)?;
         Ok(GitServer {
             src_repo: path_repo.to_string(),
             version,
             capabilities,
             shallow: Vec::new(),
-            references,
-            client_references: Vec::new(),
+            client_references: ClientReferences::new_from_references(&available_references),
+            available_references,
         })
     }
 
@@ -157,7 +160,7 @@ impl GitServer {
 
         // Send references
         // HEAD lo inserte 1ero en el vector
-        for reference in &self.references {
+        for reference in &self.available_references {
             let reference = format!("{} {}\n", reference.get_hash(), reference.get_ref_path());
             let reference = pkt_line::add_length_prefix(&reference, reference.len());
             // println!("Sending reference: {}", reference);
@@ -188,32 +191,38 @@ impl GitServer {
     ///
     pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>) {
         retain_common_values(&mut self.capabilities, &capabilities);
-        filter_by_hash(&mut self.references, &references);
+        filter_by_hash(&mut self.available_references, &references);
     }
 
-    /// Guarda las referencias del cliente en el `GitServer`.
-    ///
-    /// Esta función toma un vector de hash de objetos y los guarda en el campo `client_references`
-    /// del `GitServer`. Estas referencias del cliente representan los objetos que el cliente tiene
-    /// localmente.
-    ///
-    /// # Argumentos
-    ///
-    /// * `obj_hash` - Vector que contiene los hash de objetos del cliente a ser guardados.
-    ///
-    pub fn save_references_client(&mut self, obj_hash: Vec<String>) {
-        self.client_references = obj_hash;
+    pub fn update_client_references(&mut self, references: &Vec<Reference>) {
+        self.client_references.update_current_commit(references);
     }
 
-    /// Filtra las referencias del cliente manteniendo solo las que también están en el vector dado.
-    ///
-    /// # Argumentos
-    ///
-    /// * `references` - Vector de referencias a ser utilizado como filtro.
-    ///
-    pub fn filter_client_reference(&mut self, references: &Vec<String>) {
-        retain_common_values(&mut self.client_references, references);
-    }
+
+    // /// Guarda las referencias del cliente en el `GitServer`.
+    // ///
+    // /// Esta función toma un vector de hash de objetos y los guarda en el campo `client_references`
+    // /// del `GitServer`. Estas referencias del cliente representan los objetos que el cliente tiene
+    // /// localmente.
+    // ///
+    // /// # Argumentos
+    // ///
+    // /// * `obj_hash` - Vector que contiene los hash de objetos del cliente a ser guardados.
+    // ///
+    // // pub fn save_references_client(&mut self, obj_hash: Vec<String>) {
+    // //     self.client_references = obj_hash;
+    // // }
+
+    // /// Filtra las referencias del cliente manteniendo solo las que también están en el vector dado.
+    // ///
+    // /// # Argumentos
+    // ///
+    // /// * `references` - Vector de referencias a ser utilizado como filtro.
+    // ///
+    // pub fn filter_client_reference(&mut self, references: &Vec<String>) {
+    //     retain_common_values(&mut self.client_references, references);
+    // }
+    
 }
 
 /// Filtra las referencias basándose en un conjunto de hash de referencias.

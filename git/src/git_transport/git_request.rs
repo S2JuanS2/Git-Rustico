@@ -204,7 +204,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
 
         receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
         send_acknowledge_last_reference(stream, &obj_hash)?;
-        server.save_references_client(obj_hash);
+        // server.save_references_client(obj_hash); // UPDATE
         send_packfile_witch_references_client(stream, &server, path_repo)?;
 
         return Ok(());

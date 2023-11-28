@@ -156,7 +156,7 @@ pub fn send_packfile(
     )?;
 
     // Envio numero de objetos
-    let objects = match get_objects(path_repo, &server.references[1..]) {
+    let objects = match get_objects(path_repo, &server.available_references[1..]) {
         Ok(objects) => objects,
         Err(_) => return Err(UtilError::GetObjectsPackfile),
     };
