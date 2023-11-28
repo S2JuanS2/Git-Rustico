@@ -375,13 +375,6 @@ pub fn packfile_negotiation_partial(
     Ok(())
 }
 
-// [TODO N#1]
-// Aqui se debe examinar las referencias que nos envio el server
-// Estan en server->references y ver que referencias tenemos en local
-// Asi no le pedimos lo que tenemos
-// Para esto me podes dar un vector con las branch que ya tenemos actualizadas
-// y yo las filtro de server->references
-// let reference_que_tenemos = tu_funcion(server.references)
 
 /// Obtiene las referencias locales de un repositorio Git ubicado en la ruta especificada.
 ///
