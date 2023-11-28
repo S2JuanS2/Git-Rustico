@@ -46,6 +46,7 @@ use super::errors::CommandsError;
 /// * Otros errores de `CommandsError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
+    println!("Entre al handle fetch");
     if args.len() >= 2 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
@@ -65,6 +66,7 @@ pub fn git_fetch_all(
     repo_local: &str,
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
+    println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
     let repo_remoto = git_config.get_remote_repo()?;
 
@@ -76,7 +78,7 @@ pub fn git_fetch_all(
 
     // Reference Discovery
     let mut server = reference_discovery(socket, message, repo_remoto)?;
-
+    println!("server: {:?}", server);
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
 

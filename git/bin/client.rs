@@ -2,7 +2,7 @@ use git::config::Config;
 use git::controllers::controller_client::Controller;
 use git::errors::GitError;
 use git::models::client::Client;
-use git::util::files::is_git_initialized;
+// use git::util::files::is_git_initialized;
 use git::views::view_client::View;
 use std::env;
 
@@ -13,7 +13,7 @@ fn main() -> Result<(), GitError> {
 
     let address = format!("{}:{}", config.ip, config.port);
 
-    let mut client = Client::new(
+    let client = Client::new(
         config.name,
         config.email,
         config.ip,
@@ -23,11 +23,10 @@ fn main() -> Result<(), GitError> {
         config.path_log,
     );
 
-    let init = is_git_initialized()?;
-
-    if init.0 {
-        client.set_directory_path(init.1);
-    }
+    // let init = is_git_initialized(client.get_directory_path())?;
+    // if init.0 {
+    //     client.set_directory_path(init.1);
+    // }
     
     let controller = Controller::new(client);
 

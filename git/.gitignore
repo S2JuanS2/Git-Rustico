@@ -3,6 +3,7 @@ target/
 *.log
 test_repo/
 server_root/
+client_root/
 testing_commit_log/
 Repository/
 test_status/

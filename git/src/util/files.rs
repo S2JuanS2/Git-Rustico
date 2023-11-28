@@ -6,6 +6,7 @@ use std::io::Write;
 use std::path::Path;
 
 use super::errors::UtilError;
+use super::validation::join_paths_correctly;
 
 /// Verifica si un directorio está vacío
 /// ###Parametros:
@@ -130,28 +131,15 @@ pub fn delete_file(path_file: &str) -> Result<(),UtilError> {
 /// Verifica si hay un repositorio git en la carpeta (chequea si hay una subcarpeta .git)
 /// devuelve una tupla donde el primer elemento es un true o false (según lo anterior) 
 /// y el segundo es el nombre del repositorio.
-pub fn is_git_initialized() -> Result<(bool,String), UtilError> {
+pub fn is_git_initialized(current_src: &str) -> (bool,String) {
     let mut result = (false,"".to_string());
-    let current_src = "./";
-    let files = match fs::read_dir(current_src) {
-        Ok(files) => files,
-        Err(_) => return Err(UtilError::ReadDirError),
-    };
-    for file in files {
-        let entry = match file {
-            Ok(entry) => entry,
-            Err(_) => return Err(UtilError::DirEntryError),
-        };
-        if entry.file_type().map_or(false, |ft| ft.is_dir()) {
-            if let Some(name) = entry.file_name().to_str() {
-                let src_complete = format!("{}/{}", current_src, name);
-                if fs::read_dir(&format!("{}/.git", src_complete)).is_ok() {
-                    result = (true,name.to_string());
-                }
-            }
-        }
+    let path_git = join_paths_correctly(current_src, ".git");
+    if fs::read_dir(path_git).is_ok() {
+        let parts: Vec<&str> = current_src.split('/').collect();
+        let name = parts[parts.len() - 1];
+        result = (true,name.to_string());
     }
-    Ok(result)
+    result
 }
 
 /// Asegura que el directorio esté limpio y, si no existe, lo crea.

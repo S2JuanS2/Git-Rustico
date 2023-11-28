@@ -94,7 +94,7 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
         return Err(GitError::NonGitCommandError);
     }
 
-    let init = is_git_initialized()?;
+    let init = is_git_initialized(client.get_directory_path());
     if !init.0 && commands[1] != "init" && commands[1] != "clone"{
         return Err(GitError::NotAGitRepository)
     }
@@ -105,10 +105,12 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
                 result = handle_branch(rest_of_command, client.clone())?;
             }
             "clone" => {
-                if let Some(path_clone) = rest_of_command.first() {
-                    client.set_directory_path(path_clone.to_string());
-                }
-                result = handle_clone(rest_of_command, client.clone())?;
+                // if let Some(path_clone) = rest_of_command.first() {
+                //     client.set_directory_path(path_clone.to_string());
+                // }
+                let (status, new_path) = handle_clone(rest_of_command, client.clone())?;
+                client.set_directory_path(new_path);
+                result = status;
             }
             "commit" => {
                 result = handle_commit(rest_of_command, client.clone())?;
