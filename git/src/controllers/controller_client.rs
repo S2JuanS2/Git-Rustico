@@ -94,7 +94,7 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
         return Err(GitError::NonGitCommandError);
     }
 
-    let init = is_git_initialized(client.get_directory_path())?;
+    let init = is_git_initialized(client.get_directory_path());
     if !init.0 && commands[1] != "init" && commands[1] != "clone"{
         return Err(GitError::NotAGitRepository)
     }
