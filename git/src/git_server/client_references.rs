@@ -15,7 +15,7 @@ impl HandleReferences {
 
         for reference in references {
             // Ignore Head
-            if reference.get_type() == &ReferenceType::Tag {
+            if reference.get_type() == ReferenceType::Head {
                 continue;
             }
 
@@ -42,10 +42,8 @@ impl HandleReferences {
         let mut references: Vec<Reference> = Vec::new();
 
         for (path, value) in &self.references {
-            if value.confirmed {
-                let reference = Reference::new(value.get_remote_commit().to_string(), path.to_string())?;
-                references.push(reference);
-            }
+            let reference = Reference::new(value.get_remote_commit().to_string(), path.to_string())?;
+            references.push(reference);
         }
         Ok(references)
     }

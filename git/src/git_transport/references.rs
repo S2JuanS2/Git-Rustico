@@ -99,8 +99,14 @@ impl Reference {
         &self.ref_path
     }
 
-    pub fn get_type(&self) -> &ReferenceType {
-        &self.reference_type
+    pub fn get_type(&self) -> ReferenceType {
+        match self.reference_type
+        {
+            ReferenceType::Branch => ReferenceType::Branch,
+            ReferenceType::Head => ReferenceType::Head,
+            ReferenceType::Remote => ReferenceType::Remote,
+            ReferenceType::Tag => ReferenceType::Tag,
+        }
     }
 
     pub fn get_name(&self) -> &str {
@@ -413,7 +419,7 @@ mod tests {
 
         if let Ok(reference) = result {
             assert_eq!(reference.get_ref_path(), &"HEAD".to_string());
-            assert_eq!(*reference.get_type(), ReferenceType::Head);
+            assert_eq!(reference.get_type(), ReferenceType::Head);
         }
     }
 
@@ -424,7 +430,7 @@ mod tests {
 
         if let Ok(reference) = result {
             assert_eq!(reference.get_ref_path(), &"refs/tags/version-1.0".to_string());
-            assert_eq!(*reference.get_type(), ReferenceType::Tag);
+            assert_eq!(reference.get_type(), ReferenceType::Tag);
         }
     }
 
@@ -435,7 +441,7 @@ mod tests {
 
         if let Ok(reference) = result {
             assert_eq!(reference.get_ref_path(), &"refs/heads/main".to_string());
-            assert_eq!(*reference.get_type(), ReferenceType::Branch);
+            assert_eq!(reference.get_type(), ReferenceType::Branch);
         }
     }
 
@@ -452,7 +458,7 @@ mod tests {
                 reference.get_ref_path(),
                 &"refs/remotes/origin/main".to_string()
             );
-            assert_eq!(*reference.get_type(), ReferenceType::Remote);
+            assert_eq!(reference.get_type(), ReferenceType::Remote);
         }
     }
 
@@ -489,7 +495,7 @@ mod tests {
             ref_path: "refs/remotes/origin/main".to_string(),
             reference_type: ReferenceType::Remote,
         };
-        assert_eq!(*reference.get_type(), ReferenceType::Remote);
+        assert_eq!(reference.get_type(), ReferenceType::Remote);
     }
 
     #[test]

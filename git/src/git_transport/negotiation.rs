@@ -42,7 +42,7 @@ pub fn upload_request_type(
     for refs in refs {
         let message = format!("{} {}\n", type_req, refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
-        println!("type: {} - message: {}", type_req, message);
+        print!("type: {} - message: {}", type_req, message);
         send_message(socket, &message, UtilError::UploadRequest)?;
     }
     send_flush(socket, UtilError::UploadRequestFlush)?;
@@ -353,22 +353,27 @@ pub fn packfile_negotiation_partial(
     server: &mut GitServer,
     path_repo: &str,
 ) -> Result<(), UtilError> {
-
+    println!("Git server: {:?}", server);
+    println!();
+    println!();
     // [TODO N#1]
     // let sv_references = get_branches(server)?;
     // println!("sv_references: {:?}", sv_references);
     let local_references = get_local_references(path_repo)?;
-    println!("local_references: {:?}", local_references);
+    println!("local_references Juan: {:?}", local_references);
     server.update_local_references(&local_references);
     // Brayan:
     // server.filtrar(reference_que_tenemos)
     let remote_references = server.get_remote_references()?;
+    println!("remote_references Brayan: {:?}", remote_references);
     upload_request_type(stream, &remote_references, "want")?;
 
     //[TODO N#2]
     // let _commit_branches = get_commits(sv_references, local_references)?;
     let local_references = server.get_local_references()?;
+    println!("local_references Brayan: {:?}", local_references);
     upload_request_type(stream, &local_references, HAVE)?;
+    println!("Envie el have");
 
     let ack_references = recive_acknowledgments(stream)?;
     println!("ack_references: {:?}", ack_references);

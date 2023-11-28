@@ -78,7 +78,7 @@ pub fn git_fetch_all(
 
     // Reference Discovery
     let mut server = reference_discovery(socket, message, repo_remoto)?;
-    println!("server: {:?}", server);
+    // println!("server: {:?}", server);
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
