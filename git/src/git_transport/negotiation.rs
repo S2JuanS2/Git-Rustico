@@ -13,6 +13,8 @@ use std::{
     net::TcpStream,
 };
 
+use super::references::{Reference, self};
+
 /// Envía mensajes de tipo de solicitud (`want` o `have`) al servidor para solicitar
 /// o confirmar referencias.
 ///
@@ -40,6 +42,7 @@ pub fn upload_request_type(
     for refs in server.get_references() {
         let message = format!("{} {}\n", type_req, refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
+        println!("type: {} - message: {}", type_req, message);
         send_message(socket, &message, UtilError::UploadRequest)?;
     }
     send_flush(socket, UtilError::UploadRequestFlush)?;
@@ -353,14 +356,16 @@ pub fn packfile_negotiation_partial(
 
     // [TODO N#1]
     let sv_references = get_branches(server)?;
+    println!("sv_references: {:?}", sv_references);
     let local_references = get_local_references(path_repo)?;
+    println!("local_references: {:?}", local_references);
     // Brayan:
     // server.filtrar(reference_que_tenemos)
 
     upload_request_type(stream, server, "want")?;
 
     //[TODO N#2]
-    let _commit_branches = get_commits(sv_references, local_references)?;
+    // let _commit_branches = get_commits(sv_references, local_references)?;
 
     upload_request_type(stream, server, HAVE)?;
 
@@ -370,23 +375,43 @@ pub fn packfile_negotiation_partial(
     Ok(())
 }
 
-    // [TODO N#1]
-    // Aqui se debe examinar las referencias que nos envio el server
-    // Estan en server->references y ver que referencias tenemos en local
-    // Asi no le pedimos lo que tenemos
-    // Para esto me podes dar un vector con las branch que ya tenemos actualizadas
-    // y yo las filtro de server->references
-    // let reference_que_tenemos = tu_funcion(server.references)
-fn get_local_references(path_repo: &str) -> Result<Vec<(String,String)>, UtilError>{
-    let mut result_branches: Vec<(String,String)> = vec![];
+// [TODO N#1]
+// Aqui se debe examinar las referencias que nos envio el server
+// Estan en server->references y ver que referencias tenemos en local
+// Asi no le pedimos lo que tenemos
+// Para esto me podes dar un vector con las branch que ya tenemos actualizadas
+// y yo las filtro de server->references
+// let reference_que_tenemos = tu_funcion(server.references)
+
+/// Obtiene las referencias locales de un repositorio Git ubicado en la ruta especificada.
+///
+/// # Argumentos
+///
+/// * `path_repo`: Ruta al directorio del repositorio Git.
+///
+/// # Errores
+///
+/// Retorna un `Result` que puede contener un vector de referencias locales (`Ok(Vec<Reference>)`)
+/// o un error de utilidad (`Err(UtilError)`).
+///
+fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
+    let mut result_branches = Vec::new();
 
     let branches = get_branch(path_repo).expect("Error");
     for branch in branches.iter(){
         let path_branch = format!("{}/{}/{}/{}", path_repo, GIT_DIR, REFS_HEADS, branch);
-        let file_branch = open_file(&path_branch).expect("Error");
-        let hash_branch = read_file_string(file_branch).expect("Err");
-        let new_branch: (String, String) = (branch.to_string(), hash_branch);
-        result_branches.push(new_branch);
+        let file_branch = match open_file(&path_branch)
+        {
+            Ok(file) => file,
+            Err(_) => return Err(UtilError::GetLocalReferences),
+        };
+        let hash_branch = match read_file_string(file_branch)
+        {
+            Ok(hash) => hash,
+            Err(_) => return Err(UtilError::GetLocalReferences),
+        };
+        let rfs = Reference::new(hash_branch, format!("refs/heads/{}", branch))?;
+        result_branches.push(rfs);
     }
     Ok(result_branches)
 }

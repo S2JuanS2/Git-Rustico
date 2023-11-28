@@ -18,5 +18,8 @@
 - En negociacion no permito que el server me de sus capacibilites
 
 
-# Demo 
-- 
+# Fetch 
+1) 
+Tarea: get_branches y get_local_references(Juan) deben de devolver un vector de References
+Motivo: Que pasa si tenemos el mismo nombre de branch de remoto y heads
+Pensarlo ...
