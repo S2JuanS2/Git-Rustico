@@ -33,7 +33,7 @@ impl HandleReferences {
     pub fn update_local_commit(&mut self, references: &Vec<Reference>) {
         for reference in references {
             if let Some(reference_status) = self.references.get_mut(reference.get_ref_path()) {
-                reference_status.update_local_commit(Some(reference.get_hash().to_string()));
+                reference_status.update_local_commit(Some(reference.get_hash().trim().to_string()));
             }
         }
     }
@@ -62,7 +62,10 @@ impl HandleReferences {
 
     pub fn confirm_local_references(&mut self, local_commits: &Vec<String>)
     {
-        for (path, value) in &mut self.references {
+        println!("Confirming local references");
+        println!("Local commits: {:?}", local_commits);
+        println!("Self: {:?}", self);
+        for (_, value) in &mut self.references {
             if let Some(local_commit) = value.get_local_commit() {
                 if local_commits.contains(&local_commit.to_string()) {
                     value.confirm_local_commit();

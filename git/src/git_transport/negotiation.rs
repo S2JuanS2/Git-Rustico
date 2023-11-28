@@ -412,7 +412,7 @@ fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
             Ok(hash) => hash,
             Err(_) => return Err(UtilError::GetLocalReferences),
         };
-        let rfs = Reference::new(hash_branch, format!("refs/heads/{}", branch))?;
+        let rfs = Reference::new(hash_branch.trim().to_string(), format!("refs/heads/{}", branch))?;
         result_branches.push(rfs);
     }
     Ok(result_branches)
@@ -521,12 +521,12 @@ pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError> {
 
 pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_server: &GitServer) -> Result<(), UtilError>
 {
-    let mut message = format!("want {}\n", references.get_hash());
+    let mut message = format!("want {}", references.get_hash());
     // let capabilities = git_server.get_capabilities();
     // if capabilities.len() > 0 {
         message.push_str(" ");
         // message.push_str(&capabilities.join(" "));
-        message.push_str("multi_ack");
+        message.push_str("multi_ack"); // CHANGE - No debe estar hardcodeado
     // }
     message.push_str("\n");
     message = pkt_line::add_length_prefix(&message, message.len());
