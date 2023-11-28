@@ -2,6 +2,7 @@ use crate::commands::commit::builder_commit_log;
 use crate::commands::config::GitConfig;
 use crate::commands::init::git_init;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR, REF_HEADS, PARENT_INITIAL};
+use crate::util::validation::join_paths_correctly;
 use super::errors::CommandsError;
 use crate::git_server::GitServer;
 use crate::git_transport::git_request::GitRequest;
@@ -44,12 +45,20 @@ use super::add::add_to_index;
 ///
 /// * Otros errores de `CommandsError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket, o el proceso de clonación.
 ///
-pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
+pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<(String, String), CommandsError> {
     if args.len() != 1 {
         return Err(CommandsError::CloneMissingRepoError.into());
     }
     let mut socket = start_client(client.get_address())?;
-    git_clone(&mut socket, client.get_ip(), client.get_port(), args[0])
+    let name = match args[0].split('/').last()
+    {
+        Some(name) => name,
+        None => return Err(CommandsError::CloneMissingRepoError),
+    };
+    let local_repo = join_paths_correctly(client.get_directory_path(), name);
+    println!("local repo: {}", local_repo);
+    println!("client: {:?}", client);
+    git_clone(&mut socket, client.get_ip(), client.get_port(), &local_repo, args[0])
 }
 
 /// Clona un repositorio Git desde un servidor remoto utilizando el protocolo Git.
@@ -59,7 +68,8 @@ pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<String, CommandsE
 /// - `socket`: Una referencia mutable a un `TcpStream` que representa la conexión con el servidor.
 /// - `ip`: La dirección IP del servidor Git.
 /// - `port`: El número de puerto utilizado para la conexión.
-/// - `repo`: La ruta del repositorio Git que se va a clonar.
+/// - `name_repo`: El nombre del repositorio Git que se va a clonar.
+/// - `path_repo`: La ruta del repositorio Git que se va a clonar.
 ///
 /// # Returns
 ///
@@ -69,15 +79,17 @@ pub fn git_clone(
     socket: &mut TcpStream,
     ip: &str,
     port: &str,
-    repo: &str,
-) -> Result<String, CommandsError> {
-    println!("Clonando repositorio remoto: {}", repo);
+    local_repo: &str,
+    remote_repo: &str,
+) -> Result<(String, String), CommandsError> {
+    println!("Clonando repositorio remoto: {}", remote_repo);
+    println!("En el directorio: {}", local_repo);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
-    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, repo, ip, port);
+    let message = GitRequest::generate_request_string(RequestCommand::UploadPack, remote_repo, ip, port);
 
     // Reference Discovery
-    let git_server = reference_discovery(socket, message, repo)?;
+    let git_server = reference_discovery(socket, message, remote_repo)?;
 
     // Packfile Negotiation
     packfile_negotiation(socket, &git_server)?;
@@ -85,14 +97,15 @@ pub fn git_clone(
     // Packfile Data
     let content = receive_packfile(socket)?;
 
-    let status = create_repository(&git_server, content, repo)?;
+    let status = create_repository(&git_server, content, local_repo)?;
 
     // Creo el config
     let git_config = GitConfig::new_from_server(&git_server)?;
-    let path_config = format!("{}/{}/{}", repo, GIT_DIR, "config");
+    let path_config = format!("{}/{}/{}", local_repo, GIT_DIR, "config");
     git_config.write_to_file(&path_config)?;
 
-    Ok(status)
+
+    Ok((status, local_repo.to_string()))
 }
 
 fn create_repository(
