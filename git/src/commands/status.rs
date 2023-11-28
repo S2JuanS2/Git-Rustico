@@ -1,5 +1,5 @@
 use crate::consts::*;
-use super::check_ignore::check_gitignore;
+use super::check_ignore::{check_gitignore, get_gitignore_content};
 use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file, read_file_string};
@@ -473,7 +473,8 @@ fn get_tree_content(
 pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, CommandsError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = directory.to_string();
-    calculate_directory_hashes(&working_directory, &mut working_directory_hash_list)?;
+    let gitignore_content = get_gitignore_content(directory)?;
+    calculate_directory_hashes(&working_directory, &mut working_directory_hash_list, &gitignore_content)?;
     Ok(working_directory_hash_list)
 }
 
@@ -485,6 +486,7 @@ pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, S
 pub fn calculate_directory_hashes(
     directory: &str,
     hash_list: &mut HashMap<String, String>,
+    gitignore_content: &str,
 ) -> Result<(), CommandsError> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
@@ -504,13 +506,13 @@ pub fn calculate_directory_hashes(
             if file_name.starts_with('.') {
                 continue;
             }
-            check_gitignore(file_name, &mut ignored_files, directory)?;
+            check_gitignore(file_name, &mut ignored_files, gitignore_content)?;
             if !ignored_files.is_empty() && ignored_files.contains(&file_name.to_string()) {
                 continue;
             }
         }
 
-        create_hash_working_dir(path, hash_list)?;
+        create_hash_working_dir(path, hash_list, gitignore_content)?;
     }
     Ok(())
 }
@@ -522,10 +524,11 @@ pub fn calculate_directory_hashes(
 fn create_hash_working_dir(
     path: PathBuf,
     hash_list: &mut HashMap<String, String>,
+    gitignore_content: &str,
 ) -> Result<(), CommandsError> {
     if path.is_dir() {
         if let Some(path_str) = path.to_str() {
-            calculate_directory_hashes(path_str, hash_list)?;
+            calculate_directory_hashes(path_str, hash_list, gitignore_content)?;
         }
     } else if let Some(file_name_str) = path.to_str() {
         let file = open_file(file_name_str)?;

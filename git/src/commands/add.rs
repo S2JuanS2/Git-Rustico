@@ -6,7 +6,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
 
-use super::check_ignore::check_gitignore;
+use super::check_ignore::{check_gitignore, get_gitignore_content};
 use super::errors::CommandsError;
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
@@ -88,7 +88,8 @@ fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), CommandsError>
 pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError> {
     let file_path = format!("{}/{}", directory, file_name);
     let mut ignored_files = Vec::<String>::new();
-    check_gitignore(file_name, &mut ignored_files, directory)?;
+    let gitignore_content = get_gitignore_content(directory)?;
+    check_gitignore(file_name, &mut ignored_files, &gitignore_content)?;
     if !ignored_files.is_empty() {
         return Ok("Archivo esta en .gitignore".to_string());
     }
