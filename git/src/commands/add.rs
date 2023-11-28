@@ -6,6 +6,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
 
+use super::check_ignore::check_gitignore;
 use super::errors::CommandsError;
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
@@ -86,6 +87,11 @@ fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), CommandsError>
 /// 'file_name': Nombre del archivo del cual se leera el contenido para luego comprimirlo y generar el objeto
 pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError> {
     let file_path = format!("{}/{}", directory, file_name);
+    let mut ignored_files = Vec::<String>::new();
+    check_gitignore(file_name, &mut ignored_files, directory)?;
+    if !ignored_files.is_empty() {
+        return Ok("Archivo esta en .gitignore".to_string());
+    }
     let file = open_file(&file_path)?;
     let content = read_file(file)?;
 
@@ -138,6 +144,8 @@ mod tests {
         io::{Read, Write},
     };
 
+    use crate::commands::{init::git_init, status::get_index_content};
+
     use super::*;
 
     #[test]
@@ -176,5 +184,41 @@ mod tests {
         // Se elimina el directorio temporal.
         fs::remove_dir_all("./.git").expect("Falló al remover el directorio temporal");
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn skip_gitignore_files_add() {
+        let directory = "./test_add_skips_gitignore_files";
+        git_init(directory).expect("Error al inicializar el repositorio");
+
+        let gitignore_path = format!("{}/.gitignore", directory);
+        create_file_replace(&gitignore_path, "target/\nCargo.lock\n").expect("Error al crear el archivo");
+
+        let file_path = format!("{}/{}", directory, "filetoadd.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a agregar")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "Cargo.lock");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2
+            .write_all(b"Cargo lock")
+            .expect("Error al escribir en el archivo");
+
+        let result = git_add(directory, "filetoadd.txt");
+        let git_dir = format!("{}/{}", directory, GIT_DIR);
+        let index_content = get_index_content(&git_dir).expect("Error al leer el index");
+
+        assert_eq!(index_content, "filetoadd.txt blob 442bce82428f3a03efaa6edac44dcede0e1bd456");
+
+        let result_2 = git_add(directory, "Cargo.lock");
+        let index_content_2 = get_index_content(&git_dir).expect("Error al leer el index");
+
+        // Chequeo que no agrego Cargo.lock al index
+        assert_eq!(index_content_2, "filetoadd.txt blob 442bce82428f3a03efaa6edac44dcede0e1bd456");
+
+        fs::remove_dir_all(directory).expect("Error al eliminar el directorio");
+        assert!(result.is_ok());
+        assert!(result_2.is_ok());
     }
 }
