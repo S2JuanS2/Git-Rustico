@@ -25,6 +25,7 @@ pub struct View {
     label_user: gtk::Label,
     label_mail: gtk::Label,
     label_branch: gtk::Label,
+    label_path: gtk::Label,
 }
 
 impl View {
@@ -84,6 +85,7 @@ impl View {
         let label_user: gtk::Label = builder.object("user").ok_or(GitError::ObjectBuildFailed)?;
         let label_branch: gtk::Label = builder.object("label_branch").ok_or(GitError::ObjectBuildFailed)?;
         let label_mail: gtk::Label = builder.object("mail").ok_or(GitError::ObjectBuildFailed)?;
+        let label_path: gtk::Label = builder.object("path").ok_or(GitError::ObjectBuildFailed)?;
 
         let controller = Rc::new(RefCell::new(controller));
         Ok(View {
@@ -101,6 +103,7 @@ impl View {
             label_user,
             label_mail,
             label_branch,
+            label_path,
         })
     }
 
@@ -124,6 +127,13 @@ impl View {
         let current_branch = binding.get_current_branch();
         let text_format = format!("Current branch: {}", current_branch);
         self.label_branch.set_text(&text_format);
+    }
+
+    fn set_label_path(&mut self) {
+        let controller = Rc::clone(&self.controller);
+        let binding = controller.borrow_mut();
+        let text_format = binding.get_path_client();
+        self.label_path.set_text(&text_format);
     }
 
     fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>) {
@@ -367,10 +377,21 @@ impl View {
         self.window.connect_destroy(|_| {
             gtk::main_quit();
         });
-
+        
+        for (_, button) in &self.buttons {
+            let view = Rc::clone(&self.controller);
+            let label_branch = self.label_branch.clone();
+            let label_path = self.label_path.clone();
+            button.connect_clicked(move |_| {
+                let _ = view.borrow_mut().set_current_branch();
+                view.borrow_mut().set_label_branch(&label_branch);
+                view.borrow_mut().set_label_path(&label_path);
+            });
+        }
         self.set_label_user();
         self.set_label_mail();
         self.set_label_branch();
+        self.set_label_path();
 
         self.window.show_all();
         gtk::main();

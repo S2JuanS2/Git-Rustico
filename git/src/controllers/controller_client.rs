@@ -5,6 +5,7 @@ use crate::commands::check_ignore::handle_check_ignore;
 use crate::commands::checkout::handle_checkout;
 use crate::commands::clone::handle_clone;
 use crate::commands::commit::handle_commit;
+use crate::commands::errors::CommandsError;
 use crate::commands::fetch::handle_fetch;
 use crate::commands::hash_object::handle_hash_object;
 use crate::commands::init::handle_init;
@@ -23,6 +24,9 @@ use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::is_git_initialized;
 use crate::util::logger::write_client_log;
+
+use crate::commands::branch::get_current_branch;
+use gtk::prelude::LabelExt;
 
 #[derive(Clone)]
 pub struct Controller {
@@ -71,8 +75,25 @@ impl Controller {
     pub fn get_mail_client(&self) -> &str {
         self.client.get_email()
     }
+    pub fn get_path_client(&self) -> &str {
+        self.client.get_directory_path()
+    }
     pub fn get_current_branch(&self) -> &str {
         &self.current_branch
+    }
+    pub fn set_current_branch(&mut self) -> Result<(), CommandsError>{
+        let current_branch = get_current_branch(self.client.get_directory_path())?;
+        self.current_branch = current_branch;
+        Ok(())
+    }
+    pub fn set_label_branch(&mut self, label_branch: &gtk::Label) {
+        let current_branch = self.get_current_branch();
+        let format_label = format!("Current branch: {}", current_branch);
+        label_branch.set_text(&format_label);
+    }
+    pub fn set_label_path(&self, label_path: &gtk::Label) {
+        let path = self.client.get_directory_path();
+        label_path.set_text(path);
     }
 }
 
