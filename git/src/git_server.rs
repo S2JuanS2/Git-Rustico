@@ -194,10 +194,17 @@ impl GitServer {
         filter_by_hash(&mut self.available_references, &references);
     }
 
-    pub fn update_client_references(&mut self, references: &Vec<Reference>) {
-        self.client_references.update_current_commit(references);
+    pub fn update_local_references(&mut self, references: &Vec<Reference>) {
+        self.client_references.update_local_commit(references);
     }
 
+    pub fn get_remote_references(&self) -> Result<Vec<Reference>, UtilError> {
+        self.client_references.get_remote_references()
+    }
+
+    pub fn get_local_references(&self) -> Result<Vec<Reference>, UtilError> {
+        self.client_references.get_local_references()
+    }
 
     // /// Guarda las referencias del cliente en el `GitServer`.
     // ///
