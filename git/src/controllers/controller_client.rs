@@ -86,13 +86,12 @@ impl Controller {
         self.current_branch = current_branch;
         Ok(())
     }
-    pub fn set_label_branch(&mut self, label_branch: &gtk::Label) {
+    pub fn set_label_branch(&self, label_branch: &gtk::Label) {
         let current_branch = self.get_current_branch();
-        let format_label = format!("Current branch: {}", current_branch);
-        label_branch.set_text(&format_label);
+        label_branch.set_text(&current_branch);
     }
     pub fn set_label_path(&self, label_path: &gtk::Label) {
-        let path = self.client.get_directory_path();
+        let path = self.get_path_client();
         label_path.set_text(path);
     }
 }

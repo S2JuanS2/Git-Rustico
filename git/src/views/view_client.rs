@@ -7,7 +7,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-const DIV: &str = "\nResponse: ";
+const RESPONSE: &str = "\n___________________________________________________________\n";
+
+const HELP: &str = "text-help-here";
 
 #[derive(Clone)]
 pub struct View {
@@ -106,29 +108,24 @@ impl View {
             label_path,
         })
     }
-
     fn set_label_user(&mut self) {
         let controller = Rc::clone(&self.controller);
         let binding = controller.borrow_mut();
         let user_name = binding.get_name_client();
         self.label_user.set_text(user_name);
     }
-
     fn set_label_mail(&mut self) {
         let controller = Rc::clone(&self.controller);
         let binding = controller.borrow_mut();
         let user_mail = binding.get_mail_client();
         self.label_mail.set_text(user_mail);
     }
-
     fn set_label_branch(&mut self) {
         let controller = Rc::clone(&self.controller);
         let binding = controller.borrow_mut();
         let current_branch = binding.get_current_branch();
-        let text_format = format!("Current branch: {}", current_branch);
-        self.label_branch.set_text(&text_format);
+        self.label_branch.set_text(&current_branch);
     }
-
     fn set_label_path(&mut self) {
         let controller = Rc::clone(&self.controller);
         let binding = controller.borrow_mut();
@@ -141,13 +138,13 @@ impl View {
             let mut end_iter = buffer.end_iter();
             match result {
                 Ok(response) => {
-                    let response_format = format!("{}\n{}", DIV, response);
+                    let response_format = format!("{}\n{}", RESPONSE, response);
                     buffer.insert(&mut end_iter, &response_format);
                 }
                 Err(e) => {
                     let error_message = format!(
                         "{}\nError al enviar el comando.\n[Error] {}\n",
-                        DIV,
+                        RESPONSE,
                         e.message()
                     );
                     buffer.insert(&mut end_iter, &error_message);
@@ -155,6 +152,7 @@ impl View {
             }
         }
     }
+
     fn connect_button_cmd(
         &mut self,
         entry_cmd: &str,
@@ -177,6 +175,7 @@ impl View {
             }
         };
     }
+
     fn connect_button_cat_file(&self) {
         let dialog = self.window_dialog_cat_file.clone();
         if let Some(button) = self.buttons.get(BUTTON_CAT_FILE) {
@@ -185,7 +184,6 @@ impl View {
             });
         }
     }
-
     fn connect_button_hash_object(&self) {
         let dialog = self.window_dialog_hash_object.clone();
 
@@ -255,17 +253,27 @@ impl View {
             }
         }
     }
-
     fn connect_button_help(&self) {
         if let Some(button) = self.buttons.get(BUTTON_HELP) {
             if let Some(buffer) = self.response.buffer() {
                 button.connect_clicked(move |_| {
-                    buffer.set_text("Desarrollado por: [INTEGRANTES DEL EQUIPO]");
+                    buffer.set_text(HELP);
                 });
             }
         }
     }
-
+    fn clicked_buttons(&self){
+        for (_, button) in &self.buttons {
+            let controller = Rc::clone(&self.controller);
+            let label_branch = self.label_branch.clone();
+            let label_path = self.label_path.clone();
+            button.connect_clicked(move |_| {
+                let _ = controller.borrow_mut().set_current_branch();
+                controller.borrow_mut().set_label_branch(&label_branch);
+                controller.borrow_mut().set_label_path(&label_path);
+            });
+        }
+    }
     fn connect_button_with_entry(&self, entry_cmd: &str, button_cmd: &str, git_cmd: String) {
         let controller = Rc::clone(&self.controller);
         let response = Rc::clone(&self.response);
@@ -371,6 +379,7 @@ impl View {
             window_pull,
         );
     }
+
     pub fn start_view(&mut self) -> Result<(), GitError> {
         self.connect_buttons();
 
@@ -378,16 +387,7 @@ impl View {
             gtk::main_quit();
         });
         
-        for (_, button) in &self.buttons {
-            let view = Rc::clone(&self.controller);
-            let label_branch = self.label_branch.clone();
-            let label_path = self.label_path.clone();
-            button.connect_clicked(move |_| {
-                let _ = view.borrow_mut().set_current_branch();
-                view.borrow_mut().set_label_branch(&label_branch);
-                view.borrow_mut().set_label_path(&label_path);
-            });
-        }
+        self.clicked_buttons();
         self.set_label_user();
         self.set_label_mail();
         self.set_label_branch();
