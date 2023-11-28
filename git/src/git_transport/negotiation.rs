@@ -1,6 +1,6 @@
 use crate::{
     consts::{HAVE, PKT_DONE, PKT_NAK, GIT_DIR, REFS_HEADS},
-    git_server::GitServer,
+    git_server::{GitServer, self},
     util::{
         connections::{received_message, send_flush, send_message},
         errors::UtilError,
@@ -353,9 +353,7 @@ pub fn packfile_negotiation_partial(
     server: &mut GitServer,
     path_repo: &str,
 ) -> Result<(), UtilError> {
-    println!("Git server: {:?}", server);
-    println!();
-    println!();
+    println!("AFTER Git server: {:?}\n\n", server);
     // [TODO N#1]
     // let sv_references = get_branches(server)?;
     // println!("sv_references: {:?}", sv_references);
@@ -366,7 +364,8 @@ pub fn packfile_negotiation_partial(
     // server.filtrar(reference_que_tenemos)
     let remote_references = server.get_remote_references()?;
     println!("remote_references Brayan: {:?}", remote_references);
-    upload_request_type(stream, &remote_references, "want")?;
+    send_firts_request(stream, &remote_references[0], server)?;
+    upload_request_type(stream, &remote_references[1..].to_vec(), "want")?;
 
     //[TODO N#2]
     // let _commit_branches = get_commits(sv_references, local_references)?;
@@ -378,6 +377,9 @@ pub fn packfile_negotiation_partial(
     let ack_references = recive_acknowledgments(stream)?;
     println!("ack_references: {:?}", ack_references);
     // server.filter_client_reference(&ack_references); // UPDATE
+    server.confirm_local_references(&ack_references);
+
+    println!("Before Git server: {:?}\n\n", server);
 
     Ok(())
 }
@@ -423,22 +425,22 @@ fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
     // NOta: Si la branch no la tenemos no hace falta que me lo agregues al vector porque
     // El servidor entendera que no tenemos nada y nos enviara todo de esa branch
     // Para conversar: Que pasa si el ultimo commit el local es un commit de mas adelante del servidor
-fn get_commits(
-    sv_references: Vec<(String,String)>,
-    local_references: Vec<(String,String)>
-) -> Result<Vec<(String,String)>, UtilError> {
-    let mut result_commit: Vec<(String,String)> = vec![];
+// fn get_commits(
+//     sv_references: Vec<(String,String)>,
+//     local_references: Vec<(String,String)>
+// ) -> Result<Vec<(String,String)>, UtilError> {
+//     let mut result_commit: Vec<(String,String)> = vec![];
 
-    for local_reference in local_references.iter(){
-        for sv_reference in sv_references.iter(){
-            if local_reference.0 == sv_reference.0 {
-                let new_commit:(String, String) = (local_reference.0.clone(), local_reference.1.clone());
-                result_commit.push(new_commit);
-            }
-        }
-    }
-    Ok(result_commit)
-}
+//     for local_reference in local_references.iter(){
+//         for sv_reference in sv_references.iter(){
+//             if local_reference.0 == sv_reference.0 {
+//                 let new_commit:(String, String) = (local_reference.0.clone(), local_reference.1.clone());
+//                 result_commit.push(new_commit);
+//             }
+//         }
+//     }
+//     Ok(result_commit)
+// }
 
 /// Lee las respuestas ACK del servidor desde el flujo de datos.
 ///
@@ -464,6 +466,9 @@ pub fn recive_acknowledgments(stream: &mut TcpStream) -> Result<Vec<String>, Uti
     let lines = pkt_line::read(stream)?;
     let mut acks = Vec::new();
     for line in lines {
+        if line == b"NAK" {
+            break;
+        }
         let hash = process_ack_response(line)?;
         acks.push(hash);
     }
@@ -512,6 +517,21 @@ pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError> {
         return Err(UtilError::ExpectedStatusContinueInAckResponse);
     }
     Ok(hash.to_string())
+}
+
+pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_server: &GitServer) -> Result<(), UtilError>
+{
+    let mut message = format!("want {}\n", references.get_hash());
+    // let capabilities = git_server.get_capabilities();
+    // if capabilities.len() > 0 {
+        message.push_str(" ");
+        // message.push_str(&capabilities.join(" "));
+        message.push_str("multi_ack");
+    // }
+    message.push_str("\n");
+    message = pkt_line::add_length_prefix(&message, message.len());
+    println!("message: {}", message);
+    send_message(writer, &message, UtilError::UploadRequest)
 }
 
 #[cfg(test)]

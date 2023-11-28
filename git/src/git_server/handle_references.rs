@@ -59,4 +59,15 @@ impl HandleReferences {
         }
         Ok(references)
     }
+
+    pub fn confirm_local_references(&mut self, local_commits: &Vec<String>)
+    {
+        for (path, value) in &mut self.references {
+            if let Some(local_commit) = value.get_local_commit() {
+                if local_commits.contains(&local_commit.to_string()) {
+                    value.confirm_local_commit();
+                }
+            }
+        }
+    }
 }

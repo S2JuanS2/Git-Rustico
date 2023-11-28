@@ -33,4 +33,8 @@ impl ReferenceInformation {
             None
         }
     }
+
+    pub fn confirm_local_commit(&mut self) {
+        self.confirmed = true;
+    }
 }

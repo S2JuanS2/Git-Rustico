@@ -1,4 +1,4 @@
-pub mod client_references;
+pub mod handle_references;
 pub mod reference_information;
 
 use std::io::Write;
@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use crate::git_server::client_references::HandleReferences;
+use crate::git_server::handle_references::HandleReferences;
 
 #[derive(Debug)]
 pub struct GitServer {
@@ -22,7 +22,7 @@ pub struct GitServer {
     pub capabilities: Vec<String>,
     pub shallow: Vec<String>,
     pub available_references: Vec<Reference>,
-    client_references: HandleReferences, // No tendra el Head
+    handle_references: HandleReferences, // No tendra el Head
 }
 
 impl GitServer {
@@ -81,7 +81,7 @@ impl GitServer {
             version,
             capabilities,
             shallow,
-            client_references: HandleReferences::new_from_references(&available_references),
+            handle_references: HandleReferences::new_from_references(&available_references),
             available_references,
         })
     }
@@ -143,7 +143,7 @@ impl GitServer {
             version,
             capabilities,
             shallow: Vec::new(),
-            client_references: HandleReferences::new_from_references(&available_references),
+            handle_references: HandleReferences::new_from_references(&available_references),
             available_references,
         })
     }
@@ -195,20 +195,28 @@ impl GitServer {
     }
 
     pub fn update_local_references(&mut self, references: &Vec<Reference>) {
-        self.client_references.update_local_commit(references);
+        self.handle_references.update_local_commit(references);
     }
 
     pub fn get_remote_references(&self) -> Result<Vec<Reference>, UtilError> {
-        self.client_references.get_remote_references()
+        self.handle_references.get_remote_references()
     }
 
     pub fn get_local_references(&self) -> Result<Vec<Reference>, UtilError> {
-        self.client_references.get_local_references()
+        self.handle_references.get_local_references()
+    }
+
+    pub fn get_capabilities(&self) -> &Vec<String> {
+        &self.capabilities
+    }
+
+    pub fn confirm_local_references(&mut self, local_commits: &Vec<String>) {
+        self.handle_references.confirm_local_references(local_commits);
     }
 
     // /// Guarda las referencias del cliente en el `GitServer`.
     // ///
-    // /// Esta función toma un vector de hash de objetos y los guarda en el campo `client_references`
+    // /// Esta función toma un vector de hash de objetos y los guarda en el campo `handle_references`
     // /// del `GitServer`. Estas referencias del cliente representan los objetos que el cliente tiene
     // /// localmente.
     // ///
@@ -217,7 +225,7 @@ impl GitServer {
     // /// * `obj_hash` - Vector que contiene los hash de objetos del cliente a ser guardados.
     // ///
     // // pub fn save_references_client(&mut self, obj_hash: Vec<String>) {
-    // //     self.client_references = obj_hash;
+    // //     self.handle_references = obj_hash;
     // // }
 
     // /// Filtra las referencias del cliente manteniendo solo las que también están en el vector dado.
@@ -227,7 +235,7 @@ impl GitServer {
     // /// * `references` - Vector de referencias a ser utilizado como filtro.
     // ///
     // pub fn filter_client_reference(&mut self, references: &Vec<String>) {
-    //     retain_common_values(&mut self.client_references, references);
+    //     retain_common_values(&mut self.handle_references, references);
     // }
     
 }
