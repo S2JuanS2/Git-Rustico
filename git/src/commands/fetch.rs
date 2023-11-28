@@ -79,27 +79,27 @@ pub fn git_fetch_all(
     // Reference Discovery
     let mut server = reference_discovery(socket, message, repo_remoto)?;
     println!("server: {:?}", server);
-    // // Packfile Negotiation
-    // packfile_negotiation_partial(socket, &mut server, repo_local)?;
+    // Packfile Negotiation
+    packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
-    // // Packfile Data
-    // let content = receive_packfile(socket)?;
-    // if save_objects(content, repo_local).is_err() {
-    //     return Err(CommandsError::RepositoryNotInitialized);
-    // };
+    // Packfile Data
+    let content = receive_packfile(socket)?;
+    if save_objects(content, repo_local).is_err() {
+        return Err(CommandsError::RepositoryNotInitialized);
+    };
 
-    // // Guardar las referencias en remote refs
-    // // [TODO]
-    // // necesito una funcion que me devuleva un vector dek tipo Vec<(String, String)>
-    // // EL 1er string sera el nombre de la branch y el 2do string su ultimo commit
-    // // Se puede usar el content o otro objeto
-    // // let refs: Vec<(String, String)> = get_refs(content);
-    // let refs = get_branches(&server)?;
-    // save_references(&refs, repo_local)?;
+    // Guardar las referencias en remote refs
+    // [TODO]
+    // necesito una funcion que me devuleva un vector dek tipo Vec<(String, String)>
+    // EL 1er string sera el nombre de la branch y el 2do string su ultimo commit
+    // Se puede usar el content o otro objeto
+    // let refs: Vec<(String, String)> = get_refs(content);
+    let refs = get_branches(&server)?;
+    save_references(&refs, repo_local)?;
 
-    // // Crear archivo FETCH_HEAD
-    // let fetch_head = FetchHead::new(refs, repo_remoto)?;
-    // fetch_head.write(repo_local)?;
+    // Crear archivo FETCH_HEAD
+    let fetch_head = FetchHead::new(refs, repo_remoto)?;
+    fetch_head.write(repo_local)?;
 
 
     Ok("Sucessfully!".to_string())
