@@ -255,4 +255,20 @@ mod tests {
         assert!(handle_references.references["refs/heads/feature"].is_confirmed());
         assert!(!handle_references.references["refs/tags/v1.0.0"].is_confirmed());
     }
+
+    #[test]
+    fn test_get_references_for_updating() {
+        let references = create_references();
+        let mut handle_references = HandleReferences::new_from_references(&references);
+
+        handle_references.update_local_commit(&vec![Reference::new("abc123", "refs/heads/main").unwrap()]);
+        handle_references.update_local_commit(&vec![Reference::new("def456", "refs/heads/feature").unwrap()]);
+
+        // Obtener referencias para actualizar
+        let references_for_updating = handle_references.get_references_for_updating().unwrap();
+
+        // Verificar que solo se obtenga la referencia que necesita actualización
+        assert_eq!(references_for_updating.len(), 1);
+        assert_eq!(references_for_updating[0].get_ref_path(), "refs/tags/v1.0.0");
+    }
 }
