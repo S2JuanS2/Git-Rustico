@@ -58,6 +58,12 @@ impl ReferenceInformation {
     pub fn confirm_local_commit(&mut self) {
         self.confirmed = true;
     }
+
+    /// Indica si el commit local ha sido verificado o confirmado.
+    /// 
+    pub fn is_confirmed(&self) -> bool {
+        self.confirmed
+    }
 }
 
 #[cfg(test)]

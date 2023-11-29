@@ -160,3 +160,99 @@ impl HandleReferences {
 
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    // Función de utilidad para crear una referencia ficticia para pruebas.
+    fn create_references() -> Vec<Reference> {
+        vec![
+            Reference::new("abc123", "refs/heads/main").unwrap(),
+            Reference::new("def456", "refs/heads/feature").unwrap(),
+            Reference::new("ghi789", "refs/tags/v1.0.0").unwrap(),
+            Reference::new("ghi789", "HEAD").unwrap(),
+        ]
+    }
+
+    #[test]
+    fn test_new_from_references() {
+        let references = create_references();
+        let handle_references = HandleReferences::new_from_references(&references);
+
+        // Verifica que las referencias se hayan almacenado correctamente en HandleReferences
+        assert_eq!(handle_references.references.len(), 3); // Head se debería omitir
+        assert!(handle_references.references.contains_key("refs/heads/main"));
+        assert!(handle_references.references.contains_key("refs/heads/feature"));
+        assert!(handle_references.references.contains_key("refs/tags/v1.0.0"));
+    }
+
+    #[test]
+    fn test_update_local_commit() {
+        let references = create_references();
+        let mut handle_references = HandleReferences::new_from_references(&references);
+        let references = vec![
+            Reference::new("newcommit1", "refs/heads/main").unwrap(),
+            Reference::new("newcommit2", "refs/heads/feature").unwrap(),
+        ];
+
+        handle_references.update_local_commit(&references);
+
+        // Verifica que los commits locales se hayan actualizado correctamente
+        assert_eq!(handle_references.references["refs/heads/main"].get_local_commit(), Some("newcommit1"));
+        assert_eq!(handle_references.references["refs/heads/feature"].get_local_commit(), Some("newcommit2"));
+    }
+
+    #[test]
+    fn test_get_remote_references() {
+        let references = create_references();
+        let handle_references = HandleReferences::new_from_references(&references);
+
+        let remote_references = handle_references.get_remote_references().unwrap();
+        let path_references: Vec<String> = remote_references.iter().map(|reference| reference.get_ref_path().to_string()).collect();
+        // Verifica que las referencias remotas se hayan obtenido correctamente
+        assert!(path_references.contains(&"refs/heads/main".to_string()));
+        assert!(path_references.contains(&"refs/heads/feature".to_string()));
+        assert!(path_references.contains(&"refs/tags/v1.0.0".to_string()));
+    }
+
+    #[test]
+    fn test_get_local_references() {
+        let references = create_references();
+        let mut handle_references = HandleReferences::new_from_references(&references);
+        let references = vec![
+            Reference::new("newcommit1", "refs/heads/main").unwrap(),
+            Reference::new("newcommit2", "refs/heads/feature").unwrap(),
+        ];
+
+        handle_references.update_local_commit(&references);
+        let local_references = handle_references.get_local_references().unwrap();
+        let path_references: Vec<String> = local_references.iter().map(|reference| reference.get_ref_path().to_string()).collect();
+
+        // Verifica que las referencias locales se hayan obtenido correctamente
+        assert_eq!(path_references.len(), 2); // Solo la referencia con commit local
+        assert!(path_references.contains(&"refs/heads/main".to_string()));
+        assert!(path_references.contains(&"refs/heads/feature".to_string()));
+    }
+
+    #[test]
+    fn test_confirm_local_references() {
+        let references = create_references();
+        let mut handle_references = HandleReferences::new_from_references(&references);
+        
+        let references = vec![
+            Reference::new("newcommit1", "refs/heads/main").unwrap(),
+            Reference::new("newcommit2", "refs/heads/feature").unwrap(),
+        ];
+
+        handle_references.update_local_commit(&references);
+
+        let local_commits_to_confirm = vec!["newcommit1".to_string(), "newcommit2".to_string()];
+        handle_references.confirm_local_references(&local_commits_to_confirm);
+
+        // Verifica que los commits locales se hayan confirmado correctamente
+        assert!(handle_references.references["refs/heads/main"].is_confirmed());
+        assert!(handle_references.references["refs/heads/feature"].is_confirmed());
+        assert!(!handle_references.references["refs/tags/v1.0.0"].is_confirmed());
+    }
+}
