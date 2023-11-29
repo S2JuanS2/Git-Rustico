@@ -97,6 +97,6 @@ mod tests {
         let result = git_show_ref(directory);
         assert!(result.is_ok());
 
-        // fs::remove_dir_all(directory).expect("Error al borrar el directorio");
+        fs::remove_dir_all(directory).expect("Error al borrar el directorio");
     }
 }

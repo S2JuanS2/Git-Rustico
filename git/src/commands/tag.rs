@@ -133,11 +133,11 @@ pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_n
 
     let tag_hash = builder_object_tag(&tag_content, &git_dir)?;
 
-    let dir_tag = format!("{}/.git/refs/tags/{}", directory, version_name);
+    let dir_tag = format!("{}/.git/refs/tags/{}", directory, tag_name);
 
     create_file(&dir_tag, &tag_hash)?;
 
-    builder_tag_msg_edit(directory,tag_name)?;
+    builder_tag_msg_edit(directory,version_name)?;
 
     Ok("Tag creada con éxito".to_string())
 }

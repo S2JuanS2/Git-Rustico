@@ -1,8 +1,10 @@
+use crate::consts::{FILE, GIT_DIR, CONTENT_EMPTY};
 use crate::models::client::Client;
+use super::add::add_to_index;
 use super::errors::CommandsError;
 use crate::util::files::{create_file_replace, open_file, read_file_string};
 use std::fs;
-
+use std::path::Path;
 use super::branch::get_current_branch;
 use super::cat_file::git_cat_file;
 use super::checkout::git_checkout_switch;
@@ -59,7 +61,7 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, CommandsE
         let strategy = merge_depending_on_strategy(
             &hash_parent_current,
             &hash_parent_merge,
-            log_merge_branch,
+            &branch_to_merge_hash,
             directory,
             branch_name,
         )?;
@@ -236,29 +238,32 @@ fn check_if_current_is_up_to_date(
     false
 }
 
-/// Recorre los commits en la merge branch y hace el merge dependiendo de la estrategia a utilizar.
+/// Recorre los tree en la merge branch y hace el merge dependiendo de la estrategia a utilizar.
 /// ###Parametros:
 /// 'hash_parent_current': hash del padre del commit de la rama actual
 /// 'hash_parent_merge': hash del padre del commit de la rama a mergear
-/// 'log_merge_branch': Vector de strings que contiene los commits de la rama a mergear.
+/// 'log_merge_branch': hash del tree
 /// 'directory': directorio del repositorio local
 /// 'branch_to_merge': nombre de la rama a mergear
-fn merge_depending_on_strategy(
+fn recovery_tree_merge(
+    directory: &str,
     hash_parent_current: &str,
     hash_parent_merge: &str,
-    log_merge_branch: Vec<String>,
-    directory: &str,
     branch_to_merge: &str,
-) -> Result<(String, String), CommandsError> {
+    content_tree: String,
+    path: &str)
+    -> Result<(String, String), CommandsError>{
     let mut strategy: (String, String) = ("".to_string(), "".to_string());
-    for commit in log_merge_branch {
-        let content_commit = git_cat_file(directory, &commit, "-p")?;
-        let content_tree = get_tree_of_commit(content_commit, directory)?;
-        for line in content_tree.lines() {
-            let file = line.split_whitespace().take(1).collect::<String>();
-            let hash_blob = line.split_whitespace().skip(2).take(1).collect::<String>();
-            let content_file = git_cat_file(directory, &hash_blob, "-p")?;
-            let path_file_format = format!("{}/{}", directory, file);
+    for line in content_tree.lines() {
+        let file = line.split_whitespace().take(1).collect::<String>();
+        let mode = line.split_whitespace().skip(1).take(1).collect::<String>();
+        let hash_object = line.split_whitespace().skip(2).take(1).collect::<String>();
+        let content_file = git_cat_file(directory, &hash_object, "-p")?;
+        let path_file_format = format!("{}/{}{}", directory, path, file);
+        if mode == FILE {
+            let path_file_format_clean = Path::new(&path_file_format).strip_prefix(directory).unwrap();
+            let path_file_format_clean_str = path_file_format_clean.to_str().ok_or(CommandsError::PathToStringError)?;
+            let git_dir = format!("{}/{}", directory, GIT_DIR);
             if hash_parent_current == hash_parent_merge {
                 // RECURSIVE STRATEGY: me falta hacer el merge commit
                 if let Ok(metadata) = fs::metadata(&path_file_format) {
@@ -271,6 +276,9 @@ fn merge_depending_on_strategy(
                         )?;
                     }
                 } else {
+                    if fs::metadata(&path_file_format).is_ok() {
+                        add_to_index(git_dir, &path_file_format_clean_str, hash_object)?;
+                    }
                     create_file_replace(&path_file_format, &content_file)?;
                     strategy.0 = "recursive".to_string();
                     strategy.1 = "ok".to_string();
@@ -278,11 +286,47 @@ fn merge_depending_on_strategy(
             } else {
                 // FAST-FORWARD STRATEGY
                 create_file_replace(&path_file_format, &content_file)?;
+                add_to_index(git_dir, &path_file_format_clean_str, hash_object)?;
                 strategy.0 = "fast-forward".to_string();
                 strategy.1 = "ok".to_string();
             }
+        }else{
+            let path = format!("{}{}/", path, file);
+            let content_tree = git_cat_file(directory, &hash_object, "-p")?;
+            recovery_tree_merge(directory,
+                hash_parent_current, hash_parent_merge,
+                branch_to_merge,
+                content_tree,
+                &path
+            )?;
         }
     }
+    Ok(strategy)
+}
+
+/// Recorre los commits en la merge branch y hace el merge dependiendo de la estrategia a utilizar.
+/// ###Parametros:
+/// 'hash_parent_current': hash del padre del commit de la rama actual
+/// 'hash_parent_merge': hash del padre del commit de la rama a mergear
+/// 'log_merge_branch': hash del ultimo commit
+/// 'directory': directorio del repositorio local
+/// 'branch_to_merge': nombre de la rama a mergear
+fn merge_depending_on_strategy(
+    hash_parent_current: &str,
+    hash_parent_merge: &str,
+    branch_to_merge_hash: &str,
+    directory: &str,
+    branch_to_merge: &str,
+) -> Result<(String, String), CommandsError> {
+    let content_commit = git_cat_file(directory, &branch_to_merge_hash, "-p")?;
+    let content_tree = get_tree_of_commit(content_commit, directory)?;
+    let strategy = recovery_tree_merge(
+        directory,
+        hash_parent_current,
+        hash_parent_merge,
+        branch_to_merge,
+        content_tree,
+        CONTENT_EMPTY)?;
     Ok(strategy)
 }
 

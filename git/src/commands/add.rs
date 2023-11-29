@@ -6,6 +6,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
 
+use super::check_ignore::{check_gitignore, get_gitignore_content};
 use super::errors::CommandsError;
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
@@ -17,18 +18,19 @@ pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, CommandsErr
         return Err(CommandsError::InvalidArgumentCountAddError);
     }
     let directory = client.get_directory_path();
+    let repo_parts: Vec<&str> = directory.split('/').collect();
     let file_name = args[0];
     if args[0] != ALL {
         git_add(directory, file_name)
     } else {
-        git_add_all(Path::new(directory))
+        git_add_all(Path::new(directory), repo_parts.len())
     }
 }
 
 /// Esta función crea todos los objetos y los guarda
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
-pub fn git_add_all(directory: &Path) -> Result<String, CommandsError> {
+pub fn git_add_all(directory: &Path, repo_parts: usize) -> Result<String, CommandsError> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
         Err(_) => return Err(CommandsError::ReadDirError),
@@ -44,11 +46,11 @@ pub fn git_add_all(directory: &Path) -> Result<String, CommandsError> {
         let full_path = entry.path();
 
         if full_path.is_file() {
-            add_file(&full_path, &file_name)?;
+            add_file(&full_path, &file_name, repo_parts)?;
         } else if full_path.is_dir() {
             let path_str = file_name.to_str().ok_or(CommandsError::PathToStringError)?;
             if !path_str.starts_with('.') {
-                git_add_all(&full_path)?;
+                git_add_all(&full_path, repo_parts)?;
             }
         }
     }
@@ -60,13 +62,22 @@ pub fn git_add_all(directory: &Path) -> Result<String, CommandsError> {
 /// ###Parametros:
 /// 'full_path': PathBuf que contiene el path completo del archivo
 /// 'file_name': Nombre del archivo que se le hizo add
-fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), CommandsError> {
+fn add_file(full_path: &Path, file_name: &OsString, repo_parts: usize) -> Result<(), CommandsError> {
     let full_path_str = full_path.to_str().ok_or(CommandsError::PathToStringError)?;
     let parts: Vec<&str> = full_path_str.split('/').collect();
-    let directory = format!("{}/", parts[0]);
+    let mut directory = String::new();
+    let mut count = 0;
+    for part in &parts {
+        directory.push_str(part);
+        directory.push('/');
+        count += 1;
+        if count == repo_parts {
+            break;
+        }
+    }
     if parts.len() >= 3 {
         let mut dir_format = String::new();
-        for part in parts.iter().take(parts.len() - 1).skip(1) {
+        for part in parts.iter().take(parts.len() - 1).skip(repo_parts) {
             let dir_format_parts = format!("{}/", part);
             dir_format = dir_format + &dir_format_parts;
         }
@@ -86,6 +97,12 @@ fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), CommandsError>
 /// 'file_name': Nombre del archivo del cual se leera el contenido para luego comprimirlo y generar el objeto
 pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError> {
     let file_path = format!("{}/{}", directory, file_name);
+    let mut ignored_files = Vec::<String>::new();
+    let gitignore_content = get_gitignore_content(directory)?;
+    check_gitignore(file_name, &mut ignored_files, &gitignore_content)?;
+    if !ignored_files.is_empty() {
+        return Ok("El archivo esta en .gitignore".to_string());
+    }
     let file = open_file(&file_path)?;
     let content = read_file(file)?;
 
@@ -138,6 +155,8 @@ mod tests {
         io::{Read, Write},
     };
 
+    use crate::commands::{init::git_init, status::get_index_content};
+
     use super::*;
 
     #[test]
@@ -176,5 +195,41 @@ mod tests {
         // Se elimina el directorio temporal.
         fs::remove_dir_all("./.git").expect("Falló al remover el directorio temporal");
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn skip_gitignore_files_add() {
+        let directory = "./test_add_skips_gitignore_files";
+        git_init(directory).expect("Error al inicializar el repositorio");
+
+        let gitignore_path = format!("{}/.gitignore", directory);
+        create_file_replace(&gitignore_path, "target/\nCargo.lock\n").expect("Error al crear el archivo");
+
+        let file_path = format!("{}/{}", directory, "filetoadd.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a agregar")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "Cargo.lock");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2
+            .write_all(b"Cargo lock")
+            .expect("Error al escribir en el archivo");
+
+        let result = git_add(directory, "filetoadd.txt");
+        let git_dir = format!("{}/{}", directory, GIT_DIR);
+        let index_content = get_index_content(&git_dir).expect("Error al leer el index");
+
+        assert_eq!(index_content, "filetoadd.txt blob 442bce82428f3a03efaa6edac44dcede0e1bd456");
+
+        let result_2 = git_add(directory, "Cargo.lock");
+        let index_content_2 = get_index_content(&git_dir).expect("Error al leer el index");
+
+        // Chequeo que no agrego Cargo.lock al index
+        assert_eq!(index_content_2, "filetoadd.txt blob 442bce82428f3a03efaa6edac44dcede0e1bd456");
+
+        fs::remove_dir_all(directory).expect("Error al eliminar el directorio");
+        assert!(result.is_ok());
+        assert!(result_2.is_ok());
     }
 }

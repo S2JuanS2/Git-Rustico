@@ -1,4 +1,5 @@
 use crate::consts::*;
+use super::check_ignore::{check_gitignore, get_gitignore_content};
 use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file, read_file_string};
@@ -216,12 +217,12 @@ fn branch_with_untracked_files(
     if !untracked_files_list.is_empty() {
         for file in untracked_files_list {
             let file_path = &file.0[directory.len() + 1..];
-            formatted_result.push_str(&format!("\n\t{}\n", file_path));
+            formatted_result.push_str(&format!("\n\tnew file: \t{}", file_path));
         }
     }
     if files_not_commited_list.is_empty() {
         formatted_result.push_str(
-            "\nnothing added to commit but untracked files present (use \"git add\" to track)\n",
+            "\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n",
         );
     }
 }
@@ -231,11 +232,11 @@ fn branch_with_untracked_files(
 /// 'formatted_result': string con el resultado del status formateado.
 /// 'files_not_commited_list': vector con los nombres de los archivos que estan en el staging area y se van a incluir en el proximo commit.
 fn branch_missing_commits(formatted_result: &mut String, files_not_commited_list: &Vec<String>) {
-    formatted_result.push_str("\nChanges to be committed:\n");
-    formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
+    formatted_result.push_str("\n\nChanges to be committed:\n");
+    formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n\n");
 
     for file in files_not_commited_list {
-        formatted_result.push_str(&format!("\tmodified:   {}\n", file));
+        formatted_result.push_str(&format!("\tmodified:\t{}\n", file));
     }
 }
 
@@ -405,7 +406,7 @@ fn get_files_in_commit(
     file_hash: &str,
 ) -> Result<bool, CommandsError> {
     let mut commited = false;
-    if commit_actual != "" {
+    if !commit_actual.is_empty() {
         let commit_content = git_cat_file(directory, commit_actual, "-p")?;
         let commit_lines = commit_content.split('\n');
         let mut parent_commit = "";
@@ -472,7 +473,8 @@ fn get_tree_content(
 pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, CommandsError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = directory.to_string();
-    calculate_directory_hashes(&working_directory, &mut working_directory_hash_list)?;
+    let gitignore_content = get_gitignore_content(directory)?;
+    calculate_directory_hashes(&working_directory, &mut working_directory_hash_list, &gitignore_content)?;
     Ok(working_directory_hash_list)
 }
 
@@ -484,11 +486,13 @@ pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, S
 pub fn calculate_directory_hashes(
     directory: &str,
     hash_list: &mut HashMap<String, String>,
+    gitignore_content: &str,
 ) -> Result<(), CommandsError> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
         Err(_) => return Err(CommandsError::ReadDirError),
     };
+    let mut ignored_files: Vec<String> = Vec::new();
 
     for entry in entries {
         let entry = match entry {
@@ -502,9 +506,13 @@ pub fn calculate_directory_hashes(
             if file_name.starts_with('.') {
                 continue;
             }
+            check_gitignore(file_name, &mut ignored_files, gitignore_content)?;
+            if !ignored_files.is_empty() && ignored_files.contains(&file_name.to_string()) {
+                continue;
+            }
         }
 
-        create_hash_working_dir(path, hash_list)?;
+        create_hash_working_dir(path, hash_list, gitignore_content)?;
     }
     Ok(())
 }
@@ -516,10 +524,11 @@ pub fn calculate_directory_hashes(
 fn create_hash_working_dir(
     path: PathBuf,
     hash_list: &mut HashMap<String, String>,
+    gitignore_content: &str,
 ) -> Result<(), CommandsError> {
     if path.is_dir() {
         if let Some(path_str) = path.to_str() {
-            calculate_directory_hashes(path_str, hash_list)?;
+            calculate_directory_hashes(path_str, hash_list, gitignore_content)?;
         }
     } else if let Some(file_name_str) = path.to_str() {
         let file = open_file(file_name_str)?;
@@ -536,11 +545,11 @@ fn create_hash_working_dir(
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::{
+    use crate::{commands::{
         add::git_add,
         commit::{git_commit, Commit},
         init::git_init,
-    };
+    }, util::files::create_file_replace};
 
     use super::*;
     use std::io::Write;
@@ -611,5 +620,31 @@ mod tests {
         assert!(result_after_commit.is_ok());
         assert!(result_after_commit2.is_ok());
         assert!(result_after_remove.is_ok());
+    }
+
+    #[test]
+    fn skip_gitignore_files_status() {
+        let directory = "./test_status_skips_gitignore_files";
+        git_init(directory).expect("Error al ejecutar git init");
+
+        let gitignore_path = format!("{}/.gitignore", directory);
+        create_file_replace(&gitignore_path, "target/\nCargo.lock\n").expect("Error al crear el archivo");
+
+        let file_path = format!("{}/{}", directory, "testfile.rs");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo")
+            .expect("Error al escribir en el archivo");
+        
+        let file_path2 = format!("{}/{}", directory, "Cargo.lock");
+        let mut file = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file.write_all(b"Chau Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let result = git_status(directory);
+        let expected_result = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\ttestfile.rs\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n";
+        assert_eq!(result, Ok(expected_result.to_string()));
+
+        fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
+        assert!(result.is_ok());
     }
 }
