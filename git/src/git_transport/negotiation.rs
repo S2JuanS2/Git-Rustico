@@ -2,7 +2,7 @@ use crate::{
     consts::{HAVE, PKT_DONE, PKT_NAK, GIT_DIR, REFS_HEADS},
     git_server::{GitServer, self},
     util::{
-        connections::{received_message, send_flush, send_message},
+        connections::{received_message, send_flush, send_message, send_done},
         errors::UtilError,
         pkt_line,
         validation::is_valid_obj_id, files::{open_file, read_file_string},
@@ -381,6 +381,7 @@ pub fn packfile_negotiation_partial(
 
     println!("Before Git server: {:?}\n\n", server);
 
+    send_done(stream, UtilError::UploadRequestDone)?;
     Ok(())
 }
 

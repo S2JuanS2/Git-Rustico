@@ -13,6 +13,7 @@ use crate::util::objects::{
     read_tree, ObjectEntry, ObjectType,
 };
 use crate::git_transport::git_request::GitRequest;
+use crate::util::pkt_line::read_pkt_line;
 use std::net::TcpStream;
 use std::path::Path;
 use std::fs;
@@ -82,11 +83,17 @@ pub fn git_fetch_all(
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
-    // // Packfile Data
-    // let content = receive_packfile(socket)?;
-    // if save_objects(content, repo_local).is_err() {
-    //     return Err(CommandsError::RepositoryNotInitialized);
-    // };
+    // Packfile Data
+    let last_ack = read_pkt_line(socket)?;
+    println!("last_ack: {}", String::from_utf8_lossy(&last_ack));
+    let content = receive_packfile(socket)?;
+    for c in &content
+    {
+        println!("ObjectEntry: {:?} --- Content: {:?}", c.0, c.1);
+    }
+    if save_objects(content, repo_local).is_err() {
+        return Err(CommandsError::RepositoryNotInitialized);
+    };
 
     // // Guardar las referencias en remote refs
     // // [TODO]
