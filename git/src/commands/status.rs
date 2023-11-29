@@ -554,28 +554,27 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    const TEST_DIRECTORY: &str = "./test_status";
-
     #[test]
     fn test_git_status() {
-        git_init(TEST_DIRECTORY).expect("Error al ejecutar git init");
+        let directory: &str = "./test_status";
+        git_init(directory).expect("Error al ejecutar git init");
 
-        let file_path = format!("{}/{}", TEST_DIRECTORY, "testfile.rs");
+        let file_path = format!("{}/{}", directory, "testfile.rs");
         let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
         file.write_all(b"Hola Mundo")
             .expect("Error al escribir en el archivo");
 
-        let file_path2 = format!("{}/{}", TEST_DIRECTORY, "main.rs");
+        let file_path2 = format!("{}/{}", directory, "main.rs");
         let mut file = fs::File::create(&file_path2).expect("Falló al crear el archivo");
         file.write_all(b"Chau Mundo")
             .expect("Error al escribir en el archivo");
 
-        let result_before_add = git_status(TEST_DIRECTORY);
+        let result_before_add = git_status(directory);
 
-        git_add(TEST_DIRECTORY, "testfile.rs").expect("Error al ejecutar git add");
+        git_add(directory, "testfile.rs").expect("Error al ejecutar git add");
 
-        let result_after_add = git_status(TEST_DIRECTORY);
-        let result_after = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\tmain.rs\n\nChanges to be committed:\n  (use \"git reset HEAD <file>...\" to unstage)\n\tmodified:   ./test_status\\testfile.rs\n";
+        let result_after_add = git_status(directory);
+        let result_after = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\tnew file: \tmain.rs\n\nChanges to be committed:\n  (use \"git reset HEAD <file>...\" to unstage)\n\n\tmodified:\t./test_status\\testfile.rs\n";
         assert_eq!(result_after_add, Ok(result_after.to_string()));
 
         let test_commit1 = Commit::new(
@@ -585,13 +584,13 @@ mod tests {
             "Valen".to_string(),
             "vlanzillotta@fi.uba.ar".to_string(),
         );
-        git_commit(TEST_DIRECTORY, test_commit1).expect("Error al commitear");
+        git_commit(directory, test_commit1).expect("Error al commitear");
 
-        let result_after_commit = git_status(TEST_DIRECTORY);
-        let result_after_commit_ = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\tmain.rs\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n";
+        let result_after_commit = git_status(directory);
+        let result_after_commit_ = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\tnew file: \tmain.rs\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n";
         assert_eq!(result_after_commit, Ok(result_after_commit_.to_string()));
 
-        git_add(TEST_DIRECTORY, "main.rs").expect("Error al ejecutar git add");
+        git_add(directory, "main.rs").expect("Error al ejecutar git add");
 
         let test_commit2 = Commit::new(
             "prueba2".to_string(),
@@ -600,20 +599,20 @@ mod tests {
             "Valen".to_string(),
             "vlanzillotta@fi.uba.ar".to_string(),
         );
-        git_commit(TEST_DIRECTORY, test_commit2).expect("Error al commitear");
+        git_commit(directory, test_commit2).expect("Error al commitear");
 
-        let result_after_commit2 = git_status(TEST_DIRECTORY);
+        let result_after_commit2 = git_status(directory);
         let result_after_commit2_ = "On branch master\nYour branch is up to date with 'origin/master'.\n\nnothing to commit, working tree clean\n";
         assert_eq!(result_after_commit2, Ok(result_after_commit2_.to_string()));
 
-        let testfile = format!("{}/{}", TEST_DIRECTORY, "testfile.rs");
+        let testfile = format!("{}/{}", directory, "testfile.rs");
         fs::remove_file(testfile).expect("Error al intentar remover el archivo");
 
-        let result_after_remove = git_status(TEST_DIRECTORY);
+        let result_after_remove = git_status(directory);
         let result_after_remove_ = "On branch master\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git checkout -- <file>...\" to discard changes in working directory)\n\n\tdeleted:\t\ttestfile.rs\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n";
         assert_eq!(result_after_remove, Ok(result_after_remove_.to_string()));
 
-        fs::remove_dir_all(TEST_DIRECTORY).expect("Error al intentar remover el directorio");
+        fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
 
         assert!(result_before_add.is_ok());
         assert!(result_after_add.is_ok());
@@ -641,7 +640,7 @@ mod tests {
             .expect("Error al escribir en el archivo");
 
         let result = git_status(directory);
-        let expected_result = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\ttestfile.rs\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n";
+        let expected_result = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\tnew file: \ttestfile.rs\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n";
         assert_eq!(result, Ok(expected_result.to_string()));
 
         fs::remove_dir_all(directory).expect("Error al intentar remover el directorio");
