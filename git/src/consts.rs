@@ -25,7 +25,7 @@ pub const CONFIG_PATH_ARG_INDEX: usize = 1;
 pub const LOG_PATH_DEFAULT: &str = "./default.log";
 
 // Path por defecto del src
-pub const SRC_DEFAULT: &str = "Repository";
+pub const SRC_DEFAULT: &str = "client_root";
 
 // IP por default
 pub const IP_DEFAULT: &str = "127.0.0.1";
