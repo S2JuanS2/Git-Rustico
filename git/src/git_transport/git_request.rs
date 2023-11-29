@@ -3,7 +3,7 @@ use std::io::Read;
 use std::net::TcpStream;
 use std::path::Path;
 
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_request;
 use crate::util::errors::UtilError;
@@ -187,7 +187,8 @@ impl GitRequest {
 }
 
 fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError> {
-    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, Vec::new())?;
+    let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
+    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
     server.send_references(stream)?;
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
 

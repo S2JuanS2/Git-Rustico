@@ -27,6 +27,7 @@ pub struct GitServer {
 }
 
 impl GitServer {
+    /// Esta funcion es llamada del lado del CLIENTE.
     /// Crea una nueva estructura `GitServer` a partir del contenido proporcionado.
     ///
     /// # Descripción
@@ -117,6 +118,7 @@ impl GitServer {
         self.available_references.get(index)
     }
 
+    /// Esta funcion es llamada del lado del SERVIDOR.
     /// Crea una instancia de `GitServer` a partir de la ruta del repositorio y otros parámetros.
     ///
     /// Esta función crea una instancia de la estructura `GitServer` a partir de la ruta del
@@ -137,7 +139,7 @@ impl GitServer {
     pub fn create_from_path(
         path_repo: &str,
         version: u32,
-        capabilities: Vec<String>,
+        capabilities: &[String],
     ) -> Result<GitServer, UtilError> {
         let available_references = Reference::extract_references_from_git(path_repo)?;
         // GitServer::filter_capabilities(&mut capabilities, );
@@ -145,7 +147,7 @@ impl GitServer {
         Ok(GitServer {
             src_repo: path_repo.to_string(),
             version,
-            capabilities,
+            capabilities: capabilities.to_vec(),
             shallow: Vec::new(),
             handle_references: HandleReferences::new_from_references(&available_references),
             available_references,
@@ -164,10 +166,18 @@ impl GitServer {
 
         // Send references
         // HEAD lo inserte 1ero en el vector
-        for reference in &self.available_references {
+        // Primera refer
+        let mut firts_references = format!("{} {}\n", self.available_references[0].get_hash(), self.available_references[0].get_ref_path());
+        if !self.capabilities.is_empty()
+        {
+            firts_references.push_str(&format!(" {}\n", self.capabilities.join(" ")));
+            let firts_references = pkt_line::add_length_prefix(&firts_references, firts_references.len());
+            send_message(writer, &firts_references, UtilError::ReferencesObtaining)?;
+        }
+
+        for reference in &self.available_references[1..] {
             let reference = format!("{} {}\n", reference.get_hash(), reference.get_ref_path());
             let reference = pkt_line::add_length_prefix(&reference, reference.len());
-            // println!("Sending reference: {}", reference);
             send_message(writer, &reference, UtilError::ReferencesObtaining)?;
         }
 

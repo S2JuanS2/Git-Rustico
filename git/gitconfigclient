@@ -4,3 +4,4 @@ path_log=./client.log
 ip=127.0.0.1
 port=9418
 src=./client_root/Repo
+src=client_root/

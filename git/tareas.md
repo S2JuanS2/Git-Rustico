@@ -17,6 +17,8 @@
 - No acepto solicitudes have
 - En negociacion no permito que el server me de sus capacibilites
 
+# Fetch 
+1) Eliminar el HEAD del config
 
 # Fetch 
 1) Que pasa si mis commits son:
