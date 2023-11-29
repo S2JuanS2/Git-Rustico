@@ -1,3 +1,10 @@
+
+/// Estructura que almacena información sobre una referencia en un repositorio Git.
+/// Miembros:
+/// - `remote_commit`: Commit remoto al que apunta la referencia.
+/// - `local_commit`: Commit local al que apunta la referencia (puede ser `None`).
+/// - `confirmed`: Indica si el commit local ha sido verificado o confirmado.
+/// 
 #[derive(Debug)]
 pub struct ReferenceInformation {
     remote_commit: String,
