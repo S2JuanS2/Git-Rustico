@@ -19,7 +19,12 @@
 
 
 # Fetch 
-1) 
-Tarea: get_branches y get_local_references(Juan) deben de devolver un vector de References
-Motivo: Que pasa si tenemos el mismo nombre de branch de remoto y heads
-Pensarlo ...
+1) Que pasa si mis commits son:
+hash_1 -> mas antiguo
+hash_2
+hash_3
+hash_4
+hash_5-> mas nuevo
+Y mi local esta en el hash_3 y hace un commit y tiene el hash_6
+Y mi remoto tiene el hash_5
+El local le dira que tiene el hash_6 y el remoto no sabra nada
