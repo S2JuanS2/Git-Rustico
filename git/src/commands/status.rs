@@ -217,12 +217,12 @@ fn branch_with_untracked_files(
     if !untracked_files_list.is_empty() {
         for file in untracked_files_list {
             let file_path = &file.0[directory.len() + 1..];
-            formatted_result.push_str(&format!("\n\t{}\n", file_path));
+            formatted_result.push_str(&format!("\n\tnew file: \t{}", file_path));
         }
     }
     if files_not_commited_list.is_empty() {
         formatted_result.push_str(
-            "\nnothing added to commit but untracked files present (use \"git add\" to track)\n",
+            "\n\nnothing added to commit but untracked files present (use \"git add\" to track)\n",
         );
     }
 }
@@ -232,11 +232,11 @@ fn branch_with_untracked_files(
 /// 'formatted_result': string con el resultado del status formateado.
 /// 'files_not_commited_list': vector con los nombres de los archivos que estan en el staging area y se van a incluir en el proximo commit.
 fn branch_missing_commits(formatted_result: &mut String, files_not_commited_list: &Vec<String>) {
-    formatted_result.push_str("\nChanges to be committed:\n");
-    formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n");
+    formatted_result.push_str("\n\nChanges to be committed:\n");
+    formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n\n");
 
     for file in files_not_commited_list {
-        formatted_result.push_str(&format!("\tmodified:   {}\n", file));
+        formatted_result.push_str(&format!("\tmodified:\t{}\n", file));
     }
 }
 
