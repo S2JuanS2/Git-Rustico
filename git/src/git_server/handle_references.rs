@@ -65,7 +65,7 @@ impl HandleReferences {
         println!("Confirming local references");
         println!("Local commits: {:?}", local_commits);
         println!("Self: {:?}", self);
-        for (_, value) in &mut self.references {
+        for value in self.references.values_mut() {
             if let Some(local_commit) = value.get_local_commit() {
                 if local_commits.contains(&local_commit.to_string()) {
                     value.confirm_local_commit();

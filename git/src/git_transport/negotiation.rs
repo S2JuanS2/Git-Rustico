@@ -525,11 +525,10 @@ pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, _git_s
     let mut message = format!("want {}", references.get_hash());
     // let capabilities = git_server.get_capabilities();
     // if capabilities.len() > 0 {
-        message.push_str(" ");
+        message.push(' ');
         // message.push_str(&capabilities.join(" "));
-        message.push_str("multi_ack"); // CHANGE - No debe estar hardcodeado
+    message.push_str("multi_ack\n"); // CHANGE - No debe estar hardcodeado
     // }
-    message.push_str("\n");
     message = pkt_line::add_length_prefix(&message, message.len());
     println!("message: {}", message);
     send_message(writer, &message, UtilError::UploadRequest)
