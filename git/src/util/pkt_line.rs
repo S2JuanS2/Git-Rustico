@@ -50,8 +50,6 @@ pub fn read(stream: &mut dyn Read) -> Result<Vec<Vec<u8>>, UtilError> {
                     return Ok(lines);
                 }
 
-                println!("line --> {:?}", line);
-                println!("line string --> {:?}", String::from_utf8_lossy(&line));
                 lines.push(line);
             }
             Err(err) => return Err(err),

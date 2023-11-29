@@ -42,7 +42,6 @@ pub fn upload_request_type(
     for refs in refs {
         let message = format!("{} {}\n", type_req, refs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
-        print!("type: {} - message: {}", type_req, message);
         send_message(socket, &message, UtilError::UploadRequest)?;
     }
     send_flush(socket, UtilError::UploadRequestFlush)?;
@@ -519,7 +518,6 @@ pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_se
         message.push('\n');
     }
     message = pkt_line::add_length_prefix(&message, message.len());
-    println!("message: {}", message);
     send_message(writer, &message, UtilError::UploadRequest)
 }
 

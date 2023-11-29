@@ -85,14 +85,13 @@ pub fn git_fetch_all(
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
     // Packfile Data
-    let last_ack = read_pkt_line(socket)?;
-    println!("last_ack: {}", String::from_utf8_lossy(&last_ack));
+    let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
     let content = receive_packfile(socket)?;
-    for c in &content
-    {
-        println!("ObjectEntry: {:?} --- Content: {:?}", c.0, c.1);
-        // println!("")
-    }
+    // for c in &content
+    // {
+    //     println!("ObjectEntry: {:?} --- Content: {:?}", c.0, c.1);
+    //     // println!("")
+    // }
     if save_objects(content, repo_local).is_err() {
         return Err(CommandsError::RepositoryNotInitialized);
     };
