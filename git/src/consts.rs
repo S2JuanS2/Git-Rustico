@@ -96,7 +96,7 @@ pub const HAVE: &str = "have";
 
 pub const WANT: &str = "want";
 
-pub const CAPABILITIES_SERVER: [&str; 0] = [];
+pub const CAPABILITIES_FETCH: [&str; 1] = ["multi_ack"];
 
 // Directorios
 pub const GIT_DIR: &str = ".git";

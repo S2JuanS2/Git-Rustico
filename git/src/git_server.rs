@@ -1,4 +1,8 @@
+pub mod handle_references;
+pub mod reference_information;
+
 use std::io::Write;
+
 
 use crate::{
     consts::VERSION_DEFAULT,
@@ -10,7 +14,7 @@ use crate::{
     },
 };
 
-// use super::errors::UtilError;
+use crate::git_server::handle_references::HandleReferences;
 
 #[derive(Debug)]
 pub struct GitServer {
@@ -18,8 +22,8 @@ pub struct GitServer {
     pub version: u32,
     pub capabilities: Vec<String>,
     pub shallow: Vec<String>,
-    pub references: Vec<Reference>,
-    pub client_references: Vec<String>,
+    pub available_references: Vec<Reference>,
+    handle_references: HandleReferences, // No tendra el Head
 }
 
 impl GitServer {
@@ -37,9 +41,9 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    pub fn new(content: &Vec<Vec<u8>>, src_repo: &str) -> Result<GitServer, UtilError> {
+    pub fn new(content: &Vec<Vec<u8>>, src_repo: &str, my_capabilities: &Vec<String>) -> Result<GitServer, UtilError> {
         let classified = AdvertisedRefLine::classify_vec(content)?;
-        GitServer::from_classified(classified, src_repo)
+        GitServer::from_classified(classified, src_repo, my_capabilities)
     }
 
     /// Construye una estructura `GitServer` a partir de líneas de referencia clasificadas.
@@ -56,11 +60,11 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    fn from_classified(classified: Vec<AdvertisedRefLine>, src_repo: &str) -> Result<GitServer, UtilError> {
+    fn from_classified(classified: Vec<AdvertisedRefLine>, src_repo: &str, my_capabilities: &Vec<String>) -> Result<GitServer, UtilError> {
         let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
-        let mut references: Vec<Reference> = Vec::new();
+        let mut available_references: Vec<Reference> = Vec::new();
 
         for line in classified {
             match line {
@@ -68,18 +72,19 @@ impl GitServer {
                 AdvertisedRefLine::Capabilities(c) => capabilities = c,
                 AdvertisedRefLine::Shallow { obj_id } => shallow.push(obj_id),
                 AdvertisedRefLine::Ref { obj_id, ref_name } => {
-                    references.push(Reference::new(obj_id, ref_name)?)
+                    available_references.push(Reference::new(&obj_id, &ref_name)?)
                 }
             }
         }
-
+        
+        GitServer::filter_capabilities(&mut capabilities, my_capabilities)?;
         Ok(GitServer {
             src_repo: src_repo.to_string(),
             version,
             capabilities,
             shallow,
-            references,
-            client_references: Vec::new(),
+            handle_references: HandleReferences::new_from_references(&available_references),
+            available_references,
         })
     }
 
@@ -92,7 +97,7 @@ impl GitServer {
     /// Devuelve una referencia al vector que contiene las referencias disponibles.
     ///
     pub fn get_references(&self) -> &Vec<Reference> {
-        &self.references
+        &self.available_references
     }
 
     /// Obtiene una referencia a una referencia específica en la lista por su índice.
@@ -109,7 +114,7 @@ impl GitServer {
     /// de lo contrario, devuelve `None`.
     ///
     pub fn get_reference(&self, index: usize) -> Option<&Reference> {
-        self.references.get(index)
+        self.available_references.get(index)
     }
 
     /// Crea una instancia de `GitServer` a partir de la ruta del repositorio y otros parámetros.
@@ -134,14 +139,16 @@ impl GitServer {
         version: u32,
         capabilities: Vec<String>,
     ) -> Result<GitServer, UtilError> {
-        let references = Reference::extract_references_from_git(path_repo)?;
+        let available_references = Reference::extract_references_from_git(path_repo)?;
+        // GitServer::filter_capabilities(&mut capabilities, );
+        
         Ok(GitServer {
             src_repo: path_repo.to_string(),
             version,
             capabilities,
             shallow: Vec::new(),
-            references,
-            client_references: Vec::new(),
+            handle_references: HandleReferences::new_from_references(&available_references),
+            available_references,
         })
     }
 
@@ -157,7 +164,7 @@ impl GitServer {
 
         // Send references
         // HEAD lo inserte 1ero en el vector
-        for reference in &self.references {
+        for reference in &self.available_references {
             let reference = format!("{} {}\n", reference.get_hash(), reference.get_ref_path());
             let reference = pkt_line::add_length_prefix(&reference, reference.len());
             // println!("Sending reference: {}", reference);
@@ -188,32 +195,113 @@ impl GitServer {
     ///
     pub fn update_data(&mut self, capabilities: Vec<String>, references: Vec<String>) {
         retain_common_values(&mut self.capabilities, &capabilities);
-        filter_by_hash(&mut self.references, &references);
+        filter_by_hash(&mut self.available_references, &references);
     }
 
-    /// Guarda las referencias del cliente en el `GitServer`.
-    ///
-    /// Esta función toma un vector de hash de objetos y los guarda en el campo `client_references`
-    /// del `GitServer`. Estas referencias del cliente representan los objetos que el cliente tiene
-    /// localmente.
+    /// Actualiza los commits locales en las referencias del servidor.
     ///
     /// # Argumentos
     ///
-    /// * `obj_hash` - Vector que contiene los hash de objetos del cliente a ser guardados.
+    /// * `references`: Vector de referencias que se utilizará para actualizar los commits locales.
     ///
-    pub fn save_references_client(&mut self, obj_hash: Vec<String>) {
-        self.client_references = obj_hash;
+    pub fn update_local_references(&mut self, references: &Vec<Reference>) {
+        self.handle_references.update_local_commit(references);
     }
 
-    /// Filtra las referencias del cliente manteniendo solo las que también están en el vector dado.
+    /// Obtiene las referencias remotas del servidor Git.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `Result` que puede contener un vector de referencias (`Ok(Vec<Reference>)`)
+    /// o un error de utilidad (`Err(UtilError)`).
+    ///
+    pub fn get_remote_references(&self) -> Result<Vec<Reference>, UtilError> {
+        self.handle_references.get_remote_references()
+    }
+
+    /// Obtiene las referencias locales almacenadas en el servidor Git.
+    ///
+    /// Itera sobre las referencias almacenadas internamente y crea un vector de
+    /// referencias con la información local. Solo incluye las referencias que tienen
+    /// un commit local definido. Retorna un `Result` que contiene el vector
+    /// de referencias locales o un error de utilidad en caso de problemas.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `Result` que puede contener un vector de referencias (`Ok(Vec<Reference>)`)
+    /// o un error de utilidad (`Err(UtilError)`).
+    ///
+    pub fn get_local_references(&self) -> Result<Vec<Reference>, UtilError> {
+        self.handle_references.get_local_references()
+    }
+
+    /// Obtiene las capacidades del servidor Git.
+    ///
+    /// Retorna una referencia al vector de capacidades del servidor. Esta función
+    /// proporciona acceso inmutable a las capacidades del servidor Git.
+    ///
+    pub fn get_capabilities(&self) -> &Vec<String> {
+        &self.capabilities
+    }
+
+    /// Confirma las referencias locales del servidor Git en base a una lista de commits locales.
+    ///
+    /// Itera sobre las referencias almacenadas internamente y, si el commit local de
+    /// la referencia está presente en la lista de commits locales proporcionada,
+    /// confirma la referencia localmente.
     ///
     /// # Argumentos
     ///
-    /// * `references` - Vector de referencias a ser utilizado como filtro.
+    /// * `local_commits`: Vector de commits locales que se utilizará para confirmar referencias.
     ///
-    pub fn filter_client_reference(&mut self, references: &Vec<String>) {
-        retain_common_values(&mut self.client_references, references);
+    pub fn confirm_local_references(&mut self, local_commits: &Vec<String>) {
+        self.handle_references.confirm_local_references(local_commits);
     }
+
+    /// Obtiene las referencias del servidor Git que necesitan ser actualizadas localmente.
+    ///
+    /// Itera sobre las referencias almacenadas internamente y crea un vector de
+    /// referencias con la información remota de las referencias que han sido
+    /// actualizadas localmente. Una referencia se considera actualizada si su
+    /// commit local difiere del commit remoto. Retorna un `Result` que contiene el
+    /// vector de referencias actualizadas o un error de utilidad en caso de problemas.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `Result` que puede contener un vector de referencias (`Ok(Vec<Reference>)`)
+    /// o un error de utilidad (`Err(UtilError)`).
+    ///
+    pub fn get_references_for_updating(&self) -> Result<Vec<Reference>, UtilError> {
+        self.handle_references.get_references_for_updating()
+    }
+
+    /// Filtra las capacidades del servidor manteniendo solo aquellas que coinciden con las capacidades del cliente.
+    ///
+    /// # Argumentos
+    ///
+    /// * `capabilities`: Vector mutable que contiene las capacidades del servidor.
+    /// * `my_capabilities`: Vector de capacidades del cliente.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `Result` que contiene un mensaje de éxito (`Ok(())`) si las capacidades fueron filtradas
+    /// exitosamente, o un error de utilidad (`Err(UtilError::ServerCapabilitiesNotSupported)`) si
+    /// las capacidades del servidor no son compatibles con las del cliente.
+    ///
+    fn filter_capabilities(capabilities: &mut Vec<String>, my_capabilities: &Vec<String>) -> Result<(), UtilError>{
+        retain_common_values(capabilities, my_capabilities);
+        if capabilities.len() == my_capabilities.len() {
+            Ok(())
+        } else {
+            Err(UtilError::ServerCapabilitiesNotSupported)
+        }
+    }
+    /// Verifica si el servidor Git soporta la capacidad de "multi_ack".
+    /// 
+    pub fn is_multiack(&self) -> bool {
+        self.capabilities.contains(&"multi_ack".to_string())
+    }
+    
 }
 
 /// Filtra las referencias basándose en un conjunto de hash de referencias.
@@ -264,10 +352,10 @@ mod tests {
     #[test]
     fn filter_by_hash_should_retain_common_references() {
         // Crear algunas referencias para el ejemplo.
-        let reference1 = Reference::new("hash1".to_string(), "HEAD".to_string()).unwrap();
-        let reference2 = Reference::new("hash2".to_string(), "refs/tags/v1".to_string()).unwrap();
+        let reference1 = Reference::new("hash1", "HEAD").unwrap();
+        let reference2 = Reference::new("hash2", "refs/tags/v1").unwrap();
         let reference3 =
-            Reference::new("hash3".to_string(), "refs/heads/main".to_string()).unwrap();
+            Reference::new("hash3", "refs/heads/main").unwrap();
 
         // Crear un vector de referencias inicial.
         let mut references = vec![reference1.clone(), reference2.clone(), reference3.clone()];
@@ -282,9 +370,9 @@ mod tests {
     #[test]
     fn filter_by_hash_should_retain_nothing_if_no_common_references() {
         // Crear algunas referencias para el ejemplo.
-        let reference1 = Reference::new("hash1".to_string(), "HEAD".to_string()).unwrap();
-        let reference2 = Reference::new("hash2".to_string(), "HEAD".to_string()).unwrap();
-        let reference3 = Reference::new("hash3".to_string(), "HEAD".to_string()).unwrap();
+        let reference1 = Reference::new("hash1", "HEAD").unwrap();
+        let reference2 = Reference::new("hash2", "HEAD").unwrap();
+        let reference3 = Reference::new("hash3", "HEAD").unwrap();
 
         // Crear un vector de referencias inicial.
         let mut references = vec![reference1.clone(), reference2.clone(), reference3.clone()];

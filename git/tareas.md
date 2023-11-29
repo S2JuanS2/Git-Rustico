@@ -18,5 +18,18 @@
 - En negociacion no permito que el server me de sus capacibilites
 
 
-# Demo 
-- 
+# Fetch 
+1) Que pasa si mis commits son:
+hash_1 -> mas antiguo
+hash_2
+hash_3
+hash_4
+hash_5-> mas nuevo
+Y mi local esta en el hash_3 y hace un commit y tiene el hash_6
+Y mi remoto tiene el hash_5
+El local le dira que tiene el hash_6 y el remoto no sabra nada
+
+
+12
+35
+dc

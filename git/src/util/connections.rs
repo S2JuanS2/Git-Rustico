@@ -57,9 +57,10 @@ pub fn start_client(address: &str) -> Result<TcpStream, UtilError> {
 /// produjo un error (Err) de UtilError.
 pub fn packfile_negotiation(
     socket: &mut TcpStream,
-    advertised: &GitServer,
+    git_server: &GitServer,
 ) -> Result<(), UtilError> {
-    upload_request_type(socket, advertised, WANT)?;
+    let refs = git_server.get_references();
+    upload_request_type(socket, refs, WANT)?;
     send_done(socket, UtilError::UploadRequestDone)?;
     receive_nak(socket)?;
     Ok(())

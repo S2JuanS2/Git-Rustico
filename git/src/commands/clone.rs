@@ -89,7 +89,7 @@ pub fn git_clone(
     let message = GitRequest::generate_request_string(RequestCommand::UploadPack, remote_repo, ip, port);
 
     // Reference Discovery
-    let git_server = reference_discovery(socket, message, remote_repo)?;
+    let git_server = reference_discovery(socket, message, remote_repo, &Vec::new())?;
 
     // Packfile Negotiation
     packfile_negotiation(socket, &git_server)?;
