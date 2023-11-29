@@ -28,3 +28,8 @@ hash_5-> mas nuevo
 Y mi local esta en el hash_3 y hace un commit y tiene el hash_6
 Y mi remoto tiene el hash_5
 El local le dira que tiene el hash_6 y el remoto no sabra nada
+
+
+12
+35
+dc
