@@ -198,30 +198,96 @@ impl GitServer {
         filter_by_hash(&mut self.available_references, &references);
     }
 
+    /// Actualiza los commits locales en las referencias del servidor.
+    ///
+    /// # Argumentos
+    ///
+    /// * `references`: Vector de referencias que se utilizará para actualizar los commits locales.
+    ///
     pub fn update_local_references(&mut self, references: &Vec<Reference>) {
         self.handle_references.update_local_commit(references);
     }
 
+    /// Obtiene las referencias remotas del servidor Git.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `Result` que puede contener un vector de referencias (`Ok(Vec<Reference>)`)
+    /// o un error de utilidad (`Err(UtilError)`).
+    ///
     pub fn get_remote_references(&self) -> Result<Vec<Reference>, UtilError> {
         self.handle_references.get_remote_references()
     }
 
+    /// Obtiene las referencias locales almacenadas en el servidor Git.
+    ///
+    /// Itera sobre las referencias almacenadas internamente y crea un vector de
+    /// referencias con la información local. Solo incluye las referencias que tienen
+    /// un commit local definido. Retorna un `Result` que contiene el vector
+    /// de referencias locales o un error de utilidad en caso de problemas.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `Result` que puede contener un vector de referencias (`Ok(Vec<Reference>)`)
+    /// o un error de utilidad (`Err(UtilError)`).
+    ///
     pub fn get_local_references(&self) -> Result<Vec<Reference>, UtilError> {
         self.handle_references.get_local_references()
     }
 
+    /// Obtiene las capacidades del servidor Git.
+    ///
+    /// Retorna una referencia al vector de capacidades del servidor. Esta función
+    /// proporciona acceso inmutable a las capacidades del servidor Git.
+    ///
     pub fn get_capabilities(&self) -> &Vec<String> {
         &self.capabilities
     }
 
+    /// Confirma las referencias locales del servidor Git en base a una lista de commits locales.
+    ///
+    /// Itera sobre las referencias almacenadas internamente y, si el commit local de
+    /// la referencia está presente en la lista de commits locales proporcionada,
+    /// confirma la referencia localmente.
+    ///
+    /// # Argumentos
+    ///
+    /// * `local_commits`: Vector de commits locales que se utilizará para confirmar referencias.
+    ///
     pub fn confirm_local_references(&mut self, local_commits: &Vec<String>) {
         self.handle_references.confirm_local_references(local_commits);
     }
 
+    /// Obtiene las referencias del servidor Git que necesitan ser actualizadas localmente.
+    ///
+    /// Itera sobre las referencias almacenadas internamente y crea un vector de
+    /// referencias con la información remota de las referencias que han sido
+    /// actualizadas localmente. Una referencia se considera actualizada si su
+    /// commit local difiere del commit remoto. Retorna un `Result` que contiene el
+    /// vector de referencias actualizadas o un error de utilidad en caso de problemas.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `Result` que puede contener un vector de referencias (`Ok(Vec<Reference>)`)
+    /// o un error de utilidad (`Err(UtilError)`).
+    ///
     pub fn get_references_for_updating(&self) -> Result<Vec<Reference>, UtilError> {
         self.handle_references.get_references_for_updating()
     }
 
+    /// Filtra las capacidades del servidor manteniendo solo aquellas que coinciden con las capacidades del cliente.
+    ///
+    /// # Argumentos
+    ///
+    /// * `capabilities`: Vector mutable que contiene las capacidades del servidor.
+    /// * `my_capabilities`: Vector de capacidades del cliente.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `Result` que contiene un mensaje de éxito (`Ok(())`) si las capacidades fueron filtradas
+    /// exitosamente, o un error de utilidad (`Err(UtilError::ServerCapabilitiesNotSupported)`) si
+    /// las capacidades del servidor no son compatibles con las del cliente.
+    ///
     fn filter_capabilities(capabilities: &mut Vec<String>, my_capabilities: &Vec<String>) -> Result<(), UtilError>{
         retain_common_values(capabilities, my_capabilities);
         if capabilities.len() == my_capabilities.len() {
@@ -234,30 +300,6 @@ impl GitServer {
     pub fn is_multiack(&self) -> bool {
         self.capabilities.contains(&"multi_ack".to_string())
     }
-    
-    // /// Guarda las referencias del cliente en el `GitServer`.
-    // ///
-    // /// Esta función toma un vector de hash de objetos y los guarda en el campo `handle_references`
-    // /// del `GitServer`. Estas referencias del cliente representan los objetos que el cliente tiene
-    // /// localmente.
-    // ///
-    // /// # Argumentos
-    // ///
-    // /// * `obj_hash` - Vector que contiene los hash de objetos del cliente a ser guardados.
-    // ///
-    // // pub fn save_references_client(&mut self, obj_hash: Vec<String>) {
-    // //     self.handle_references = obj_hash;
-    // // }
-
-    // /// Filtra las referencias del cliente manteniendo solo las que también están en el vector dado.
-    // ///
-    // /// # Argumentos
-    // ///
-    // /// * `references` - Vector de referencias a ser utilizado como filtro.
-    // ///
-    // pub fn filter_client_reference(&mut self, references: &Vec<String>) {
-    //     retain_common_values(&mut self.handle_references, references);
-    // }
     
 }
 
