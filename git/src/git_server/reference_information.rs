@@ -52,3 +52,45 @@ impl ReferenceInformation {
         self.confirmed = true;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_local_commit() {
+        let mut reference = ReferenceInformation::new("abc123", Some("def456".to_string()));
+        reference.update_local_commit(Some("ghi789".to_string()));
+
+        assert_eq!(reference.get_local_commit(), Some("ghi789"));
+    }
+
+    #[test]
+    fn test_get_remote_commit() {
+        let reference = ReferenceInformation::new("abc123", Some("def456".to_string()));
+
+        assert_eq!(reference.get_remote_commit(), "abc123");
+    }
+
+    #[test]
+    fn test_get_local_commit() {
+        let reference = ReferenceInformation::new("abc123", Some("def456".to_string()));
+
+        assert_eq!(reference.get_local_commit(), Some("def456"));
+    }
+
+    #[test]
+    fn test_get_local_commit_none() {
+        let reference = ReferenceInformation::new("abc123", None);
+
+        assert_eq!(reference.get_local_commit(), None);
+    }
+
+    #[test]
+    fn test_confirm_local_commit() {
+        let mut reference = ReferenceInformation::new("abc123", Some("def456".to_string()));
+        reference.confirm_local_commit();
+
+        assert_eq!(reference.confirmed, true);
+    }
+}
