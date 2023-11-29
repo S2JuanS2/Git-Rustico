@@ -33,3 +33,6 @@ El local le dira que tiene el hash_6 y el remoto no sabra nada
 12
 35
 dc
+
+2) Dado 2 commits, hash1(remoto) hash2(local)...
+que el una funcion me diga si el commit hash2 esta incluido en el hash2
