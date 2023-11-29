@@ -353,37 +353,19 @@ pub fn packfile_negotiation_partial(
     server: &mut GitServer,
     path_repo: &str,
 ) -> Result<(), UtilError> {
-    println!("AFTER Git server: {:?}\n\n", server);
-    // [TODO N#1]
-    // let sv_references = get_branches(server)?;
-    // println!("sv_references: {:?}", sv_references);
-    println!("\nSERVER: {:?}\n", server);
     let local_references = get_local_references(path_repo)?;
-    println!("local_references Juan: {:?}", local_references);
     server.update_local_references(&local_references);
-    // Brayan:
-    // server.filtrar(reference_que_tenemos)
     let remote_references = server.get_remote_references()?;
-    println!("remote_references Brayan: {:?}", remote_references);
     send_firts_request(stream, &remote_references[0], server)?;
     upload_request_type(stream, &remote_references[1..].to_vec(), "want")?;
 
-    //[TODO N#2]
-    // let _commit_branches = get_commits(sv_references, local_references)?;
     let local_references = server.get_local_references()?;
-    println!("local_references Brayan: {:?}", local_references);
     upload_request_type(stream, &local_references, HAVE)?;
-    println!("Envie el have");
 
     let ack_references = recive_acknowledgments_multi_ack(stream, &server)?;
-    println!("ack_references: {:?}", ack_references);
-    // server.filter_client_reference(&ack_references); // UPDATE
     server.confirm_local_references(&ack_references);
 
-    println!("Before Git server: {:?}\n\n", server);
-
     send_done(stream, UtilError::UploadRequestDone)?;
-    println!("\nSERVER: {:?}\n", server);
     Ok(())
 }
 
