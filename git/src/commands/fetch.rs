@@ -90,6 +90,7 @@ pub fn git_fetch_all(
     for c in &content
     {
         println!("ObjectEntry: {:?} --- Content: {:?}", c.0, c.1);
+        // println!("")
     }
     if save_objects(content, repo_local).is_err() {
         return Err(CommandsError::RepositoryNotInitialized);
@@ -104,7 +105,7 @@ pub fn git_fetch_all(
     // let refs = get_branches(&server)?;
     // save_references(&refs, repo_local)?;
 
-    // // Crear archivo FETCH_HEAD
+    // Crear archivo FETCH_HEAD
     // let fetch_head = FetchHead::new(refs, repo_remoto)?;
     // fetch_head.write(repo_local)?;
 
