@@ -42,7 +42,7 @@ impl HandleReferences {
         let mut references: Vec<Reference> = Vec::new();
 
         for (path, value) in &self.references {
-            let reference = Reference::new(value.get_remote_commit().to_string(), path.to_string())?;
+            let reference = Reference::new(value.get_remote_commit(), path)?;
             references.push(reference);
         }
         Ok(references)
@@ -53,7 +53,7 @@ impl HandleReferences {
 
         for (path, value) in &self.references {
             if let Some(local_commit) = &value.get_local_commit() {
-                let reference = Reference::new(local_commit.to_string(), path.to_string())?;
+                let reference = Reference::new(local_commit, path)?;
                 references.push(reference);
             }
         }
@@ -73,4 +73,21 @@ impl HandleReferences {
             }
         }
     }
+
+    pub fn get_updated_references(&self) -> Result<Vec<Reference>, UtilError> {
+        let mut references: Vec<Reference> = Vec::new();
+
+        for (path, value) in &self.references {
+            if let Some(local_commit) = value.get_local_commit() {
+                if local_commit == value.get_remote_commit() {
+                    continue;
+                }
+            }
+            let reference = Reference::new(value.get_remote_commit(), path)?;
+            references.push(reference);
+        }
+        Ok(references)
+    }
+
+
 }

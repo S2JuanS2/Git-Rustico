@@ -33,7 +33,9 @@ pub struct Reference {
 }
 
 impl Reference {
-    pub fn new(hash: String, ref_path: String) -> Result<Reference, UtilError> {
+    pub fn new(hash: &str, ref_path: &str) -> Result<Reference, UtilError> {
+        let hash = hash.to_string();
+        let ref_path = ref_path.to_string();
         if ref_path == "HEAD" {
             Ok(Reference {
                 hash,
@@ -237,7 +239,7 @@ pub fn get_ref_name(directory: &str) -> Result<Reference, UtilError> {
     let file_current_branch = open_file(&branch_current_path).expect("Error");
     let hash_current_branch = read_file_string(file_current_branch).expect("Error");
 
-    Reference::new(hash_current_branch, ref_path)
+    Reference::new(&hash_current_branch, &ref_path)
 }
 
 /// Realiza un proceso de descubrimiento de referencias (refs) enviando un mensaje al servidor
@@ -286,7 +288,7 @@ fn extract_references_from_path(
         let path = Path::new(&new_root).join(&name);
         if let Ok(hash) = fs::read_to_string(path) {
             let name_ref = format!("{}/{}", signature, name);
-            let refs = Reference::new(hash.trim().to_string(), name_ref)?;
+            let refs = Reference::new(hash.trim(), &name_ref)?;
             println!("Refs: {:?}", refs);
             references.push(refs);
         }
@@ -405,7 +407,7 @@ fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference
         name_head.remove(0);
     }
     let hash_head = extract_hash_head_from_path(refs, &name_head)?;
-    Reference::new(hash_head, HEAD.to_string())
+    Reference::new(&hash_head, HEAD)
 }
 
 #[cfg(test)]
@@ -414,7 +416,7 @@ mod tests {
 
     #[test]
     fn test_create_head_reference() {
-        let result = Reference::new("some_hash".to_string(), "HEAD".to_string());
+        let result = Reference::new("some_hash", "HEAD");
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
@@ -425,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_create_tag_reference() {
-        let result = Reference::new("some_hash".to_string(), "refs/tags/version-1.0".to_string());
+        let result = Reference::new("some_hash", "refs/tags/version-1.0");
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
@@ -436,7 +438,7 @@ mod tests {
 
     #[test]
     fn test_create_branch_reference() {
-        let result = Reference::new("some_hash".to_string(), "refs/heads/main".to_string());
+        let result = Reference::new("some_hash", "refs/heads/main");
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
@@ -448,8 +450,8 @@ mod tests {
     #[test]
     fn test_create_remote_reference() {
         let result = Reference::new(
-            "some_hash".to_string(),
-            "refs/remotes/origin/main".to_string(),
+            "some_hash",
+            "refs/remotes/origin/main",
         );
         assert!(result.is_ok());
 
@@ -464,7 +466,7 @@ mod tests {
 
     #[test]
     fn test_create_invalid_reference() {
-        let result = Reference::new("some_hash".to_string(), "invalid_reference".to_string());
+        let result = Reference::new("some_hash", "invalid_reference");
         assert!(result.is_err());
     }
 

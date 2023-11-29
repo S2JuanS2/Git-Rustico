@@ -71,7 +71,7 @@ impl GitServer {
                 AdvertisedRefLine::Capabilities(c) => capabilities = c,
                 AdvertisedRefLine::Shallow { obj_id } => shallow.push(obj_id),
                 AdvertisedRefLine::Ref { obj_id, ref_name } => {
-                    available_references.push(Reference::new(obj_id, ref_name)?)
+                    available_references.push(Reference::new(&obj_id, &ref_name)?)
                 }
             }
         }
@@ -214,6 +214,9 @@ impl GitServer {
         self.handle_references.confirm_local_references(local_commits);
     }
 
+    pub fn get_updated_references(&self) -> Result<Vec<Reference>, UtilError> {
+        self.handle_references.get_updated_references()
+    }
     // /// Guarda las referencias del cliente en el `GitServer`.
     // ///
     // /// Esta función toma un vector de hash de objetos y los guarda en el campo `handle_references`
@@ -288,10 +291,10 @@ mod tests {
     #[test]
     fn filter_by_hash_should_retain_common_references() {
         // Crear algunas referencias para el ejemplo.
-        let reference1 = Reference::new("hash1".to_string(), "HEAD".to_string()).unwrap();
-        let reference2 = Reference::new("hash2".to_string(), "refs/tags/v1".to_string()).unwrap();
+        let reference1 = Reference::new("hash1", "HEAD").unwrap();
+        let reference2 = Reference::new("hash2", "refs/tags/v1").unwrap();
         let reference3 =
-            Reference::new("hash3".to_string(), "refs/heads/main".to_string()).unwrap();
+            Reference::new("hash3", "refs/heads/main").unwrap();
 
         // Crear un vector de referencias inicial.
         let mut references = vec![reference1.clone(), reference2.clone(), reference3.clone()];
@@ -306,9 +309,9 @@ mod tests {
     #[test]
     fn filter_by_hash_should_retain_nothing_if_no_common_references() {
         // Crear algunas referencias para el ejemplo.
-        let reference1 = Reference::new("hash1".to_string(), "HEAD".to_string()).unwrap();
-        let reference2 = Reference::new("hash2".to_string(), "HEAD".to_string()).unwrap();
-        let reference3 = Reference::new("hash3".to_string(), "HEAD".to_string()).unwrap();
+        let reference1 = Reference::new("hash1", "HEAD").unwrap();
+        let reference2 = Reference::new("hash2", "HEAD").unwrap();
+        let reference3 = Reference::new("hash3", "HEAD").unwrap();
 
         // Crear un vector de referencias inicial.
         let mut references = vec![reference1.clone(), reference2.clone(), reference3.clone()];

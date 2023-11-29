@@ -1,5 +1,7 @@
 use std::{io::{self, Write, BufRead}, fs, fmt};
 
+use crate::git_transport::references::Reference;
+
 use super::errors::CommandsError;
 
 
@@ -119,11 +121,13 @@ impl FetchHead {
     /// Retorna un error si hay algún problema al crear las entradas FETCH_HEAD.
     /// 
     pub fn new(
-        references: Vec<(String, String)>,
+        references: &Vec<Reference>,
         remote_repo: &str
     ) -> Result<FetchHead, CommandsError> {
         let mut entries = Vec::new();
-        for (commit_hash, branch_name) in references {
+        for reference in references {
+            let commit_hash = reference.get_hash().to_string();
+            let branch_name = reference.get_name().to_string();
             let entry = FetchHeadEntry::new(commit_hash, branch_name, Label::Merge.to_string(), remote_repo.to_string());
             entries.push(entry?);
         }

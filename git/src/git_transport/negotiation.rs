@@ -1,19 +1,19 @@
 use crate::{
     consts::{HAVE, PKT_DONE, PKT_NAK, GIT_DIR, REFS_HEADS},
-    git_server::{GitServer, self},
+    git_server::GitServer,
     util::{
         connections::{received_message, send_flush, send_message, send_done},
         errors::UtilError,
         pkt_line,
         validation::is_valid_obj_id, files::{open_file, read_file_string},
-    }, commands::{branch::get_branch, fetch::get_branches},
+    }, commands::branch::get_branch,
 };
 use std::{
     io::{Read, Write},
     net::TcpStream,
 };
 
-use super::references::{Reference, self};
+use super::references::Reference;
 
 /// Envía mensajes de tipo de solicitud (`want` o `have`) al servidor para solicitar
 /// o confirmar referencias.
@@ -413,7 +413,7 @@ fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
             Ok(hash) => hash,
             Err(_) => return Err(UtilError::GetLocalReferences),
         };
-        let rfs = Reference::new(hash_branch.trim().to_string(), format!("refs/heads/{}", branch))?;
+        let rfs = Reference::new(hash_branch.trim(), &format!("refs/heads/{}", branch))?;
         result_branches.push(rfs);
     }
     Ok(result_branches)
@@ -520,7 +520,7 @@ pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError> {
     Ok(hash.to_string())
 }
 
-pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_server: &GitServer) -> Result<(), UtilError>
+pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, _git_server: &GitServer) -> Result<(), UtilError>
 {
     let mut message = format!("want {}", references.get_hash());
     // let capabilities = git_server.get_capabilities();
@@ -721,21 +721,5 @@ mod tests {
             process_ack_response(response),
             Err(UtilError::ExpectedStatusInAckResponse)
         );
-    }
-
-    #[test]
-    fn test_get_commit(){
-        let sv_references = vec![
-            ("branch1".to_string(), "commit_hash1".to_string()),
-            ("branch2".to_string(), "commit_hash2".to_string()),
-        ];
-        let local_references = vec![
-            ("branch1".to_string(), "commit_hash1".to_string()),
-            ("branch3".to_string(), "commit_hash3".to_string()),
-        ];
-        let result = get_commits(sv_references, local_references).expect("Error al obtener los commits");
-        for i in result {
-            assert_eq!("branch1",i.0);
-        }
     }
 }

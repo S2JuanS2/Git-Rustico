@@ -3,7 +3,7 @@ use crate::commands::fetch_head::FetchHead;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
-use crate::git_transport::references::reference_discovery;
+use crate::git_transport::references::{reference_discovery, Reference};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{receive_packfile, start_client};
@@ -105,10 +105,12 @@ pub fn git_fetch_all(
     // let refs = get_branches(&server)?;
     // save_references(&refs, repo_local)?;
 
+    let refs = server.get_updated_references()?;
+    // Guardo las referencias
+    save_references(&refs, repo_local)?;
     // Crear archivo FETCH_HEAD
-    // let fetch_head = FetchHead::new(refs, repo_remoto)?;
-    // fetch_head.write(repo_local)?;
-
+    let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+    fetch_head.write(repo_local)?;
 
     Ok("Sucessfully!".to_string())
 }
@@ -152,14 +154,17 @@ pub fn get_branches(server: &GitServer) -> Result<Vec<(String,String)>,CommandsE
 /// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
-fn save_references(refs: &Vec<(String, String)>, repo_path: &str) -> Result<(), CommandsError> {
+fn save_references(references: &Vec<Reference>, repo_path: &str) -> Result<(), CommandsError> {
+    
     let refs_dir_path = format!("{}/.git/refs/origin", repo_path);
 
     // Crea el directorio si no existe
     ensure_directory_clean(&refs_dir_path)?;
 
     // Escribe los hashes en archivos individuales
-    for (name, hash) in refs {
+    for reference in references {
+        let name = reference.get_name();
+        let hash = reference.get_hash();
         let file_path = format!("{}/{}", refs_dir_path, name);
         if fs::write(&file_path, hash).is_err() {
             return Err(CommandsError::RemotoNotInitialized);
