@@ -167,24 +167,7 @@ impl GitServer {
         // Send references
         // HEAD lo inserte 1ero en el vector
         // Primera refer
-        let mut firts_references = format!("{} {}", self.available_references[0].get_hash(), self.available_references[0].get_ref_path());
-        if !self.capabilities.is_empty()
-        {
-            println!("Tengo capacidades");
-            println!("Capabilities: {:?}", self.capabilities);
-            let mut len = firts_references.len();
-            firts_references.push('\0');
-            len += 1;
-            let capabilities = format!("{}\n", self.capabilities.join(" "));
-            len += capabilities.len();
-            firts_references.push_str(&capabilities);
-            let firts_references = pkt_line::add_length_prefix(&firts_references, len);
-            println!("Firts references: {:?}", firts_references); // Pensar en si debo agregar el \0
-            send_message(writer, &firts_references, UtilError::ReferencesObtaining)?;
-        } else {
-            firts_references.push('\n');
-            send_message(writer, &firts_references, UtilError::ReferencesObtaining)?;
-        }
+        self.send_first_reference(writer)?;
 
         for reference in &self.available_references[1..] {
             let reference = format!("{} {}\n", reference.get_hash(), reference.get_ref_path());
@@ -201,6 +184,26 @@ impl GitServer {
 
         send_flush(writer, UtilError::FlushNotSentDiscoveryReferences)?;
         Ok(())
+    }
+
+    fn send_first_reference(&self, writer: &mut dyn Write) -> Result<(), UtilError>
+    {
+        let mut firts_references = format!("{} {}", self.available_references[0].get_hash(), self.available_references[0].get_ref_path());
+        if !self.capabilities.is_empty()
+        {
+            let mut len = firts_references.len();
+            firts_references.push('\0');
+            len += 1;
+            let capabilities = format!("{}\n", self.capabilities.join(" "));
+            len += capabilities.len();
+            firts_references.push_str(&capabilities);
+            let firts_references = pkt_line::add_length_prefix(&firts_references, len);
+            send_message(writer, &firts_references, UtilError::ReferencesObtaining)
+        } else {
+            firts_references.push('\n');
+            let firts_references = pkt_line::add_length_prefix(&firts_references, firts_references.len());
+            send_message(writer, &firts_references, UtilError::ReferencesObtaining)
+        }
     }
 
     /// Actualiza los datos del `GitServer` con nuevas capacidades y referencias.

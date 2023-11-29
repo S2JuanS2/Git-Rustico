@@ -6,6 +6,7 @@ use std::path::Path;
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_request;
+use crate::git_transport::references::Reference;
 use crate::util::errors::UtilError;
 use crate::util::packfile::{send_packfile, send_packfile_witch_references_client};
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
@@ -191,26 +192,35 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
     let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
     println!("Server: {:?}", server);
     server.send_references(stream)?;
+    println!("Envie las referencias");
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
     println!("Capabilities: {:?}", capabilities);
     println!("Wanted Objects: {:?}", wanted_objects);
     println!("Had Objects: {:?}", had_objects);
 
     if !had_objects.is_empty() {
-        // // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
+        // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
 
-        // server.update_data(capabilities, wanted_objects);
-        // // [TODO]
-        // // Dado las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
-        // // Se deben filtrar las referencias que tiene el servidor
-        // // obj_hash = filtrar_referencias_que_tenemos(had_objects)
-        // let obj_hash: Vec<String> = Vec::new();
-        // sent_references_valid_client(stream, &obj_hash)?;
+        server.update_data(capabilities, wanted_objects);
+        // [TODO]
+        // Dado las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
+        // Se deben filtrar las referencias que tiene el servidor
+        // Me debes devolver un Vec<Reference> con las referencias que tenemos en comun
+        // Acordate que el repo esta en path_repo
+        // let valid_references = search_available_references(had_objects)
+        let local_references: Vec<Reference> = Vec::new();
+        // Confirmo las referencias del usuario que el servidor tiene disponibles
+        sent_references_valid_client(stream, &local_references)?;
+        // Actualizo las referencias disponibles del servidor
+        server.update_local_references(&local_references);
 
-        // receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
-        // send_acknowledge_last_reference(stream, &obj_hash)?;
-        // // server.save_references_client(obj_hash); // UPDATE
-        // send_packfile_witch_references_client(stream, &server, path_repo)?;
+        // Las confirmaciones terminan con recibiendo un done
+        receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
+
+        // Envio el ultimo ACK
+        send_acknowledge_last_reference(stream, &local_references)?;
+        // server.save_references_client(obj_hash); // UPDATE
+        send_packfile_witch_references_client(stream, &server, path_repo)?;
 
         return Ok(());
     }

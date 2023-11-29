@@ -2,7 +2,7 @@ use crate::{
     consts::{HAVE, PKT_DONE, PKT_NAK, GIT_DIR, REFS_HEADS},
     git_server::GitServer,
     util::{
-        connections::{received_message, send_flush, send_message, send_done},
+        connections::{send_flush, send_message, send_done},
         errors::UtilError,
         pkt_line,
         validation::is_valid_obj_id, files::{open_file, read_file_string},
@@ -133,19 +133,25 @@ pub fn receive_request(
     stream: &mut dyn Read,
 ) -> Result<(Vec<String>, Vec<String>, Vec<String>), UtilError> {
     // Want
+    println!("Recibiendo solicitudes...");
     let lines = pkt_line::read(stream)?;
+    for line in &lines {
+        println!("want -> {}", String::from_utf8_lossy(line));
+    }
     let (capacilities, request) = process_received_requests_want(lines)?;
 
     let lines = pkt_line::read(stream)?;
+    for line in &lines {
+        println!("have -> {}", String::from_utf8_lossy(line));
+    }
     if lines.len() == 1 && lines[0] == b"done" {
         return Ok((capacilities, request, Vec::new()));
     }
 
     // Have
     let request_have = receive_request_type(lines, "have", UtilError::UnexpectedRequestNotHave)?;
-
+    println!("Termine de procesar el have");
     // Done
-    received_message(stream, PKT_DONE, UtilError::NegociacionExpectedDone)?;
     Ok((capacilities, request, request_have))
 }
 
@@ -289,31 +295,27 @@ fn receive_request_type(
     })
 }
 
-/// Envia las referencias confirmadas al cliente durante la fase de negociación.
+/// Envia las referencias válidas al cliente a través del flujo de escritura proporcionado.
 ///
-/// Para cada identificador de objeto en el vector proporcionado, esta función envía un
-/// mensaje de agradecimiento al cliente, indicando que el objeto es reconocido y que la
-/// transferencia puede continuar. Después de procesar todos los objetos, envía un mensaje
-/// de agradecimiento negativo (NAK) para confirmar las referencias y señalar el final de
-/// la fase de agradecimiento.
+/// Itera sobre el vector de referencias y envía un mensaje ACK (ACK{hash} continue) por cada referencia válida.
+/// Finaliza enviando un mensaje NAK (PKT_NAK) para confirmar las referencias al cliente.
 ///
 /// # Argumentos
 ///
-/// * `stream` - Una referencia mutable a un objeto de tipo trait que implementa el trait
-///              `Write`, que representa el flujo de salida hacia el cliente.
-/// * `objt_id` - Un vector que contiene los identificadores de objetos para los cuales
-///               se deben enviar mensajes de agradecimiento.
+/// * `stream`: Una referencia mutable a un objeto que implementa el trait `Write`, como un flujo de red o un escritor de archivos.
+/// * `references`: Vector de referencias a commits del servidor Git.
 ///
-/// # Retorna
+/// # Errores
 ///
-/// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
+/// Retorna un `Result` que contiene un mensaje de éxito (`Ok(())`) si las referencias se envían correctamente,
+/// o un error de utilidad en caso de problemas durante el envío.
 ///
 pub fn sent_references_valid_client(
     stream: &mut dyn Write,
-    objt_id: &Vec<String>,
+    references: &Vec<Reference>,
 ) -> Result<(), UtilError> {
-    for obj in objt_id {
-        let message = format!("ACK{} continue\n", obj);
+    for rfs in references {
+        let message = format!("ACK{} continue\n", rfs.get_hash());
         let message = pkt_line::add_length_prefix(&message, message.len());
         send_message(stream, &message, UtilError::UploadRequest)?;
     }
@@ -321,29 +323,25 @@ pub fn sent_references_valid_client(
     Ok(())
 }
 
-/// Envia una confirmacion ACK por la última referencia al cliente, para cerrar la etapa
-/// çde negociacion.
+/// Envía un mensaje de reconocimiento (ACK) al escritor proporcionado, confirmando el último commit referenciado.
 ///
-/// Esta función envía un mensaje de agradecimiento al cliente por el último objeto en
-/// el vector proporcionado. El mensaje de agradecimiento indica que el objeto es reconocido
-/// y la transferencia puede continuar.
+/// Este mensaje de ACK se construye utilizando el hash del último commit en la lista de referencias proporcionada.
 ///
 /// # Argumentos
 ///
-/// * `writer` - Una referencia mutable a un objeto que implementa el trait `Write`, que
-///              representa el flujo de salida hacia el cliente.
-/// * `objs`   - Un vector que contiene los identificadores de objetos, y se asume que
-///              está ordenado de manera que el último objeto en el vector es el más reciente.
+/// * `writer`: Una referencia mutable a un objeto que implementa el trait `Write`, como un escritor de archivos o un socket.
+/// * `references`: Vector de referencias a commits del servidor Git.
 ///
-/// # Retorna
+/// # Errores
 ///
-/// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
+/// Retorna un `Result` que contiene un mensaje de éxito (`Ok(())`) si el ACK se envía correctamente,
+/// o un error de utilidad (`Err(UtilError::SendLastACKConf)`) si hay problemas durante el envío.
 ///
 pub fn send_acknowledge_last_reference(
     writer: &mut dyn Write,
-    objs: &Vec<String>,
+    references: &Vec<Reference>,
 ) -> Result<(), UtilError> {
-    let message = format!("ACK {}\n", objs[objs.len() - 1]);
+    let message = format!("ACK {}\n", references[references.len() - 1].get_hash());
     send_message(writer, &message, UtilError::SendLastACKConf)
 }
 

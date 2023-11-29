@@ -195,7 +195,7 @@ pub fn send_packfile_witch_references_client(
     // Envio el len
 
     // Envio los de objetos
-    // [TODO]
+    // [TODO - X -> Aun no codees, lo estoy pensando]
     // Pero la diferencia de esta funcion, es que no tengo que enviar todos los objs.
     // en el server tengo el miembro client_references que tiene un vector con las referencias
     // que ya tiene el cliente
