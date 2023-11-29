@@ -1,6 +1,6 @@
 use crate::commands::config::GitConfig;
 use crate::commands::fetch_head::FetchHead;
-use crate::consts::{DIRECTORY, FILE, GIT_DIR};
+use crate::consts::{DIRECTORY, FILE, GIT_DIR, CAPABILITIES_FETCH};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::git_transport::references::{reference_discovery, Reference};
@@ -78,7 +78,8 @@ pub fn git_fetch_all(
         GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
 
     // Reference Discovery
-    let mut server = reference_discovery(socket, message, repo_remoto)?;
+    let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
+    let mut server = reference_discovery(socket, message, repo_remoto, &my_capacibilities)?;
     // println!("server: {:?}", server);
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;

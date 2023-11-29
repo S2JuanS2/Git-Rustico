@@ -3,6 +3,7 @@ pub mod reference_information;
 
 use std::io::Write;
 
+
 use crate::{
     consts::VERSION_DEFAULT,
     git_transport::{advertised::AdvertisedRefLine, references::Reference},
@@ -40,9 +41,9 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    pub fn new(content: &Vec<Vec<u8>>, src_repo: &str) -> Result<GitServer, UtilError> {
+    pub fn new(content: &Vec<Vec<u8>>, src_repo: &str, my_capabilities: &Vec<String>) -> Result<GitServer, UtilError> {
         let classified = AdvertisedRefLine::classify_vec(content)?;
-        GitServer::from_classified(classified, src_repo)
+        GitServer::from_classified(classified, src_repo, my_capabilities)
     }
 
     /// Construye una estructura `GitServer` a partir de líneas de referencia clasificadas.
@@ -59,7 +60,7 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    fn from_classified(classified: Vec<AdvertisedRefLine>, src_repo: &str) -> Result<GitServer, UtilError> {
+    fn from_classified(classified: Vec<AdvertisedRefLine>, src_repo: &str, my_capabilities: &Vec<String>) -> Result<GitServer, UtilError> {
         let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
@@ -75,7 +76,8 @@ impl GitServer {
                 }
             }
         }
-
+        
+        GitServer::filter_capabilities(&mut capabilities, my_capabilities)?;
         Ok(GitServer {
             src_repo: src_repo.to_string(),
             version,
@@ -138,6 +140,8 @@ impl GitServer {
         capabilities: Vec<String>,
     ) -> Result<GitServer, UtilError> {
         let available_references = Reference::extract_references_from_git(path_repo)?;
+        // GitServer::filter_capabilities(&mut capabilities, );
+        
         Ok(GitServer {
             src_repo: path_repo.to_string(),
             version,
@@ -217,6 +221,20 @@ impl GitServer {
     pub fn get_updated_references(&self) -> Result<Vec<Reference>, UtilError> {
         self.handle_references.get_updated_references()
     }
+
+    fn filter_capabilities(capabilities: &mut Vec<String>, my_capabilities: &Vec<String>) -> Result<(), UtilError>{
+        retain_common_values(capabilities, my_capabilities);
+        if capabilities.len() == my_capabilities.len() {
+            Ok(())
+        } else {
+            Err(UtilError::ServerCapabilitiesNotSupported)
+        }
+    }
+
+    pub fn is_multiack(&self) -> bool {
+        self.capabilities.contains(&"multi_ack".to_string())
+    }
+    
     // /// Guarda las referencias del cliente en el `GitServer`.
     // ///
     // /// Esta función toma un vector de hash de objetos y los guarda en el campo `handle_references`

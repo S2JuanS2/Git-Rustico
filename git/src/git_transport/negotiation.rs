@@ -357,6 +357,7 @@ pub fn packfile_negotiation_partial(
     // [TODO N#1]
     // let sv_references = get_branches(server)?;
     // println!("sv_references: {:?}", sv_references);
+    println!("\nSERVER: {:?}\n", server);
     let local_references = get_local_references(path_repo)?;
     println!("local_references Juan: {:?}", local_references);
     server.update_local_references(&local_references);
@@ -374,7 +375,7 @@ pub fn packfile_negotiation_partial(
     upload_request_type(stream, &local_references, HAVE)?;
     println!("Envie el have");
 
-    let ack_references = recive_acknowledgments(stream)?;
+    let ack_references = recive_acknowledgments_multi_ack(stream, &server)?;
     println!("ack_references: {:?}", ack_references);
     // server.filter_client_reference(&ack_references); // UPDATE
     server.confirm_local_references(&ack_references);
@@ -382,6 +383,7 @@ pub fn packfile_negotiation_partial(
     println!("Before Git server: {:?}\n\n", server);
 
     send_done(stream, UtilError::UploadRequestDone)?;
+    println!("\nSERVER: {:?}\n", server);
     Ok(())
 }
 
@@ -463,7 +465,12 @@ fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
 /// - `UtilError::ExpectedHashInAckResponse`: Se esperaba un hash en la respuesta ACK y no se encontró.
 /// - `UtilError::ExpectedStatusInAckResponse`: Se esperaba un estado en la respuesta ACK y no se encontró.
 ///
-pub fn recive_acknowledgments(stream: &mut TcpStream) -> Result<Vec<String>, UtilError> {
+pub fn recive_acknowledgments_multi_ack(stream: &mut TcpStream, server: &GitServer) -> Result<Vec<String>, UtilError> {
+    if !server.is_multiack()
+    {
+        return Err(UtilError::MultiAckNotSupported);
+    }
+    
     let lines = pkt_line::read(stream)?;
     let mut acks = Vec::new();
     for line in lines {
@@ -520,15 +527,15 @@ pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError> {
     Ok(hash.to_string())
 }
 
-pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, _git_server: &GitServer) -> Result<(), UtilError>
+pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_server: &GitServer) -> Result<(), UtilError>
 {
     let mut message = format!("want {}", references.get_hash());
-    // let capabilities = git_server.get_capabilities();
-    // if capabilities.len() > 0 {
+    let capabilities = git_server.get_capabilities();
+    if capabilities.len() > 0 {
         message.push(' ');
-        // message.push_str(&capabilities.join(" "));
-    message.push_str("multi_ack\n"); // CHANGE - No debe estar hardcodeado
-    // }
+        message.push_str(&capabilities.join(" "));
+        message.push('\n');
+    }
     message = pkt_line::add_length_prefix(&message, message.len());
     println!("message: {}", message);
     send_message(writer, &message, UtilError::UploadRequest)

@@ -81,6 +81,8 @@ pub enum UtilError {
     DirEntryError,
     InvalidObjectLength,
     GetLocalReferences,
+    MultiAckNotSupported,
+    ServerCapabilitiesNotSupported,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -162,6 +164,8 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidObjectLength => write!(f, "Fallo al leer en el header, se leyo una longitud de objecto invalido"),
         UtilError::DeleteFileError => write!(f, "No se pudo encontrar el archivo"),
         UtilError::GetLocalReferences => write!(f, "GetLocalReferences: No se pudieron obtener las referencias locales"),
+        UtilError::MultiAckNotSupported => write!(f, "MultiAckNotSupported: El servidor no soporta multi_ack"),
+        UtilError::ServerCapabilitiesNotSupported => write!(f, "ServerCapabilitiesNotSupported: El servidor no soporta mis capacidades"),
     }
 }
 
