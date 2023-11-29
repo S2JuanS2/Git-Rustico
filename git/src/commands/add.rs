@@ -18,18 +18,19 @@ pub fn handle_add(args: Vec<&str>, client: Client) -> Result<String, CommandsErr
         return Err(CommandsError::InvalidArgumentCountAddError);
     }
     let directory = client.get_directory_path();
+    let repo_parts: Vec<&str> = directory.split('/').collect();
     let file_name = args[0];
     if args[0] != ALL {
         git_add(directory, file_name)
     } else {
-        git_add_all(Path::new(directory))
+        git_add_all(Path::new(directory), repo_parts.len())
     }
 }
 
 /// Esta función crea todos los objetos y los guarda
 /// ###Parametros:
 /// 'directory': directorio donde estará inicializado el repositorio
-pub fn git_add_all(directory: &Path) -> Result<String, CommandsError> {
+pub fn git_add_all(directory: &Path, repo_parts: usize) -> Result<String, CommandsError> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
         Err(_) => return Err(CommandsError::ReadDirError),
@@ -45,11 +46,11 @@ pub fn git_add_all(directory: &Path) -> Result<String, CommandsError> {
         let full_path = entry.path();
 
         if full_path.is_file() {
-            add_file(&full_path, &file_name)?;
+            add_file(&full_path, &file_name, repo_parts)?;
         } else if full_path.is_dir() {
             let path_str = file_name.to_str().ok_or(CommandsError::PathToStringError)?;
             if !path_str.starts_with('.') {
-                git_add_all(&full_path)?;
+                git_add_all(&full_path, repo_parts)?;
             }
         }
     }
@@ -61,13 +62,22 @@ pub fn git_add_all(directory: &Path) -> Result<String, CommandsError> {
 /// ###Parametros:
 /// 'full_path': PathBuf que contiene el path completo del archivo
 /// 'file_name': Nombre del archivo que se le hizo add
-fn add_file(full_path: &Path, file_name: &OsString) -> Result<(), CommandsError> {
+fn add_file(full_path: &Path, file_name: &OsString, repo_parts: usize) -> Result<(), CommandsError> {
     let full_path_str = full_path.to_str().ok_or(CommandsError::PathToStringError)?;
     let parts: Vec<&str> = full_path_str.split('/').collect();
-    let directory = format!("{}/", parts[0]);
+    let mut directory = String::new();
+    let mut count = 0;
+    for part in &parts {
+        directory.push_str(part);
+        directory.push('/');
+        count += 1;
+        if count == repo_parts {
+            break;
+        }
+    }
     if parts.len() >= 3 {
         let mut dir_format = String::new();
-        for part in parts.iter().take(parts.len() - 1).skip(1) {
+        for part in parts.iter().take(parts.len() - 1).skip(repo_parts) {
             let dir_format_parts = format!("{}/", part);
             dir_format = dir_format + &dir_format_parts;
         }
@@ -91,7 +101,7 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError
     let gitignore_content = get_gitignore_content(directory)?;
     check_gitignore(file_name, &mut ignored_files, &gitignore_content)?;
     if !ignored_files.is_empty() {
-        return Ok("Archivo esta en .gitignore".to_string());
+        return Ok("El archivo esta en .gitignore".to_string());
     }
     let file = open_file(&file_path)?;
     let content = read_file(file)?;

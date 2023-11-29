@@ -102,7 +102,7 @@ fn load_files(
 /// Esta función se encarga de leer el parent hash de un commit
 /// ###Parametros:
 /// 'commit': Contenido de un commit
-fn extract_parent_hash(commit: &str) -> Option<&str> {
+fn _extract_parent_hash(commit: &str) -> Option<&str> {
     for line in commit.lines() {
         if line.starts_with("parent") {
             let words: Vec<&str> = line.split_whitespace().collect();
@@ -119,14 +119,7 @@ fn extract_parent_hash(commit: &str) -> Option<&str> {
 fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result<(), CommandsError> {
     let commit = git_cat_file(directory, hash_commit, "-p")?;
 
-    if let Some(parent_hash) = extract_parent_hash(&commit) {
-        if parent_hash != PARENT_INITIAL {
-            read_parent_commit(directory, parent_hash, mode)?;
-        }
-        if let Some(tree_hash) = get_tree_hash(&commit) {
-            load_files(directory, tree_hash, mode, "")?;
-        };
-    } else if let Some(tree_hash) = get_tree_hash(&commit) {
+    if let Some(tree_hash) = get_tree_hash(&commit) {
         load_files(directory, tree_hash, mode, "")?;
     } else {
         return Err(CommandsError::GetHashError);
