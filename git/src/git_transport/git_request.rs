@@ -190,13 +190,13 @@ impl GitRequest {
 fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError> {
     let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
     let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
-    println!("Server: {:?}", server);
+    // println!("Server: {:?}", server);
     server.send_references(stream)?;
-    println!("Envie las referencias");
+    // println!("Envie las referencias");
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
-    println!("Capabilities: {:?}", capabilities);
-    println!("Wanted Objects: {:?}", wanted_objects);
-    println!("Had Objects: {:?}", had_objects);
+    // println!("Capabilities: {:?}", capabilities);
+    // println!("Wanted Objects: {:?}", wanted_objects);
+    // println!("Had Objects: {:?}", had_objects);
 
     if !had_objects.is_empty() {
         // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
