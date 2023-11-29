@@ -1,6 +1,6 @@
 use crate::commands::config::GitConfig;
 use crate::commands::fetch_head::FetchHead;
-use crate::consts::{DIRECTORY, FILE, GIT_DIR, CAPABILITIES_FETCH};
+use crate::consts::{DIRECTORY, FILE, GIT_DIR, CAPABILITIES_FETCH, DIR_OBJECTS};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::git_transport::references::{reference_discovery, Reference};
@@ -206,6 +206,25 @@ fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(
     Ok(())
 }
 
+fn recovery_blob(
+    hash: &str,
+    content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
+    mut i: usize,
+    repo: &str,
+) -> Result<usize, CommandsError> {
+    if i < content.len(){
+        let blob_content = read_blob(&content[i].1)?;
+        let blob_content_bytes = blob_content.clone();
+        let object_dir = format!("{}/{}/{}/{}", repo, DIR_OBJECTS, &hash[..2], &hash[2..]);
+        if !Path::new(&object_dir).exists(){
+            builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
+        }else{
+            i -= 1;
+        }
+    }
+    Ok(i)
+}
+
 fn recovery_tree(
     tree_content: String,
     path_dir_repo: &Path,
@@ -224,14 +243,12 @@ fn recovery_tree(
             file_name = parts[0];
             mode = parts[1];
         }
-        let _hash = parts[2];
+        let hash = parts[2];
 
         let path_dir_repo = path_dir_repo.join(file_name);
         if mode == FILE {
             i += 1;
-            let blob_content = read_blob(&content[i].1)?;
-            let blob_content_bytes = blob_content.clone();
-            builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
+            i = recovery_blob(hash, content, i, repo)?;
         } else if mode == DIRECTORY {
             i += 1;
             let tree_content = read_tree(&content[i].1)?;
