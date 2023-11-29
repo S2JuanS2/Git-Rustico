@@ -296,7 +296,8 @@ impl GitServer {
             Err(UtilError::ServerCapabilitiesNotSupported)
         }
     }
-
+    /// Verifica si el servidor Git soporta la capacidad de "multi_ack".
+    /// 
     pub fn is_multiack(&self) -> bool {
         self.capabilities.contains(&"multi_ack".to_string())
     }
