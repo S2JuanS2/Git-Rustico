@@ -167,11 +167,22 @@ impl GitServer {
         // Send references
         // HEAD lo inserte 1ero en el vector
         // Primera refer
-        let mut firts_references = format!("{} {}\n", self.available_references[0].get_hash(), self.available_references[0].get_ref_path());
+        let mut firts_references = format!("{} {}", self.available_references[0].get_hash(), self.available_references[0].get_ref_path());
         if !self.capabilities.is_empty()
         {
-            firts_references.push_str(&format!(" {}\n", self.capabilities.join(" ")));
-            let firts_references = pkt_line::add_length_prefix(&firts_references, firts_references.len());
+            println!("Tengo capacidades");
+            println!("Capabilities: {:?}", self.capabilities);
+            let mut len = firts_references.len();
+            firts_references.push('\0');
+            len += 1;
+            let capabilities = format!("{}\n", self.capabilities.join(" "));
+            len += capabilities.len();
+            firts_references.push_str(&capabilities);
+            let firts_references = pkt_line::add_length_prefix(&firts_references, len);
+            println!("Firts references: {:?}", firts_references); // Pensar en si debo agregar el \0
+            send_message(writer, &firts_references, UtilError::ReferencesObtaining)?;
+        } else {
+            firts_references.push('\n');
             send_message(writer, &firts_references, UtilError::ReferencesObtaining)?;
         }
 

@@ -189,24 +189,28 @@ impl GitRequest {
 fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError> {
     let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
     let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
+    println!("Server: {:?}", server);
     server.send_references(stream)?;
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
+    println!("Capabilities: {:?}", capabilities);
+    println!("Wanted Objects: {:?}", wanted_objects);
+    println!("Had Objects: {:?}", had_objects);
 
     if !had_objects.is_empty() {
-        // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
+        // // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
 
-        server.update_data(capabilities, wanted_objects);
-        // [TODO]
-        // Dado las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
-        // Se deben filtrar las referencias que tiene el servidor
-        // obj_hash = filtrar_referencias_que_tenemos(had_objects)
-        let obj_hash: Vec<String> = Vec::new();
-        sent_references_valid_client(stream, &obj_hash)?;
+        // server.update_data(capabilities, wanted_objects);
+        // // [TODO]
+        // // Dado las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
+        // // Se deben filtrar las referencias que tiene el servidor
+        // // obj_hash = filtrar_referencias_que_tenemos(had_objects)
+        // let obj_hash: Vec<String> = Vec::new();
+        // sent_references_valid_client(stream, &obj_hash)?;
 
-        receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
-        send_acknowledge_last_reference(stream, &obj_hash)?;
-        // server.save_references_client(obj_hash); // UPDATE
-        send_packfile_witch_references_client(stream, &server, path_repo)?;
+        // receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
+        // send_acknowledge_last_reference(stream, &obj_hash)?;
+        // // server.save_references_client(obj_hash); // UPDATE
+        // send_packfile_witch_references_client(stream, &server, path_repo)?;
 
         return Ok(());
     }

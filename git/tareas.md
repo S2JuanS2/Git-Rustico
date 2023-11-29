@@ -38,3 +38,5 @@ dc
 
 2) Dado 2 commits, hash1(remoto) hash2(local)...
 que el una funcion me diga si el commit hash2 esta incluido en el hash2
+
+3) Que hacer si no esta el repo
