@@ -218,8 +218,8 @@ impl GitServer {
         self.handle_references.confirm_local_references(local_commits);
     }
 
-    pub fn get_updated_references(&self) -> Result<Vec<Reference>, UtilError> {
-        self.handle_references.get_updated_references()
+    pub fn get_references_for_updating(&self) -> Result<Vec<Reference>, UtilError> {
+        self.handle_references.get_references_for_updating()
     }
 
     fn filter_capabilities(capabilities: &mut Vec<String>, my_capabilities: &Vec<String>) -> Result<(), UtilError>{

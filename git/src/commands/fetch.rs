@@ -106,7 +106,7 @@ pub fn git_fetch_all(
     // let refs = get_branches(&server)?;
     // save_references(&refs, repo_local)?;
 
-    let refs = server.get_updated_references()?;
+    let refs = server.get_references_for_updating()?;
     // Guardo las referencias
     save_references(&refs, repo_local)?;
     // Crear archivo FETCH_HEAD
