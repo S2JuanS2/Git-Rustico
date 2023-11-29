@@ -202,7 +202,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
         // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
 
         server.update_data(capabilities, wanted_objects);
-        // [TODO]
+        // [TODO #4]
         // Dado las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
         // Se deben filtrar las referencias que tiene el servidor
         // Me debes devolver un Vec<Reference> con las referencias que tenemos en comun

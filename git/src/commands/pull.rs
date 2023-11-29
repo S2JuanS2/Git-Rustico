@@ -24,7 +24,7 @@ use std::net::TcpStream;
 ///
 pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
     if !args.is_empty() {
-        return Err(CommandsError::InvalidArgumentCountPull.into());
+        return Err(CommandsError::InvalidArgumentCountPull);
     }
     let mut socket = start_client(client.get_address())?;
     git_pull(
@@ -47,7 +47,7 @@ pub fn git_pull(
     match git_fetch_all(socket, ip, port, repo_local)
     {
         Ok(_) => print!("Se descargo las actualizaciones del repositorio remoto con exito"),
-        Err(e) => return Err(e.into()),
+        Err(e) => return Err(e),
     }
 
     // TODO: Implementar el merge de los cambios

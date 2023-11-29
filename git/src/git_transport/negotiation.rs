@@ -359,7 +359,7 @@ pub fn packfile_negotiation_partial(
     let local_references = server.get_local_references()?;
     upload_request_type(stream, &local_references, HAVE)?;
 
-    let ack_references = recive_acknowledgments_multi_ack(stream, &server)?;
+    let ack_references = recive_acknowledgments_multi_ack(stream, server)?;
     server.confirm_local_references(&ack_references);
 
     send_done(stream, UtilError::UploadRequestDone)?;
@@ -510,7 +510,7 @@ pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_se
 {
     let mut message = format!("want {}", references.get_hash());
     let capabilities = git_server.get_capabilities();
-    if capabilities.len() > 0 {
+    if !capabilities.is_empty() {
         message.push(' ');
         message.push_str(&capabilities.join(" "));
         message.push('\n');

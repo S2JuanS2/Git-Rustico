@@ -47,7 +47,7 @@ use super::add::add_to_index;
 ///
 pub fn handle_clone(args: Vec<&str>, client: Client) -> Result<(String, String), CommandsError> {
     if args.len() != 1 {
-        return Err(CommandsError::CloneMissingRepoError.into());
+        return Err(CommandsError::CloneMissingRepoError);
     }
     let mut socket = start_client(client.get_address())?;
     let name = match args[0].split('/').last()

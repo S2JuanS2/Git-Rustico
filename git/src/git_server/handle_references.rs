@@ -119,7 +119,7 @@ impl HandleReferences {
     ///
     /// * `local_commits`: Vector de commits locales que se utilizará para confirmar referencias.
     ///
-    pub fn confirm_local_references(&mut self, local_commits: &Vec<String>)
+    pub fn confirm_local_references(&mut self, local_commits: &[String])
     {
         for value in self.references.values_mut() {
             if let Some(local_commit) = value.get_local_commit() {
