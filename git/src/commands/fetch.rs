@@ -87,14 +87,17 @@ pub fn git_fetch_all(
     // Packfile Data
     let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
     let content = receive_packfile(socket)?;
-    // for c in &content
-    // {
-    //     println!("ObjectEntry: {:?} --- Content: {:?}", c.0, c.1);
-    //     // println!("")
-    // }
+    for c in &content
+    {
+        println!("ObjectEntry: {:?} --- Content: {:?}", c.0, c.1);
+        // println!("")
+    }
+    println!("Antes del save_objects");
     if save_objects(content, repo_local).is_err() {
+        println!("Error al guardar los objetos");
         return Err(CommandsError::RepositoryNotInitialized);
     };
+    println!("Despues del save_objects");
 
     // // Guardar las referencias en remote refs
     // // [TODO]
@@ -104,7 +107,7 @@ pub fn git_fetch_all(
     // // let refs: Vec<(String, String)> = get_refs(content);
     // let refs = get_branches(&server)?;
     // save_references(&refs, repo_local)?;
-
+    println!("Guardando referencias");
     let refs = server.get_references_for_updating()?;
     // Guardo las referencias
     save_references(&refs, repo_local)?;
@@ -202,6 +205,7 @@ fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(
             i = handle_tree(&content, &git_dir, i, path_dir_cloned)?;
             i += 1;
         }
+        println!("i: {}", i);
     }
     Ok(())
 }
