@@ -1,4 +1,4 @@
-use std::{io::{self, Write, BufRead}, fs, fmt};
+use std::{io::{self, Write, BufRead}, fs, fmt, process::Command};
 
 use crate::git_transport::references::Reference;
 
@@ -189,6 +189,25 @@ impl FetchHead {
     pub fn new_from_file(repo_path: &str) -> Result<FetchHead, CommandsError> {
         let repo = format!("{}/.git/FETCH_HEAD", repo_path);
         _read_fetch_head(&repo)
+    }
+
+    pub fn references_needs_update(&self, branch: &str) -> bool {
+        for entry in &self.entries {
+            if entry.branch_name == branch && entry.label == Label::Merge {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn delete_references(&mut self, branch: &str) -> Result<(), CommandsError> {
+        for i in 0..self.entries.len() {
+            if self.entries[i].branch_name == branch && self.entries[i].label == Label::Merge {
+                self.entries.remove(i);
+                return Ok(());
+            }
+        }
+        Err(CommandsError::DeleteReferenceFetchHead)
     }
 }
 

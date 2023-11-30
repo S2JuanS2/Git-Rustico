@@ -85,6 +85,7 @@ pub enum CommandsError {
     InvalidArgumentCountRebaseError,
     BranchNotFound,
     PullCurrentBranchNotFound,
+    DeleteReferenceFetchHead,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -176,6 +177,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::InvalidArgumentCountRebaseError => write!(f, "Número de argumentos inválido para el comando rebase.\nUsar: git rebase <branch name>"),
         CommandsError::BranchNotFound => write!(f, "La branch no existe"),
         CommandsError::PullCurrentBranchNotFound => write!(f, "Erro al hacer pull, no se pudo obtener la branch actual"),
+        CommandsError::DeleteReferenceFetchHead => write!(f, "No se pudo borrar la referencia en FETCH_HEAD"),
     }
 }
 

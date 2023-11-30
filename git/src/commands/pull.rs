@@ -1,6 +1,7 @@
 use crate::commands::branch::get_current_branch;
 use crate::commands::fetch::{git_fetch_branch, FetchStatus};
 use crate::commands::fetch_head::{self, FetchHead};
+use crate::git_transport::references::Reference;
 use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
@@ -51,6 +52,8 @@ pub fn git_pull(
         Ok(name_branch) => name_branch,
         Err(_) => return Err(CommandsError::PullCurrentBranchNotFound), // Pensar porque fallaria esto?
     };
+
+    
     let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
     match result {
         FetchStatus::BranchNotFound => return Ok(format!("{}", FetchStatus::BranchNotFound)),
@@ -58,9 +61,35 @@ pub fn git_pull(
         FetchStatus::Success => (),
     }
 
-    // let fetch_head = FetchHead::new_from_file(repo_local)?;
+    let current_rfs = get_current_references(repo_local)?;
+    let mut fetch_head = FetchHead::new_from_file(repo_local)?;
+    if !fetch_head.references_needs_update(current_rfs.get_name())
+    {
+        return Ok(format!("{}", FetchStatus::NoUpdates));
+    }
 
 
+    fetch_head.delete_references(current_rfs.get_name())?;
+    fetch_head.write(repo_local)?;
 
     Ok("Pullcito naciendo".to_string())
+}
+
+// Que pasa si la branch aun no tiene commits?
+fn get_current_references(repo_local: &str) -> Result<Reference, CommandsError> {
+    let path: String = format!("{}/.git/HEAD", repo_local);
+    let head = match std::fs::read_to_string(path) {
+        Ok(head) => head,
+        Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),
+    };
+    let ref_path = head.split(':').last().unwrap();
+    let ref_path = ref_path.trim();
+    let path: String = format!("{}/.git/{}", repo_local, ref_path);
+    let hash = match std::fs::read_to_string(path) {
+        Ok(reference) => reference,
+        Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),
+    };
+    let hash = hash.trim();
+    let reference = Reference::new(hash, ref_path)?;
+    Ok(reference)
 }

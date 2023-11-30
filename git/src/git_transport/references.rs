@@ -123,6 +123,20 @@ impl Reference {
         let hash_branch = binding.trim();
         Reference::new(&hash_branch, &format!("refs/heads/{}", name_branch))
     }
+
+    pub fn is_valid_references_path(ref_path: &str) -> bool {
+        if ref_path == "HEAD" {
+            true
+        } else if ref_path.starts_with("refs/tags/") {
+            true
+        } else if ref_path.starts_with("refs/heads/") {
+            true
+        } else if ref_path.starts_with("refs/remotes/") {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 /// Extrae el contenido de un objeto a partir de su hash
