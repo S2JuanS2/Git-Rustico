@@ -24,6 +24,19 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, Commands
     }
 }
 
+/// Devuelve el hash de la branch recibida por parametro.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'branch': nombre de la branch a obtener el hash.
+pub fn get_branch_current_hash(directory: &str, branch: String) -> Result<String, CommandsError>{
+
+    let dir_branch = format!("{}/{}/{}/remotes/origin/{}", directory, GIT_DIR, REFS, branch);
+    let file = open_file(&dir_branch)?;
+    let hash = read_file_string(file)?;
+
+    Ok(hash)
+}
+
 /// Devuelve el nombre de la branch actual.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
@@ -116,6 +129,36 @@ pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, C
     let result = format!("Rama {} creada con éxito!", branch_name);
 
     Ok(result)
+}
+
+// Devuelve un vector con los nombres de las branchs
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+pub fn get_branch_remote(directory: &str) -> Result<Vec<String>, CommandsError> {
+    // "directory/.git/refs/remote/origin"
+    let directory_git = format!("{}/{}", directory, GIT_DIR);
+    let branch_dir = Path::new(&directory_git).join("refs/remotes/origin");
+
+    let entries = match fs::read_dir(branch_dir) {
+        Ok(entries) => entries,
+        Err(_) => return Err(CommandsError::BranchDirectoryOpenError),
+    };
+
+    let mut branches: Vec<String> = Vec::new();
+
+    for entry in entries {
+        match entry {
+            Ok(entry) => {
+                let branch = match entry.file_name().into_string() {
+                    Ok(branch) => branch,
+                    Err(_) => return Err(CommandsError::ReadBranchesError),
+                };
+                branches.push(branch);
+            }
+            Err(_) => return Err(CommandsError::ReadBranchesError),
+        }
+    }
+    Ok(branches)
 }
 
 // Devuelve un vector con los nombres de las branchs
