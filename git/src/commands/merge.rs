@@ -28,16 +28,19 @@ pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, CommandsE
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
 pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, CommandsError> {
+    let formatted_result = try_for_merge(directory, branch_name)?;
+    Ok(formatted_result)
+}
+
+pub fn try_for_merge(directory: &str, branch_name: &str) -> Result<String, CommandsError> {
     let current_branch = get_current_branch(directory)?;
     let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
     let mut path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
     if branch_name.contains("origin") {
         path_branch_to_merge = format!("{}/.git/{}", directory, branch_name);
     }
-
     let (current_branch_hash, branch_to_merge_hash) =
         get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
-
     let mut formatted_result = String::new();
     if current_branch_hash == branch_to_merge_hash || current_branch_hash == branch_name {
         formatted_result.push_str("Already up to date.");
@@ -340,7 +343,6 @@ pub fn merge_depending_on_strategy(
         branch_to_merge,
         content_tree,
         CONTENT_EMPTY)?;
-    println!("strategy en merge: {:?}", strategy);
     Ok(strategy)
 }
 
@@ -376,7 +378,6 @@ fn compare_files(
     let file = open_file(path_file_format)?;
     let content_file_local = read_file_string(file)?;
     if content_file_local != content_file {
-        println!("entro al conflicto en el archivo: {}", path_file_format);
         // CONFLICTO
         let path_conflict = check_each_line(
             path_file_format,
@@ -392,7 +393,6 @@ fn compare_files(
         strategy.0 = "recursive".to_string();
         strategy.1 = "ok".to_string();
     }
-    println!("strategy en compare_files: {:?}", strategy);
     Ok(())
 }
 

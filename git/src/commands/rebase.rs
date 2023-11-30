@@ -1,13 +1,9 @@
 use crate::models::client::Client;
 use crate::util::files::{create_file_replace, open_file, read_file_string};
-
 use super::branch::get_current_branch;
 use super::commit::{Commit, git_commit};
 use super::errors::CommandsError;
-use super::merge::{
-    check_if_current_is_up_to_date, get_branches_hashes, get_first_commit_of_each_branch,
-    get_logs_from_branches, get_parent_hashes, merge_depending_on_strategy,
-};
+use super::merge::{get_logs_from_branches, try_for_merge};
 use super::cat_file::git_cat_file;
 
 /// Esta función se encarga de llamar al comando rebase con los parametros necesarios.
@@ -24,141 +20,55 @@ pub fn handle_rebase(args: Vec<&str>, client: Client) -> Result<String, Commands
 }
 
 pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<String, CommandsError> {
-    let current_branch = get_current_branch(directory)?;
-    let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
-    let path_branch_to_rebase = format!("{}/.git/refs/heads/{}", directory, branch_name);
-
-    let (current_branch_hash, branch_to_rebase_hash) =
-        get_branches_hashes(&path_current_branch, &path_branch_to_rebase)?;
-
     let mut formatted_result = String::new();
-    if current_branch_hash == branch_to_rebase_hash || current_branch_hash == branch_name {
-        formatted_result.push_str("Already up to date.");
-        return Ok(formatted_result);
-    } else {
-        let (log_current_branch, log_rebase_branch) =
+    let current_branch = get_current_branch(directory)?;
+    let (log_current_branch, log_rebase_branch) =
             get_logs_from_branches(directory, branch_name, &current_branch)?;
-        if check_if_current_is_up_to_date(
-            &log_current_branch,
-            &log_rebase_branch,
-            &mut formatted_result,
-        ) {
-            return Ok(formatted_result);
-        }
 
-        let (first_commit_current_branch, first_commit_rebase_branch) =
-            get_first_commit_of_each_branch(&log_current_branch, &log_rebase_branch);
-        let root_parent_current_branch =
-            git_cat_file(directory, &first_commit_current_branch, "-p")?;
-        let root_parent_rebase_branch = git_cat_file(directory, &first_commit_rebase_branch, "-p")?;
-        let (hash_parent_current, hash_parent_rebase) =
-            get_parent_hashes(root_parent_current_branch, root_parent_rebase_branch);
+    formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
+    let result_merge = try_for_merge(directory, branch_name)?;
 
-        let strategy = merge_depending_on_strategy(
-            &hash_parent_current,
-            &hash_parent_rebase,
-            &branch_to_rebase_hash,
-            directory,
-            branch_name,
-        )?;
-        println!("{:?}", strategy);
+    formatted_result.push_str(result_merge.as_str());
+    if !result_merge.contains("CONFLICT") {
 
-        get_result_depending_on_strategy(
-            &strategy,
-            &mut formatted_result,
-            current_branch_hash,
-            branch_to_rebase_hash,
-            path_current_branch,
-        )?;
+        let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch, log_rebase_branch);
 
-        if strategy.1 == "ok".to_string() {
-
-            let logs_just_in_current_branch = log_current_branch
-                .iter()
-                .filter(|commit| !log_rebase_branch.contains(commit))
-                .collect::<Vec<_>>();
-
-            
-            create_new_commits(directory, client, logs_just_in_current_branch, &current_branch, branch_name, &mut formatted_result)?;
-            update_first_commit(directory, current_branch, branch_name)?;
-        }
+        create_new_commits(directory, client, logs_just_in_current_branch, &current_branch, branch_name, &mut formatted_result)?;
+        update_first_commit(directory, current_branch, branch_name)?;
     }
 
     Ok(formatted_result)
 }
 
-fn get_result_depending_on_strategy(
-    strategy: &(String, String),
-    formatted_result: &mut String,
-    current_branch_hash: String,
-    branch_to_rebase_hash: String,
-    path_current_branch: String,
-) -> Result<(), CommandsError> {
-    formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
-    if strategy.0 == "fast-forward" {
-        formatted_result.push_str(
-            format!(
-                "Updating {}..{}\n",
-                current_branch_hash, branch_to_rebase_hash
-            )
-            .as_str(),
-        );
-        formatted_result.push_str("Fast-forward\n");
-        create_file_replace(&path_current_branch, &branch_to_rebase_hash)?;
-    } else if strategy.0 == "recursive" && strategy.1 != "ok" {
-        formatted_result.push_str(format!("Auto-merging {}\n", strategy.1).as_str());
-        formatted_result.push_str(
-            format!(
-                "CONFLICT (content): Merge conflict in {}\n",
-                strategy.1
-            )
-            .as_str(),
-        );
-        formatted_result
-            .push_str("Automatic merge failed; fix conflicts and then commit the result.\n");
-        formatted_result.push_str(format!("Conflict in file:{}\n", strategy.1).as_str());
-    }
-    Ok(())
-}
-
-
 fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &str) -> Result<(), CommandsError> {
     let (log_current_branch, log_rebase_branch) =
         get_logs_from_branches(directory, rebase_branch, &current_branch)?;
-    let last_commit_rebase_branch = match log_rebase_branch.last() {
+
+    let log_rebase_branch_cloned = log_rebase_branch.clone();
+    let last_commit_rebase_branch = match log_rebase_branch_cloned.last() {
         Some(commit) => commit,
         None => return Err(CommandsError::GenericError), // CAMBIAR ERROR
     };
 
-    let logs_just_in_current_branch = log_current_branch
-        .iter()
-        .filter(|commit| !log_rebase_branch.contains(commit))
-        .collect::<Vec<_>>();
-    let first_commit_current_branch = logs_just_in_current_branch[0];
+    let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch, log_rebase_branch);
+    let first_commit_current_branch = &logs_just_in_current_branch[0];
 
-    let content_commit = git_cat_file(directory, first_commit_current_branch, "-p")?;
+    let content_commit = git_cat_file(directory, &first_commit_current_branch, "-p")?;
 
+    update_parent(content_commit, last_commit_rebase_branch, &first_commit_current_branch, directory, current_branch)?;
+
+    Ok(())
+}
+
+fn update_parent(content_commit: String, last_commit_rebase_branch: &String, first_commit_current_branch: &String, directory: &str, current_branch: String) -> Result<(), CommandsError> {
     let mut new_content = String::new();
-    for line in content_commit.lines() {
-        if line.starts_with("parent") {
-            let mut new_line = String::new();
-            new_line.push_str(format!("parent {}", last_commit_rebase_branch).as_str());
-            new_content.push_str(&new_line);
-        } else {
-            new_content.push_str(line);
-        }
-        new_content.push_str("\n");
-    }
+    rewrite_commit(content_commit, last_commit_rebase_branch, &mut new_content);
     let lines_new_content: Vec<&str> = new_content.lines().collect();
     let new_commit_in_log = format!("{}\n{}\n{}\n{}\n\n{}", first_commit_current_branch, lines_new_content[1], lines_new_content[2], lines_new_content[3], lines_new_content[5]);
-
     let path_current_branch = format!("{}/.git/logs/refs/heads/{}", directory, current_branch);
     let file = open_file(&path_current_branch)?;
     let mut content = read_file_string(file)?;
-    
     let lines: Vec<&str> = content.lines().collect();
-
-
     if let Some(index) = lines.iter().position(|&s| s == first_commit_current_branch) {
         let new_lines: Vec<&str> = new_commit_in_log.lines().collect();
         content = [
@@ -169,13 +79,32 @@ fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &
         .concat()
         .join("\n");
     }
-
     create_file_replace(&path_current_branch, &content)?;
-
     Ok(())
 }
 
-fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<&String>, current_branch: &str, branch_name: &str, formatted_result: &mut String) -> Result<(), CommandsError> {
+fn rewrite_commit(content_commit: String, last_commit_rebase_branch: &String, new_content: &mut String) {
+    for line in content_commit.lines() {
+        if line.starts_with("parent") {
+            let mut new_line = String::new();
+            new_line.push_str(format!("parent {}", last_commit_rebase_branch).as_str());
+            new_content.push_str(&new_line);
+        } else {
+            new_content.push_str(line);
+        }
+        new_content.push_str("\n");
+    }
+}
+
+fn logs_just_in_one_branch(log_current_branch: Vec<String>, log_rebase_branch: Vec<String>) -> Vec<String> {
+    let logs_just_in_current_branch = log_current_branch
+        .iter()
+        .filter(|commit| !log_rebase_branch.contains(commit))
+        .collect::<Vec<_>>();
+    logs_just_in_current_branch.iter().map(|commit| commit.to_string()).collect::<Vec<_>>()
+}
+
+fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<String>, current_branch: &str, branch_name: &str, formatted_result: &mut String) -> Result<(), CommandsError> {
     update_log_current_branch(directory, current_branch, branch_name)?;
 
     for commit in log_current_branch {
@@ -199,10 +128,9 @@ fn update_log_current_branch(directory: &str, current_branch: &str, rebase_branc
     let path_rebase_log = format!("{}/.git/logs/refs/heads/{}", directory, rebase_branch);
     let file_rebase_log = open_file(&path_rebase_log)?;
     let content_rebase_log = read_file_string(file_rebase_log)?;
+    let path_current_log = format!("{}/.git/logs/refs/heads/{}", directory, current_branch);
 
-    let path_log = format!("{}/.git/logs/refs/heads/{}", directory, current_branch);
-
-    create_file_replace(&path_log, &content_rebase_log)?;
+    create_file_replace(&path_current_log, &content_rebase_log)?;
     Ok(())
 }
 
@@ -315,12 +243,12 @@ mod tests {
         );
 
         let result = git_rebase(directory, "nueva_branch", client);
-        println!("{:?}", result);
+        println!("sin conflicto:\n{:?}", result);
 
         let log_current_branch_after_rebase = git_log(directory).expect("Error al hacer git log");
         assert!(log_current_branch_after_rebase.contains(&log_nueva_branch));
         
-        fs::remove_dir_all(directory).expect("Error al borrar el directorio");
+        // fs::remove_dir_all(directory).expect("Error al borrar el directorio");
         assert!(result.is_ok());
     }
 
@@ -416,12 +344,12 @@ mod tests {
         );
 
         let result = git_rebase(directory, "nueva_branch", client);
-        println!("{:?}", result);
+        println!("con conflicto:\n{:?}", result);
 
         let log_current_branch_after_rebase = git_log(directory).expect("Error al hacer git log");
         assert!(!log_current_branch_after_rebase.contains(&log_nueva_branch));
         
-        fs::remove_dir_all(directory).expect("Error al borrar el directorio");
+        // fs::remove_dir_all(directory).expect("Error al borrar el directorio");
         assert!(result.is_ok());
     }
 }
