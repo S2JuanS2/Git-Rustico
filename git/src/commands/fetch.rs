@@ -17,9 +17,28 @@ use crate::git_transport::git_request::GitRequest;
 use crate::util::pkt_line::read_pkt_line;
 use std::net::TcpStream;
 use std::path::Path;
-use std::fs;
+use std::{fs, fmt};
 
 use super::errors::CommandsError;
+
+pub enum FetchStatus {
+    Success,
+    NoUpdates,
+    BranchNotFound,
+    Error,
+}
+
+impl fmt::Display for FetchStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FetchStatus::Success => write!(f, "El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
+            FetchStatus::NoUpdates => write!(f, "No hay nuevas actualizaciones. Todo está actualizado."),
+            FetchStatus::Error => write!(f, "Error al realizar el fetch."),
+            FetchStatus::BranchNotFound => write!(f, "La branch no existe en el repositorio remoto."),
+        }
+    }
+    
+}
 
 // use super::cat_file::git_cat_file;
 
@@ -47,7 +66,7 @@ use super::errors::CommandsError;
 ///
 /// * Otros errores de `CommandsError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
-pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
+pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<FetchStatus, CommandsError> {
     println!("Entre al handle fetch");
     if args.len() >= 2 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
@@ -75,7 +94,7 @@ pub fn git_fetch_all(
     ip: &str,
     port: &str,
     repo_local: &str,
-) -> Result<String, CommandsError> {
+) -> Result<FetchStatus, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
@@ -100,7 +119,7 @@ pub fn git_fetch_all(
 
     if content.is_empty()
     {
-        return Ok("No hay nuevas actualizaciones. Todo está actualizado.".to_string());
+        return Ok(FetchStatus::NoUpdates);
     }
     
     if save_objects(content, repo_local).is_err() {
@@ -112,7 +131,7 @@ pub fn git_fetch_all(
     let fetch_head = FetchHead::new(&refs, repo_remoto)?;
     fetch_head.write(repo_local)?;
 
-    Ok("El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones.".to_string())
+    Ok(FetchStatus::Success)
 }
 
 pub fn git_fetch_branch(
@@ -121,7 +140,7 @@ pub fn git_fetch_branch(
     port: &str,
     repo_local: &str,
     name_branch: &str,
-) -> Result<String, CommandsError> {
+) -> Result<FetchStatus, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
@@ -140,7 +159,7 @@ pub fn git_fetch_branch(
     if !server.contains_reference(&rfs_fetch)
     {
         send_flush(socket, UtilError::SendFlushCancelConnection)?;
-        return Ok(format!("No existe la branch {} en el repositorio remoto.", name_branch))
+        return Ok(FetchStatus::BranchNotFound)
     }
 
     // Packfile Negotiation
@@ -154,7 +173,7 @@ pub fn git_fetch_branch(
 
     if content.is_empty()
     {
-        return Ok("No hay nuevas actualizaciones. Todo está actualizado.".to_string());
+        return Ok(FetchStatus::NoUpdates);
     }
 
     if save_objects(content, repo_local).is_err() {
@@ -167,7 +186,7 @@ pub fn git_fetch_branch(
     let fetch_head = FetchHead::new(&refs, repo_remoto)?;
     fetch_head.write(repo_local)?;
 
-    Ok("Sucessfully!".to_string())
+    Ok(FetchStatus::Success)
 }
 
 

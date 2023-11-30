@@ -148,7 +148,8 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
                 result = handle_checkout(rest_of_command, client.clone())?;
             }
             "fetch" => {
-                result = handle_fetch(rest_of_command, client.clone())?;
+                let result_fetch = handle_fetch(rest_of_command, client.clone())?;
+                result = result_fetch.to_string();
             }
             "hash-object" => {
                 result = handle_hash_object(rest_of_command, client.clone())?;
