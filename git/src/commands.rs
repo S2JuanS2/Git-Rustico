@@ -33,3 +33,4 @@ pub mod show_ref;
 pub mod status;
 pub mod tag;
 pub mod fetch_head;
+pub mod rebase;
