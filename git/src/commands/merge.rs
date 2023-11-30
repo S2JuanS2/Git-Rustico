@@ -32,6 +32,10 @@ pub fn git_merge(directory: &str, branch_name: &str) -> Result<String, CommandsE
     Ok(formatted_result)
 }
 
+/// Intenta fusionar la rama actual con otra rama pasada por parametro.
+/// ###Parametros:
+/// 'directory': directorio del repositorio local
+/// 'branch_name': nombre de la rama a mergear
 pub fn try_for_merge(directory: &str, branch_name: &str) -> Result<String, CommandsError> {
     let current_branch = get_current_branch(directory)?;
     let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
@@ -82,13 +86,30 @@ pub fn try_for_merge(directory: &str, branch_name: &str) -> Result<String, Comma
     Ok(formatted_result)
 }
 
+/// Fusiona dos ramas pasadas por parametro.
+/// ###Parametros:
+/// 'directory': directorio del repositorio local
+/// 'current_branch_path': path del archivo de la rama actual
+/// 'merge_branch_path': path del archivo de la rama a mergear
 pub fn git_merge_paths(directory: &str, current_branch_path: &str, merge_branch_path: &str) -> Result<String, CommandsError> {
-    let current_branch_name = match current_branch_path.split("/").last() {
+    let current_branch_name = match current_branch_path.split('/').last() {
         Some(name) => name,
         None => return Err(CommandsError::InvalidArgumentCountMergeError),
     };
     git_checkout_switch(directory, current_branch_name)?;
     git_merge(directory, merge_branch_path)
+}
+
+/// Obtiene los logs que difieren entre las ramas a mergear.
+/// ###Parametros:
+/// 'log_current_branch': logs de la branch actual
+/// 'log_other_branch': logs de otra branch
+pub fn logs_just_in_one_branch(log_current_branch: Vec<String>, log_other_branch: Vec<String>) -> Vec<String> {
+    let logs_just_in_current_branch = log_current_branch
+        .iter()
+        .filter(|commit| !log_other_branch.contains(commit))
+        .collect::<Vec<_>>();
+    logs_just_in_current_branch.iter().map(|commit| commit.to_string()).collect::<Vec<_>>()
 }
 
 /// Obtiene el primer commit de cada rama por separado.
@@ -99,24 +120,19 @@ pub fn get_first_commit_of_each_branch(
     log_current_branch: &[String],
     log_merge_branch: &[String],
 ) -> (String, String) {
-    let logs_just_in_current_branch = log_current_branch
-        .iter()
-        .filter(|commit| !log_merge_branch.contains(commit))
-        .collect::<Vec<_>>();
-    let logs_just_in_merge_branch = log_merge_branch
-        .iter()
-        .filter(|commit| !log_current_branch.contains(commit))
-        .collect::<Vec<_>>();
+
+    let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch.to_vec(), log_merge_branch.to_vec());
+    let logs_just_in_merge_branch = logs_just_in_one_branch(log_merge_branch.to_vec(), log_current_branch.to_vec());
 
     let mut first_commit_current_branch = &log_current_branch[0];
     let mut first_commit_merge_branch = &log_merge_branch[0];
 
     if !logs_just_in_current_branch.is_empty() {
-        first_commit_current_branch = logs_just_in_current_branch[0];
+        first_commit_current_branch = &logs_just_in_current_branch[0];
     }
 
     if !logs_just_in_merge_branch.is_empty() {
-        first_commit_merge_branch = logs_just_in_merge_branch[0];
+        first_commit_merge_branch = &logs_just_in_merge_branch[0];
     }
     (
         first_commit_current_branch.to_string(),
@@ -154,7 +170,7 @@ pub fn get_logs_from_branches(
     git_checkout_switch(directory, branch_name)?;
     let log_merge_branch = git_log(directory)?;
     let log_merge_branch = get_commits_from_log(log_merge_branch);
-    git_checkout_switch(directory, &current_branch)?;
+    git_checkout_switch(directory, current_branch)?;
     Ok((log_current_branch, log_merge_branch))
 }
 
@@ -294,7 +310,7 @@ fn recovery_tree_merge(
                         }
                     }
                 } else {
-                    add_to_index(git_dir, &path_file_format_clean_str, hash_object)?;
+                    add_to_index(git_dir, path_file_format_clean_str, hash_object)?;
                     create_file_replace(&path_file_format, &content_file)?;
                     strategy.0 = "recursive".to_string();
                     strategy.1 = "ok".to_string();
@@ -302,7 +318,7 @@ fn recovery_tree_merge(
             } else {
                 // FAST-FORWARD STRATEGY
                 create_file_replace(&path_file_format, &content_file)?;
-                add_to_index(git_dir, &path_file_format_clean_str, hash_object)?;
+                add_to_index(git_dir, path_file_format_clean_str, hash_object)?;
                 strategy.0 = "fast-forward".to_string();
                 strategy.1 = "ok".to_string();
             }
@@ -334,7 +350,7 @@ pub fn merge_depending_on_strategy(
     directory: &str,
     branch_to_merge: &str,
 ) -> Result<(String, String), CommandsError> {
-    let content_commit = git_cat_file(directory, &branch_to_merge_hash, "-p")?;
+    let content_commit = git_cat_file(directory, branch_to_merge_hash, "-p")?;
     let content_tree = get_tree_of_commit(content_commit, directory)?;
     let strategy = recovery_tree_merge(
         directory,
