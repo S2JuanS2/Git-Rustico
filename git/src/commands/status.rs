@@ -161,6 +161,25 @@ fn print_changes(
     Ok(formatted_result)
 }
 
+pub fn is_files_to_delete(directory: &str, file_name: &str) -> Result<bool, CommandsError> {
+
+    let dir_git = format!("{}/{}", directory, GIT_DIR);
+
+    let index_content = get_index_content(&dir_git)?;
+    let index_files = get_lines_in_index(index_content);
+    let working_directory_hash_list = get_hashes_working_directory(directory)?;
+    let index_hashes = get_hashes_index(index_files)?;
+
+    let deleted_files_list = check_for_deleted_files(&index_hashes, &working_directory_hash_list, directory);
+
+    for deleted_file in deleted_files_list {
+        if deleted_file == file_name{
+            return Ok(true)
+        }
+    }
+    Ok(false)
+}
+
 pub fn is_files_to_commit(directory: &str) -> Result<bool, CommandsError> {
     let dir_git = format!("{}/{}", directory, GIT_DIR);
 

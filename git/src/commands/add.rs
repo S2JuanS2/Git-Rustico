@@ -8,6 +8,8 @@ use std::path::Path;
 
 use super::check_ignore::{check_gitignore, get_gitignore_content};
 use super::errors::CommandsError;
+use super::rm::remove_from_index_with_filename;
+use super::status::is_files_to_delete;
 
 /// Esta función se encarga de llamar al comando add con los parametros necesarios
 /// ###Parametros:
@@ -96,23 +98,28 @@ fn add_file(full_path: &Path, file_name: &OsString, repo_parts: usize) -> Result
 /// 'directory': directorio donde estará inicializado el repositorio
 /// 'file_name': Nombre del archivo del cual se leera el contenido para luego comprimirlo y generar el objeto
 pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError> {
-    let file_path = format!("{}/{}", directory, file_name);
-    let mut ignored_files = Vec::<String>::new();
-    let gitignore_content = get_gitignore_content(directory)?;
-    check_gitignore(file_name, &mut ignored_files, &gitignore_content)?;
-    if !ignored_files.is_empty() {
-        let error_format = format!("This file {} is in .gitignore", file_name);
-        return Ok(error_format);
+
+    if !is_files_to_delete(directory, file_name)? {
+        let file_path = format!("{}/{}", directory, file_name);
+        let mut ignored_files = Vec::<String>::new();
+        let gitignore_content = get_gitignore_content(directory)?;
+        check_gitignore(file_name, &mut ignored_files, &gitignore_content)?;
+        if !ignored_files.is_empty() {
+            let error_format = format!("This file {} is in .gitignore", file_name);
+            return Ok(error_format);
+        }
+        let file = open_file(&file_path)?;
+        let content = read_file(file)?;
+    
+        let git_dir = format!("{}/{}", directory, GIT_DIR);
+    
+        let hash_object = builder_object_blob(content, &git_dir)?;
+    
+        // Se actualiza el index.
+        add_to_index(git_dir, file_name, hash_object)?;
+    }else{
+        remove_from_index_with_filename(directory, file_name)?;
     }
-    let file = open_file(&file_path)?;
-    let content = read_file(file)?;
-
-    let git_dir = format!("{}/{}", directory, GIT_DIR);
-
-    let hash_object = builder_object_blob(content, &git_dir)?;
-
-    // Se actualiza el index.
-    add_to_index(git_dir, file_name, hash_object)?;
 
     let ok_format = format!("File {} added successfully", file_name);
     Ok(ok_format)
