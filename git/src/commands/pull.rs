@@ -1,5 +1,6 @@
 use crate::commands::branch::get_current_branch;
 use crate::commands::fetch::{git_fetch_branch, FetchStatus};
+use crate::commands::fetch_head::{self, FetchHead};
 use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
@@ -57,8 +58,8 @@ pub fn git_pull(
         FetchStatus::Success => (),
     }
 
-    // A implementar, usar el FETCH_HEAD
-        
+    // let fetch_head = FetchHead::new_from_file(repo_local)?;
+
 
 
     Ok("Pullcito naciendo".to_string())
