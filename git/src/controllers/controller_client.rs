@@ -161,7 +161,7 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
                 result = handle_log(rest_of_command, client.clone())?;
             }
             "pull" => {
-                handle_pull(rest_of_command, client.clone())?;
+                result = handle_pull(rest_of_command, client.clone())?;
             }
             "push" => {
                 handle_push(rest_of_command, client.clone())?;

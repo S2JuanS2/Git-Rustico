@@ -25,7 +25,6 @@ pub enum FetchStatus {
     Success,
     NoUpdates,
     BranchNotFound,
-    Error,
 }
 
 impl fmt::Display for FetchStatus {
@@ -33,7 +32,6 @@ impl fmt::Display for FetchStatus {
         match self {
             FetchStatus::Success => write!(f, "El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
             FetchStatus::NoUpdates => write!(f, "No hay nuevas actualizaciones. Todo está actualizado."),
-            FetchStatus::Error => write!(f, "Error al realizar el fetch."),
             FetchStatus::BranchNotFound => write!(f, "La branch no existe en el repositorio remoto."),
         }
     }
