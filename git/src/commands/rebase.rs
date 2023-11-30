@@ -61,6 +61,15 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
             directory,
             branch_name,
         )?;
+        println!("{:?}", strategy);
+
+        get_result_depending_on_strategy(
+            &strategy,
+            &mut formatted_result,
+            current_branch_hash,
+            branch_to_rebase_hash,
+            path_current_branch,
+        )?;
 
         if strategy.1 == "ok".to_string() {
 
@@ -70,13 +79,48 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
                 .collect::<Vec<_>>();
 
             
-            create_new_commits(directory, client, logs_just_in_current_branch, &current_branch, branch_name)?;
+            create_new_commits(directory, client, logs_just_in_current_branch, &current_branch, branch_name, &mut formatted_result)?;
             update_first_commit(directory, current_branch, branch_name)?;
         }
     }
 
     Ok(formatted_result)
 }
+
+fn get_result_depending_on_strategy(
+    strategy: &(String, String),
+    formatted_result: &mut String,
+    current_branch_hash: String,
+    branch_to_rebase_hash: String,
+    path_current_branch: String,
+) -> Result<(), CommandsError> {
+    formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
+    if strategy.0 == "fast-forward" {
+        formatted_result.push_str(
+            format!(
+                "Updating {}..{}\n",
+                current_branch_hash, branch_to_rebase_hash
+            )
+            .as_str(),
+        );
+        formatted_result.push_str("Fast-forward\n");
+        create_file_replace(&path_current_branch, &branch_to_rebase_hash)?;
+    } else if strategy.0 == "recursive" && strategy.1 != "ok" {
+        formatted_result.push_str(format!("Auto-merging {}\n", strategy.1).as_str());
+        formatted_result.push_str(
+            format!(
+                "CONFLICT (content): Merge conflict in {}\n",
+                strategy.1
+            )
+            .as_str(),
+        );
+        formatted_result
+            .push_str("Automatic merge failed; fix conflicts and then commit the result.\n");
+        formatted_result.push_str(format!("Conflict in file:{}\n", strategy.1).as_str());
+    }
+    Ok(())
+}
+
 
 fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &str) -> Result<(), CommandsError> {
     let (log_current_branch, log_rebase_branch) =
@@ -131,19 +175,20 @@ fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &
     Ok(())
 }
 
-fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<&String>, current_branch: &str, branch_name: &str) -> Result<(), CommandsError> {
+fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<&String>, current_branch: &str, branch_name: &str, formatted_result: &mut String) -> Result<(), CommandsError> {
     update_log_current_branch(directory, current_branch, branch_name)?;
 
     for commit in log_current_branch {
         let content_commit = git_cat_file(directory, &commit, "-p")?;
         let commit_message = get_commit_msg(content_commit);
         let new_commit = Commit::new(
-            commit_message,
+            commit_message.clone(),
             client.get_name().to_string(),
             client.get_email().to_string(),
             client.get_name().to_string(),
             client.get_email().to_string(),
         );
+        formatted_result.push_str(format!("Applying: {}\n", commit_message).as_str());
         git_commit(directory, new_commit)?;
     }
     Ok(())
@@ -270,9 +315,111 @@ mod tests {
         );
 
         let result = git_rebase(directory, "nueva_branch", client);
+        println!("{:?}", result);
 
         let log_current_branch_after_rebase = git_log(directory).expect("Error al hacer git log");
         assert!(log_current_branch_after_rebase.contains(&log_nueva_branch));
+        
+        fs::remove_dir_all(directory).expect("Error al borrar el directorio");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_rebase_with_conflict() {
+        let directory = "./test_rebase_with_conflict";
+        git_init(directory).expect("Error al inicializar el repositorio");
+
+        let file_path = format!("{}/{}", directory, "holamundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Error al crear el archivo");
+        file.write_all(b"Hola Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "holamundo2.txt");
+        let mut file2 = fs::File::create(&file_path2).expect("Error al crear el archivo");
+        file2.write_all(b"Hola Mundo 2")
+            .expect("Error al escribir en el archivo");
+
+        let file_path3 = format!("{}/{}", directory, "holamundo3.txt");
+        let mut file3 = fs::File::create(&file_path3).expect("Error al crear el archivo");
+        file3.write_all(b"Hola Mundo 3")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "holamundo.txt").expect("Error al hacer git add");
+
+        let test_commit1 = Commit::new(
+            "prueba".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit1).expect("Error al hacer git commit");
+
+        git_branch_create(directory, "nueva_branch").expect("Error al crear la nueva branch");
+        git_checkout_switch(directory, "nueva_branch").expect("Error al hacer git checkout");
+
+        git_add(directory, "holamundo2.txt").expect("Error al hacer git add");
+
+        let test_commit2 = Commit::new(
+            "prueba otra".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit2).expect("Error al hacer git commit");
+
+        git_add(directory, "holamundo3.txt").expect("Error al hacer git add");
+
+        let test_commit3 = Commit::new(
+            "aa".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit3).expect("Error al hacer git commit");
+
+        let log_nueva_branch = git_log(directory).expect("Error al hacer git log");
+
+        git_checkout_switch(directory, "master").expect("Error al hacer git checkout");
+
+        // ESTA VEZ VA A HABER CONFLICTO EN HOLAMUNDO2.TXT
+        let file_path2 = format!("{}/{}", directory, "holamundo2.txt");
+        let mut file2 = fs::File::create(&file_path2).expect("Error al crear el archivo");
+        file2.write_all(b"conflicto")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "holamundo2.txt").expect("Error al hacer git add");
+
+        let test_commit4 = Commit::new(
+            "bb".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit4).expect("Error al hacer git commit");
+
+        let client = Client::new(
+            "Valen".to_string(), 
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "19992020".to_string(),
+            "9090".to_string(),
+            "localhost".to_string(),
+            "./".to_string(),
+            "master".to_string(),
+        );
+
+        let result = git_rebase(directory, "nueva_branch", client);
+        println!("{:?}", result);
+
+        let log_current_branch_after_rebase = git_log(directory).expect("Error al hacer git log");
+        assert!(!log_current_branch_after_rebase.contains(&log_nueva_branch));
         
         fs::remove_dir_all(directory).expect("Error al borrar el directorio");
         assert!(result.is_ok());

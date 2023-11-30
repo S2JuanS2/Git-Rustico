@@ -82,6 +82,7 @@ pub enum CommandsError {
     ReadTagsError,
     TagAlreadyExistsError,
     TagNotExistsError,
+    InvalidArgumentCountRebaseError,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -170,6 +171,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::ReadTagsError => write!(f, "Error al leer la tag"),
         CommandsError::TagAlreadyExistsError => write!(f, "Ya existe una tag con ese nombre"),
         CommandsError::TagNotExistsError => write!(f, "La tag no existe"),
+        CommandsError::InvalidArgumentCountRebaseError => write!(f, "Número de argumentos inválido para el comando rebase.\nUsar: git rebase <branch name>"),
     }
 }
 
