@@ -126,9 +126,9 @@ pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, C
 
     copy_log(directory, &current_branch, branch_name)?;
 
-    let result = format!("Rama {} creada con éxito!", branch_name);
+    let response = format!("Branch {} created", branch_name);
 
-    Ok(result)
+    Ok(response)
 }
 
 // Devuelve un vector con los nombres de las branchs
@@ -213,7 +213,8 @@ pub fn git_branch_delete(directory: &str, branch_name: &str) -> Result<String, C
         return Err(CommandsError::DeleteBranchError);
     }
 
-    Ok("Rama eliminada con éxito".to_string())
+    let response = format!("Branch {} deleted", branch_name);
+    Ok(response)
 }
 
 #[cfg(test)]

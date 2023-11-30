@@ -13,7 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::commands::branch::get_current_branch;
 
-use super::status::get_index_content;
+use super::status::{get_index_content, is_files_to_commit};
 
 const COMMIT_EDITMSG: &str = "COMMIT_EDITMSG";
 const BRANCH_DIR: &str = "refs/heads/";
@@ -188,6 +188,10 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
     let git_dir = format!("{}/{}", directory, GIT_DIR);
     check_index_content(&git_dir)?;
 
+    if is_files_to_commit(directory)? {
+        return Ok("nothing to commit, working tree clean".to_string())
+    }
+
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
 
@@ -210,9 +214,11 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
     builder_commit_log(directory, &commit_content, &hash_commit)?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
-    create_or_replace_commit_into_branch(current_branch, branch_current_path, hash_commit)?;
+    create_or_replace_commit_into_branch(current_branch.clone(), branch_current_path, hash_commit.clone())?;
 
-    Ok("Commit exitoso!".to_string())
+    let response = format!("[{} {}] {}", current_branch, &hash_commit.as_str()[..7], commit.get_message());
+
+    Ok(response)
 }
 
 /// Esta función cambia el hash del commit en el archivo de la branch actual (y si no existe el path de

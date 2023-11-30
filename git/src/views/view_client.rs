@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-const RESPONSE: &str = "\n___________________________________________________________\n";
+const RESPONSE: &str = "\n_______________________________________________________________________________________________________________\n";
 
 const HELP: &str = "text-help-here";
 

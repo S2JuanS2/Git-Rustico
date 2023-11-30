@@ -139,7 +139,8 @@ pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_n
 
     builder_tag_msg_edit(directory,version_name)?;
 
-    Ok("Tag creada con éxito".to_string())
+    let response = format!("Tag {} created", tag_name);
+    Ok(response)
 }
 
 /// Esta función se encarga de eliminar la tag con el nombre recibido por parámetro

@@ -54,7 +54,7 @@ pub fn git_add_all(directory: &Path, repo_parts: usize) -> Result<String, Comman
             }
         }
     }
-    Ok("Archivos agregados con exito!".to_string())
+    Ok("Files added successfully".to_string())
 }
 
 /// Esta función se encarga de llamar a la función git_add con los parametros necesarios si se hace git
@@ -101,7 +101,8 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError
     let gitignore_content = get_gitignore_content(directory)?;
     check_gitignore(file_name, &mut ignored_files, &gitignore_content)?;
     if !ignored_files.is_empty() {
-        return Ok("El archivo esta en .gitignore".to_string());
+        let error_format = format!("This file {} is in .gitignore", file_name);
+        return Ok(error_format);
     }
     let file = open_file(&file_path)?;
     let content = read_file(file)?;
@@ -113,7 +114,8 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError
     // Se actualiza el index.
     add_to_index(git_dir, file_name, hash_object)?;
 
-    Ok("Archivo agregado con exito!".to_string())
+    let ok_format = format!("File {} added successfully", file_name);
+    Ok(ok_format)
 }
 
 /// Esta función se encarga de actualizar el index con el nuevo archivo al que se le hizo add.
