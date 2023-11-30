@@ -3,6 +3,7 @@ use super::branch::get_branch;
 use super::branch::get_current_branch;
 use super::branch::git_branch_create;
 use super::cat_file::git_cat_file;
+use super::status::is_files_to_commit;
 use crate::consts::*;
 use super::errors::CommandsError;
 
@@ -24,18 +25,17 @@ use std::path::Path;
 pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     let directory = client.get_directory_path();
     if args.len() == 1 {
-        git_checkout_switch(directory, args[0])?;
+        return Ok(git_checkout_switch(directory, args[0])?)
     } else if args.len() == 2 {
         if args[0] == "-b" {
             git_branch_create(directory, args[1])?;
-            git_checkout_switch(directory, args[1])?;
+            return Ok(git_checkout_switch(directory, args[1])?)
         } else {
             return Err(CommandsError::FlagCheckoutNotRecognisedError);
         }
     } else {
         return Err(CommandsError::InvalidArgumentCountCheckoutError);
     }
-    Ok("Rama cambiada con éxito".to_string())
 }
 
 /// Esta función se encarga de leer el tree hash de un commit
@@ -146,7 +146,7 @@ fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<()
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a cambiar.
-pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<(), CommandsError> {
+pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<String, CommandsError> {
     //Falta implementar que verifique si realizó commit ante la pérdida de datos. <- con el status..
     let current_branch_name = get_current_branch(directory)?;
 
@@ -158,6 +158,11 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
     if !branches.contains(&branch_switch_name.to_string()) {
         return Err(CommandsError::BranchNotFoundError);
     }
+    
+    if !is_files_to_commit(directory)? {
+        return Ok("Please commit your changes\nAborting".to_string())
+    }
+    
     let directory_git = format!("{}/{}", directory, GIT_DIR);
     let head_file_path = Path::new(&directory_git).join(HEAD);
 
@@ -179,7 +184,8 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
     load_files_tree(directory, &current_branch_name, 1)?;
     load_files_tree(directory, branch_switch_name, 0)?;
 
-    Ok(())
+    let response = format!("Switched to branch {}", branch_switch_name);
+    Ok(response)
 }
 
 #[cfg(test)]

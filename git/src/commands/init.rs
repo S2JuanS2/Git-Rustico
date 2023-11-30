@@ -47,7 +47,7 @@ pub fn git_init(directory: &str) -> Result<String, CommandsError> {
     create_file(&config_file, CONTENT_EMPTY)?;
 
     let result = format!(
-        "Repositorio vacío inicializado en la direcección: {}",
+        "Initialized empty Git repository in {}/.git/",
         directory
     );
 

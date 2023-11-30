@@ -161,6 +161,20 @@ fn print_changes(
     Ok(formatted_result)
 }
 
+pub fn is_files_to_commit(directory: &str) -> Result<bool, CommandsError> {
+    let dir_git = format!("{}/{}", directory, GIT_DIR);
+
+    let index_content = get_index_content(&dir_git)?;
+
+    let index_files = get_lines_in_index(index_content);
+
+    let index_hashes = get_hashes_index(index_files)?;
+
+    let files_not_commited_list = check_for_commit(directory, index_hashes)?;
+
+    Ok(files_not_commited_list.is_empty())
+}
+
 /// Muestra los archivos con cambios que no estan en el staging area.
 /// ###Parámetros:
 /// 'formatted_result': string con el resultado del status formateado.

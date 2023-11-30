@@ -78,7 +78,7 @@ fn remove_from_index(
             };
         } else {
             return Ok(
-                "No se puede remover el archivo porque no esta en su version mas reciente."
+                "The file cannot be removed because it is not in its most recent version"
                     .to_string(),
             );
         }
@@ -86,7 +86,8 @@ fn remove_from_index(
 
     update_index(index_file_path, lines)?;
 
-    Ok("Archivo removido con éxito!".to_string())
+    let response = format!("rm '{}'", file_name);
+    Ok(response)
 }
 
 /// Actualiza el index con las lineas que se le pasan por parametro.
