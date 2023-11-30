@@ -27,6 +27,7 @@ pub struct GitServer {
 }
 
 impl GitServer {
+    /// Esta funcion es llamada del lado del CLIENTE.
     /// Crea una nueva estructura `GitServer` a partir del contenido proporcionado.
     ///
     /// # Descripción
@@ -117,6 +118,7 @@ impl GitServer {
         self.available_references.get(index)
     }
 
+    /// Esta funcion es llamada del lado del SERVIDOR.
     /// Crea una instancia de `GitServer` a partir de la ruta del repositorio y otros parámetros.
     ///
     /// Esta función crea una instancia de la estructura `GitServer` a partir de la ruta del
@@ -137,7 +139,7 @@ impl GitServer {
     pub fn create_from_path(
         path_repo: &str,
         version: u32,
-        capabilities: Vec<String>,
+        capabilities: &[String],
     ) -> Result<GitServer, UtilError> {
         let available_references = Reference::extract_references_from_git(path_repo)?;
         // GitServer::filter_capabilities(&mut capabilities, );
@@ -145,7 +147,7 @@ impl GitServer {
         Ok(GitServer {
             src_repo: path_repo.to_string(),
             version,
-            capabilities,
+            capabilities: capabilities.to_vec(),
             shallow: Vec::new(),
             handle_references: HandleReferences::new_from_references(&available_references),
             available_references,
@@ -164,10 +166,12 @@ impl GitServer {
 
         // Send references
         // HEAD lo inserte 1ero en el vector
-        for reference in &self.available_references {
+        // Primera refer
+        self.send_first_reference(writer)?;
+
+        for reference in &self.available_references[1..] {
             let reference = format!("{} {}\n", reference.get_hash(), reference.get_ref_path());
             let reference = pkt_line::add_length_prefix(&reference, reference.len());
-            // println!("Sending reference: {}", reference);
             send_message(writer, &reference, UtilError::ReferencesObtaining)?;
         }
 
@@ -180,6 +184,26 @@ impl GitServer {
 
         send_flush(writer, UtilError::FlushNotSentDiscoveryReferences)?;
         Ok(())
+    }
+
+    fn send_first_reference(&self, writer: &mut dyn Write) -> Result<(), UtilError>
+    {
+        let mut firts_references = format!("{} {}", self.available_references[0].get_hash(), self.available_references[0].get_ref_path());
+        if !self.capabilities.is_empty()
+        {
+            let mut len = firts_references.len();
+            firts_references.push('\0');
+            len += 1;
+            let capabilities = format!("{}\n", self.capabilities.join(" "));
+            len += capabilities.len();
+            firts_references.push_str(&capabilities);
+            let firts_references = pkt_line::add_length_prefix(&firts_references, len);
+            send_message(writer, &firts_references, UtilError::ReferencesObtaining)
+        } else {
+            firts_references.push('\n');
+            let firts_references = pkt_line::add_length_prefix(&firts_references, firts_references.len());
+            send_message(writer, &firts_references, UtilError::ReferencesObtaining)
+        }
     }
 
     /// Actualiza los datos del `GitServer` con nuevas capacidades y referencias.
@@ -301,7 +325,15 @@ impl GitServer {
     pub fn is_multiack(&self) -> bool {
         self.capabilities.contains(&"multi_ack".to_string())
     }
+
+    pub fn filter_references_for_update(&mut self, path_references: Vec<String>) -> Result<(), UtilError>
+    {
+        self.handle_references.filter_references_for_update(path_references)
+    }
     
+    pub fn contains_reference(&self, reference: &str) -> bool {
+        self.handle_references.contains_reference(reference)
+    }
 }
 
 /// Filtra las referencias basándose en un conjunto de hash de referencias.

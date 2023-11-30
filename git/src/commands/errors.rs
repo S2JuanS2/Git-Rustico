@@ -83,6 +83,8 @@ pub enum CommandsError {
     TagAlreadyExistsError,
     TagNotExistsError,
     InvalidArgumentCountRebaseError,
+    BranchNotFound,
+    PullCurrentBranchNotFound,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -172,6 +174,8 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::TagAlreadyExistsError => write!(f, "Ya existe una tag con ese nombre"),
         CommandsError::TagNotExistsError => write!(f, "La tag no existe"),
         CommandsError::InvalidArgumentCountRebaseError => write!(f, "Número de argumentos inválido para el comando rebase.\nUsar: git rebase <branch name>"),
+        CommandsError::BranchNotFound => write!(f, "La branch no existe"),
+        CommandsError::PullCurrentBranchNotFound => write!(f, "Erro al hacer pull, no se pudo obtener la branch actual"),
     }
 }
 

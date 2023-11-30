@@ -6,8 +6,9 @@ use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::git_transport::references::{reference_discovery, Reference};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
-use crate::util::connections::{receive_packfile, start_client};
-use crate::util::files::ensure_directory_clean;
+use crate::util::connections::{receive_packfile, start_client, send_flush};
+use crate::util::errors::UtilError;
+use crate::util::files::{ensure_directory_clean, create_directory};
 use crate::util::objects::{
     builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_commit,
     read_tree, ObjectEntry, ObjectType,
@@ -16,9 +17,26 @@ use crate::git_transport::git_request::GitRequest;
 use crate::util::pkt_line::read_pkt_line;
 use std::net::TcpStream;
 use std::path::Path;
-use std::fs;
+use std::{fs, fmt};
 
 use super::errors::CommandsError;
+
+pub enum FetchStatus {
+    Success,
+    NoUpdates,
+    BranchNotFound,
+}
+
+impl fmt::Display for FetchStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FetchStatus::Success => write!(f, "El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
+            FetchStatus::NoUpdates => write!(f, "No hay nuevas actualizaciones. Todo está actualizado."),
+            FetchStatus::BranchNotFound => write!(f, "La branch no existe en el repositorio remoto."),
+        }
+    }
+    
+}
 
 // use super::cat_file::git_cat_file;
 
@@ -46,17 +64,26 @@ use super::errors::CommandsError;
 ///
 /// * Otros errores de `CommandsError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
-pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
+pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<FetchStatus, CommandsError> {
     println!("Entre al handle fetch");
     if args.len() >= 2 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
     let mut socket = start_client(client.get_address())?;
-    git_fetch_all(
+    if args.is_empty() {
+        return git_fetch_all(
+            &mut socket,
+            client.get_ip(),
+            client.get_port(),
+            client.get_directory_path(),
+        );
+    }
+    git_fetch_branch(
         &mut socket,
         client.get_ip(),
         client.get_port(),
         client.get_directory_path(),
+        args[0],
     )
 }
 
@@ -65,7 +92,7 @@ pub fn git_fetch_all(
     ip: &str,
     port: &str,
     repo_local: &str,
-) -> Result<String, CommandsError> {
+) -> Result<FetchStatus, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
@@ -80,40 +107,86 @@ pub fn git_fetch_all(
     // Reference Discovery
     let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
     let mut server = reference_discovery(socket, message, repo_remoto, &my_capacibilities)?;
-    // println!("server: {:?}", server);
+    
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
     // Packfile Data
     let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
     let content = receive_packfile(socket)?;
-    // for c in &content
-    // {
-    //     println!("ObjectEntry: {:?} --- Content: {:?}", c.0, c.1);
-    //     // println!("")
-    // }
+
+    if content.is_empty()
+    {
+        return Ok(FetchStatus::NoUpdates);
+    }
+    
     if save_objects(content, repo_local).is_err() {
         return Err(CommandsError::RepositoryNotInitialized);
     };
 
-    // // Guardar las referencias en remote refs
-    // // [TODO]
-    // // necesito una funcion que me devuleva un vector dek tipo Vec<(String, String)>
-    // // EL 1er string sera el nombre de la branch y el 2do string su ultimo commit
-    // // Se puede usar el content o otro objeto
-    // // let refs: Vec<(String, String)> = get_refs(content);
-    // let refs = get_branches(&server)?;
-    // save_references(&refs, repo_local)?;
-
     let refs = server.get_references_for_updating()?;
-    // Guardo las referencias
     save_references(&refs, repo_local)?;
-    // Crear archivo FETCH_HEAD
     let fetch_head = FetchHead::new(&refs, repo_remoto)?;
     fetch_head.write(repo_local)?;
 
-    Ok("Sucessfully!".to_string())
+    Ok(FetchStatus::Success)
 }
+
+pub fn git_fetch_branch(
+    socket: &mut TcpStream,
+    ip: &str,
+    port: &str,
+    repo_local: &str,
+    name_branch: &str,
+) -> Result<FetchStatus, CommandsError> {
+    // Obtengo el repositorio remoto
+    println!("Repositorio local: {}", repo_local);
+    let git_config = GitConfig::new_from_file(repo_local)?;
+    let repo_remoto = git_config.get_remote_repo()?;
+
+    println!("Fetch del repositorio remoto: {}", repo_remoto);
+    let rfs_fetch = format!("refs/heads/{}", name_branch);
+
+    // Prepara la solicitud "git-upload-pack" para el servidor
+    let message =
+        GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
+
+    // Reference Discovery
+    let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
+    let mut server = reference_discovery(socket, message, repo_remoto, &my_capacibilities)?;
+    if !server.contains_reference(&rfs_fetch)
+    {
+        send_flush(socket, UtilError::SendFlushCancelConnection)?;
+        return Ok(FetchStatus::BranchNotFound)
+    }
+
+    // Packfile Negotiation
+    // Solo solicitar una branch
+    server.filter_references_for_update([rfs_fetch].to_vec())?;
+    packfile_negotiation_partial(socket, &mut server, repo_local)?;
+
+    // Packfile Data
+    let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
+    let content = receive_packfile(socket)?;
+
+    if content.is_empty()
+    {
+        return Ok(FetchStatus::NoUpdates);
+    }
+
+    if save_objects(content, repo_local).is_err() {
+        println!("Error al guardar los objetos");
+        return Err(CommandsError::RepositoryNotInitialized);
+    };
+
+    let refs = server.get_references_for_updating()?;
+    save_references(&refs, repo_local)?;
+    let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+    fetch_head.write(repo_local)?;
+
+    Ok(FetchStatus::Success)
+}
+
 
 /// Devuelve las referencias (nombres de las branches y hashes)
 ///  
@@ -155,10 +228,14 @@ pub fn get_branches(server: &GitServer) -> Result<Vec<(String,String)>,CommandsE
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
 fn save_references(references: &Vec<Reference>, repo_path: &str) -> Result<(), CommandsError> {
-    
-    let refs_dir_path = format!("{}/.git/refs/origin", repo_path);
 
-    // Crea el directorio si no existe
+    // Si no existe el directorio .git/refs/remotes lo crea
+    let directory_remotes = format!("{}/.git/refs/remotes", repo_path); 
+    let directory_remotes = Path::new(&directory_remotes);
+    create_directory(directory_remotes)?;
+
+    // Si no existe el directorio .git/refs/remotes/origin lo crea
+    let refs_dir_path = format!("{}/.git/refs/remotes/origin", repo_path);
     ensure_directory_clean(&refs_dir_path)?;
 
     // Escribe los hashes en archivos individuales
@@ -202,6 +279,7 @@ fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(
             i = handle_tree(&content, &git_dir, i, path_dir_cloned)?;
             i += 1;
         }
+        println!("i: {}", i);
     }
     Ok(())
 }
@@ -280,73 +358,3 @@ fn handle_tree(
     let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir)?;
     Ok(i)
 }
-
-// /// Recupera las referencias y objetos del repositorio remoto.
-// /// ###Parámetros:
-// /// 'directory': directorio del repositorio local.
-// /// 'remote_name': nombre del repositorio remoto.
-// pub fn git_fetch(directory: &str, remote_name: &str) -> Result<(), CommandsError> {
-//     // Verifica si el repositorio remoto existe
-//     let remote_dir = format!("{}{}", REMOTES_DIR, remote_name);
-//     let remote_refs_dir = format!("{}{}", directory, remote_dir);
-
-//     if !Path::new(&remote_refs_dir).exists() {
-//         return Err(CommandsError::RemoteDoesntExistError);
-//     }
-
-//     // Copia las referencias del repositorio remoto al directorio local
-//     let local_refs_dir = format!("{}{}", directory, GIT_DIR);
-//     let local_refs_dir = Path::new(&local_refs_dir)
-//         .join("refs/remotes")
-//         .join(remote_name);
-
-//     if fs::create_dir_all(&local_refs_dir).is_err() {
-//         return Err(CommandsError::OpenFileError);
-//     }
-
-//     let entries = match fs::read_dir(&remote_refs_dir) {
-//         Ok(entries) => entries,
-//         Err(_) => return Err(CommandsError::ReadFileError),
-//     };
-
-//     for entry in entries {
-//         match entry {
-//             Ok(entry) => {
-//                 let file_name = entry.file_name();
-//                 let local_ref_path = local_refs_dir.join(file_name);
-//                 let remote_ref_path = entry.path();
-
-//                 if fs::copy(remote_ref_path, local_ref_path).is_err() {
-//                     return Err(CommandsError::CopyFileError);
-//                 }
-//             }
-//             Err(_) => {
-//                 return Err(CommandsError::ReadFileError);
-//             }
-//         }
-//     }
-
-//     // Descarga los objetos necesarios desde el repositorio remoto
-//     let objects_dir = format!("{}/{}", directory, GIT_DIR);
-
-//     let objects = match fs::read_dir(&objects_dir) {
-//         Ok(objects) => objects,
-//         Err(_) => return Err(CommandsError::ReadFileError),
-//     };
-
-//     for entry in objects {
-//         match entry {
-//             Ok(entry) => {
-//                 let file_name = entry.file_name();
-//                 let object_hash = file_name.to_string_lossy().to_string();
-
-//                 git_cat_file(directory, &object_hash, "-p")?;
-//             }
-//             Err(_) => {
-//                 return Err(CommandsError::ReadFileError);
-//             }
-//         }
-//     }
-
-//     Ok(())
-// }

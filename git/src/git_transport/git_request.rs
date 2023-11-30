@@ -3,9 +3,10 @@ use std::io::Read;
 use std::net::TcpStream;
 use std::path::Path;
 
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT};
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_request;
+use crate::git_transport::references::Reference;
 use crate::util::errors::UtilError;
 use crate::util::packfile::{send_packfile, send_packfile_witch_references_client};
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
@@ -166,7 +167,7 @@ impl GitRequest {
         add_length_prefix(&message, len)
     }
 
-    pub fn execute(&self, stream: &mut TcpStream, root: &str) -> Result<(), UtilError> {
+    pub fn execute(&self, stream: &mut TcpStream, root: &str) -> Result<String, UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
                 let path_repo = get_path_repository(root, &self.pathname)?;
@@ -175,44 +176,58 @@ impl GitRequest {
             RequestCommand::ReceivePack => {
                 println!("ReceivePack");
                 println!("Funcion aun no implementada");
-                Ok(())
+                Ok("".to_string())
             }
             RequestCommand::UploadArchive => {
                 println!("Funcion aun no implementada");
                 println!("UploadArchive");
-                Ok(())
+                Ok("".to_string())
             }
         }
     }
 }
 
-fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError> {
-    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, Vec::new())?;
+fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String, UtilError> {
+    let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
+    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
+    // println!("Server: {:?}", server);
     server.send_references(stream)?;
+    // println!("Envie las referencias");
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
+    if capabilities.is_empty() && wanted_objects.is_empty() && had_objects.is_empty() {
+        return Ok("No solicito referencias".to_string());
+    }
 
     if !had_objects.is_empty() {
         // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
 
         server.update_data(capabilities, wanted_objects);
-        // [TODO]
+        // [TODO #4]
         // Dado las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
         // Se deben filtrar las referencias que tiene el servidor
-        // obj_hash = filtrar_referencias_que_tenemos(had_objects)
-        let obj_hash: Vec<String> = Vec::new();
-        sent_references_valid_client(stream, &obj_hash)?;
+        // Me debes devolver un Vec<Reference> con las referencias que tenemos en comun
+        // Acordate que el repo esta en path_repo
+        // let local_references = search_available_references(had_objects)
+        let local_references: Vec<Reference> = Vec::new();
+        // Confirmo las referencias del usuario que el servidor tiene disponibles
+        sent_references_valid_client(stream, &local_references)?;
+        // Actualizo las referencias disponibles del servidor
+        server.update_local_references(&local_references);
 
+        // Las confirmaciones terminan con recibiendo un done
         receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
-        send_acknowledge_last_reference(stream, &obj_hash)?;
+
+        // Envio el ultimo ACK
+        send_acknowledge_last_reference(stream, &local_references)?;
         // server.save_references_client(obj_hash); // UPDATE
         send_packfile_witch_references_client(stream, &server, path_repo)?;
 
-        return Ok(());
+        return Ok("Fetch exitoso".to_string());
     }
     // Si el cliente solicita todo, esta haciendo un CLONE
     server.update_data(capabilities, wanted_objects);
     send_packfile(stream, &server, path_repo)?; // Debo modificarlo, el NAK no debe estar dentro
-    Ok(())
+    Ok("Clone exitoso".to_string())
 }
 
 /// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.

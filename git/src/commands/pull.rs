@@ -1,4 +1,5 @@
-use crate::commands::fetch::git_fetch_all;
+use crate::commands::branch::get_current_branch;
+use crate::commands::fetch::{git_fetch_branch, FetchStatus};
 use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
@@ -22,9 +23,9 @@ use std::net::TcpStream;
 /// * `CommandsError::InvalidArgumentCountPull` - Indica que se proporcionó un número incorrecto de argumentos para el comando pull.
 /// * `CommandsError` - Indica varios errores relacionados con Git que podrían ocurrir durante la operación de pull.
 ///
-pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
+pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if !args.is_empty() {
-        return Err(CommandsError::InvalidArgumentCountPull.into());
+        return Err(CommandsError::InvalidArgumentCountPull);
     }
     let mut socket = start_client(client.get_address())?;
     git_pull(
@@ -40,19 +41,25 @@ pub fn git_pull(
     ip: &str,
     port: &str,
     repo_local: &str,
-) -> Result<(), CommandsError> {
+) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Pull del repositorio remoto ...");
 
-    match git_fetch_all(socket, ip, port, repo_local)
+    let name_branch = match get_current_branch(repo_local)
     {
-        Ok(_) => print!("Se descargo las actualizaciones del repositorio remoto con exito"),
-        Err(e) => return Err(e.into()),
+        Ok(name_branch) => name_branch,
+        Err(_) => return Err(CommandsError::PullCurrentBranchNotFound), // Pensar porque fallaria esto?
+    };
+    let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
+    match result {
+        FetchStatus::BranchNotFound => return Ok(format!("{}", FetchStatus::BranchNotFound)),
+        FetchStatus::NoUpdates => return Ok(format!("{}", FetchStatus::NoUpdates)),
+        FetchStatus::Success => (),
     }
 
-    // TODO: Implementar el merge de los cambios
+    // A implementar, usar el FETCH_HEAD
         
 
 
-    Ok(())
+    Ok("Pullcito naciendo".to_string())
 }
