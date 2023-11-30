@@ -41,4 +41,4 @@ que el una funcion me diga si el commit hash2 esta incluido en el hash2
 
 3) Que hacer si no esta el repo
 
-4) Que hacer mi branch no esta en el remoto
+4) Que hacer mi branch no esta en el remoto. Solo queda desde el lado del servidor

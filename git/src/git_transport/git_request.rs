@@ -194,6 +194,9 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
     server.send_references(stream)?;
     // println!("Envie las referencias");
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
+    if capabilities.is_empty() && wanted_objects.is_empty() && had_objects.is_empty() {
+        return Ok(());
+    }
     // println!("Capabilities: {:?}", capabilities);
     // println!("Wanted Objects: {:?}", wanted_objects);
     // println!("Had Objects: {:?}", had_objects);

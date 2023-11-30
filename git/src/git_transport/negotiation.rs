@@ -135,6 +135,10 @@ pub fn receive_request(
     // Want
     println!("Recibiendo solicitudes...");
     let lines = pkt_line::read(stream)?;
+    if lines.is_empty()
+    {
+        return Ok((Vec::new(), Vec::new(), Vec::new()));
+    }
     for line in &lines {
         println!("want -> {}", String::from_utf8_lossy(line));
     }
