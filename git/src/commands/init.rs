@@ -28,12 +28,14 @@ pub fn git_init(directory: &str) -> Result<String, CommandsError> {
     let heads_dir = format!("{}/{}", &git_dir, REF_HEADS);
     let remotes_dir = format!("{}/{}", &git_dir, REFS_REMOTES);
     let tags_dir = format!("{}/{}", &git_dir, REFS_TAGS);
+    let origin_dir = format!("{}/{}/{}", &git_dir, REFS_REMOTES, ORIGIN);
 
     create_directory(Path::new(&git_dir))?;
     create_directory(Path::new(&objects_dir))?;
     create_directory(Path::new(&heads_dir))?;
     create_directory(Path::new(&remotes_dir))?;
     create_directory(Path::new(&tags_dir))?;
+    create_directory(Path::new(&origin_dir))?;
 
     let head_file = format!("{}/{}", &git_dir, HEAD);
     let head_content = format!("{}{}\n", HEAD_POINTER_REF, INITIAL_BRANCH);

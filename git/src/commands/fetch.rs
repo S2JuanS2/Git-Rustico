@@ -1,3 +1,4 @@
+use crate::commands::branch::get_branch_current_hash;
 use crate::commands::config::GitConfig;
 use crate::commands::fetch_head::FetchHead;
 use crate::consts::{DIRECTORY, FILE, GIT_DIR, CAPABILITIES_FETCH, DIR_OBJECTS};
@@ -19,6 +20,7 @@ use std::net::TcpStream;
 use std::path::Path;
 use std::{fs, fmt};
 
+use super::branch::get_branch_remote;
 use super::errors::CommandsError;
 
 pub enum FetchStatus {
@@ -114,20 +116,22 @@ pub fn git_fetch_all(
     // Packfile Data
     let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
     let content = receive_packfile(socket)?;
-
     if content.is_empty()
     {
         return Ok(FetchStatus::NoUpdates);
     }
-    
-    if save_objects(content, repo_local).is_err() {
-        return Err(CommandsError::RepositoryNotInitialized);
-    };
-
     let refs = server.get_references_for_updating()?;
-    save_references(&refs, repo_local)?;
-    let fetch_head = FetchHead::new(&refs, repo_remoto)?;
-    fetch_head.write(repo_local)?;
+
+    if !is_already_update(repo_local, &refs)? {
+        if save_objects(content, repo_local).is_err() {
+            return Err(CommandsError::RepositoryNotInitialized);
+        };
+        save_references(&refs, repo_local)?;
+        let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+        fetch_head.write(repo_local)?;
+    }else{
+        return Ok(FetchStatus::NoUpdates)
+    }
 
     Ok(FetchStatus::Success)
 }
@@ -174,19 +178,64 @@ pub fn git_fetch_branch(
         return Ok(FetchStatus::NoUpdates);
     }
 
-    if save_objects(content, repo_local).is_err() {
-        println!("Error al guardar los objetos");
-        return Err(CommandsError::RepositoryNotInitialized);
-    };
-
     let refs = server.get_references_for_updating()?;
-    save_references(&refs, repo_local)?;
-    let fetch_head = FetchHead::new(&refs, repo_remoto)?;
-    fetch_head.write(repo_local)?;
+
+    if !is_already_update(repo_local, &refs)? {
+        if save_objects(content, repo_local).is_err() {
+            println!("Error al guardar los objetos");
+            return Err(CommandsError::RepositoryNotInitialized);
+        };
+        save_references(&refs, repo_local)?;
+        let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+        fetch_head.write(repo_local)?;
+    }else{
+        return Ok(FetchStatus::NoUpdates)
+    }
 
     Ok(FetchStatus::Success)
 }
 
+/// Recibe las referencias del servidor y las compara los hashes de cada branch con el repositorio local,
+/// en caso de ser todas iguales devuelve true, sino false.
+///  
+/// # Argumentos
+///
+/// * `repo_local`: Directorio del repositorio local
+/// * `refs`: Referencias del servidor
+///
+/// # Errores
+///
+/// Devuelve un error del tipo `CommandsError` si hay problemas
+///
+fn is_already_update(repo_local: &str, refs: &Vec<Reference>) -> Result<bool, CommandsError> {
+
+    let mut found = false;
+    let branches = get_branch_remote(repo_local)?;
+
+    if branches.is_empty(){
+        return Ok(false)
+    }
+    for reference in refs{
+        for branch in branches.clone() {
+            if String::from(reference.get_name()) == branch {
+                found = true;
+            }
+        }
+    }
+    if found == false{
+        return Ok(false)
+    }
+    for branch in branches {
+        for reference in refs {
+            let local_branch_hash = get_branch_current_hash(repo_local, branch.clone())?;
+            let ref_branch_hash = String::from(reference.get_hash());
+            if branch == reference.get_name() && local_branch_hash != ref_branch_hash{
+                return Ok(false)
+            }
+        }
+    }
+    Ok(true)
+}
 
 /// Devuelve las referencias (nombres de las branches y hashes)
 ///  
@@ -198,7 +247,7 @@ pub fn git_fetch_branch(
 ///
 /// Devuelve un error del tipo `CommandsError` si hay problemas
 ///
-pub fn get_branches(server: &GitServer) -> Result<Vec<(String,String)>,CommandsError> {
+pub fn get_branches_remote(server: &GitServer) -> Result<Vec<(String,String)>,CommandsError> {
 
     let mut references: Vec<(String,String)> = vec![];
 
@@ -278,8 +327,9 @@ fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(
         } else if content[i].0.obj_type == ObjectType::Tree {
             i = handle_tree(&content, &git_dir, i, path_dir_cloned)?;
             i += 1;
+        }else if content[i].0.obj_type == ObjectType::Blob{
+            i += 1;
         }
-        println!("i: {}", i);
     }
     Ok(())
 }

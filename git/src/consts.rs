@@ -119,6 +119,8 @@ pub const REFS_REMOTES: &str = "refs/remotes";
 
 pub const REFS_TAGS: &str = "refs/tags";
 
+pub const ORIGIN: &str = "origin";
+
 pub const DIR_REFS: &str = "refs";
 
 pub const DIR_OBJECTS: &str = "objects";
