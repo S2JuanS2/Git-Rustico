@@ -167,7 +167,7 @@ impl GitRequest {
         add_length_prefix(&message, len)
     }
 
-    pub fn execute(&self, stream: &mut TcpStream, root: &str) -> Result<(), UtilError> {
+    pub fn execute(&self, stream: &mut TcpStream, root: &str) -> Result<String, UtilError> {
         match self.request_command {
             RequestCommand::UploadPack => {
                 let path_repo = get_path_repository(root, &self.pathname)?;
@@ -176,18 +176,18 @@ impl GitRequest {
             RequestCommand::ReceivePack => {
                 println!("ReceivePack");
                 println!("Funcion aun no implementada");
-                Ok(())
+                Ok("".to_string())
             }
             RequestCommand::UploadArchive => {
                 println!("Funcion aun no implementada");
                 println!("UploadArchive");
-                Ok(())
+                Ok("".to_string())
             }
         }
     }
 }
 
-fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError> {
+fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String, UtilError> {
     let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
     let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
     // println!("Server: {:?}", server);
@@ -195,7 +195,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
     // println!("Envie las referencias");
     let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
     if capabilities.is_empty() && wanted_objects.is_empty() && had_objects.is_empty() {
-        return Ok(());
+        return Ok("No solicito referencias".to_string());
     }
     // println!("Capabilities: {:?}", capabilities);
     // println!("Wanted Objects: {:?}", wanted_objects);
@@ -225,12 +225,12 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), Uti
         // server.save_references_client(obj_hash); // UPDATE
         send_packfile_witch_references_client(stream, &server, path_repo)?;
 
-        return Ok(());
+        return Ok("Fetch exitoso".to_string());
     }
     // Si el cliente solicita todo, esta haciendo un CLONE
     server.update_data(capabilities, wanted_objects);
     send_packfile(stream, &server, path_repo)?; // Debo modificarlo, el NAK no debe estar dentro
-    Ok(())
+    Ok("Clone exitoso".to_string())
 }
 
 /// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.
