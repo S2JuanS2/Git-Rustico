@@ -17,6 +17,8 @@
 - No acepto solicitudes have
 - En negociacion no permito que el server me de sus capacibilites
 
+# Fetch 
+1) Eliminar el HEAD del config
 
 # Fetch 
 1) Que pasa si mis commits son:
@@ -33,3 +35,10 @@ El local le dira que tiene el hash_6 y el remoto no sabra nada
 12
 35
 dc
+
+2) Dado 2 commits, hash1(remoto) hash2(local)...
+que el una funcion me diga si el commit hash2 esta incluido en el hash2
+
+3) Que hacer si no esta el repo
+
+4) Que hacer mi branch no esta en el remoto. Solo queda desde el lado del servidor

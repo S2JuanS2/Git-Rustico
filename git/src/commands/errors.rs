@@ -82,6 +82,8 @@ pub enum CommandsError {
     ReadTagsError,
     TagAlreadyExistsError,
     TagNotExistsError,
+    BranchNotFound,
+    PullCurrentBranchNotFound,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -170,6 +172,8 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::ReadTagsError => write!(f, "Error al leer la tag"),
         CommandsError::TagAlreadyExistsError => write!(f, "Ya existe una tag con ese nombre"),
         CommandsError::TagNotExistsError => write!(f, "La tag no existe"),
+        CommandsError::BranchNotFound => write!(f, "La branch no existe"),
+        CommandsError::PullCurrentBranchNotFound => write!(f, "Erro al hacer pull, no se pudo obtener la branch actual"),
     }
 }
 

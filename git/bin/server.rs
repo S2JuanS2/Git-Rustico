@@ -41,7 +41,9 @@ fn process_request(
     root_directory: &str,
 ) -> Result<(), GitError> {
     match request.execute(stream, root_directory) {
-        Ok(()) => {
+        Ok(result) => {
+            let message = format!("{}{}", signature, result);
+            log_message(tx, &message);
             let message = format!("{}Request exitosa", signature);
             log_message(tx, &message);
             Ok(())
