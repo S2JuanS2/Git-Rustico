@@ -261,9 +261,6 @@ pub fn reference_discovery(
 ) -> Result<GitServer, UtilError> {
     send_message(stream, &message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(stream)?;
-    for line in &lines {
-        println!("String: {}", String::from_utf8_lossy(line))        
-    }
     GitServer::new(&lines, src_repo, my_capabilities)
 }
 

@@ -7,7 +7,7 @@ use crate::git_transport::references::{reference_discovery, Reference};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{receive_packfile, start_client};
-use crate::util::files::ensure_directory_clean;
+use crate::util::files::{ensure_directory_clean, create_directory};
 use crate::util::objects::{
     builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_commit,
     read_tree, ObjectEntry, ObjectType,
@@ -87,31 +87,14 @@ pub fn git_fetch_all(
     // Packfile Data
     let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
     let content = receive_packfile(socket)?;
-    for c in &content
-    {
-        println!("ObjectEntry: {:?} --- Content: {:?}", c.0, c.1);
-        // println!("")
-    }
-    println!("Antes del save_objects");
+
     if save_objects(content, repo_local).is_err() {
         println!("Error al guardar los objetos");
         return Err(CommandsError::RepositoryNotInitialized);
     };
-    println!("Despues del save_objects");
 
-    // // Guardar las referencias en remote refs
-    // // [TODO]
-    // // necesito una funcion que me devuleva un vector dek tipo Vec<(String, String)>
-    // // EL 1er string sera el nombre de la branch y el 2do string su ultimo commit
-    // // Se puede usar el content o otro objeto
-    // // let refs: Vec<(String, String)> = get_refs(content);
-    // let refs = get_branches(&server)?;
-    // save_references(&refs, repo_local)?;
-    println!("Guardando referencias");
     let refs = server.get_references_for_updating()?;
-    // Guardo las referencias
     save_references(&refs, repo_local)?;
-    // Crear archivo FETCH_HEAD
     let fetch_head = FetchHead::new(&refs, repo_remoto)?;
     fetch_head.write(repo_local)?;
 
@@ -158,10 +141,14 @@ pub fn get_branches(server: &GitServer) -> Result<Vec<(String,String)>,CommandsE
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
 fn save_references(references: &Vec<Reference>, repo_path: &str) -> Result<(), CommandsError> {
-    
-    let refs_dir_path = format!("{}/.git/refs/origin", repo_path);
 
-    // Crea el directorio si no existe
+    // Si no existe el directorio .git/refs/remotes lo crea
+    let directory_remotes = format!("{}/.git/refs/remotes", repo_path); 
+    let directory_remotes = Path::new(&directory_remotes);
+    create_directory(directory_remotes)?;
+
+    // Si no existe el directorio .git/refs/remotes/origin lo crea
+    let refs_dir_path = format!("{}/.git/refs/remotes/origin", repo_path);
     ensure_directory_clean(&refs_dir_path)?;
 
     // Escribe los hashes en archivos individuales
