@@ -360,6 +360,24 @@ pub fn packfile_negotiation_partial(
     send_firts_request(stream, &remote_references[0], server)?;
     upload_request_type(stream, &remote_references[1..].to_vec(), "want")?;
 
+    //  [TODO #5]
+    // Este TODO es para optmizar el fetch
+    // Supongamos que nuestro main local tiene h1(mas antigua) h2 h3 h4 h5 h6(mas nueva)
+    // Y el servidor tiene h1 h2 h3 h4 h5
+    // Si sabemos que el h1 h2 h3 h4 h5 son iguales en el servidor y en el local
+    // No haria falta que el servidor nos mande esos commits
+    // En este caso solo tenemos los ultimos commits del local y remoto
+    // Se necesita una funcion que dado 3 vectores de String
+    // Vec(path_branch, hash local, hash remoto)
+    // Nos devuelva un vector de path_branch y un booleano  -> Vec<(String, bool)>
+    // El booleano indica si el path_branch local es igual al hash remoto
+    // True: La referencia local esta actualizada o adelantada, no necesitamos descargar cosas
+    // False: La referencia local esta atrasada, necesitamos descargar cosas
+    // Ejemplo:
+    // Vec<(refs/heads/master, h3, h4), (refs/heads/develop, h4, h3)>
+    // Vec<(refs/heads/master, false), (refs/heads/develop, true)>
+    // Supongamos que el orden de los hash es por su indice
+
     let local_references = server.get_local_references()?;
     upload_request_type(stream, &local_references, HAVE)?;
 

@@ -197,9 +197,6 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
     if capabilities.is_empty() && wanted_objects.is_empty() && had_objects.is_empty() {
         return Ok("No solicito referencias".to_string());
     }
-    // println!("Capabilities: {:?}", capabilities);
-    // println!("Wanted Objects: {:?}", wanted_objects);
-    // println!("Had Objects: {:?}", had_objects);
 
     if !had_objects.is_empty() {
         // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
@@ -210,7 +207,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
         // Se deben filtrar las referencias que tiene el servidor
         // Me debes devolver un Vec<Reference> con las referencias que tenemos en comun
         // Acordate que el repo esta en path_repo
-        // let valid_references = search_available_references(had_objects)
+        // let local_references = search_available_references(had_objects)
         let local_references: Vec<Reference> = Vec::new();
         // Confirmo las referencias del usuario que el servidor tiene disponibles
         sent_references_valid_client(stream, &local_references)?;
