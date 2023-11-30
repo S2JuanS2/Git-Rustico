@@ -325,7 +325,15 @@ impl GitServer {
     pub fn is_multiack(&self) -> bool {
         self.capabilities.contains(&"multi_ack".to_string())
     }
+
+    pub fn filter_references_for_update(&mut self, path_references: Vec<String>) -> Result<(), UtilError>
+    {
+        self.handle_references.filter_references_for_update(path_references)
+    }
     
+    pub fn contains_reference(&self, reference: &str) -> bool {
+        self.handle_references.contains_reference(reference)
+    }
 }
 
 /// Filtra las referencias basándose en un conjunto de hash de referencias.

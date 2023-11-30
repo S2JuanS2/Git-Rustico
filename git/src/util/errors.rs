@@ -83,6 +83,7 @@ pub enum UtilError {
     GetLocalReferences,
     MultiAckNotSupported,
     ServerCapabilitiesNotSupported,
+    SendFlushCancelConnection,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -166,6 +167,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::GetLocalReferences => write!(f, "GetLocalReferences: No se pudieron obtener las referencias locales"),
         UtilError::MultiAckNotSupported => write!(f, "MultiAckNotSupported: El servidor no soporta multi_ack"),
         UtilError::ServerCapabilitiesNotSupported => write!(f, "ServerCapabilitiesNotSupported: El servidor no soporta mis capacidades"),
+        UtilError::SendFlushCancelConnection => write!(f, "SendFlushCancelConnection: Error al enviar el flush para terminar la conexión."),
     }
 }
 

@@ -115,6 +115,14 @@ impl Reference {
         let parts: Vec<&str> = self.ref_path.split('/').collect();
         parts.last().map_or("", |&x| x)
     }
+
+    pub fn new_from_branch(path_repo: &str, name_branch: &str) -> Result<Reference, UtilError> {
+        let path_branch = format!("{}/{}/{}/{}", path_repo, GIT_DIR, REF_HEADS, name_branch);
+        let file_branch = open_file(&path_branch)?;
+        let binding = read_file_string(file_branch)?;
+        let hash_branch = binding.trim();
+        Reference::new(&hash_branch, &format!("refs/heads/{}", name_branch))
+    }
 }
 
 /// Extrae el contenido de un objeto a partir de su hash

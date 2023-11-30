@@ -6,7 +6,8 @@ use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::git_transport::references::{reference_discovery, Reference};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
-use crate::util::connections::{receive_packfile, start_client};
+use crate::util::connections::{receive_packfile, start_client, send_flush};
+use crate::util::errors::UtilError;
 use crate::util::files::{ensure_directory_clean, create_directory};
 use crate::util::objects::{
     builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_commit,
@@ -52,11 +53,20 @@ pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<String, CommandsE
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
     let mut socket = start_client(client.get_address())?;
-    git_fetch_all(
+    if args.is_empty() {
+        return git_fetch_all(
+            &mut socket,
+            client.get_ip(),
+            client.get_port(),
+            client.get_directory_path(),
+        );
+    }
+    git_fetch_branch(
         &mut socket,
         client.get_ip(),
         client.get_port(),
         client.get_directory_path(),
+        args[0],
     )
 }
 
@@ -88,6 +98,65 @@ pub fn git_fetch_all(
     let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
     let content = receive_packfile(socket)?;
 
+    if content.is_empty()
+    {
+        return Ok("No hay nuevas actualizaciones. Todo está actualizado.".to_string());
+    }
+    
+    if save_objects(content, repo_local).is_err() {
+        return Err(CommandsError::RepositoryNotInitialized);
+    };
+
+    let refs = server.get_references_for_updating()?;
+    save_references(&refs, repo_local)?;
+    let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+    fetch_head.write(repo_local)?;
+
+    Ok("El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones.".to_string())
+}
+
+pub fn git_fetch_branch(
+    socket: &mut TcpStream,
+    ip: &str,
+    port: &str,
+    repo_local: &str,
+    name_branch: &str,
+) -> Result<String, CommandsError> {
+    // Obtengo el repositorio remoto
+    println!("Repositorio local: {}", repo_local);
+    let git_config = GitConfig::new_from_file(repo_local)?;
+    let repo_remoto = git_config.get_remote_repo()?;
+
+    println!("Fetch del repositorio remoto: {}", repo_remoto);
+    let rfs_fetch = format!("refs/heads/{}", name_branch);
+
+    // Prepara la solicitud "git-upload-pack" para el servidor
+    let message =
+        GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
+
+    // Reference Discovery
+    let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
+    let mut server = reference_discovery(socket, message, repo_remoto, &my_capacibilities)?;
+    if !server.contains_reference(&rfs_fetch)
+    {
+        send_flush(socket, UtilError::SendFlushCancelConnection)?;
+        return Ok(format!("No existe la branch {} en el repositorio remoto.", name_branch))
+    }
+
+    // Packfile Negotiation
+    // Solo solicitar una branch
+    server.filter_references_for_update([rfs_fetch].to_vec())?;
+    packfile_negotiation_partial(socket, &mut server, repo_local)?;
+
+    // Packfile Data
+    let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
+    let content = receive_packfile(socket)?;
+
+    if content.is_empty()
+    {
+        return Ok("No hay nuevas actualizaciones. Todo está actualizado.".to_string());
+    }
+
     if save_objects(content, repo_local).is_err() {
         println!("Error al guardar los objetos");
         return Err(CommandsError::RepositoryNotInitialized);
@@ -100,6 +169,7 @@ pub fn git_fetch_all(
 
     Ok("Sucessfully!".to_string())
 }
+
 
 /// Devuelve las referencias (nombres de las branches y hashes)
 ///  

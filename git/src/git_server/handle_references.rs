@@ -158,7 +158,23 @@ impl HandleReferences {
         Ok(references)
     }
 
+    pub fn filter_references_for_update(&mut self, path_references: Vec<String>) -> Result<(), UtilError> {
+        let mut new_refences: HashMap<String, ReferenceInformation> = HashMap::new();
+        for path in path_references {
+            if let Some(reference) = self.references.get(&path) {
+                let local_commit = match reference.get_local_commit() {
+                    Some(commit) => Some(commit.to_string()),
+                    None => None,
+                };
+                new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), local_commit));
+            }
+        }
+        Ok(())
+    }
 
+    pub fn contains_reference(&self, path: &str) -> bool {
+        self.references.contains_key(path)
+    }
 }
 
 #[cfg(test)]
