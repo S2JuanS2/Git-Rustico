@@ -3,10 +3,21 @@ use crate::models::client::Client;
 use crate::util::connections::start_client;
 use std::net::TcpStream;
 
-/// Esta función se encarga de llamar al comando push con los parametros necesarios
-/// ###Parametros:
-/// 'args': Vector de strings que contiene los argumentos que se le pasan a la función push
-/// 'client': Cliente que contiene la información del cliente que se conectó
+/// Maneja el comando "push" en el servidor Git.
+///
+/// # Arguments
+///
+/// * `args` - Argumentos proporcionados al comando. Se espera que esté vacío ya que "push" no requiere argumentos.
+/// * `client` - Objeto `Client` que contiene la información del cliente, como la dirección, el puerto y la ruta del directorio.
+///
+/// # Returns
+///
+/// Retorna un resultado que indica si la operación "push" fue exitosa o si hubo errores durante la ejecución.
+///
+/// # Errors
+///
+/// Retorna un error si la cantidad de argumentos no es la esperada o si hay problemas al iniciar la conexión con el cliente o ejecutar el comando "git push".
+///
 pub fn handle_push(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
     if !args.is_empty() {
         return Err(CommandsError::InvalidArgumentCountPush);
