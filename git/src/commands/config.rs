@@ -124,6 +124,11 @@ impl RemoteInfo {
     {
         self.url.is_none() && self.fetch.is_none()
     }
+
+    pub fn valid_attribute(attribute: &str) -> bool
+    {
+        matches!(attribute, "url" | "fetch")
+    }
 }
 
 /// Representa la configuración de Git con secciones específicas.
@@ -132,13 +137,13 @@ impl RemoteInfo {
 /// "core", "remote.origin" y "branch.main".
 /// La deficion de los miembros:
 /// * `core`: HashMap que contiene la información de la sección "core".
-/// * `remote_origin`: HashMap que contiene la información de la sección "remote.origin".
+/// * `remotes`: HashMap que contiene la información de la sección "remote.origin".
 /// * `branch`: HashMap que contiene la información de la sección "branch.main".
 ///
 #[derive(Debug)]
 pub struct GitConfig {
     core: HashMap<String, String>,
-    remote_origin: RemoteInfo,
+    remotes: HashMap<String, RemoteInfo>,
     branch: HashMap<String, BranchInfo>,
 }
 
@@ -152,7 +157,7 @@ impl GitConfig {
     pub fn new() -> Self {
         Self {
             core: HashMap::new(),
-            remote_origin: RemoteInfo::new(),
+            remotes: HashMap::new(),
             branch: HashMap::new(),
         }
     }
@@ -236,24 +241,37 @@ impl GitConfig {
         }
         match parts[0].trim() {
             "remote" => {
-                self.remote_origin.update_info(key, value)?;
-                Ok(())
-            }
-            "branch" => {
-                let name = parts[1].trim();
-                if !name.starts_with('\"') || !name.ends_with('\"')
+                let name = get_name_seccion(section)
+                .ok_or(CommandsError::InvalidEntryConfigFile)?;
+
+                if !RemoteInfo::valid_attribute(key)
                 {
                     return Err(CommandsError::InvalidEntryConfigFile);
                 }
-                let name = name[1..name.len() - 1].to_string();
+                if !self.remotes.contains_key(name) {
+                    self.remotes.insert(name.to_string(), RemoteInfo::new());
+                }
+                let remote_info = match self.remotes.get_mut(name)
+                {
+                    Some(remote_info) => remote_info,
+                    None => return Err(CommandsError::InvalidEntryConfigFile),
+                };
+                remote_info.update_info(key, value)?;
+                // self.remotes.update_info(key, value)?;
+                Ok(())
+            }
+            "branch" => {
+                let name = get_name_seccion(section)
+                    .ok_or(CommandsError::InvalidEntryConfigFile)?;
+
                 if !BranchInfo::valid_attribute(key)
                 {
                     return Err(CommandsError::InvalidEntryConfigFile);
                 }
-                if !self.branch.contains_key(&name) {
-                    self.branch.insert(name.clone(), BranchInfo::new());
+                if !self.branch.contains_key(name) {
+                    self.branch.insert(name.to_string(), BranchInfo::new());
                 }
-                let branch_info = match self.branch.get_mut(&name)
+                let branch_info = match self.branch.get_mut(name)
                 {
                     Some(branch_info) => branch_info,
                     None => return Err(CommandsError::InvalidEntryConfigFile),
@@ -296,10 +314,10 @@ impl GitConfig {
         };
 
         // Write remote "origin" section
-        if !self.remote_origin.is_empty()
+        if !self.remotes.is_empty()
         {
             writeln!(file, "[remote \"origin\"]")?;
-            write!(file, "{}", self.remote_origin.format())?;
+            write!(file, "{}", self.remotes.format())?;
         }
 
         // Write branch "main" section
@@ -321,7 +339,7 @@ impl GitConfig {
     /// Devuelve un error [`CommandsError::MissingUrlConfig`] si la URL remota no está configurada.
     /// 
     pub fn get_remote_repo(&self) -> Result<&str, CommandsError> {
-        match &self.remote_origin.url {
+        match &self.remotes.url {
             Some(url) => Ok(url),
             None => Err(CommandsError::MissingUrlConfig),
         }
@@ -373,7 +391,7 @@ impl GitConfig {
             return None;
         }
         match parts[0].trim() {
-            "remote" => self.remote_origin.get_value(key),
+            "remote" => self.remotes.get_value(key),
             "branch" => {
                 let name = parts[1].trim();
                 if !name.starts_with('\"') || !name.ends_with('\"')
@@ -465,6 +483,46 @@ fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, Stri
     Ok(result)
 }
 
+
+/// Extrae y devuelve el nombre de una sección a partir de una cadena dada.
+///
+/// La función toma una cadena que representa una sección y retorna el nombre de la sección si el formato
+/// es válido. Las secciones válidas son "remote" y "branch". El nombre de la sección debe estar rodeado
+/// por comillas dobles ("") o comillas simples ('').
+///
+/// # Arguments
+///
+/// * `section` - Cadena que representa una sección con el formato "tipo nombre".
+///
+/// # Returns
+///
+/// Retorna `Some` con el nombre de la sección si es válido, o `None` si el formato es incorrecto o no se encuentra
+/// un nombre válido.
+///
+fn get_name_seccion(section: &str) -> Option<&str>
+{
+    let parts: Vec<&str> = section.split_whitespace().collect();
+    if parts.len() != 2 {
+        println!("parts: {:?}", parts);
+        return None;
+    }
+    match parts[0].trim() {
+        "remote" | "branch" => {
+            let name = parts[1].trim();
+            if name.starts_with('\"') && name.ends_with('\"')
+            {
+                return Some(&name[1..name.len() - 1])
+            }
+            if name.starts_with('\'') && name.ends_with('\'')
+            {
+                return Some(&name)
+            }
+            return None;
+        }
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Read;
@@ -482,11 +540,11 @@ mod tests {
     }
 
     #[test]
-    fn add_entry_valid_remote_origin() {
+    fn add_entry_valid_remotes() {
         let mut git_config = GitConfig::new();
         git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin").unwrap();
         assert_eq!(
-            git_config.remote_origin.get_value("url").unwrap(),
+            git_config.remotes.get_value("url").unwrap(),
             "git@github.com:example/repo.git".to_string()
         );
     }
@@ -507,7 +565,7 @@ mod tests {
         let mut git_config = GitConfig::new();
         let _ = git_config.add_entry("invalid", "origin", "branch \"main\"");
         assert!(git_config.core.is_empty());
-        assert!(git_config.remote_origin.is_empty());
+        assert!(git_config.remotes.is_empty());
         assert!(git_config.branch.is_empty());
     }
 
@@ -516,7 +574,7 @@ mod tests {
         let mut git_config = GitConfig::new();
         let _ = git_config.add_entry("bare", "false", "invalid");
         assert!(git_config.core.is_empty());
-        assert!(git_config.remote_origin.is_empty());
+        assert!(git_config.remotes.is_empty());
         assert!(git_config.branch.is_empty());
     }
 
@@ -543,7 +601,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_value_remote_origin() {
+    fn test_get_value_remotes() {
         let mut git_config = GitConfig::new();
         let _ = git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin");
         assert_eq!(
@@ -600,7 +658,37 @@ mod tests {
         let config = GitConfig::_new_from_file(file_path).unwrap();
 
         assert_eq!(config.branch.len(), 5);
-        assert!(!config.remote_origin.is_empty());
-        assert!(!config.remote_origin.is_empty());
+        assert!(!config.remotes.is_empty());
+        assert!(!config.remotes.is_empty());
+    }
+
+    #[test]
+    fn test_get_name_seccion_valid_remote() {
+        assert_eq!(get_name_seccion("remote \"origin\""), Some("origin"));
+    }
+
+    #[test]
+    fn test_get_name_seccion_valid_branch() {
+        assert_eq!(get_name_seccion("branch 'main'"), Some("main"));
+    }
+
+    #[test]
+    fn test_get_name_seccion_invalid_format() {
+        assert_eq!(get_name_seccion("invalid format"), None);
+    }
+
+    #[test]
+    fn test_get_name_seccion_invalid_quote() {
+        assert_eq!(get_name_seccion("remote invalid\""), None);
+    }
+
+    #[test]
+    fn test_get_name_seccion_valid_single_quote() {
+        assert_eq!(get_name_seccion("branch 'feature'"), Some("feature"));
+    }
+
+    #[test]
+    fn test_get_name_seccion_invalid_single_quote() {
+        assert_eq!(get_name_seccion("branch 'invalid"), None);
     }
 }
