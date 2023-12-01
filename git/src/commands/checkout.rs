@@ -5,6 +5,7 @@ use super::branch::git_branch_create;
 use super::cat_file::git_cat_file;
 use super::status::is_files_to_commit;
 use crate::consts::*;
+use crate::util::files::is_folder_empty;
 use super::errors::CommandsError;
 
 use crate::models::client::Client;
@@ -94,6 +95,12 @@ fn load_files(
             create_directory(Path::new(&path_file_format))?;
             let new_path = format!("{}/{}", dir_path, path_file);
             load_files(directory, hash, mode, &new_path)?;
+            let new_path_dir = format!("{}/{}", directory, new_path);
+            if mode == 1 && is_folder_empty(&new_path_dir)?{
+                if fs::remove_dir(new_path_dir).is_err(){
+                    return Err(CommandsError::RemoveFileError);
+                };
+            }
         }
     }
     Ok(())
