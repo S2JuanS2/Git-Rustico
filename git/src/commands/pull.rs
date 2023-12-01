@@ -50,9 +50,11 @@ pub fn git_pull(
     let name_branch = current_rfs.get_name();
     
     let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
+    println!("Result: {:?}", result);
     match result {
         FetchStatus::BranchNotFound => return Ok(format!("{}", FetchStatus::BranchNotFound)),
         FetchStatus::NoUpdates => return Ok(format!("{}", FetchStatus::NoUpdates)),
+        FetchStatus::BranchHasNoExistingCommits => return Ok(format!("{}", FetchStatus::BranchHasNoExistingCommits)),
         FetchStatus::Success => (),
     }
 
