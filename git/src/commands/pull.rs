@@ -73,6 +73,8 @@ pub fn git_pull(
     // update_rfs.get_hash() -> hash del commit remoto
     // current_rfs.get_name() -> nombre de la branch actual
     // update_rfs.get_name() -> nombre de la branch remota
+    // current_rfs.get_path() -> path del archivo de la branch actual
+    // update_rfs.get_path() -> path del archivo de la branch remota
     // repo_local -> path del repo local
     // [FIN TODO #6]
     
