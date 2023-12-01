@@ -348,8 +348,8 @@ impl GitConfig {
     /// Retorna un resultado que contiene la URL del repositorio remoto si se encuentra, o un error
     /// si no se encuentra la configuración del remoto o si la URL está ausente en la configuración.
     ///
-    pub fn get_remote_repo(&self, name: &str) -> Result<String, CommandsError> {
-        let remote = match self.remotes.get(name)
+    pub fn get_remote_url_by_name(&self, name_remote: &str) -> Result<String, CommandsError> {
+        let remote = match self.remotes.get(name_remote)
         {
             Some(remote) => remote,
             None => return Err(CommandsError::MissingUrlConfig),
@@ -360,27 +360,59 @@ impl GitConfig {
         }
     }
 
-    /// Obtener el remoto asociado a una rama específica.
+    /// Obtiene el nombre del repositorio remoto asociado a una rama específica.
     ///
-    /// # Parámetros
-    /// - `name`: El nombre de la rama.
+    /// Esta función busca la configuración de la rama almacenada en el objeto `GitConfig` y devuelve
+    /// el nombre del repositorio remoto asociado a la rama proporcionada.
     ///
-    /// # Retorno
-    /// Devuelve `Some(remote)` si la rama tiene un remoto asociado, o `None` si no tiene remoto.
+    /// # Arguments
     ///
-    pub fn get_remote_from_branch(&self, name: &str) -> Option<&str>
+    /// * `name_branch` - Nombre de la rama cuyo repositorio remoto se desea obtener.
+    ///
+    /// # Returns
+    ///
+    /// Retorna un resultado que contiene el nombre del repositorio remoto si se encuentra, o un error
+    /// si no se encuentra la configuración de la rama o si el remoto está ausente en la configuración.
+    ///
+    pub fn get_remote_by_branch_name(&self, name_branch: &str) -> Result<String, CommandsError>
     {
-        let branch = match self.branch.get(name)
+        let branch = match self.branch.get(name_branch)
         {
             Some(b) => b,
-            None => return None,
+            None => return Err(CommandsError::MissingUrlConfig),
         };
 
         match &branch.remote
         {
-            Some(remote) => Some(remote),
-            None => None,
+            Some(remote) => Ok(remote.to_string()),
+            None => Err(CommandsError::MissingUrlConfig),
         }
+    }
+
+    /// Obtiene la URL del repositorio remoto asociado a una rama específica.
+    ///
+    /// Esta función utiliza `get_remote_by_branch_name` para obtener el nombre del repositorio remoto
+    /// asociado a la rama y luego utiliza `get_remote_url_by_name` para obtener la URL correspondiente.
+    ///
+    /// # Arguments
+    ///
+    /// * `name_branch` - Nombre de la rama cuyo repositorio remoto se desea obtener.
+    ///
+    /// # Returns
+    ///
+    /// Retorna un resultado que contiene la URL del repositorio remoto si se encuentra, o un error
+    /// si no se encuentra la configuración de la rama o si la URL está ausente en la configuración del remoto.
+    ///
+    /// # Errors
+    ///
+    /// Retorna un error del tipo `CommandsError` en caso de que no se encuentre la configuración de la rama o si
+    /// la URL está ausente en la configuración del remoto.
+    ///
+    pub fn get_branch_url_by_name(&self, name_branch: &str) -> Result<String, CommandsError>
+    {
+        let remote = self.get_remote_by_branch_name(name_branch)?;
+
+        self.get_remote_url_by_name(&remote)
     }
 
     /// Obtiene el valor asociado a una clave en una sección específica de la configuración Git.
@@ -561,7 +593,7 @@ mod tests {
         let mut git_config = GitConfig::new();
         git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin").unwrap();
         assert_eq!(
-            git_config.get_remote_repo("origin").unwrap(),
+            git_config.get_remote_url_by_name("origin").unwrap(),
             "git@github.com:example/repo.git".to_string()
         );
     }
@@ -571,8 +603,8 @@ mod tests {
         let mut git_config = GitConfig::new();
         git_config.add_entry("remote", "origin", "branch \"main\"").unwrap();
         assert_eq!(
-            git_config.get_remote_from_branch("main"),
-            Some("origin")
+            git_config.get_remote_by_branch_name("main").unwrap(),
+            "origin"
         );
         assert!(true)
     }
