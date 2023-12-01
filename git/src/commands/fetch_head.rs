@@ -1,4 +1,4 @@
-use std::{io::{self, Write, BufRead}, fs, fmt, process::Command};
+use std::{io::{self, Write, BufRead}, fs, fmt};
 
 use crate::git_transport::references::Reference;
 
