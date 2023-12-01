@@ -278,7 +278,7 @@ impl GitServer {
     ///
     /// * `local_commits`: Vector de commits locales que se utilizará para confirmar referencias.
     ///
-    pub fn confirm_local_references(&mut self, local_commits: &Vec<String>) {
+    pub fn confirm_local_references(&mut self, local_commits: &[String]) {
         self.handle_references.confirm_local_references(local_commits);
     }
 

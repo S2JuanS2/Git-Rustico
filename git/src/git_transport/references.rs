@@ -121,7 +121,21 @@ impl Reference {
         let file_branch = open_file(&path_branch)?;
         let binding = read_file_string(file_branch)?;
         let hash_branch = binding.trim();
-        Reference::new(&hash_branch, &format!("refs/heads/{}", name_branch))
+        Reference::new(hash_branch, &format!("refs/heads/{}", name_branch))
+    }
+
+    pub fn is_valid_references_path(ref_path: &str) -> bool {
+        if ref_path == "HEAD" {
+            true
+        } else if ref_path.starts_with("refs/tags/") {
+            true
+        } else if ref_path.starts_with("refs/heads/") {
+            true
+        } else if ref_path.starts_with("refs/remotes/") {
+            true
+        } else {
+            false
+        }
     }
 }
 

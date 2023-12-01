@@ -41,4 +41,5 @@ que el una funcion me diga si el commit hash2 esta incluido en el hash2
 
 3) Que hacer si no esta el repo
 
-4) Que hacer mi branch no esta en el remoto. Solo queda desde el lado del servidor
+4) Que pasa si ya tenemos lo descargado en origin? Pero aun no mergeamos
+Tambien debemos de leer los commits de remotes y fijarnos si hay alguna actualizacion

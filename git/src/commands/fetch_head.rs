@@ -99,6 +99,7 @@ impl FetchHeadEntry {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct FetchHead {
     entries: Vec<FetchHeadEntry>,
 }
@@ -186,9 +187,47 @@ impl FetchHead {
     ///
     /// Retorna un error si el archivo FETCH_HEAD no se encuentra o si hay problemas al leer su contenido.
     pub fn new_from_file(repo_path: &str) -> Result<FetchHead, CommandsError> {
-        let repo = format!("{}/.git", repo_path);
+        let repo = format!("{}/.git/FETCH_HEAD", repo_path);
         _read_fetch_head(&repo)
     }
+
+    pub fn references_needs_update(&self, branch: &str) -> bool {
+        for entry in &self.entries {
+            if entry.branch_name == branch && entry.label == Label::Merge {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn delete_references(&mut self, branch: &str) -> Result<(), CommandsError> {
+        for i in 0..self.entries.len() {
+            if self.entries[i].branch_name == branch && self.entries[i].label == Label::Merge {
+                self.entries.remove(i);
+                return Ok(());
+            }
+        }
+        Err(CommandsError::DeleteReferenceFetchHead)
+    }
+
+    pub fn get_references(&self, branch: &str) -> Result<Reference, CommandsError> {
+        for entry in &self.entries {
+            if entry.branch_name == branch && entry.label == Label::Merge {
+                return Ok(Reference::new(&entry.commit_hash, &entry.branch_name)?);
+            }
+        }
+        Err(CommandsError::ReferenceNotFound)
+    }
+
+    // pub fn update(&mut self, references: &Vec<Reference>, remote_repo: &str) -> Result<(), CommandsError> {
+    //     for reference in references {
+    //         let commit_hash = reference.get_hash().to_string();
+    //         let branch_name = reference.get_name().to_string();
+    //         let entry = FetchHeadEntry::new(commit_hash, branch_name, Label::Merge.to_string(), remote_repo.to_string());
+    //         self.entries.push(entry?);
+    //     }
+    //     Ok(())
+    // }
 }
 
 
@@ -236,8 +275,7 @@ fn extract_branch_info(branch_info: &str) -> Result<(String, String), CommandsEr
 ///
 /// Retorna un error si el archivo FETCH_HEAD no se encuentra o si hay problemas al leer su contenido.
 /// 
-fn _read_fetch_head(path: &str) -> Result<FetchHead, CommandsError> {
-    let fetch_head_path = format!("{}/FETCH_HEAD", path);
+fn _read_fetch_head(fetch_head_path: &str) -> Result<FetchHead, CommandsError> {
     let file = match fs::File::open(fetch_head_path)
     {
         Ok(file) => file,
@@ -337,5 +375,66 @@ mod tests {
         let result = FetchHeadEntry::new_from_line(line);
         assert!(result.is_err());
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_new_fetch_head_with_references() {
+        // Simula algunas referencias locales para la prueba
+        let references = vec![
+            Reference::new("93455fe53543e1dcca9533dd51d5b83656a6432c", "refs/heads/branch1").unwrap(),
+            Reference::new("56620fe39508e1dcca4873dd51d5b83656a9418c", "refs/heads/branch2").unwrap(),
+        ];
+
+        let remote_repo = "origin";
+
+        // Crea el objeto FetchHead con las referencias simuladas
+        let result = FetchHead::new(&references, remote_repo);
+
+        // Verifica que la creación del FetchHead sea exitosa
+        assert!(result.is_ok());
+
+        let fetch_head = result.unwrap();
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 2);
+        
+        // Verifica que las entradas tengan los valores esperados
+        let entry1 = &fetch_head.entries[0];
+        assert_eq!(entry1.commit_hash, "93455fe53543e1dcca9533dd51d5b83656a6432c");
+        assert_eq!(entry1.branch_name, "branch1");
+        assert_eq!(entry1.label, Label::Merge);
+        assert_eq!(entry1.remote_repo, "origin");
+
+        let entry2 = &fetch_head.entries[1];
+        assert_eq!(entry2.commit_hash, "56620fe39508e1dcca4873dd51d5b83656a9418c");
+        assert_eq!(entry2.branch_name, "branch2");
+        assert_eq!(entry2.label, Label::Merge);
+        assert_eq!(entry2.remote_repo, "origin");
+
+    }
+    
+    #[test]
+    fn test_new_fetch_head_from_file() {
+        let result = _read_fetch_head("./test_files/test_head");
+        println!("{:?}", result);
+        assert!(result.is_ok());
+
+        let fetch_head = result.unwrap();
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 2);
+
+        // Verifica que las entradas tengan los valores esperados
+        let entry1 = &fetch_head.entries[0];
+        assert_eq!(entry1.commit_hash, "93455fe53543e1dcca9533dd51d5b83656a6432c");
+        assert_eq!(entry1.branch_name, "branch1");
+        assert_eq!(entry1.label, Label::Merge);
+        assert_eq!(entry1.remote_repo, "origin");
+
+        let entry2 = &fetch_head.entries[1];
+        assert_eq!(entry2.commit_hash, "56620fe39508e1dcca4873dd51d5b83656a9418c");
+        assert_eq!(entry2.branch_name, "branch2");
+        assert_eq!(entry2.label, Label::Merge);
+        assert_eq!(entry2.remote_repo, "origin");
     }
 }
