@@ -86,6 +86,7 @@ pub enum CommandsError {
     BranchNotFound,
     PullCurrentBranchNotFound,
     DeleteReferenceFetchHead,
+    ReferenceNotFound,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -178,6 +179,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::BranchNotFound => write!(f, "La branch no existe"),
         CommandsError::PullCurrentBranchNotFound => write!(f, "Erro al hacer pull, no se pudo obtener la branch actual"),
         CommandsError::DeleteReferenceFetchHead => write!(f, "No se pudo borrar la referencia en FETCH_HEAD"),
+        CommandsError::ReferenceNotFound => write!(f, "No se encontró la referencia"),
     }
 }
 

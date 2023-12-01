@@ -209,6 +209,25 @@ impl FetchHead {
         }
         Err(CommandsError::DeleteReferenceFetchHead)
     }
+
+    pub fn get_references(&self, branch: &str) -> Result<Reference, CommandsError> {
+        for entry in &self.entries {
+            if entry.branch_name == branch && entry.label == Label::Merge {
+                return Ok(Reference::new(&entry.commit_hash, &entry.branch_name)?);
+            }
+        }
+        Err(CommandsError::ReferenceNotFound)
+    }
+
+    // pub fn update(&mut self, references: &Vec<Reference>, remote_repo: &str) -> Result<(), CommandsError> {
+    //     for reference in references {
+    //         let commit_hash = reference.get_hash().to_string();
+    //         let branch_name = reference.get_name().to_string();
+    //         let entry = FetchHeadEntry::new(commit_hash, branch_name, Label::Merge.to_string(), remote_repo.to_string());
+    //         self.entries.push(entry?);
+    //     }
+    //     Ok(())
+    // }
 }
 
 
