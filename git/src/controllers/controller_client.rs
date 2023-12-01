@@ -121,7 +121,7 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
             "status" => result = handle_status(rest_of_command, client.clone())?,
             "log" => result = handle_log(rest_of_command, client.clone())?,
             "pull" => result = handle_pull(rest_of_command, client.clone())?,
-            "push" => handle_push(rest_of_command, client.clone())?,
+            "push" => result = handle_push(rest_of_command, client.clone())?,
             "merge" => result = handle_merge(rest_of_command, client.clone())?,
             "remote" => result = handle_remote(rest_of_command, client.clone())?,
             "rm" => result = handle_rm(rest_of_command, client.clone())?,

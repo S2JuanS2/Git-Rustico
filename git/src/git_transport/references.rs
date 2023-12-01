@@ -137,6 +137,42 @@ impl Reference {
             false
         }
     }
+
+    /// Obtiene la referencia actual (HEAD) de un repositorio local Git.
+    ///
+    /// Esta función lee el archivo HEAD para obtener la referencia actual y luego lee el archivo correspondiente
+    /// para obtener el hash asociado a esa referencia.
+    ///
+    /// # Arguments
+    ///
+    /// * `repo_local` - Ruta al directorio del repositorio local.
+    ///
+    /// # Returns
+    ///
+    /// Retorna un resultado que contiene la estructura `Reference` representando la referencia actual o un error
+    /// si la referencia actual no se encuentra o hay problemas al leer los archivos.
+    ///
+    /// # Errors
+    ///
+    /// Retorna un error si la referencia actual no se encuentra o si hay problemas al leer los archivos asociados a la referencia.
+    ///
+    pub fn get_current_references(repo_local: &str) -> Result<Self, UtilError> {
+        let path: String = format!("{}/.git/HEAD", repo_local);
+        let head = match std::fs::read_to_string(path) {
+            Ok(head) => head,
+            Err(_) => return Err(UtilError::CurrentBranchNotFound),
+        };
+        let ref_path = head.split(':').last().unwrap();
+        let ref_path = ref_path.trim();
+        let path: String = format!("{}/.git/{}", repo_local, ref_path);
+        let hash = match std::fs::read_to_string(path) {
+            Ok(reference) => reference,
+            Err(_) => return Err(UtilError::CurrentBranchNotFound),
+        };
+        let hash = hash.trim();
+        let reference = Reference::new(hash, ref_path)?;
+        Ok(reference)
+    }
 }
 
 /// Extrae el contenido de un objeto a partir de su hash

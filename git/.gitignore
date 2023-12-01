@@ -8,3 +8,5 @@ testing_commit_log/
 Repository/
 test_status/
 test_commit_erase_index_repo/
+gitconfigclient
+gitconfigserver
