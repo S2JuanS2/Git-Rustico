@@ -84,6 +84,7 @@ pub enum UtilError {
     MultiAckNotSupported,
     ServerCapabilitiesNotSupported,
     SendFlushCancelConnection,
+    CurrentBranchNotFound,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -168,6 +169,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::MultiAckNotSupported => write!(f, "MultiAckNotSupported: El servidor no soporta multi_ack"),
         UtilError::ServerCapabilitiesNotSupported => write!(f, "ServerCapabilitiesNotSupported: El servidor no soporta mis capacidades"),
         UtilError::SendFlushCancelConnection => write!(f, "SendFlushCancelConnection: Error al enviar el flush para terminar la conexión."),
+        UtilError::CurrentBranchNotFound => write!(f, "CurrentBranchNotFound: No se encontró la rama actual."),
     }
 }
 

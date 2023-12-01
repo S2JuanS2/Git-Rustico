@@ -37,6 +37,7 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
     )
 }
 
+// Quiero actualizar mi branch actual con los cambios del repositorio remoto
 pub fn git_pull(
     socket: &mut TcpStream,
     ip: &str,
@@ -46,7 +47,11 @@ pub fn git_pull(
     // Obtengo el repositorio remoto
     println!("Pull del repositorio remoto ...");
 
-    let current_rfs = get_current_references(repo_local)?;
+    let current_rfs = match Reference::get_current_references(repo_local)
+    {
+        Ok(rfs) => rfs,
+        Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),
+    };
     let name_branch = current_rfs.get_name();
     
     let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
@@ -88,21 +93,5 @@ pub fn git_pull(
     Ok("Pullcito naciendo".to_string())
 }
 
-// Que pasa si la branch aun no tiene commits?
-fn get_current_references(repo_local: &str) -> Result<Reference, CommandsError> {
-    let path: String = format!("{}/.git/HEAD", repo_local);
-    let head = match std::fs::read_to_string(path) {
-        Ok(head) => head,
-        Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),
-    };
-    let ref_path = head.split(':').last().unwrap();
-    let ref_path = ref_path.trim();
-    let path: String = format!("{}/.git/{}", repo_local, ref_path);
-    let hash = match std::fs::read_to_string(path) {
-        Ok(reference) => reference,
-        Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),
-    };
-    let hash = hash.trim();
-    let reference = Reference::new(hash, ref_path)?;
-    Ok(reference)
-}
+
+// Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),

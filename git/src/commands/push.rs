@@ -1,4 +1,6 @@
 use super::errors::CommandsError;
+use crate::commands::config::GitConfig;
+use crate::git_transport::references::Reference;
 use crate::models::client::Client;
 use crate::util::connections::start_client;
 use std::net::TcpStream;
@@ -39,11 +41,26 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
 /// 'port': puerto del cliente
 /// 'remote_name': nombre del repositorio remoto
 /// 'branch_name': nombre de la rama a mergear
+// Quiero actualizar mi branch actual con los cambios del repositorio remoto
 pub fn git_push(
     _socket: &mut TcpStream,
     _ip: &str,
     _port: &str,
-    _repo_local: &str,
+    repo_local: &str,
 ) -> Result<String, CommandsError> {
+    // Obtengo el repositorio remoto
+    println!("Push del repositorio remoto ...");
+    let current_rfs = match Reference::get_current_references(repo_local)
+    {
+        Ok(rfs) => rfs,
+        Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),
+    };
+    let git_config = GitConfig::new_from_file(repo_local)?;
+    
+    // Codear esto que lo necesita tambien el fetch
+    // El remoto debe ser dinamico no estatico, y no debe haber remotos repetidos
+    // let remote_url = git_config.get_remote_url(current_rfs.get_name());
+
+
     Ok("Hola, soy baby push!".to_string())
 }
