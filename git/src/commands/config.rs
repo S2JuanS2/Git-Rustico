@@ -316,8 +316,10 @@ impl GitConfig {
         // Write remote "origin" section
         if !self.remotes.is_empty()
         {
-            writeln!(file, "[remote \"origin\"]")?;
-            write!(file, "{}", self.remotes.format())?;
+            for (name, value) in &self.remotes {
+                writeln!(file, "[remote \"{}\"]", name)?;
+                write!(file, "{}", value.format())?;
+            }
         }
 
         // Write branch "main" section
@@ -332,15 +334,28 @@ impl GitConfig {
         Ok(())
     }
 
-    /// Obtener la URL remota del repositorio.
+    /// Obtiene la URL del repositorio remoto con el nombre especificado.
     ///
-    /// # Errores
+    /// Esta función busca en la configuración de remotos almacenada en el objeto `GitConfig` y devuelve
+    /// la URL del repositorio remoto correspondiente al nombre proporcionado.
     ///
-    /// Devuelve un error [`CommandsError::MissingUrlConfig`] si la URL remota no está configurada.
-    /// 
-    pub fn get_remote_repo(&self) -> Result<&str, CommandsError> {
-        match &self.remotes.url {
-            Some(url) => Ok(url),
+    /// # Arguments
+    ///
+    /// * `name` - Nombre del repositorio remoto cuya URL se desea obtener.
+    ///
+    /// # Returns
+    ///
+    /// Retorna un resultado que contiene la URL del repositorio remoto si se encuentra, o un error
+    /// si no se encuentra la configuración del remoto o si la URL está ausente en la configuración.
+    ///
+    pub fn get_remote_repo(&self, name: &str) -> Result<String, CommandsError> {
+        let remote = match self.remotes.get(name)
+        {
+            Some(remote) => remote,
+            None => return Err(CommandsError::MissingUrlConfig),
+        };
+        match &remote.url {
+            Some(url) => Ok(url.to_string()),
             None => Err(CommandsError::MissingUrlConfig),
         }
     }
@@ -391,15 +406,17 @@ impl GitConfig {
             return None;
         }
         match parts[0].trim() {
-            "remote" => self.remotes.get_value(key),
-            "branch" => {
-                let name = parts[1].trim();
-                if !name.starts_with('\"') || !name.ends_with('\"')
+            "remote" => {
+                let name = get_name_seccion(section)?;
+                match self.remotes.get(name)
                 {
-                    return None;
+                    Some(r) => r.get_value(key),
+                    None => None,
                 }
-                let name = name[1..name.len() - 1].to_string();
-                match self.branch.get(&name)
+            },
+            "branch" => {
+                let name = get_name_seccion(section)?;
+                match self.branch.get(name)
                 {
                     Some(b) => b.get_value(key),
                     None => None,
@@ -544,7 +561,7 @@ mod tests {
         let mut git_config = GitConfig::new();
         git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin").unwrap();
         assert_eq!(
-            git_config.remotes.get_value("url").unwrap(),
+            git_config.get_remote_repo("origin").unwrap(),
             "git@github.com:example/repo.git".to_string()
         );
     }
