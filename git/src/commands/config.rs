@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io;
 use std::io::Write;
 
-use crate::{consts::{CONFIG_FILE, GIT_DIR}, git_server::GitServer};
+use crate::{consts::{CONFIG_FILE, GIT_DIR, CONFIG_REMOTE_FETCH}, git_server::GitServer};
 
 use super::errors::CommandsError;
 
@@ -77,7 +77,7 @@ impl RemoteInfo {
     fn new() -> Self {
         Self {
             url: None,
-            fetch: None,
+            fetch: Some(CONFIG_REMOTE_FETCH.to_string()),
         }
     }
 
@@ -122,7 +122,7 @@ impl RemoteInfo {
 
     fn is_empty(&self) -> bool
     {
-        self.url.is_none() && self.fetch.is_none()
+        self.url.is_none()
     }
 
     pub fn valid_attribute(attribute: &str) -> bool
@@ -317,6 +317,10 @@ impl GitConfig {
         if !self.remotes.is_empty()
         {
             for (name, value) in &self.remotes {
+                if value.is_empty()
+                {
+                    continue;
+                }
                 writeln!(file, "[remote \"{}\"]", name)?;
                 write!(file, "{}", value.format())?;
             }

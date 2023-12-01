@@ -101,8 +101,9 @@ pub fn git_fetch_all(
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
-    let repo_remoto = git_config.get_remote_repo()?;
-
+    // Abria que hacer una conexion con cada servidor remoto
+    // Esto debe ser refactorizado
+    let repo_remoto = &git_config.get_remote_url_by_name("origin")?;
     println!("Fetch del repositorio remoto: {}", repo_remoto);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
@@ -149,7 +150,7 @@ pub fn git_fetch_branch(
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
-    let repo_remoto = git_config.get_remote_repo()?;
+    let repo_remoto = &git_config.get_remote_url_by_name(repo_local)?;
 
     println!("Fetch del repositorio remoto: {}", repo_remoto);
     
