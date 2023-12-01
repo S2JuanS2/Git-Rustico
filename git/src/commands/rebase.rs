@@ -62,11 +62,14 @@ fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &
     };
 
     let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch, log_rebase_branch);
-    let first_commit_current_branch = &logs_just_in_current_branch[0];
+    let mut first_commit_current_branch = String::new();
+    if logs_just_in_current_branch.len() > 0 {
+        first_commit_current_branch = logs_just_in_current_branch[0].clone();
+    }
 
-    let content_commit = git_cat_file(directory, first_commit_current_branch, "-p")?;
+    let content_commit = git_cat_file(directory, &first_commit_current_branch, "-p")?;
 
-    update_parent(content_commit, last_commit_rebase_branch, first_commit_current_branch, directory, current_branch)?;
+    update_parent(content_commit, last_commit_rebase_branch, &first_commit_current_branch, directory, current_branch)?;
 
     Ok(())
 }

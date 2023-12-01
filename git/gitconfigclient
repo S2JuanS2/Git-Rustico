@@ -1,6 +1,6 @@
-name=Brayan
-email=b@fiar.com
+name=BJV-Visionary
+email=bjv@visionary.org
 path_log=./client.log
 ip=127.0.0.1
 port=9418
-src=client_root/Repo_Daemon
+src=client_root

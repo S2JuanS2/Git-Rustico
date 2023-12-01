@@ -222,12 +222,12 @@ fn branch_with_untracked_changes(
     }
     if !deleted_files_list.is_empty() {
         for file in deleted_files_list {
-            formatted_result.push_str(&format!("\n\tdeleted:\t\t{}\n", file));
+            formatted_result.push_str(&format!("\n\tdeleted:\t\t{}", file));
         }
     }
     if untracked_files_list.is_empty() {
         formatted_result
-            .push_str("\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
+            .push_str("\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
     }
 }
 

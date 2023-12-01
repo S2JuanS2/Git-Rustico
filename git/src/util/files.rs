@@ -12,7 +12,6 @@ use super::validation::join_paths_correctly;
 /// ###Parametros:
 /// 'path': url de un directorio
 pub fn is_folder_empty(path: &str) -> Result<bool, UtilError> {
-    println!("{path}");
     let contents = match fs::read_dir(path) {
         Ok(contents) => contents,
         Err(_) => return Err(UtilError::VisitDirectoryError),

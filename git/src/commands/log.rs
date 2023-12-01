@@ -65,7 +65,7 @@ fn get_parts_commit(lines: Vec<String>, formatted_result: &mut String) {
             formatted_result.push_str(&format!("Date: {}\n", date_time));
         } else if count_line == 6 {
             formatted_result.push('\n');
-            formatted_result.push_str(&format!("{}\n", line));
+            formatted_result.push_str(&format!("\t{}\n", line));
         }
         count_line += 1;
         if count_line == 7 {
