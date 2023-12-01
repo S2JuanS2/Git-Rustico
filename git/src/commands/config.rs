@@ -930,6 +930,29 @@ mod tests {
         assert_eq!(git_config.delete_remote("origin"), Ok(()));
         assert!(git_config.get_remote_url_by_name("main").is_err());
         assert_eq!(git_config.get_remote_by_branch_name("main"), Err(CommandsError::NoTrackingInformationForBranch));
+    }
+
+    #[test]
+    fn test_write_and_to_file() {
+        let mut git_config = GitConfig::new();
+        git_config.add_remote("origin", "Repository_1").unwrap();
+        git_config.add_branch("main", "origin", "refs/heads/main").unwrap();
+        git_config.add_remote("upstream", "Repository_2").unwrap();
+        git_config.add_branch("feature", "upstream", "refs/heads/feature").unwrap();
+        git_config.add_branch("master", "upstream", "refs/heads/master").unwrap();
+        git_config.delete_branch("master").unwrap();
+        let file_path = "./test_files/test_config_2";
+        let _ = git_config.write_to_file(file_path);
+
+        let git_config = GitConfig::_new_from_file(file_path).unwrap();
+        fs::remove_file(file_path).expect("No se pudo eliminar el config del tests");
+        // Cleanup
+        assert_eq!(git_config.branch.len(), 2);
+        assert_eq!(git_config.remotes.len(), 2);
+        assert_eq!(git_config.get_remote_url_by_name("origin").unwrap(), "Repository_1");
+        assert_eq!(git_config.get_remote_url_by_name("upstream").unwrap(), "Repository_2");
+        assert_eq!(git_config.get_remote_by_branch_name("main").unwrap(), "origin");
+        assert_eq!(git_config.get_remote_by_branch_name("feature").unwrap(), "upstream");
 
     }
 }

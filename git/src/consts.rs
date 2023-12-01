@@ -148,4 +148,4 @@ pub const VERSION_DEFAULT: u32 = 2;
 
 pub const CONFIG_FILE: &str = "config";
 
-pub const CONFIG_REMOTE_FETCH: &str = "get_remote_by_branch_name";
+pub const CONFIG_REMOTE_FETCH: &str = "+refs/heads/*:refs/remotes/origin/*";
