@@ -127,6 +127,7 @@ pub const DIR_OBJECTS: &str = "objects";
 
 pub const CONTENT_EMPTY: &str = "";
 
+// Objetos
 pub const BLOB: &str = "blob";
 
 pub const TREE: &str = "tree";
