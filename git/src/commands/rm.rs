@@ -47,13 +47,48 @@ fn compare_hash(file_name: &str, directory: &str) -> Result<String, CommandsErro
     Ok(result)
 }
 
+/// Remueve el archivo del index
+/// ###Parametros
+/// 'directory': directorio del repositorio local.
+/// 'file_name': nombre del archivo a remover.
+pub fn remove_from_index_with_filename(
+    directory: &str,
+    file_name: &str,
+) -> Result<(), CommandsError> {
+    let directory_git = format!("{}/{}", directory, GIT_DIR);
+    let index_file_path = format!("{}/{}", directory_git, INDEX);
+
+    let index_file = open_file(&index_file_path)?;
+    let index_content = read_file_string(index_file)?;
+
+    let mut lines: Vec<String> = index_content.lines().map(String::from).collect();
+    let index_hash = lines.iter().position(|line| line.starts_with(file_name));
+
+    if let Some(index) = index_hash {
+        if lines[index].starts_with(file_name) {
+            lines.remove(index);
+            let file_path = format!("{}/{}", directory, file_name);
+            if fs::metadata(&file_path).is_ok(){
+                // Se remueve del working directory
+                match fs::remove_file(&file_path) {
+                    Ok(_) => {}
+                    Err(_) => return Err(CommandsError::RemoveFileError),
+                };
+            }
+        }
+    }
+    update_index(index_file_path, lines)?;
+
+    Ok(())
+}
+
 /// Obtiene el hash del archivo que se quiere remover del index y lo compara con el hash del archivo
 /// que se quiere remover del working directory. Si son iguales, se remueve del index y del working directory.
 /// ###Parametros
 /// 'directory': directorio del repositorio local.
 /// 'file_name': nombre del archivo a remover.
 /// 'hash_file': hash del archivo que se quiere remover del index.
-fn remove_from_index(
+pub fn remove_from_index(
     directory: &str,
     file_name: &str,
     hash_file: &str,
@@ -71,11 +106,13 @@ fn remove_from_index(
         if lines[index].ends_with(hash_file) {
             lines.remove(index);
             let file_path = format!("{}/{}", directory, file_name);
-            // Se remueve del working directory
-            match fs::remove_file(file_path) {
-                Ok(_) => {}
-                Err(_) => return Err(CommandsError::RemoveFileError),
-            };
+            if fs::metadata(&file_path).is_ok(){
+                // Se remueve del working directory
+                match fs::remove_file(&file_path) {
+                    Ok(_) => {}
+                    Err(_) => return Err(CommandsError::RemoveFileError),
+                };
+            }
         } else {
             return Ok(
                 "The file cannot be removed because it is not in its most recent version"
