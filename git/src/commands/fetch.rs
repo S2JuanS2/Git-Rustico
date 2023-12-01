@@ -23,10 +23,12 @@ use std::{fs, fmt};
 use super::branch::get_branch_remote;
 use super::errors::CommandsError;
 
+#[derive(Debug)]
 pub enum FetchStatus {
     Success,
     NoUpdates,
     BranchNotFound,
+    BranchHasNoExistingCommits,
 }
 
 impl fmt::Display for FetchStatus {
@@ -35,6 +37,7 @@ impl fmt::Display for FetchStatus {
             FetchStatus::Success => write!(f, "El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
             FetchStatus::NoUpdates => write!(f, "No hay nuevas actualizaciones. Todo está actualizado."),
             FetchStatus::BranchNotFound => write!(f, "La branch no existe en el repositorio remoto."),
+            FetchStatus::BranchHasNoExistingCommits => write!(f, "La branch no tiene commits."),
         }
     }
     
@@ -149,7 +152,13 @@ pub fn git_fetch_branch(
     let repo_remoto = git_config.get_remote_repo()?;
 
     println!("Fetch del repositorio remoto: {}", repo_remoto);
+    
+    // Valido si la branch existe en el repositorio local
     let rfs_fetch = format!("refs/heads/{}", name_branch);
+    let path_complete = format!("{}/.git/{}", repo_local, rfs_fetch);
+    if !Path::new(&path_complete).exists() {
+        return Ok(FetchStatus::BranchHasNoExistingCommits);
+    }
 
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
