@@ -133,6 +133,8 @@ fn create_repository(
                 Err(e) => return Err(e),
             };
             i += 1;
+        }else if content[i].0.obj_type == ObjectType::Blob{
+            i += 1;
         }
     }
     Ok("Clonación exitosa!".to_string())
@@ -237,7 +239,8 @@ fn handle_commit(
 ) -> Result<(), CommandsError> {
     let mut commit_content = read_commit(&content[i].1)?;
     
-    builder_object_commit(&commit_content, git_dir)?;
+    
+    let hash_commit = builder_object_commit(&commit_content, git_dir)?;
 
     if let Some(refs) = advertised.get_reference(i + 1) {
         let hash = refs.get_hash();
@@ -247,11 +250,11 @@ fn handle_commit(
             let branch_dir = format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
             create_file(&branch_dir, hash)?;
         }
-        if commit_content.lines().count() == 5{
-            commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
-        }
-        builder_commit_log(repo, &commit_content, hash)?;
     }
+    if commit_content.lines().count() == 5{
+        commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
+    }
+    builder_commit_log(repo, &commit_content, &hash_commit)?;
 
     Ok(())
 }
