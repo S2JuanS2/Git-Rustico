@@ -88,6 +88,8 @@ pub enum CommandsError {
     DeleteReferenceFetchHead,
     ReferenceNotFound,
     InvalidArgumentCountPush,
+    RemoteNotFound,
+    NoTrackingInformationForBranch,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -183,6 +185,8 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::ReferenceNotFound => write!(f, "No se encontró la referencia"),
         // CommandsError::InvalidArgumentCountPush => write!(f, "Número de argumentos inválido para el comando push.\nUsar: git push <remote name> <branch name>"),
         CommandsError::InvalidArgumentCountPush => write!(f, "Número de argumentos inválido para el comando push.\nUsar: git push"),
+        CommandsError::RemoteNotFound => write!(f, "No se encontró el repositorio remoto"),
+        CommandsError::NoTrackingInformationForBranch => write!(f, "No se encontró información de seguimiento para la branch"),
     }
 }
 
