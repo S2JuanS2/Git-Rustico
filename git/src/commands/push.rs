@@ -18,7 +18,7 @@ use std::net::TcpStream;
 ///
 /// Retorna un error si la cantidad de argumentos no es la esperada o si hay problemas al iniciar la conexión con el cliente o ejecutar el comando "git push".
 ///
-pub fn handle_push(args: Vec<&str>, client: Client) -> Result<(), CommandsError> {
+pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     if !args.is_empty() {
         return Err(CommandsError::InvalidArgumentCountPush);
     }
@@ -40,10 +40,10 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<(), CommandsError>
 /// 'remote_name': nombre del repositorio remoto
 /// 'branch_name': nombre de la rama a mergear
 pub fn git_push(
-    socket: &mut TcpStream,
-    ip: &str,
-    port: &str,
-    repo_local: &str,
-) -> Result<(), CommandsError> {
-    Ok(())
+    _socket: &mut TcpStream,
+    _ip: &str,
+    _port: &str,
+    _repo_local: &str,
+) -> Result<String, CommandsError> {
+    Ok("Hola, soy baby push!".to_string())
 }
