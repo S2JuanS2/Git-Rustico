@@ -383,13 +383,13 @@ impl GitConfig {
         let branch = match self.branch.get(name_branch)
         {
             Some(b) => b,
-            None => return Err(CommandsError::MissingUrlConfig),
+            None => return Err(CommandsError::NoTrackingInformationForBranch),
         };
 
         match &branch.remote
         {
             Some(remote) => Ok(remote.to_string()),
-            None => Err(CommandsError::MissingUrlConfig),
+            None => Err(CommandsError::NoTrackingInformationForBranch),
         }
     }
 
@@ -906,4 +906,30 @@ mod tests {
         assert_eq!(branch_info.merge, Some("refs/heads/upstream".to_string()));
     }
 
+    #[test]
+    fn test_delete_branch() {
+        let mut git_config = GitConfig::new();
+        git_config.add_remote("origin", "github").unwrap();
+        git_config.add_branch("main", "origin", "refs/heads/main").unwrap();
+
+        assert!(git_config.get_remote_by_branch_name("main").is_ok());
+
+        assert_eq!(git_config.delete_branch("main"), Ok(()));
+        assert_eq!(git_config.get_remote_by_branch_name("main"), Err(CommandsError::NoTrackingInformationForBranch));
+    }
+
+    #[test]
+    fn test_delete_remote() {
+        let mut git_config = GitConfig::new();
+        git_config.add_remote("origin", "github").unwrap();
+        git_config.add_branch("main", "origin", "refs/heads/main").unwrap();
+
+        assert!(git_config.get_remote_by_branch_name("main").is_ok());
+        assert!(git_config.get_remote_url_by_name("origin").is_ok());
+
+        assert_eq!(git_config.delete_remote("origin"), Ok(()));
+        assert!(git_config.get_remote_url_by_name("main").is_err());
+        assert_eq!(git_config.get_remote_by_branch_name("main"), Err(CommandsError::NoTrackingInformationForBranch));
+
+    }
 }
