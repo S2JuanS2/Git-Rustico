@@ -336,28 +336,6 @@ fn _read_fetch_head(fetch_head_path: &str) -> Result<FetchHead, CommandsError> {
 }
 
 
-// /// Obtiene las referencias del archivo FETCH_HEAD que tienen el modo de fusión "not-for-merge".
-// ///
-// /// # Argumentos
-// ///
-// /// * `repo_path` - Ruta del repositorio.
-// ///
-// /// # Errores
-// ///
-// /// Devuelve un error de tipo `CommandsError` si no puede leer o interpretar el contenido del archivo FETCH_HEAD.
-// ///
-// // pub fn get_references_not_for_merge(repo_path: &str) -> Result<Vec<(String, String)>, CommandsError> {
-// //     let references = read_fetch_head(repo_path)?;
-// //     let mut filter = Vec::new();
-// //     for (hash, mode_merge, branch_github) in references {
-// //         if mode_merge == "not-for-merge" {
-// //             filter.push((hash, branch_github));
-// //         }
-// //     }
-// //     Ok(filter)
-// // }
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
