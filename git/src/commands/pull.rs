@@ -72,7 +72,7 @@ pub fn git_pull(
     }
 
     
-    let _update_rfs = fetch_head.get_reference_to_merge(current_rfs.get_name())?;
+    // let _update_rfs = fetch_head.get_reference_to_merge(current_rfs.get_name())?;
     
     // [TODO #6]
     // Dado current references y update references, hacer merge

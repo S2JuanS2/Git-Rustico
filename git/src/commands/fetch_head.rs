@@ -231,8 +231,8 @@ impl FetchHead {
             return Err(CommandsError::MergeNotAllowedError);
         } else {
             self.entries.remove(branch_name);
+            Ok(())
         }
-        Err(CommandsError::DeleteReferenceFetchHead)
     }
 
     /// Obtiene la referencia que se debe fusionar para la rama dada desde el archivo FETCH_HEAD.
@@ -246,17 +246,17 @@ impl FetchHead {
     ///
     /// Retorna la referencia si se encuentra, de lo contrario, retorna un error.
     ///
-    pub fn get_reference_to_merge(&self, branch_name: &str) -> Result<Reference, CommandsError> {
-        let entrie = self.entries.get(branch_name);
-        let entrie = match entrie {
-            Some(entrie) => entrie,
-            None => return Err(CommandsError::ReferenceNotFound),
-        };
-        if entrie.label != Label::Merge {
-            return Err(CommandsError::MergeNotAllowedError);
-        }
-        Ok(Reference::new(&entrie.commit_hash, &entrie.branch_name)?)
-    }
+    // pub fn get_reference_to_merge(&self, branch_name: &str) -> Result<Reference, CommandsError> {
+    //     let entrie = self.entries.get(branch_name);
+    //     let entrie = match entrie {
+    //         Some(entrie) => entrie,
+    //         None => return Err(CommandsError::ReferenceNotFound),
+    //     };
+    //     if entrie.label != Label::Merge {
+    //         return Err(CommandsError::MergeNotAllowedError);
+    //     }
+    //     Ok(Reference::new(&entrie.commit_hash, &entrie.branch_name)?)
+    // }
 
     pub fn update_references(&mut self, references: &Vec<Reference>, url_remote: &str) -> Result<(), CommandsError> {
         for reference in references {
@@ -385,7 +385,6 @@ mod tests {
     fn test_fetch_head_entry_new_from_line_not_for_merge() {
         let line = "d3214e19f4736504392664d579ce1ef2d15b5581	not-for-merge	branch 'main' of github.com:example/repo";
         let result = FetchHeadEntry::new_from_line(line);
-        print!("{:?}", result);
         assert!(result.is_ok());
 
         let entry = result.unwrap();
@@ -416,6 +415,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    
     #[test]
     fn test_new_fetch_head_with_references() {
         // Simula algunas referencias locales para la prueba
@@ -455,7 +455,6 @@ mod tests {
     #[test]
     fn test_new_fetch_head_from_file() {
         let result = _read_fetch_head("./test_files/test_head");
-        println!("{:?}", result);
         assert!(result.is_ok());
 
         let fetch_head = result.unwrap();
@@ -475,5 +474,229 @@ mod tests {
         assert_eq!(entry2.branch_name, "branch2");
         assert_eq!(entry2.label, Label::Merge);
         assert_eq!(entry2.url_remote, "origin");
+    }
+
+
+    #[test]
+    pub fn branch_already_merged_valid()
+    {
+        let references = vec![
+            Reference::new("93455fe53543e1dcca9533dd51d5b83656a6432c", "refs/heads/branch1").unwrap(),
+            Reference::new("56620fe39508e1dcca4873dd51d5b83656a9418c", "refs/heads/branch2").unwrap(),
+        ];
+
+        let url_remote = "Repository/Rust";
+
+        // Crea el objeto FetchHead con las referencias simuladas
+        let result = FetchHead::new(&references, url_remote);
+
+        // Verifica que la creación del FetchHead sea exitosa
+        assert!(result.is_ok());
+
+        let mut fetch_head = result.unwrap();
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 2);
+
+        // Mergeo una entrada
+        let result = fetch_head.branch_already_merged("branch1");
+        assert!(result.is_ok());
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 1);
+
+        // Verifica que las entradas tengan los valores esperados
+        let entry2 = &fetch_head.entries.get("branch2").unwrap();
+        assert_eq!(entry2.commit_hash, "56620fe39508e1dcca4873dd51d5b83656a9418c");
+        assert_eq!(entry2.branch_name, "branch2");
+        assert_eq!(entry2.label, Label::Merge);
+        assert_eq!(entry2.url_remote, "Repository/Rust");
+    }
+
+    #[test]
+    pub fn test_references_needs_update()
+    {
+        let references = vec![
+            Reference::new("93455fe53543e1dcca9533dd51d5b83656a6432c", "refs/heads/branch1").unwrap(),
+            Reference::new("56620fe39508e1dcca4873dd51d5b83656a9418c", "refs/heads/branch2").unwrap(),
+        ];
+
+        let url_remote = "Repository/Rust";
+
+        // Crea el objeto FetchHead con las referencias simuladas
+        let result = FetchHead::new(&references, url_remote);
+
+        // Verifica que la creación del FetchHead sea exitosa
+        assert!(result.is_ok());
+
+        let mut fetch_head = result.unwrap();
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 2);
+
+        // Verifica que las entradas tengan los valores esperados
+        assert!(fetch_head.references_needs_update("branch1"));
+        assert!(fetch_head.references_needs_update("branch2"));
+    
+        // Actualizo una branch
+        let result = fetch_head.branch_already_merged("branch1");
+        assert!(result.is_ok());
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 1);
+
+        // Verifica que las entradas tengan los valores esperados
+        assert!(!fetch_head.references_needs_update("branch1"));
+        assert!(fetch_head.references_needs_update("branch2"));
+    }
+
+    // #[test]
+    // pub fn test_get_reference_to_merge()
+    // {
+    //     let references = vec![
+    //         Reference::new("93455fe53543e1dcca9533dd51d5b83656a6432c", "refs/heads/branch1").unwrap(),
+    //         Reference::new("56620fe39508e1dcca4873dd51d5b83656a9418c", "refs/heads/branch2").unwrap(),
+    //     ];
+
+    //     let url_remote = "Repository/Rust";
+
+    //     // Crea el objeto FetchHead con las referencias simuladas
+    //     let result = FetchHead::new(&references, url_remote);
+
+    //     // Verifica que la creación del FetchHead sea exitosa
+    //     assert!(result.is_ok());
+
+    //     let fetch_head = result.unwrap();
+
+    //     // Verifica que la cantidad de entradas sea la esperada
+    //     assert_eq!(fetch_head.entries.len(), 2);
+
+    //     // Verifica que las entradas tengan los valores esperados
+    //     let result = fetch_head.get_reference_to_merge("branch1");
+    //     println!("{:?}", result);
+    //     assert!(result.is_ok());
+    //     let reference = result.unwrap();
+    //     assert_eq!(reference.get_hash(), "93455fe53543e1dcca9533dd51d5b83656a6432c");
+    //     assert_eq!(reference.get_name(), "branch1");
+    // }
+
+    #[test]
+    pub fn test_update_references()
+    {
+        let references = vec![
+            Reference::new("93455fe53543e1dcca9533dd51d5b83656a6432c", "refs/heads/branch1").unwrap(),
+            Reference::new("56620fe39508e1dcca4873dd51d5b83656a9418c", "refs/heads/branch2").unwrap(),
+            Reference::new("98094u50hj3094u503498hj0439h804308434380", "refs/heads/branch3").unwrap(),
+        ];
+
+        let url_remote = "Repository/Rust";
+
+        // Crea el objeto FetchHead con las referencias simuladas
+        let result = FetchHead::new(&references, url_remote);
+
+        // Verifica que la creación del FetchHead sea exitosa
+        assert!(result.is_ok());
+
+        let mut fetch_head = result.unwrap();
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 3);
+
+        // Verifica que las entradas tengan los valores esperados
+        assert!(fetch_head.references_needs_update("branch1"));
+        assert!(fetch_head.references_needs_update("branch2"));
+        assert!(fetch_head.references_needs_update("branch3"));
+    
+        // Actualizo una branch
+        let result = fetch_head.branch_already_merged("branch1");
+        assert!(result.is_ok());
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 2);
+
+        // Verifica que las entradas tengan los valores esperados
+        assert!(!fetch_head.references_needs_update("branch1"));
+        assert!(fetch_head.references_needs_update("branch2"));
+
+        // Actualizo las referencias
+        let references = vec![
+            Reference::new("93455fe53543e1dcca9533dd51d5b83656a6432c", "refs/heads/branch1").unwrap(),
+            Reference::new("92834092834093u24098u2098u034jhr984h9843", "refs/heads/branch2").unwrap(),
+        ];
+
+        let url_remote = "Repository/Rust";
+            
+        // Crea el objeto FetchHead con las referencias simuladas
+        let result = fetch_head.update_references(&references, url_remote);
+
+        // Verifica que la actualizacion del FetchHead sea exitosa
+        assert!(result.is_ok());
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 3);
+
+        let entry1 = &fetch_head.entries.get("branch1").unwrap();
+        assert_eq!(entry1.commit_hash, "93455fe53543e1dcca9533dd51d5b83656a6432c");
+        assert_eq!(entry1.branch_name, "branch1");
+        assert_eq!(entry1.label, Label::Merge);
+        assert_eq!(entry1.url_remote, "Repository/Rust");
+
+        let entry2 = &fetch_head.entries.get("branch2").unwrap();
+        assert_eq!(entry2.commit_hash, "92834092834093u24098u2098u034jhr984h9843");
+        assert_eq!(entry2.branch_name, "branch2");
+        assert_eq!(entry2.label, Label::Merge);
+        assert_eq!(entry2.url_remote, "Repository/Rust");
+
+        let entry3 = &fetch_head.entries.get("branch3").unwrap();
+        assert_eq!(entry3.commit_hash, "98094u50hj3094u503498hj0439h804308434380");
+        assert_eq!(entry3.branch_name, "branch3");
+        assert_eq!(entry3.label, Label::Merge);
+        assert_eq!(entry3.url_remote, "Repository/Rust");
+    }
+
+    #[test]
+    pub fn test_fetch_head_write() {
+        let references = vec![
+            Reference::new("93455fe53543e1dcca9533dd51d5b83656a6432c", "refs/heads/branch1").unwrap(),
+            Reference::new("56620fe39508e1dcca4873dd51d5b83656a9418c", "refs/heads/branch2").unwrap(),
+            Reference::new("09h90238h9r298h2832r98h23r98h32r98h23293", "refs/heads/branch3").unwrap(),
+            Reference::new("1n3291u7b9192h812921397891h98132hg971133", "refs/heads/branch4").unwrap(),
+        ];
+
+        let url_remote = "Repository/Rust";
+
+        // Crea el objeto FetchHead con las referencias simuladas
+        let result = FetchHead::new(&references, url_remote);
+
+        // Verifica que la creación del FetchHead sea exitosa
+        assert!(result.is_ok());
+
+        let mut fetch_head = result.unwrap();
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 4);
+
+        // Mergeo una entrada
+        let result = fetch_head.branch_already_merged("branch3");
+        assert!(result.is_ok());
+
+        // Verifica que la cantidad de entradas sea la esperada
+        assert_eq!(fetch_head.entries.len(), 3);
+
+        // Verifica que las entradas tengan los valores esperados
+        let entry1 = &fetch_head.entries.get("branch1").unwrap();
+        assert_eq!(entry1.commit_hash, "93455fe53543e1dcca9533dd51d5b83656a6432c");
+        assert_eq!(entry1.branch_name, "branch1");
+        assert_eq!(entry1.label, Label::Merge);
+        assert_eq!(entry1.url_remote, "Repository/Rust");
+
+        let entry2 = &fetch_head.entries.get("branch2").unwrap();
+        assert_eq!(entry2.commit_hash, "56620fe39508e1dcca4873dd51d5b83656a9418c");
+        assert_eq!(entry2.branch_name, "branch2");
+        assert_eq!(entry2.label, Label::Merge);
+        assert_eq!(entry2.url_remote, "Repository/Rust");
+
+        let result = fetch_head._write("./test_files/test_head_write");
+        assert!(result.is_ok());
     }
 }
