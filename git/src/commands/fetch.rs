@@ -29,6 +29,7 @@ pub enum FetchStatus {
     NoUpdates,
     BranchNotFound,
     BranchHasNoExistingCommits,
+    SomeRemotesUpdated(String),
 }
 
 impl fmt::Display for FetchStatus {
@@ -38,6 +39,7 @@ impl fmt::Display for FetchStatus {
             FetchStatus::NoUpdates => write!(f, "No hay nuevas actualizaciones. Todo está actualizado."),
             FetchStatus::BranchNotFound => write!(f, "La branch no existe en el repositorio remoto."),
             FetchStatus::BranchHasNoExistingCommits => write!(f, "La branch no tiene commits."),
+            FetchStatus::SomeRemotesUpdated(remotes) => write!(f, "Se actualizaron los remotos: {}", remotes),
         }
     }
     
@@ -92,45 +94,43 @@ pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<FetchStatus, Comm
     )
 }
 
-// pub fn _git_fetch_all(
-//     socket: &mut TcpStream,
-//     ip: &str,
-//     port: &str,
-//     repo_local: &str,
-// ) -> Result<FetchStatus, CommandsError>
-// {
-//     // Obtengo los remotos en uso
-//     let git_config = GitConfig::new_from_file(repo_local)?;
-//     let remotes = git_config.get_remotes_in_use();
-
-//     for remote in remotes {
-        
-//     }
-//     Ok(FetchStatus::Success)
-// }
-
-
 pub fn git_fetch_all(
     socket: &mut TcpStream,
     ip: &str,
     port: &str,
     repo_local: &str,
+) -> Result<FetchStatus, CommandsError>
+{
+    // Obtengo los remotos en uso
+    let git_config = GitConfig::new_from_file(repo_local)?;
+    let remotes = git_config.get_remotes_in_use();
+
+    for remote_name in remotes {
+        let url_remote = &git_config.get_remote_url_by_name(&remote_name)?;
+        let status = _git_fetch_all(socket, ip, port, repo_local, &url_remote);
+    }
+    Ok(FetchStatus::Success)
+}
+
+
+pub fn _git_fetch_all(
+    socket: &mut TcpStream,
+    ip: &str,
+    port: &str,
+    repo_local: &str,
+    url_remoto: &str,
 ) -> Result<FetchStatus, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
-    let git_config = GitConfig::new_from_file(repo_local)?;
-    // Abria que hacer una conexion con cada servidor remoto
-    // Esto debe ser refactorizado
-    let repo_remoto = &git_config.get_remote_url_by_name("origin")?;
-    println!("Fetch del repositorio remoto: {}", repo_remoto);
+    println!("Fetch del repositorio remoto: {}", url_remoto);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
-        GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
+        GitRequest::generate_request_string(RequestCommand::UploadPack, url_remoto, ip, port);
 
     // Reference Discovery
     let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
-    let mut server = reference_discovery(socket, message, repo_remoto, &my_capacibilities)?;
+    let mut server = reference_discovery(socket, message, url_remoto, &my_capacibilities)?;
     
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
@@ -149,7 +149,7 @@ pub fn git_fetch_all(
             return Err(CommandsError::RepositoryNotInitialized);
         };
         save_references(&refs, repo_local)?;
-        let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+        let fetch_head = FetchHead::new(&refs, url_remoto)?;
         fetch_head.write(repo_local)?;
     }else{
         return Ok(FetchStatus::NoUpdates)
