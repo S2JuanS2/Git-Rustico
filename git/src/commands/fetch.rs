@@ -38,12 +38,12 @@ impl fmt::Display for FetchStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             // FetchStatus::Success(String) => write!(f, "El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
-            FetchStatus::NoUpdatesRemote(String) => write!(f, "No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", String),
-            FetchStatus::NoUpdatesBranch(String) => write!(f, "No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", String),
-            FetchStatus::UpdatesBranch(String) => write!(f, "Se actualizaron los objetos de la branch: {}", String),
-            FetchStatus::BranchNotFound(String) => write!(f, "La branch: {}\nNo existe en el repositorio remoto. Haga push", String),
-            FetchStatus::BranchHasNoExistingCommits(String) => write!(f, "La branch: {}\nNo tiene commits. Realice add y commit", String),
-            FetchStatus::SomeRemotesUpdated(branch) => write!(f, "Se actualizaron las siguientes branch:\n{}", branch),
+            FetchStatus::NoUpdatesRemote(s) => write!(f, "No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", s),
+            FetchStatus::NoUpdatesBranch(s) => write!(f, "No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", s),
+            FetchStatus::UpdatesBranch(s) => write!(f, "Se actualizaron los objetos de la branch:\n{}", s),
+            FetchStatus::BranchNotFound(s) => write!(f, "La branch: {}\nNo existe en el repositorio remoto. Haga push", s),
+            FetchStatus::BranchHasNoExistingCommits(s) => write!(f, "La branch: {}\nNo tiene commits. Realice add y commit", s),
+            FetchStatus::SomeRemotesUpdated(s) => write!(f, "Se actualizaron las siguientes branch:\n{}", s),
         }
     }
     
@@ -55,12 +55,12 @@ impl FetchStatus
     {
         match self {
             // FetchStatus::Success(String) => format!("El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
-            FetchStatus::NoUpdatesRemote(String) => format!("No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", String),
-            FetchStatus::NoUpdatesBranch(String) => format!("No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", String),
-            FetchStatus::UpdatesBranch(String) => format!("Se actualizaron los objetos de la branch: {}", String),
-            FetchStatus::BranchNotFound(String) => format!("La branch: {}\nNo existe en el repositorio remoto. Haga push", String),
-            FetchStatus::BranchHasNoExistingCommits(String) => format!("La branch: {}\nNo tiene commits. Realice add y commit", String),
-            FetchStatus::SomeRemotesUpdated(branch) => format!("Se actualizaron las siguientes branch:\n{}", branch),
+            FetchStatus::NoUpdatesRemote(s) => format!("No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", s),
+            FetchStatus::NoUpdatesBranch(s) => format!("No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", s),
+            FetchStatus::UpdatesBranch(s) => format!("Se actualizaron los objetos de la branch: {}", s),
+            FetchStatus::BranchNotFound(s) => format!("La branch: {}\nNo existe en el repositorio remoto. Haga push", s),
+            FetchStatus::BranchHasNoExistingCommits(s) => format!("La branch: {}\nNo tiene commits. Realice add y commit", s),
+            FetchStatus::SomeRemotesUpdated(s) => format!("Se actualizaron las siguientes branch:\n{}", s),
         }
     }
 }
@@ -92,7 +92,6 @@ impl FetchStatus
 /// * Otros errores de `CommandsError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<FetchStatus, CommandsError> {
-    println!("Entre al handle fetch");
     if args.len() >= 2 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
@@ -196,7 +195,9 @@ pub fn git_fetch_branch(
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
-    let repo_remoto = &git_config.get_remote_url_by_name(repo_local)?;
+    println!("Config: {:?}", git_config);
+
+    let repo_remoto = &git_config.get_branch_url_by_name(name_branch)?;
 
     println!("Fetch del repositorio remoto: {}", repo_remoto);
     
@@ -235,6 +236,7 @@ pub fn git_fetch_branch(
     }
 
     let refs = server.get_references_for_updating()?;
+    println!("Refs: {:?}", refs);
 
     if !is_already_update(repo_local, &refs)? {
         if save_objects(content, repo_local).is_err() {
@@ -271,7 +273,12 @@ pub fn git_fetch_branch(
 fn is_already_update(repo_local: &str, refs: &Vec<Reference>) -> Result<bool, CommandsError> {
 
     let mut found = false;
-    let branches = get_branch_remote(repo_local)?;
+    let branches = match get_branch_remote(repo_local)
+    {
+        Ok(branches) => branches,
+        Err(CommandsError::BranchDirectoryOpenError) => return Ok(false),
+        Err(e) => return Err(e),
+    };
 
     if branches.is_empty(){
         return Ok(false)

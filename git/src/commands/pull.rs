@@ -57,17 +57,18 @@ pub fn git_pull(
     let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
     println!("Result: {:?}", result);
     match result {
-        FetchStatus::BranchNotFound => return Ok(format!("{}", FetchStatus::BranchNotFound)),
-        FetchStatus::NoUpdates => return Ok(format!("{}", FetchStatus::NoUpdates)),
-        FetchStatus::BranchHasNoExistingCommits => return Ok(format!("{}", FetchStatus::BranchHasNoExistingCommits)),
-        FetchStatus::Success => (),
+        FetchStatus::BranchNotFound(s) => return Ok(format!("{}", FetchStatus::BranchNotFound(s))),
+        FetchStatus::NoUpdatesBranch(s) => return Ok(format!("{}", FetchStatus::NoUpdatesBranch(s))),
+        FetchStatus::BranchHasNoExistingCommits(s) => return Ok(format!("{}", FetchStatus::BranchHasNoExistingCommits(s))),
+        FetchStatus::NoUpdatesRemote(_) => return Ok("Error: Aqui no deberia entrar".to_string()),
+        _ => (),
     }
 
     // Esto pasa cuando ya hicimos fetch anteriormente y no mergeamos
     let mut fetch_head = FetchHead::new_from_file(repo_local)?;
     if !fetch_head.references_needs_update(current_rfs.get_name())
     {
-        return Ok(format!("{}", FetchStatus::NoUpdates));
+        return Ok(format!("{}", FetchStatus::NoUpdatesBranch(name_branch.to_string())));
     }
 
     
