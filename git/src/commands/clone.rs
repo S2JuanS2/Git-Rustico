@@ -98,7 +98,8 @@ pub fn git_clone(
     let content = receive_packfile(socket)?;
 
     let local_repo_parts: Vec<&str> = local_repo.split('/').collect();
-    let status = create_repository(&git_server, content, local_repo, local_repo_parts.len())?;
+    let status = create_repository(content, local_repo, local_repo_parts.len())?;
+    save_references(&git_server, local_repo)?;
 
     // Creo el config
     let git_config = GitConfig::new_from_server(&git_server)?;
@@ -110,7 +111,6 @@ pub fn git_clone(
 }
 
 fn create_repository(
-    advertised: &GitServer,
     content: Vec<(ObjectEntry, Vec<u8>)>,
     repo: &str,
     repo_count: usize,
@@ -125,7 +125,7 @@ fn create_repository(
     let mut i = 0;
     while i < count_objects {
         if content[i].0.obj_type == ObjectType::Commit {
-            handle_commit(&content, repo, advertised, &git_dir, i)?;
+            handle_commit(&content, repo, &git_dir, i)?;
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
             i = match handle_tree(&content, &git_dir, i, path_dir_cloned, repo_count) {
@@ -178,29 +178,31 @@ fn recovery_tree(
 ) -> Result<usize, CommandsError> {
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let mode;
-        let file_name;
-        if parts[0] == FILE || parts[0] == DIRECTORY {
-            mode = parts[0];
-            file_name = parts[1];
-        }else{
-            file_name = parts[0];
-            mode = parts[1];
-        }
-        let hash = parts[2];
-        
-        let path_dir_cloned = path_dir_cloned.join(file_name);
-        if mode == FILE {
-            i += 1;
-            i = recovery_blob(hash, &path_dir_cloned, content, i, repo, repo_count)?;
+        if parts.len() == 3{
+            let mode;
+            let file_name;
+            if parts[0] == FILE || parts[0] == DIRECTORY {
+                mode = parts[0];
+                file_name = parts[1];
+            }else{
+                file_name = parts[0];
+                mode = parts[1];
+            }
+            let hash = parts[2];
             
-        } else if mode == DIRECTORY {
-            i += 1;
-            if i < content.len(){
-                create_directory(&path_dir_cloned)?;
-                let tree_content = read_tree(&content[i].1)?;
-                builder_object_tree(repo, &tree_content)?;
-                i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo, repo_count)?;
+            let path_dir_cloned = path_dir_cloned.join(file_name);
+            if mode == FILE {
+                i += 1;
+                i = recovery_blob(hash, &path_dir_cloned, content, i, repo, repo_count)?;
+                
+            } else if mode == DIRECTORY {
+                i += 1;
+                if i < content.len(){
+                    create_directory(&path_dir_cloned)?;
+                    let tree_content = read_tree(&content[i].1)?;
+                    builder_object_tree(repo, &tree_content)?;
+                    i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo, repo_count)?;
+                }
             }
         }
     }
@@ -229,28 +231,29 @@ fn insert_line_between_lines(
     result
 }
 
-
-fn handle_commit(
-    content: &[(ObjectEntry, Vec<u8>)],
-    repo: &str,
-    advertised: &GitServer,
-    git_dir: &str,
-    i: usize,
-) -> Result<(), CommandsError> {
-    let mut commit_content = read_commit(&content[i].1)?;
+fn save_references(advertised: &GitServer, repo: &str) -> Result<(), CommandsError> {
     
-    
-    let hash_commit = builder_object_commit(&commit_content, git_dir)?;
-
-    if let Some(refs) = advertised.get_reference(i + 1) {
+    for refs in advertised.get_references().iter().skip(1){
         let hash = refs.get_hash();
         let branch = refs.get_name();
-
         if let Some(current_branch) = branch.rsplit('/').next() {
             let branch_dir = format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
             create_file(&branch_dir, hash)?;
         }
     }
+    Ok(())
+}
+
+fn handle_commit(
+    content: &[(ObjectEntry, Vec<u8>)],
+    repo: &str,
+    git_dir: &str,
+    i: usize,
+) -> Result<(), CommandsError> {
+    let mut commit_content = read_commit(&content[i].1)?;
+    
+    let hash_commit = builder_object_commit(&commit_content, git_dir)?;
+
     if commit_content.lines().count() == 5{
         commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
     }

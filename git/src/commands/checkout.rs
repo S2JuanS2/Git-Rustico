@@ -41,13 +41,13 @@ pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, Comman
 
 /// Esta función se encarga de leer el tree hash de un commit
 /// ###Parametros:
-/// 'contenido_commit': Contenido de un commit
-pub fn get_tree_hash(contenido_commit: &str) -> Option<&str> {
-    if let Some(pos) = contenido_commit.find("tree ") {
+/// 'content_commit': Contenido de un commit
+pub fn get_tree_hash(content_commit: &str) -> Option<&str> {
+    if let Some(pos) = content_commit.find("tree ") {
         let start = pos + "tree ".len();
 
-        if let Some(end) = contenido_commit[start..].find(char::is_whitespace) {
-            return Some(&contenido_commit[start..start + end]);
+        if let Some(end) = content_commit[start..].find(char::is_whitespace) {
+            return Some(&content_commit[start..start + end]);
         }
     }
     None
@@ -109,7 +109,7 @@ fn load_files(
 /// Esta función se encarga de leer el parent hash de un commit
 /// ###Parametros:
 /// 'commit': Contenido de un commit
-fn _extract_parent_hash(commit: &str) -> Option<&str> {
+pub fn extract_parent_hash(commit: &str) -> Option<&str> {
     for line in commit.lines() {
         if line.starts_with("parent") {
             let words: Vec<&str> = line.split_whitespace().collect();
@@ -123,7 +123,7 @@ fn _extract_parent_hash(commit: &str) -> Option<&str> {
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'hash_commit': Valor hash de 40 caracteres (SHA-1) del commit a leer.
-fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result<(), CommandsError> {
+pub fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result<(), CommandsError> {
     let commit = git_cat_file(directory, hash_commit, "-p")?;
 
     if let Some(tree_hash) = get_tree_hash(&commit) {
