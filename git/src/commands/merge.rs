@@ -7,7 +7,6 @@ use std::fs;
 use std::path::Path;
 use super::branch::get_current_branch;
 use super::cat_file::git_cat_file;
-// use super::checkout::git_checkout_switch;
 use super::log::get_parts_commit;
 
 /// Esta función se encarga de llamar al comando merge con los parametros necesarios.
@@ -75,6 +74,8 @@ pub fn try_for_merge(directory: &str, branch_name: &str) -> Result<String, Comma
             directory,
             branch_name,
         )?;
+        update_refs(&strategy, &path_current_branch, &branch_to_merge_hash)?;
+        update_logs_refs(directory, &strategy, &current_branch, branch_name)?;
         get_result_depending_on_strategy(
             strategy,
             &mut formatted_result,
@@ -86,15 +87,71 @@ pub fn try_for_merge(directory: &str, branch_name: &str) -> Result<String, Comma
     Ok(formatted_result)
 }
 
-// /// Fusiona dos ramas pasadas por parametro.
-// /// ###Parametros:
-// /// 'directory': directorio del repositorio local
-// /// 'current_branch': nombre de la rama actual
-// /// 'merge_branch_path': path del archivo de la rama a mergear
-// pub fn git_merge_paths(directory: &str, current_branch: &str, merge_branch_path: &str) -> Result<String, CommandsError> {
-//     git_checkout_switch(directory, current_branch)?;
-//     git_merge(directory, merge_branch_path)
-// }
+/// Actualiza refs/heads/current_branch con el hash de la rama a mergear.
+/// ###Parametros:
+/// 'strategy': tupla que contiene la estrategia de merge utilizada y el archivo en conflicto (u ok si no hay)
+/// 'path_current_branch': path del refs/heads/current_branch
+/// 'branch_to_merge_hash': hash del commit de la rama a mergear
+fn update_refs(strategy: &(String, String), path_current_branch: &str, branch_to_merge_hash: &str) -> Result<(), CommandsError> {
+    if strategy.0 == "recursive" && strategy.1 == "ok" {
+        // TODO: hacer el merge commit
+    } else if strategy.0 == "fast-forward" {
+        create_file_replace(path_current_branch, branch_to_merge_hash)?;
+    } else {
+        return Ok(())
+    }
+    Ok(())
+}
+
+/// Actualiza el archivo de logs de la rama actual con los commits de la rama a mergear.
+/// ###Parametros:
+/// 'directory': directorio del repositorio local
+/// 'strategy': tupla que contiene la estrategia de merge utilizada y el archivo en conflicto (u ok si no hay)
+/// 'current_branch': nombre de la rama actual
+/// 'branch_to_merge': nombre de la rama a mergear
+fn update_logs_refs(directory: &str, strategy: &(String, String), current_branch: &str, branch_to_merge: &str) -> Result<(), CommandsError> {
+    if strategy.0 == "recursive" && strategy.1 == "ok" {
+        // TODO: agregar el merge commit
+    } else if strategy.0 == "fast-forward" {
+        // TODO: falta q se copien cada uno de los commits pero no se hace en git real
+        let log_current_path = format!("{}/.git/logs/refs/heads/{}", directory, current_branch);
+        let log_current_file = open_file(&log_current_path)?;
+        let mut log_current_content = read_file_string(log_current_file)?;
+        let log_merge_path = if branch_to_merge.contains("remotes") {
+            let branch_path = branch_to_merge.split('/').collect::<Vec<_>>();
+            format!("{}/.git/logs/refs/remotes/{}/{}", directory, branch_path[2], branch_path[3])
+        } else {
+            format!("{}/.git/logs/refs/heads/{}", directory, branch_to_merge)
+        };
+        let log_merge_file = open_file(&log_merge_path)?;
+        let log_merge_content = read_file_string(log_merge_file)?;
+        let last_commit_in_log_merge = get_last_commit_in_log(log_merge_content);
+        log_current_content.push_str(format!("\n{}", last_commit_in_log_merge).as_str());
+        create_file_replace(&log_current_path, &log_current_content)?;
+    } else {
+        return Ok(())
+    }
+    Ok(())
+}
+
+/// Obtiene el ultimo commit del log con su informacion.
+/// ###Parametros:
+/// 'log': String que contiene el log
+fn get_last_commit_in_log(log: String) -> String {
+    let mut last_commit = String::new();
+    let total_lines = log.lines().count();
+    for (count, line) in log.lines().enumerate() {
+        if count >= (total_lines - 6) {
+            if count == (total_lines - 1) {
+                last_commit.push_str(line);
+            } else {
+                last_commit.push_str(line);
+                last_commit.push('\n');
+            }
+        }
+    }
+    last_commit
+}
 
 /// Obtiene los logs que difieren entre las ramas a mergear.
 /// ###Parametros:
@@ -154,7 +211,7 @@ pub fn get_branches_hashes(
 /// Obtiene el log de la rama pasada por parametro.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
-/// 'branch': nombre de la rama a mergear
+/// 'branch': nombre de la rama
 pub fn get_log_from_branch(
     directory: &str,
     branch: &str,
@@ -247,6 +304,9 @@ pub fn get_parent_hashes(
     )
 }
 
+/// Obtiene el path del archivo en conflicto.
+/// ###Parametros:
+/// 'conflict_msg': String que contiene el mensaje de conflicto
 pub fn get_conflict_path(conflict_msg: &str) -> String {
     let mut conflict_path = String::new();
     for line in conflict_msg.lines() {
@@ -492,6 +552,7 @@ fn check_each_line(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::commands::add::git_add;
     use crate::commands::branch::git_branch_create;
     use crate::commands::checkout::git_checkout_switch;
@@ -933,5 +994,68 @@ mod tests {
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_last_commit_in_log() {
+        // 
+        // 455beb4810931b8b0b688103a152e318890dbd6e
+        // parent 0000000000000000000000000000000000000000
+        // author Valen <vlanzillotta@fi.uba.ar> 1701544637 -0300
+        // committer Valen <vlanzillotta@fi.uba.ar> 1701544637 -0300
+
+        // prueba
+        // a0cb2895e88c84ffba96b94f6b1409464ad914dc
+        // parent 455beb4810931b8b0b688103a152e318890dbd6e
+        // author Valen <vlanzillotta@fi.uba.ar> 1701544637 -0300
+        // committer Valen <vlanzillotta@fi.uba.ar> 1701544637 -0300
+
+        // prueba otra
+        // b378b7d03bce553e792408edc07c46296bac733a
+        // parent a0cb2895e88c84ffba96b94f6b1409464ad914dc
+        // author Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+        // committer Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+
+        // aa
+        // 93af11079538db6ec316f552fdf9c969fd8eb582
+        // parent b378b7d03bce553e792408edc07c46296bac733a
+        // author Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+        // committer Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+
+        // bb
+        let log = r#"
+455beb4810931b8b0b688103a152e318890dbd6e
+parent 0000000000000000000000000000000000000000
+author Valen <vlanzillotta@fi.uba.ar> 1701544637 -0300
+committer Valen <vlanzillotta@fi.uba.ar> 1701544637 -0300
+
+prueba
+a0cb2895e88c84ffba96b94f6b1409464ad914dc
+parent 455beb4810931b8b0b688103a152e318890dbd6e
+author Valen <vlanzillotta@fi.uba.ar> 1701544637 -0300
+committer Valen <vlanzillotta@fi.uba.ar> 1701544637 -0300
+
+prueba otra
+b378b7d03bce553e792408edc07c46296bac733a
+parent a0cb2895e88c84ffba96b94f6b1409464ad914dc
+author Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+committer Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+
+aa
+93af11079538db6ec316f552fdf9c969fd8eb582
+parent b378b7d03bce553e792408edc07c46296bac733a
+author Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+committer Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+
+bb"#;
+        
+        let last_commit = get_last_commit_in_log(log.to_string());
+        let last_commit_formatted = r#"93af11079538db6ec316f552fdf9c969fd8eb582
+parent b378b7d03bce553e792408edc07c46296bac733a
+author Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+committer Valen <vlanzillotta@fi.uba.ar> 1701544638 -0300
+
+bb"#;
+        assert_eq!(last_commit, last_commit_formatted);
     }
 }
