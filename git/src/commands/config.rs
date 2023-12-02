@@ -83,7 +83,11 @@ impl RemoteInfo {
 
     fn update_info(&mut self, key: &str, value: &str) -> Result<(), CommandsError>{
         match key {
-            "url" => self.url = Some(value.to_string()),
+            "url" => {
+                self.url = Some(value.to_string());
+                let fetch  = format!("+refs/heads/*:refs/remotes/{}/*", value);
+                self.fetch = Some(fetch);
+            },
             "fetch" => self.fetch = Some(value.to_string()),
             _ => return Err(CommandsError::InvalidEntryConfigFile),
         };
