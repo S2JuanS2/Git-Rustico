@@ -621,6 +621,17 @@ impl GitConfig {
         remotes
     }
 
+    /// Obtiene la referencia completa de una rama remota específica.
+    ///
+    /// # Argumentos
+    ///
+    /// * `name_branch`: El nombre de la rama para la cual se busca la referencia remota.
+    ///
+    /// # Devuelve
+    ///
+    /// Un `Option<String>` que contiene la referencia completa de la rama remota si se encuentra.
+    /// Si no se encuentra información para la rama especificada o si la referencia no es válida, se devuelve `None`.
+    ///
     pub fn get_remote_branch_ref(&self, name_branch: &str) -> Option<String>
     {
         let branch_info = match self.branch.get(name_branch)
