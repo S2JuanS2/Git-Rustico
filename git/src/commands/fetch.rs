@@ -55,10 +55,12 @@ impl FetchStatus
     {
         match self {
             // FetchStatus::Success(String) => format!("El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
-            FetchStatus::NoUpdates(String) => format!("No hay nuevas actualizaciones. Todo está actualizado."),
-            FetchStatus::BranchNotFound(String) => format!("La branch no existe en el repositorio remoto."),
-            FetchStatus::BranchHasNoExistingCommits(String) => format!("La branch no tiene commits."),
-            FetchStatus::SomeRemotesUpdated(remotes) => format!("Se actualizaron los remotos: {}", remotes),
+            FetchStatus::NoUpdatesRemote(String) => format!("No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", String),
+            FetchStatus::NoUpdatesBranch(String) => format!("No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", String),
+            FetchStatus::UpdatesBranch(String) => format!("Se actualizaron los objetos de la branch: {}", String),
+            FetchStatus::BranchNotFound(String) => format!("La branch: {}\nNo existe en el repositorio remoto. Haga push", String),
+            FetchStatus::BranchHasNoExistingCommits(String) => format!("La branch: {}\nNo tiene commits. Realice add y commit", String),
+            FetchStatus::SomeRemotesUpdated(branch) => format!("Se actualizaron las siguientes branch:\n{}", branch),
         }
     }
 }
@@ -174,11 +176,14 @@ pub fn _git_fetch_all(
         // NO pisarlo porque perderias las referencias de otros remotos
         let fetch_head = FetchHead::new(&refs, url_remoto)?;
         fetch_head.write(repo_local)?;
+        let mut status = Vec::new();
+        for reference in refs {
+            status.push(format!("{} --> {}", reference.get_ref_path(), reference.get_hash()));
+        }
+        return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
     }else{
         return Ok(FetchStatus::NoUpdatesRemote(url_remoto.to_string()))
     }
-
-    Ok(FetchStatus::Success)
 }
 
 pub fn git_fetch_branch(
@@ -239,11 +244,16 @@ pub fn git_fetch_branch(
         save_references(&refs, repo_local)?;
         let fetch_head = FetchHead::new(&refs, repo_remoto)?;
         fetch_head.write(repo_local)?;
+        let mut status = Vec::new();
+        for reference in refs {
+            status.push(format!("{} --> {}", reference.get_ref_path(), reference.get_hash()));
+        }
+        return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
     }else{
         return Ok(FetchStatus::NoUpdatesBranch(name_branch.to_string()))
     }
 
-    Ok(FetchStatus::Success)
+    // Ok(FetchStatus::SomeRemotesUpdated(format!("{} --> {}", name_branch, refs.)))
 }
 
 /// Recibe las referencias del servidor y las compara los hashes de cada branch con el repositorio local,
