@@ -313,29 +313,31 @@ fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, UtilError> {
 
     for line in index_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let file_name = parts[0];
-        let mut mode = parts[1];
-        let hash = parts[2];
-
-        if mode == BLOB {
-            mode = FILE;
-        } else if mode == TREE {
-            mode = DIRECTORY;
+        if parts.len() == 3 {
+            let file_name = parts[0];
+            let mut mode = parts[1];
+            let hash = parts[2];
+    
+            if mode == BLOB {
+                mode = FILE;
+            } else if mode == TREE {
+                mode = DIRECTORY;
+            }
+            let bytes = hash
+                .as_bytes()
+                .chunks(2)
+                .filter_map(|chunk| {
+                    let hex_str = String::from_utf8_lossy(chunk);
+                    u8::from_str_radix(&hex_str, 16).ok()
+                })
+                .collect::<Vec<u8>>();
+    
+            format_tree.extend_from_slice(file_name.as_bytes());
+            format_tree.push(SPACE);
+            format_tree.extend_from_slice(mode.as_bytes());
+            format_tree.push(NULL);
+            format_tree.extend_from_slice(&bytes);
         }
-        let bytes = hash
-            .as_bytes()
-            .chunks(2)
-            .filter_map(|chunk| {
-                let hex_str = String::from_utf8_lossy(chunk);
-                u8::from_str_radix(&hex_str, 16).ok()
-            })
-            .collect::<Vec<u8>>();
-
-        format_tree.extend_from_slice(file_name.as_bytes());
-        format_tree.push(SPACE);
-        format_tree.extend_from_slice(mode.as_bytes());
-        format_tree.push(NULL);
-        format_tree.extend_from_slice(&bytes);
     }
     Ok(format_tree)
 }
