@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::fs::File;
 use std::io;
@@ -587,6 +587,19 @@ impl GitConfig {
         }
 
         Ok(())
+    }
+
+    pub fn get_remotes_in_use(&self) -> HashSet<String>
+    {
+        let mut remotes = HashSet::new();
+        for (_, branch_info) in &self.branch
+        {
+            if let Some(remote) = branch_info.get_value("remote")
+            {
+                remotes.insert(remote.to_string());
+            }
+        }
+        remotes
     }
 }
 

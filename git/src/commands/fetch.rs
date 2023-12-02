@@ -92,6 +92,24 @@ pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<FetchStatus, Comm
     )
 }
 
+// pub fn _git_fetch_all(
+//     socket: &mut TcpStream,
+//     ip: &str,
+//     port: &str,
+//     repo_local: &str,
+// ) -> Result<FetchStatus, CommandsError>
+// {
+//     // Obtengo los remotos en uso
+//     let git_config = GitConfig::new_from_file(repo_local)?;
+//     let remotes = git_config.get_remotes_in_use();
+
+//     for remote in remotes {
+        
+//     }
+//     Ok(FetchStatus::Success)
+// }
+
+
 pub fn git_fetch_all(
     socket: &mut TcpStream,
     ip: &str,
