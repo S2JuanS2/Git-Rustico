@@ -81,11 +81,11 @@ impl RemoteInfo {
         }
     }
 
-    fn update_info(&mut self, key: &str, value: &str) -> Result<(), CommandsError>{
+    fn update_info(&mut self, key: &str, value: &str, name_remote: &str) -> Result<(), CommandsError>{
         match key {
             "url" => {
                 self.url = Some(value.to_string());
-                let fetch  = format!("+refs/heads/*:refs/remotes/{}/*", value);
+                let fetch  = format!("+refs/heads/*:refs/remotes/{}/*", name_remote);
                 self.fetch = Some(fetch);
             },
             "fetch" => self.fetch = Some(value.to_string()),
@@ -260,7 +260,7 @@ impl GitConfig {
                     Some(remote_info) => remote_info,
                     None => return Err(CommandsError::InvalidEntryConfigFile),
                 };
-                remote_info.update_info(key, value)?;
+                remote_info.update_info(key, value, &name)?;
                 // self.remotes.update_info(key, value)?;
                 Ok(())
             }
@@ -505,7 +505,7 @@ impl GitConfig {
             self.remotes.remove(name_remote);
         }
         let mut remote_info = RemoteInfo::new();
-        remote_info.update_info("url", url)?;
+        remote_info.update_info("url", url, name_remote)?;
         self.remotes.insert(name_remote.to_string(), remote_info);
         Ok(())
     }
@@ -619,6 +619,38 @@ impl GitConfig {
             }
         }
         remotes
+    }
+
+    pub fn get_remote_branch_ref(&self, name_branch: &str) -> Option<String>
+    {
+        let branch_info = match self.branch.get(name_branch)
+        {
+            Some(branch_info) => branch_info,
+            None => return None,
+        };
+        let remote = match branch_info.get_value("remote")
+        {
+            Some(remote) => remote,
+            None => return None,
+        };
+        let remote_info = match self.remotes.get(remote)
+        {
+            Some(remote_info) => remote_info,
+            None => return None,
+        };
+        let fetch = match remote_info.get_value("fetch")
+        {
+            Some(fetch) => fetch,
+            None => return None,
+        };
+        let parts = fetch.split(":").collect::<Vec<&str>>();
+        if parts.len() != 2
+        {
+            return None;
+        }
+        let location: &str = parts[1].trim();
+        let location = &location.replace("*", name_branch);
+        Some(location.to_string())
     }
 }
 
@@ -986,5 +1018,21 @@ mod tests {
         assert_eq!(git_config.get_remote_by_branch_name("main").unwrap(), "origin");
         assert_eq!(git_config.get_remote_by_branch_name("feature").unwrap(), "upstream");
 
+    }
+
+    #[test]
+    fn test_get_remote_branch_ref()
+    {
+        let mut git_config = GitConfig::new();
+        git_config.add_remote("origin", "Repository_1").unwrap();
+        git_config.add_branch("main", "origin", "refs/heads/main").unwrap();
+        git_config.add_remote("upstream", "Repository_2").unwrap();
+        git_config.add_branch("feature", "upstream", "refs/heads/feature").unwrap();
+        git_config.add_branch("master", "upstream", "refs/heads/master").unwrap();
+        git_config.delete_branch("master").unwrap();
+
+        assert_eq!(git_config.get_remote_branch_ref("main"), Some("refs/remotes/origin/main".to_string()));
+        assert_eq!(git_config.get_remote_branch_ref("feature"), Some("refs/remotes/upstream/feature".to_string()));
+        assert_eq!(git_config.get_remote_branch_ref("master"), None);
     }
 }

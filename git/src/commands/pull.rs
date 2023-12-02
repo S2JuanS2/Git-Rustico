@@ -1,3 +1,4 @@
+use crate::commands::config::GitConfig;
 use crate::commands::fetch::{git_fetch_branch, FetchStatus};
 use crate::commands::fetch_head::FetchHead;
 use crate::git_transport::references::Reference;
@@ -61,10 +62,14 @@ pub fn git_pull(
     let mut fetch_head = FetchHead::new_from_file(repo_local)?;
     if !fetch_head.references_needs_update(current_rfs.get_name())
     {
-        return Ok(format!("No hay actualizaciones para mergear"));
+        status.push(format!("No hay actualizaciones para mergear"));
+        return Ok(status.join("\n"));
     }
 
+    let git_config = GitConfig::new_from_file(repo_local)?;
     
+
+
 
     
     
