@@ -93,7 +93,7 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
     let commands = command.split_whitespace().collect::<Vec<&str>>();
     let rest_of_command = commands.iter().skip(2).cloned().collect::<Vec<&str>>();
 
-    let mut result = " ".to_string();
+    let result;
 
     if command.is_empty() || command.split_whitespace().count() == 1 {
         return Err(GitError::NonGitCommandError);
