@@ -38,7 +38,7 @@ pub fn git_log(directory: &str) -> Result<String, CommandsError> {
             })
             .collect();
 
-        get_parts_commit(lines, &mut formatted_result);
+        formatted_result = get_parts_commit(lines)?;
     }
 
     Ok(formatted_result)
@@ -48,7 +48,8 @@ pub fn git_log(directory: &str) -> Result<String, CommandsError> {
 /// ###Parametros:
 /// 'lines': Vector de strings que contiene las lineas del archivo del commit
 /// 'formatted_result': String que contiene el resultado de git log formateado
-fn get_parts_commit(lines: Vec<String>, formatted_result: &mut String) {
+pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
+    let mut formatted_result = String::new();
     let mut count_line = 0;
     for line in lines {
         if count_line == 1 {
@@ -59,7 +60,7 @@ fn get_parts_commit(lines: Vec<String>, formatted_result: &mut String) {
             formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
             let timestamp = match parts[3].parse::<i64>(){
                 Ok(t) => t,
-                Err(_) => return eprintln!("Parse Error"),
+                Err(_) => return Err(CommandsError::GenericError),
             };
             let date_time = chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
             formatted_result.push_str(&format!("Date: {}\n", date_time));
@@ -73,6 +74,7 @@ fn get_parts_commit(lines: Vec<String>, formatted_result: &mut String) {
             formatted_result.push('\n');
         }
     }
+    Ok(formatted_result)
 }
 
 #[cfg(test)]

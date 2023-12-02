@@ -1,6 +1,7 @@
 use crate::commands::config::GitConfig;
 use crate::commands::fetch::{git_fetch_branch, FetchStatus};
 use crate::commands::fetch_head::FetchHead;
+use crate::commands::merge::{git_merge, get_conflict_path};
 use crate::git_transport::references::Reference;
 use super::errors::CommandsError;
 use crate::models::client::Client;
@@ -73,22 +74,13 @@ pub fn git_pull(
         None => return Err(CommandsError::PullRemoteBranchNotFound),
     };
 
+    let merge_result = git_merge(repo_local, _remote_branch_ref)?;
+    if merge_result.contains("CONFLICT") {
+        let path_conflict = get_conflict_path(&merge_result);
+        println!("error: The following file would be overwritten by merge:\n\t{}\nAborting.", path_conflict);
+        return Ok("No se puede hacer pull ya que hay conflictos".to_string());
+    }
 
-
-    
-    
-    // let _update_rfs = fetch_head.get_reference_to_merge(current_rfs.get_name())?;
-    
-    // [TODO #6]
-    // Dado current references y update references, hacer merge
-    // Datos:
-    // current_rfs.get_hash() -> hash del commit actual
-    // update_rfs.get_hash() -> hash del commit remoto
-    // current_rfs.get_name() -> nombre de la branch actual
-    // update_rfs.get_name() -> nombre de la branch remota
-    // current_rfs.get_path() -> path del archivo de la branch actual
-    // update_rfs.get_path() -> path del archivo de la branch remota
-    // repo_local -> path del repo local
     // [FIN TODO #6]
     
 

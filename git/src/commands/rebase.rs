@@ -3,7 +3,7 @@ use crate::util::files::{create_file_replace, open_file, read_file_string};
 use super::branch::get_current_branch;
 use super::commit::{Commit, git_commit};
 use super::errors::CommandsError;
-use super::merge::{get_logs_from_branches, try_for_merge, logs_just_in_one_branch};
+use super::merge::{get_log_from_branch, try_for_merge, logs_just_in_one_branch};
 use super::cat_file::git_cat_file;
 
 /// Esta función se encarga de llamar al comando rebase con los parametros necesarios.
@@ -27,8 +27,8 @@ pub fn handle_rebase(args: Vec<&str>, client: Client) -> Result<String, Commands
 pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
     let current_branch = get_current_branch(directory)?;
-    let (log_current_branch, log_rebase_branch) =
-            get_logs_from_branches(directory, branch_name, &current_branch)?;
+    let log_current_branch = get_log_from_branch(directory, &current_branch)?;
+    let log_rebase_branch = get_log_from_branch(directory, branch_name)?;
 
     formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
     let result_merge = try_for_merge(directory, branch_name)?;
@@ -52,8 +52,8 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
 /// 'current_branch': nombre de la branch actual
 /// 'rebase_branch': nombre de la branch sobre la cual se hizo el rebase
 fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &str) -> Result<(), CommandsError> {
-    let (log_current_branch, log_rebase_branch) =
-        get_logs_from_branches(directory, rebase_branch, &current_branch)?;
+    let log_current_branch = get_log_from_branch(directory, &current_branch)?;
+    let log_rebase_branch = get_log_from_branch(directory, rebase_branch)?;
 
     let log_rebase_branch_cloned = log_rebase_branch.clone();
     let last_commit_rebase_branch = match log_rebase_branch_cloned.last() {
@@ -63,7 +63,7 @@ fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &
 
     let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch, log_rebase_branch);
     let mut first_commit_current_branch = String::new();
-    if logs_just_in_current_branch.len() > 0 {
+    if !logs_just_in_current_branch.is_empty() {
         first_commit_current_branch = logs_just_in_current_branch[0].clone();
     }
 
