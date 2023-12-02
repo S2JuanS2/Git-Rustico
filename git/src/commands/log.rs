@@ -1,5 +1,10 @@
+use super::cat_file::git_cat_file;
+use super::checkout::extract_parent_hash;
+use super::commit::builder_commit_log;
 use super::errors::CommandsError;
+use crate::consts::{PARENT_INITIAL, GIT_DIR};
 use crate::models::client::Client;
+use crate::util::files::{open_file, read_file_string};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -73,6 +78,91 @@ fn get_parts_commit(lines: Vec<String>, formatted_result: &mut String) {
             formatted_result.push('\n');
         }
     }
+}
+
+/// Inserta una linea en una cadena recibida por parámetro
+///
+/// # Argumentos
+///
+/// - `original_string`: Cadena original a modificar
+/// - `line_number_1`: Numero de linea a modificar
+/// - `new_line`: Linea a agrear
+///
+fn insert_line_between_lines(
+    original_string: &str,
+    line_number_1: usize,
+    new_line: &str,
+) -> String {
+    let mut result = String::new();
+
+    let lines = original_string.lines();
+
+    for (index, line) in lines.enumerate() {
+        result.push_str(line);
+        result.push('\n');
+        if index + 1 == line_number_1 {
+            let parent_format = format!("parent {}", new_line);
+            result.push_str(&parent_format);
+            result.push('\n');
+        }
+    }
+
+    result
+}
+
+/// Recorre los parents de los commits y registra en el log de la branch
+///
+/// # Argumentos
+///
+/// - `directory`: Dirección del repositorio
+/// - `commit`: Contenido del objeto commit
+/// - `branch_name`: Nombre de la branch a modificar el log
+///
+/// # Returns
+///
+/// Un `Result` con un retorno `CommandsError` en caso de error.
+///
+pub fn save_parent_log(directory: &str, commit: &str, branch_name: &str, path_log: &str) -> Result<(), CommandsError> {
+
+    if let Some(parent_hash) = extract_parent_hash(&commit){
+        if parent_hash != PARENT_INITIAL {
+            let mut parent_commit = git_cat_file(directory, &parent_hash, "-p")?;
+            if parent_commit.lines().count() == 5{
+                parent_commit = insert_line_between_lines(&parent_commit, 1, PARENT_INITIAL);
+            }
+            builder_commit_log(directory, &parent_commit, parent_hash, branch_name, path_log)?;
+            save_parent_log(directory, &parent_commit, branch_name, path_log)?;
+
+        }
+    };
+
+    Ok(())
+}
+
+/// Guarda los logs de los commits recibidos del servidor
+///
+/// # Argumentos
+///
+/// - `directory`: Dirección del repositorio
+/// - `branch_name`: Nombre de la branch a modificar el log
+///
+/// # Returns
+///
+/// Un `Result` con un retorno `CommandsError` en caso de error.
+///
+pub fn save_log(directory: &str, branch_name: &str, path_log: &str, path_branch: &str) -> Result<(), CommandsError>{
+
+    let dir_branch = format!("{}/{}/{}/{}", directory, GIT_DIR, path_branch, branch_name);
+    let file = open_file(&dir_branch)?;
+    let hash_commit = read_file_string(file)?;
+    let mut commit_content = git_cat_file(directory, &hash_commit, "-p")?;
+    if commit_content.lines().count() == 5{
+        commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
+    }
+    builder_commit_log(directory, &commit_content, &hash_commit, branch_name, path_log)?;
+    save_parent_log(directory, &commit_content, branch_name, path_log)?;
+
+    Ok(())
 }
 
 #[cfg(test)]

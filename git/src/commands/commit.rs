@@ -125,8 +125,10 @@ pub fn builder_commit_log(
     directory: &str,
     content: &str,
     hash_commit: &str,
-) -> Result<(), CommandsError> {
-    let logs_path = format!("{}/{}/logs/refs/heads", directory, GIT_DIR);
+    current_branch: &str,
+    path_log: &str
+) -> Result<(), CommandsError> {//logs/refs/heads
+    let logs_path = format!("{}/{}/{}", directory, GIT_DIR, path_log);
     if !Path::new(&logs_path).exists() {
         match fs::create_dir_all(logs_path.clone()) {
             Ok(_) => (),
@@ -139,7 +141,6 @@ pub fn builder_commit_log(
     }
     let content_mod = lines.join("\n");
     let content_mod_with_newline = format!("\n{}", content_mod);
-    let current_branch = get_current_branch(directory)?;
     let logs_path = format!("{}/{}", logs_path, current_branch);
     let mut file = match OpenOptions::new().append(true).create(true).open(logs_path) {
         Ok(file) => file,
@@ -211,7 +212,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
 
     let commit_content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
-    builder_commit_log(directory, &commit_content, &hash_commit)?;
+    builder_commit_log(directory, &commit_content, &hash_commit, &current_branch, "logs/refs/heads")?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
     create_or_replace_commit_into_branch(current_branch.clone(), branch_current_path, hash_commit.clone())?;
