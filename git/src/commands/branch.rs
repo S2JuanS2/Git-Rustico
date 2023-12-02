@@ -267,7 +267,7 @@ mod tests {
             .expect("Falló al crear el archivo que contiene la branch");
 
         let result = git_branch_create(directory, "test_new_branch");
-        let result_branch = format!("Rama {} creada con éxito!", "test_new_branch");
+        let result_branch = format!("Branch {} created", "test_new_branch");
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
