@@ -225,11 +225,11 @@ pub fn recovery_tree(
         if mode == FILE {
             let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
             object_blob.1 = get_content(directory, hash)?;
-            objects.push(object_blob);
+            save_object_pack(objects, object_blob)
         } else if mode == DIRECTORY {
             let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
             object_tree.1 = get_content(directory, hash)?;
-            objects.push(object_tree);
+            save_object_pack(objects, object_tree);
             recovery_tree(directory, hash, objects)?;
         }
     }
@@ -256,7 +256,7 @@ pub fn recovery_commits(directory: &str,
 ) -> Result<(), GitError>{
     let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
     object_commit.1 = get_content(directory, &hash_commit)?;
-    objects.push(object_commit);
+    save_object_pack(objects, object_commit);
     
     if let Some(parent_hash) = extract_parent_hash(&commit) {
         if parent_hash != PARENT_INITIAL {
@@ -266,6 +266,20 @@ pub fn recovery_commits(directory: &str,
         }
     }
     Ok(())
+}
+
+/// Guarda el objeto recibido por parámetro en el vector de objetos, solo si el vector
+/// no contiene al mismo.
+/// 
+/// # Argumentos
+///
+/// * `objects` - vector donde se almacenan los objetos
+/// * `object` - objeto a almacenar.
+fn save_object_pack(objects: &mut Vec<(ObjectType, Vec<u8>)>, object: (ObjectType, Vec<u8>)) {
+
+    if !objects.contains(&object) {
+        objects.push(object);
+    }
 }
 
 /// Extrae los objetos de un repositorio para guardar los mismos en un vector
@@ -285,7 +299,7 @@ pub fn get_objects(
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
     let mut hashes_commits: Vec<String> = vec![];
-        for reference in references.iter() {
+    for reference in references.iter() {
         let parts: Vec<&str> = reference.get_ref_path().split('/').collect();
         let branch = parts.last().map_or("", |&x| x);
         let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
@@ -299,16 +313,17 @@ pub fn get_objects(
             let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
             object_tree.1 = get_content(directory, tree_hash)?;
 
-            objects.push(object_tree);
+            save_object_pack(&mut objects, object_tree);
 
             recovery_tree(directory, tree_hash, &mut objects)?;
         };
         for hash_commit in hashes_commits.clone(){
             let content_commit = git_cat_file(directory, &hash_commit, "-p")?;
             if let Some(tree_hash) = get_tree_hash(&content_commit) {
-                let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
-                object_tree.1 = get_content(directory, tree_hash)?;
-                objects.push(object_tree);
+                let mut object_subtree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+                object_subtree.1 = get_content(directory, tree_hash)?;
+                save_object_pack(&mut objects, object_subtree);
+                recovery_tree(directory, tree_hash, &mut objects)?;
             };
         }
     }
