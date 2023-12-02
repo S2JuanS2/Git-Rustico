@@ -23,8 +23,8 @@ pub fn handle_tag(args: Vec<&str>, client: Client) -> Result<String, CommandsErr
     let directory = client.get_directory_path();
     if args.is_empty() {
         git_tag(client.get_directory_path())
-    }else if args.len() == 4 && args[0] == "-a" {
-        git_tag_create(directory, client.clone(), args[1], args[3])
+    }else if args.len() == 3 && args[0] == "-a" {
+        git_tag_create(directory, client.clone(), args[1], args[2])
     }else if args.len() == 2 && args[0] == "-d" {
         git_tag_delete(directory, args[1])
     }else{
