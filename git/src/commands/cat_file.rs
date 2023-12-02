@@ -13,7 +13,7 @@ pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, Comman
     if args.len() != 2 {
         return Err(CommandsError::InvalidArgumentCountCatFileError);
     }
-    if args[0] != "-t" && args[0] != "-p" {
+    if args[0] != "-t" && args[0] != "-p" && args[0] != "-s"{
         return Err(CommandsError::FlagCatFileNotRecognizedError);
     }
 
@@ -60,6 +60,8 @@ pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<St
 
     if flag == "-p" {
         result = git_cat_file_p(content, result)?;
+    }else if flag == "-s" {
+        result = read_size(&content)?;
     }
 
     Ok(result)

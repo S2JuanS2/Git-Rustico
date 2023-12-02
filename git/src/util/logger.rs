@@ -60,7 +60,7 @@ pub fn write_client_log(directory: &str, content: String, path_log: &str) -> Res
             Err(_) => return Err(GitError::OpenFileError),
         };
 
-        if writeln!(file, "Client => {}", content).is_err() {
+        if writeln!(file, "{} Client => {}", chrono::Local::now(), content).is_err() {
             return Err(GitError::WriteFileError);
         }
     }
