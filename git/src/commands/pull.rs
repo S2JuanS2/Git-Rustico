@@ -58,6 +58,7 @@ pub fn git_pull(
     
     let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
     status.push(format!("{}", result));
+    println!("Result del fetch: {}", result);
 
     // Esto pasa cuando ya hicimos fetch anteriormente y no mergeamos
     let mut fetch_head = FetchHead::new_from_file(repo_local)?;
@@ -73,15 +74,15 @@ pub fn git_pull(
         Some(rfs) => rfs,
         None => return Err(CommandsError::PullRemoteBranchNotFound),
     };
-
+    println!("Remote branch ref: {}", remote_branch_ref);
+    println!("Mergeando con el repositorio remoto ...");
     let merge_result = git_merge(repo_local, &remote_branch_ref)?;
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);
-        println!("error: The following file would be overwritten by merge:\n\t{}\nAborting.", path_conflict);
-        return Ok("No se puede hacer pull ya que hay conflictos".to_string());
+        status.push(format!("Error: El siguiente archivo se sobrescribiría al fusionarlo:\n\t{}\nAborting.", path_conflict));
+        status.push(format!("No se puede hacer pull ya que hay conflictos"));
+        return Ok(status.join("\n"));
     }
-
-    // [FIN TODO #6]
     
 
     // Actualizo el fetch_head si todo salio bien
