@@ -177,7 +177,7 @@ pub fn _git_fetch_all(
         fetch_head.write(repo_local)?;
         let mut status = Vec::new();
         for reference in refs {
-            status.push(format!("{} --> {}", reference.get_ref_path(), reference.get_hash()));
+            status.push(format!("Nueva actualizacion: {} --> {}, haga merge", reference.get_ref_path(), reference.get_hash()));
         }
         return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
     }else{
@@ -250,7 +250,7 @@ pub fn git_fetch_branch(
         fetch_head.write(repo_local)?;
         let mut status = Vec::new();
         for reference in refs {
-            status.push(format!("{} --> {}", reference.get_ref_path(), reference.get_hash()));
+            status.push(format!("Nueva actualizacion: {} --> {}, haga merge", reference.get_ref_path(), reference.get_hash()));
         }
         return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
     }else{
