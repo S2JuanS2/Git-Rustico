@@ -1,3 +1,4 @@
+use crate::commands::config::GitConfig;
 use crate::commands::fetch::{git_fetch_branch, FetchStatus};
 use crate::commands::fetch_head::FetchHead;
 use crate::git_transport::references::Reference;
@@ -46,7 +47,7 @@ pub fn git_pull(
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Pull del repositorio remoto ...");
-
+    let mut status = Vec::new();
     let current_rfs = match Reference::get_current_references(repo_local)
     {
         Ok(rfs) => rfs,
@@ -55,22 +56,26 @@ pub fn git_pull(
     let name_branch = current_rfs.get_name();
     
     let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
-    println!("Result: {:?}", result);
-    match result {
-        FetchStatus::BranchNotFound(_) => return Ok("La branch no existe".to_string()),
-        FetchStatus::NoUpdatesBranch(_) => return Ok(format!("No hay actualizaciones! Branch ya esta al dia")),
-        FetchStatus::BranchHasNoExistingCommits(_) => return Ok("La branch esta vacia. Haga add y commits!".to_string()),
-        FetchStatus::NoUpdatesRemote(_) => return Ok("Error: Aqui no deberia entrar".to_string()),
-        _ => (),
-    }
+    status.push(format!("{}", result));
 
     // Esto pasa cuando ya hicimos fetch anteriormente y no mergeamos
     let mut fetch_head = FetchHead::new_from_file(repo_local)?;
     if !fetch_head.references_needs_update(current_rfs.get_name())
     {
-        return Ok(format!("{}", FetchStatus::NoUpdatesBranch(name_branch.to_string())));
+        status.push(format!("No hay actualizaciones para mergear"));
+        return Ok(status.join("\n"));
     }
 
+    let git_config = GitConfig::new_from_file(repo_local)?;
+    let _remote_branch_ref = match git_config.get_remote_branch_ref(name_branch)
+    {
+        Some(rfs) => rfs,
+        None => return Err(CommandsError::PullRemoteBranchNotFound),
+    };
+
+
+
+    
     
     // let _update_rfs = fetch_head.get_reference_to_merge(current_rfs.get_name())?;
     
