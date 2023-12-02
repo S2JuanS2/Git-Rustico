@@ -1,4 +1,4 @@
-use crate::consts::{FILE, GIT_DIR, CONTENT_EMPTY};
+use crate::consts::{FILE, GIT_DIR, CONTENT_EMPTY, PARENT_INITIAL};
 use crate::models::client::Client;
 use super::add::add_to_index;
 use super::errors::CommandsError;
@@ -7,8 +7,8 @@ use std::fs;
 use std::path::Path;
 use super::branch::get_current_branch;
 use super::cat_file::git_cat_file;
-use super::checkout::git_checkout_switch;
-use super::log::git_log;
+// use super::checkout::git_checkout_switch;
+use super::log::get_parts_commit;
 
 /// Esta función se encarga de llamar al comando merge con los parametros necesarios.
 /// ###Parametros:
@@ -40,7 +40,7 @@ pub fn try_for_merge(directory: &str, branch_name: &str) -> Result<String, Comma
     let current_branch = get_current_branch(directory)?;
     let path_current_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
     let mut path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
-    if branch_name.contains("origin") {
+    if branch_name.contains("remotes") {
         path_branch_to_merge = format!("{}/.git/{}", directory, branch_name);
     }
     let (current_branch_hash, branch_to_merge_hash) =
@@ -50,8 +50,8 @@ pub fn try_for_merge(directory: &str, branch_name: &str) -> Result<String, Comma
         formatted_result.push_str("Already up to date.");
         return Ok(formatted_result);
     } else {
-        let (log_current_branch, log_merge_branch) =
-            get_logs_from_branches(directory, branch_name, &current_branch)?;
+        let log_current_branch = get_log_from_branch(directory, &current_branch)?;
+        let log_merge_branch = get_log_from_branch(directory, branch_name)?;
         if check_if_current_is_up_to_date(
             &log_current_branch,
             &log_merge_branch,
@@ -86,19 +86,15 @@ pub fn try_for_merge(directory: &str, branch_name: &str) -> Result<String, Comma
     Ok(formatted_result)
 }
 
-/// Fusiona dos ramas pasadas por parametro.
-/// ###Parametros:
-/// 'directory': directorio del repositorio local
-/// 'current_branch_path': path del archivo de la rama actual
-/// 'merge_branch_path': path del archivo de la rama a mergear
-pub fn git_merge_paths(directory: &str, current_branch_path: &str, merge_branch_path: &str) -> Result<String, CommandsError> {
-    let current_branch_name = match current_branch_path.split('/').last() {
-        Some(name) => name,
-        None => return Err(CommandsError::InvalidArgumentCountMergeError),
-    };
-    git_checkout_switch(directory, current_branch_name)?;
-    git_merge(directory, merge_branch_path)
-}
+// /// Fusiona dos ramas pasadas por parametro.
+// /// ###Parametros:
+// /// 'directory': directorio del repositorio local
+// /// 'current_branch': nombre de la rama actual
+// /// 'merge_branch_path': path del archivo de la rama a mergear
+// pub fn git_merge_paths(directory: &str, current_branch: &str, merge_branch_path: &str) -> Result<String, CommandsError> {
+//     git_checkout_switch(directory, current_branch)?;
+//     git_merge(directory, merge_branch_path)
+// }
 
 /// Obtiene los logs que difieren entre las ramas a mergear.
 /// ###Parametros:
@@ -155,23 +151,27 @@ pub fn get_branches_hashes(
     Ok((current_branch_hash, branch_to_merge_hash))
 }
 
-/// Obtiene los logs de las ramas a mergear.
+/// Obtiene el log de la rama pasada por parametro.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
-/// 'branch_name': nombre de la rama a mergear
-/// 'current_branch': nombre de la rama actual
-pub fn get_logs_from_branches(
+/// 'branch': nombre de la rama a mergear
+pub fn get_log_from_branch(
     directory: &str,
-    branch_name: &str,
-    current_branch: &str,
-) -> Result<(Vec<String>, Vec<String>), CommandsError> {
-    let log_current_branch = git_log(directory)?;
+    branch: &str,
+) -> Result<Vec<String>, CommandsError> {
+
+    let mut log_path = format!("{}/.git/logs/refs/heads/{}", directory, branch);
+    if branch.contains("remotes") {
+        let branch_path = branch.split('/').collect::<Vec<_>>();
+        log_path = format!("{}/.git/logs/refs/remotes/{}/{}", directory, branch_path[2], branch_path[3]);
+    }
+    let log_file = open_file(&log_path)?;
+    let log_content = read_file_string(log_file)?;
+    let log_content_lines = log_content.lines().map(|line| line.to_string()).collect::<Vec<_>>();
+    let log_current_branch = get_parts_commit(log_content_lines)?;
     let log_current_branch = get_commits_from_log(log_current_branch);
-    git_checkout_switch(directory, branch_name)?;
-    let log_merge_branch = git_log(directory)?;
-    let log_merge_branch = get_commits_from_log(log_merge_branch);
-    git_checkout_switch(directory, current_branch)?;
-    Ok((log_current_branch, log_merge_branch))
+    
+    Ok(log_current_branch)
 }
 
 /// Obtiene el resultado del merge dependiendo de la estrategia de merge utilizada.
@@ -225,8 +225,8 @@ pub fn get_parent_hashes(
     root_parent_current_branch: String,
     root_parent_merge_branch: String,
 ) -> (String, String) {
-    let mut hash_parent_current = "0000000000000000000000000000000000000000";
-    let mut hash_parent_merge = "0000000000000000000000000000000000000000";
+    let mut hash_parent_current = PARENT_INITIAL;
+    let mut hash_parent_merge = PARENT_INITIAL;
     for line in root_parent_current_branch.lines() {
         if line.starts_with("parent ") {
             if let Some(hash) = line.strip_prefix("parent ") {
@@ -245,6 +245,18 @@ pub fn get_parent_hashes(
         hash_parent_current.to_string(),
         hash_parent_merge.to_string(),
     )
+}
+
+pub fn get_conflict_path(conflict_msg: &str) -> String {
+    let mut conflict_path = String::new();
+    for line in conflict_msg.lines() {
+        if line.starts_with("CONFLICT (content): Merge conflict in ") {
+            if let Some(path) = line.strip_prefix("CONFLICT (content): Merge conflict in ") {
+                conflict_path = path.to_string();
+            }
+        }
+    }
+    conflict_path
 }
 
 /// Chequea si la rama actual tiene como commit al ultimo commit de la rama a mergear. En caso de tenerlo,
@@ -395,6 +407,11 @@ fn compare_files(
     let content_file_local = read_file_string(file)?;
     if content_file_local != content_file {
         // CONFLICTO
+        if branch_to_merge.contains("remotes") {
+            strategy.0 = "recursive".to_string();
+            strategy.1 = path_file_format.to_string();
+            return Ok(());
+        }
         let path_conflict = check_each_line(
             path_file_format,
             content_file_local,
@@ -481,6 +498,8 @@ mod tests {
     use crate::commands::commit::Commit;
     use crate::commands::merge::git_merge;
     use crate::commands::{commit::git_commit, init::git_init};
+    use crate::util::files::{create_file_replace, open_file, read_file_string};
+    use std::fs::create_dir_all;
     use std::{
         fs::{self},
         io::Write,
@@ -757,37 +776,162 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    // #[test]
-    // fn git_merge_local_and_remote_paths() {
-    //     let directory = "./test_merge_local_and_remote_paths";
-    //     git_init(directory).expect("Error al iniciar el repositorio");
+    #[test]
+    fn git_merge_local_and_remote_paths() {
+        let directory = "./test_merge_local_and_remote_paths";
+        git_init(directory).expect("Error al iniciar el repositorio");
 
-    //     let file_path = format!("{}/{}", directory, "tocommitinmaster.txt");
-    //     let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
-    //     file.write_all(b"Archivo a commitear")
-    //         .expect("Error al escribir en el archivo");
+        let file_path = format!("{}/{}", directory, "tocommitinmaster.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear")
+            .expect("Error al escribir en el archivo");
 
-    //     let file_path2 = format!("{}/{}", directory, "tocommitinnew1.txt");
-    //     let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
-    //     file2.write_all(b"Otro archivo a commitear")
-    //         .expect("Error al escribir en el archivo");
+        let file_path2 = format!("{}/{}", directory, "tocommitinnew1.txt");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2.write_all(b"Otro archivo a commitear")
+            .expect("Error al escribir en el archivo");
 
-    //     let file_path3 = format!("{}/{}", directory, "tocommitinnew2.txt");
-    //     let mut file = fs::File::create(&file_path3).expect("Falló al crear el archivo");
-    //     file.write_all(b"Archivo a commitear 2")
-    //         .expect("Error al escribir en el archivo");
+        let file_path3 = format!("{}/{}", directory, "tocommitinnew2.txt");
+        let mut file = fs::File::create(&file_path3).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear 2")
+            .expect("Error al escribir en el archivo");
 
-    //     git_add(directory, "tocommitinmaster.txt").expect("Error al agregar el archivo");
+        git_add(directory, "tocommitinmaster.txt").expect("Error al agregar el archivo");
 
-    //     let test_commit1 = Commit::new(
-    //         "prueba".to_string(),
-    //         "Valen".to_string(),
-    //         "vlanzillotta@fi.uba.ar".to_string(),
-    //         "Valen".to_string(),
-    //         "vlanzillotta@fi.uba.ar".to_string(),
-    //     );
-    //     git_commit(directory, test_commit1).expect("Error al commitear");
+        let test_commit1 = Commit::new(
+            "prueba".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+        git_commit(directory, test_commit1).expect("Error al commitear");
 
-    //     let remote_branch_path = format!("{}/.git/refs/remotes/origin/fetch", directory);
-    // }
+        // para copiar el commit a una branch remota
+        git_branch_create(directory, "new_branch").expect("Error al crear la rama");
+        git_checkout_switch(directory, "new_branch").expect("Error al cambiar de rama");
+
+        git_add(directory, "tocommitinnew1.txt").expect("Error al agregar el archivo");
+        git_add(directory, "tocommitinnew2.txt").expect("Error al agregar el archivo");
+
+        let test_commit2 = Commit::new(
+            "para remote".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit2).expect("Error al commitear");
+
+        let new_branch_path = format!("{}/.git/refs/heads/{}", directory, "new_branch");
+        let new_branch_file = open_file(&new_branch_path).expect("Error al abrir el archivo");
+        let new_branch_hash = read_file_string(new_branch_file).expect("Error al leer el archivo");
+
+        create_dir_all(format!("{}/.git/logs", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs/remotes", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs/remotes/origin", directory)).expect("Error al crear el directorio");
+
+        let log_new = open_file(format!("{}/.git/logs/refs/heads/new_branch", directory).as_str()).expect("Error al abrir el archivo");
+        let log_new_content = read_file_string(log_new).expect("Error al leer el archivo");
+
+        let log_remote = format!("{}/.git/logs/refs/remotes/origin/fetch", directory);
+        create_file_replace(&log_remote, &log_new_content).expect("Error al crear el archivo");
+
+        let remote_branch_path = format!("{}/.git/refs/remotes/origin/fetch", directory);
+        create_file_replace(&remote_branch_path, &new_branch_hash).expect("Error al crear el archivo");
+
+        git_checkout_switch(directory, "master").expect("Error al cambiar de rama");
+
+        let result = git_merge(directory, "refs/remotes/origin/fetch");
+
+        fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn git_merge_local_and_remote_paths_conflict() {
+        let directory = "./test_merge_local_and_remote_paths_conflict";
+        git_init(directory).expect("Error al iniciar el repositorio");
+
+        let file_path = format!("{}/{}", directory, "tocommitinmaster.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "forconflict.txt");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2.write_all(b"Otro archivo a commitear")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "tocommitinmaster.txt").expect("Error al agregar el archivo");
+
+        let test_commit1 = Commit::new(
+            "prueba".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+        git_commit(directory, test_commit1).expect("Error al commitear");
+
+        // para copiar el commit a una branch remota
+        git_branch_create(directory, "new_branch").expect("Error al crear la rama");
+        git_checkout_switch(directory, "new_branch").expect("Error al cambiar de rama");
+
+        git_add(directory, "forconflict.txt").expect("Error al agregar el archivo");
+
+        let test_commit2 = Commit::new(
+            "para remote".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit2).expect("Error al commitear");
+
+        git_checkout_switch(directory, "master").expect("Error al cambiar de rama");
+
+        let file_path3 = format!("{}/{}", directory, "forconflict.txt");
+        let mut file = fs::File::create(&file_path3).expect("Falló al crear el archivo");
+        file.write_all(b"Para conflicto")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "forconflict.txt").expect("Error al agregar el archivo");
+
+        let test_commit3 = Commit::new(
+            "para conflicto".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit3).expect("Error al commitear");
+
+        let new_branch_path = format!("{}/.git/refs/heads/{}", directory, "new_branch");
+        let new_branch_file = open_file(&new_branch_path).expect("Error al abrir el archivo");
+        let new_branch_hash = read_file_string(new_branch_file).expect("Error al leer el archivo");
+
+        create_dir_all(format!("{}/.git/logs", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs/remotes", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs/remotes/origin", directory)).expect("Error al crear el directorio");
+
+        let log_new = open_file(format!("{}/.git/logs/refs/heads/new_branch", directory).as_str()).expect("Error al abrir el archivo");
+        let log_new_content = read_file_string(log_new).expect("Error al leer el archivo");
+
+        let log_remote = format!("{}/.git/logs/refs/remotes/origin/fetch", directory);
+        create_file_replace(&log_remote, &log_new_content).expect("Error al crear el archivo");
+
+        let remote_branch_path = format!("{}/.git/refs/remotes/origin/fetch", directory);
+        create_file_replace(&remote_branch_path, &new_branch_hash).expect("Error al crear el archivo");
+
+        let result = git_merge(directory, "refs/remotes/origin/fetch");
+
+        fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
+        assert!(result.is_ok());
+    }
 }

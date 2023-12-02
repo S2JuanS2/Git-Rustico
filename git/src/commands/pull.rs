@@ -1,5 +1,6 @@
 use crate::commands::fetch::{git_fetch_branch, FetchStatus};
 use crate::commands::fetch_head::FetchHead;
+use crate::commands::merge::{git_merge, get_conflict_path};
 use crate::git_transport::references::Reference;
 use super::errors::CommandsError;
 use crate::models::client::Client;
@@ -71,7 +72,7 @@ pub fn git_pull(
     }
 
     
-    let _update_rfs = fetch_head.get_references(current_rfs.get_name())?;
+    let update_rfs = fetch_head.get_references(current_rfs.get_name())?;
     
     // [TODO #6]
     // Dado current references y update references, hacer merge
@@ -83,6 +84,14 @@ pub fn git_pull(
     // current_rfs.get_path() -> path del archivo de la branch actual
     // update_rfs.get_path() -> path del archivo de la branch remota
     // repo_local -> path del repo local
+
+    let merge_result = git_merge(repo_local, update_rfs.get_ref_path())?;
+    if merge_result.contains("CONFLICT") {
+        let path_conflict = get_conflict_path(&merge_result);
+        println!("error: The following file would be overwritten by merge:\n\t{}\nAborting.", path_conflict);
+        return Ok("No se puede hacer pull ya que hay conflictos".to_string());
+    }
+
     // [FIN TODO #6]
     
 
