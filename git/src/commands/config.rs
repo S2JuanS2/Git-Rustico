@@ -393,6 +393,21 @@ impl GitConfig {
         }
     }
 
+    pub fn get_name_remote_by_url(&self, url: &str) -> Option<String>
+    {
+        for (name, remote_info) in &self.remotes
+        {
+            if let Some(remote_url) = remote_info.get_value("url")
+            {
+                if remote_url == url
+                {
+                    return Some(name.to_string());
+                }
+            }
+        }
+        None
+    }
+
     /// Obtiene la URL del repositorio remoto asociado a una rama específica.
     ///
     /// Esta función utiliza `get_remote_by_branch_name` para obtener el nombre del repositorio remoto

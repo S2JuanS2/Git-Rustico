@@ -125,9 +125,9 @@ pub fn git_fetch_all(
     let remotes = git_config.get_remotes_in_use();
     let mut status = Vec::new();
 
-    for remote_name in remotes {
-        let url_remote = &git_config.get_remote_url_by_name(&remote_name)?;
-        let status_remote = _git_fetch_all(socket, ip, port, repo_local, &url_remote)?;
+    for name_remote in remotes {
+        let url_remote = &git_config.get_remote_url_by_name(&name_remote)?;
+        let status_remote = _git_fetch_all(socket, ip, port, repo_local, &url_remote, &name_remote)?;
         status.push(status_remote.to_string());
     }
 
@@ -140,19 +140,20 @@ pub fn _git_fetch_all(
     ip: &str,
     port: &str,
     repo_local: &str,
-    url_remoto: &str,
+    url_remote: &str,
+    remote_branch: &str
 ) -> Result<FetchStatus, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
-    println!("Fetch del repositorio remoto: {}", url_remoto);
+    println!("Fetch del repositorio remoto: {}", url_remote);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
-        GitRequest::generate_request_string(RequestCommand::UploadPack, url_remoto, ip, port);
+        GitRequest::generate_request_string(RequestCommand::UploadPack, url_remote, ip, port);
 
     // Reference Discovery
     let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
-    let mut server = reference_discovery(socket, message, url_remoto, &my_capacibilities)?;
+    let mut server = reference_discovery(socket, message, url_remote, &my_capacibilities)?;
     
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
@@ -162,18 +163,17 @@ pub fn _git_fetch_all(
     let content = receive_packfile(socket)?;
     if content.is_empty()
     {
-        return Ok(FetchStatus::NoUpdatesRemote(url_remoto.to_string()));
+        return Ok(FetchStatus::NoUpdatesRemote(url_remote.to_string()));
     }
     let refs = server.get_references_for_updating()?;
 
-    if !is_already_update(repo_local, &refs)? {
+    if !is_already_update(repo_local, &refs, &remote_branch)? {
         if save_objects(content, repo_local).is_err() {
             return Err(CommandsError::RepositoryNotInitialized);
         };
-        save_references(&refs, repo_local)?;
-        // Aqui debo leer el FetchHead y actualizarlo
-        // NO pisarlo porque perderias las referencias de otros remotos
-        let fetch_head = FetchHead::new(&refs, url_remoto)?;
+        save_references(&refs, repo_local, remote_branch)?;
+        let mut fetch_head = FetchHead::new_from_file(repo_local)?;
+        fetch_head.update_references(&refs, url_remote)?;
         fetch_head.write(repo_local)?;
         let mut status = Vec::new();
         for reference in refs {
@@ -181,7 +181,7 @@ pub fn _git_fetch_all(
         }
         return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
     }else{
-        return Ok(FetchStatus::NoUpdatesRemote(url_remoto.to_string()))
+        return Ok(FetchStatus::NoUpdatesRemote(url_remote.to_string()))
     }
 }
 
@@ -197,9 +197,10 @@ pub fn git_fetch_branch(
     let git_config = GitConfig::new_from_file(repo_local)?;
     println!("Config: {:?}", git_config);
 
-    let repo_remoto = &git_config.get_branch_url_by_name(name_branch)?;
+    let url_remoto = &git_config.get_branch_url_by_name(name_branch)?;
+    let remote_branch = &git_config.get_remote_by_branch_name(name_branch)?;
 
-    println!("Fetch del repositorio remoto: {}", repo_remoto);
+    println!("Fetch del repositorio remoto: {}", url_remoto);
     
     // Valido si la branch existe en el repositorio local
     let rfs_fetch = format!("refs/heads/{}", name_branch);
@@ -210,11 +211,11 @@ pub fn git_fetch_branch(
 
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
-        GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
+        GitRequest::generate_request_string(RequestCommand::UploadPack, url_remoto, ip, port);
 
     // Reference Discovery
     let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
-    let mut server = reference_discovery(socket, message, repo_remoto, &my_capacibilities)?;
+    let mut server = reference_discovery(socket, message, url_remoto, &my_capacibilities)?;
     if !server.contains_reference(&rfs_fetch)
     {
         send_flush(socket, UtilError::SendFlushCancelConnection)?;
@@ -238,13 +239,14 @@ pub fn git_fetch_branch(
     let refs = server.get_references_for_updating()?;
     println!("Refs: {:?}", refs);
 
-    if !is_already_update(repo_local, &refs)? {
+    if !is_already_update(repo_local, &refs, &remote_branch)? {
         if save_objects(content, repo_local).is_err() {
             println!("Error al guardar los objetos");
             return Err(CommandsError::RepositoryNotInitialized);
         };
-        save_references(&refs, repo_local)?;
-        let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+        save_references(&refs, repo_local, remote_branch)?;
+        let mut fetch_head = FetchHead::new_from_file(repo_local)?;
+        fetch_head.update_references(&refs, url_remoto)?;
         fetch_head.write(repo_local)?;
         let mut status = Vec::new();
         for reference in refs {
@@ -265,15 +267,16 @@ pub fn git_fetch_branch(
 ///
 /// * `repo_local`: Directorio del repositorio local
 /// * `refs`: Referencias del servidor
+/// * `name_remote`: Nombre del repositorio remoto
 ///
 /// # Errores
 ///
 /// Devuelve un error del tipo `CommandsError` si hay problemas
 ///
-fn is_already_update(repo_local: &str, refs: &Vec<Reference>) -> Result<bool, CommandsError> {
+fn is_already_update(repo_local: &str, refs: &Vec<Reference>, name_remote: &str) -> Result<bool, CommandsError> {
 
     let mut found = false;
-    let branches = match get_branch_remote(repo_local)
+    let branches = match get_branch_remote(repo_local, name_remote)
     {
         Ok(branches) => branches,
         Err(CommandsError::BranchDirectoryOpenError) => return Ok(false),
@@ -344,7 +347,7 @@ pub fn get_branches_remote(server: &GitServer) -> Result<Vec<(String,String)>,Co
 /// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
-fn save_references(references: &Vec<Reference>, repo_path: &str) -> Result<(), CommandsError> {
+fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &str) -> Result<(), CommandsError> {
 
     // Si no existe el directorio .git/refs/remotes lo crea
     let directory_remotes = format!("{}/.git/refs/remotes", repo_path); 
@@ -352,7 +355,7 @@ fn save_references(references: &Vec<Reference>, repo_path: &str) -> Result<(), C
     create_directory(directory_remotes)?;
 
     // Si no existe el directorio .git/refs/remotes/origin lo crea
-    let refs_dir_path = format!("{}/.git/refs/remotes/origin", repo_path);
+    let refs_dir_path = format!("{}/.git/refs/remotes/{}", repo_path, name_remote);
     ensure_directory_clean(&refs_dir_path)?;
 
     // Escribe los hashes en archivos individuales

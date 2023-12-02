@@ -57,9 +57,9 @@ pub fn git_pull(
     let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
     println!("Result: {:?}", result);
     match result {
-        FetchStatus::BranchNotFound(s) => return Ok(format!("{}", FetchStatus::BranchNotFound(s))),
-        FetchStatus::NoUpdatesBranch(s) => return Ok(format!("{}", FetchStatus::NoUpdatesBranch(s))),
-        FetchStatus::BranchHasNoExistingCommits(s) => return Ok(format!("{}", FetchStatus::BranchHasNoExistingCommits(s))),
+        FetchStatus::BranchNotFound(_) => return Ok("La branch no existe".to_string()),
+        FetchStatus::NoUpdatesBranch(_) => return Ok(format!("No hay actualizaciones! Branch ya esta al dia")),
+        FetchStatus::BranchHasNoExistingCommits(_) => return Ok("La branch esta vacia. Haga add y commits!".to_string()),
         FetchStatus::NoUpdatesRemote(_) => return Ok("Error: Aqui no deberia entrar".to_string()),
         _ => (),
     }
@@ -72,7 +72,7 @@ pub fn git_pull(
     }
 
     
-    let _update_rfs = fetch_head.get_references(current_rfs.get_name())?;
+    // let _update_rfs = fetch_head.get_reference_to_merge(current_rfs.get_name())?;
     
     // [TODO #6]
     // Dado current references y update references, hacer merge
@@ -88,7 +88,7 @@ pub fn git_pull(
     
 
     // Actualizo el fetch_head si todo salio bien
-    fetch_head.delete_references(current_rfs.get_name())?;
+    fetch_head.branch_already_merged(current_rfs.get_name())?;
     fetch_head.write(repo_local)?;
 
     Ok("Pullcito naciendo".to_string())
