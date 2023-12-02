@@ -1,9 +1,9 @@
-use crate::commands::commit::builder_commit_log;
 use crate::commands::config::GitConfig;
 use crate::commands::init::git_init;
-use crate::consts::{DIRECTORY, FILE, GIT_DIR, REF_HEADS, PARENT_INITIAL};
+use crate::consts::{DIRECTORY, FILE, GIT_DIR, REF_HEADS};
 use crate::util::validation::join_paths_correctly;
 use super::errors::CommandsError;
+use super::log::save_log;
 use crate::git_server::GitServer;
 use crate::git_transport::git_request::GitRequest;
 use crate::git_transport::references::reference_discovery;
@@ -110,6 +110,18 @@ pub fn git_clone(
     Ok((status, local_repo.to_string()))
 }
 
+/// Crea un repositorio a partir de los objetos recibidos del servidor.
+///
+/// # Argumentos
+///
+/// - `content`: Objetos recibidos desde el servidor
+/// - `repo`: Dirección del repositorio del clone
+/// - `repo_count`: Cantidad de objetos a crear
+///
+/// # Returns
+///
+/// Un `Result` que contiene una cadena indicando el éxito del clone o un error `CommandsError` en caso de error.
+///
 fn create_repository(
     content: Vec<(ObjectEntry, Vec<u8>)>,
     repo: &str,
@@ -125,7 +137,7 @@ fn create_repository(
     let mut i = 0;
     while i < count_objects {
         if content[i].0.obj_type == ObjectType::Commit {
-            handle_commit(&content, repo, &git_dir, i)?;
+            handle_commit(&content, &git_dir, i)?;
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
             i = match handle_tree(&content, &git_dir, i, path_dir_cloned, repo_count) {
@@ -137,9 +149,23 @@ fn create_repository(
             i += 1;
         }
     }
-    Ok("Clonación exitosa!".to_string())
+    Ok("Successful cloning".to_string())
 }
 
+/// Construye el blob y lo agrega al index.
+///
+/// # Argumentos
+///
+/// - `hash`: hash del blob
+/// - `path_dir_cloned`: Dirección del blob
+/// - `content`: Objetos recibidos desde el servidor
+/// - `repo_count`: Cantidad de objetos a crear
+/// - `repo`: Repositorio del cliente
+///
+/// # Returns
+///
+/// Un `Result` que contiene el numero de objeto actual o un error `CommandsError` en caso de error.
+///
 fn recovery_blob(
     hash: &str,
     path_dir_cloned: &Path,
@@ -168,6 +194,20 @@ fn recovery_blob(
     Ok(i)
 }
 
+/// Recorre los objetos sub-tree, lo construye y lo agrega al index.
+///
+/// # Argumentos
+///
+/// - `tree_content`: Contenido del tree
+/// - `path_dir_cloned`: Dirección del tree
+/// - `content`: Objetos recibidos desde el servidor
+/// - `repo_count`: Cantidad de objetos a crear
+/// - `repo`: Repositorio del cliente
+///
+/// # Returns
+///
+/// Un `Result` que contiene el numero de objeto actual o un error `CommandsError` en caso de error.
+///
 fn recovery_tree(
     tree_content: String,
     path_dir_cloned: &Path,
@@ -201,7 +241,11 @@ fn recovery_tree(
                     create_directory(&path_dir_cloned)?;
                     let tree_content = read_tree(&content[i].1)?;
                     builder_object_tree(repo, &tree_content)?;
+                    let count = i;
                     i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo, repo_count)?;
+                    if count == i{
+                        i -= 1;
+                    }
                 }
             }
         }
@@ -209,59 +253,69 @@ fn recovery_tree(
     Ok(i)
 }
 
-fn insert_line_between_lines(
-    original_string: &str,
-    line_number_1: usize,
-    new_line: &str,
-) -> String {
-    let mut result = String::new();
-
-    let lines = original_string.lines();
-
-    for (index, line) in lines.enumerate() {
-        result.push_str(line);
-        result.push('\n');
-        if index + 1 == line_number_1 {
-            let parent_format = format!("parent {}", new_line);
-            result.push_str(&parent_format);
-            result.push('\n');
-        }
-    }
-
-    result
-}
-
+/// Recorre las referencias recibidas del servidor y las guarda en el repositorio local
+///
+/// # Argumentos
+///
+/// - `repo`: Dirección del repositorio
+/// - `advertised`: Contiene las referencias
+///
+/// # Returns
+///
+/// Un `Result` con un retorno `CommandsError` en caso de error.
+///
 fn save_references(advertised: &GitServer, repo: &str) -> Result<(), CommandsError> {
     
+    //refs/remotes/origin
     for refs in advertised.get_references().iter().skip(1){
         let hash = refs.get_hash();
         let branch = refs.get_name();
         if let Some(current_branch) = branch.rsplit('/').next() {
             let branch_dir = format!("{}/{}/{}/{}", repo, GIT_DIR, REF_HEADS, current_branch);
             create_file(&branch_dir, hash)?;
+            save_log(repo, current_branch, "logs/refs/heads", REF_HEADS)?;
         }
     }
     Ok(())
 }
 
+/// Construye el objeto Commit recibido del servidor
+///
+/// # Argumentos
+///
+/// - `git_dir`: Dirección del repositorio
+/// - `content`: Objetos recibidos del servidor
+/// - `i`: Numero de objeto actual
+///
+/// # Returns
+///
+/// Un `Result` con un retorno `CommandsError` en caso de error.
+///
 fn handle_commit(
     content: &[(ObjectEntry, Vec<u8>)],
-    repo: &str,
     git_dir: &str,
     i: usize,
 ) -> Result<(), CommandsError> {
-    let mut commit_content = read_commit(&content[i].1)?;
-    
-    let hash_commit = builder_object_commit(&commit_content, git_dir)?;
-
-    if commit_content.lines().count() == 5{
-        commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
-    }
-    builder_commit_log(repo, &commit_content, &hash_commit)?;
+    let commit_content = read_commit(&content[i].1)?;
+    builder_object_commit(&commit_content, git_dir)?;
 
     Ok(())
 }
 
+/// Recorre los objetos tree, lo construye y lo agrega al index.
+///
+/// # Argumentos
+///
+/// - `content`: Objetos recibidos desde el servidor
+/// - `git_dir`: Repositorio del cliente
+/// - `tree_content`: Contenido del tree
+/// - `path_dir_cloned`: Dirección del tree
+/// - `repo_count`: Cantidad de objetos a crear
+///
+/// # Returns
+///
+/// Un `Result` que contiene el numero de objeto actual o un error `CommandsError` en caso de error.
+///
 fn handle_tree(
     content: &Vec<(ObjectEntry, Vec<u8>)>,
     git_dir: &str,

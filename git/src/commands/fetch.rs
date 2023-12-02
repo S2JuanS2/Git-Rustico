@@ -22,6 +22,7 @@ use std::{fs, fmt};
 
 use super::branch::get_branch_remote;
 use super::errors::CommandsError;
+use super::log::save_log;
 
 #[derive(Debug)]
 pub enum FetchStatus {
@@ -366,6 +367,7 @@ fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &s
         if fs::write(&file_path, hash).is_err() {
             return Err(CommandsError::RemotoNotInitialized);
         };
+        save_log(repo_path, name, "logs/refs/remotes", "refs/remotes/origin")?;
     }
 
     Ok(())
