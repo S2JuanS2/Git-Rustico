@@ -1,5 +1,5 @@
 use crate::commands::config::GitConfig;
-use crate::commands::fetch::{git_fetch_branch, FetchStatus};
+use crate::commands::fetch::git_fetch_branch;
 use crate::commands::fetch_head::FetchHead;
 use crate::commands::merge::{git_merge, get_conflict_path};
 use crate::git_transport::references::Reference;
@@ -68,13 +68,13 @@ pub fn git_pull(
     }
 
     let git_config = GitConfig::new_from_file(repo_local)?;
-    let _remote_branch_ref = match git_config.get_remote_branch_ref(name_branch)
+    let remote_branch_ref = match git_config.get_remote_branch_ref(name_branch)
     {
         Some(rfs) => rfs,
         None => return Err(CommandsError::PullRemoteBranchNotFound),
     };
 
-    let merge_result = git_merge(repo_local, _remote_branch_ref)?;
+    let merge_result = git_merge(repo_local, &remote_branch_ref)?;
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);
         println!("error: The following file would be overwritten by merge:\n\t{}\nAborting.", path_conflict);
