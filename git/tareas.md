@@ -43,3 +43,5 @@ que el una funcion me diga si el commit hash2 esta incluido en el hash2
 
 4) Que pasa si ya tenemos lo descargado en origin? Pero aun no mergeamos
 Tambien debemos de leer los commits de remotes y fijarnos si hay alguna actualizacion
+
+5) Validar si la actualizacion esta en el remoto, si esta no se le pide
