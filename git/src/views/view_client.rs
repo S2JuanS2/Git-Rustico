@@ -312,6 +312,8 @@ impl View {
         self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_TREE, "git ls-tree".to_string());
         self.connect_button_with_entry(ENTRY_CHECK_IGNORE, BUTTON_CHECK_IGNORE, "git check-ignore".to_string());
         self.connect_button_with_entry(ENTRY_TAG, BUTTON_TAG, "git tag".to_string());
+        self.connect_button_with_entry(ENTRY_TAG, BUTTON_TAG_CREATE, "git tag -a".to_string());
+        self.connect_button_with_entry(ENTRY_TAG, BUTTON_TAG_DELETE, "git tag -d".to_string());
         self.connect_button_with_entry(ENTRY_REBASE, BUTTON_REBASE, "git rebase".to_string());
 
         let commands = [
@@ -356,8 +358,20 @@ impl View {
         );
         self.connect_button_cmd(
             ENTRY_CAT_FILE,
-            BUTTON_CMD_CAT_FILE,
-            "git cat-file".to_string(),
+            BUTTON_CMD_CAT_FILE_P,
+            "git cat-file -p".to_string(),
+            window_cat_file.clone(),
+        );
+        self.connect_button_cmd(
+            ENTRY_CAT_FILE,
+            BUTTON_CMD_CAT_FILE_T,
+            "git cat-file -t".to_string(),
+            window_cat_file.clone(),
+        );
+        self.connect_button_cmd(
+            ENTRY_CAT_FILE,
+            BUTTON_CMD_CAT_FILE_S,
+            "git cat-file -s".to_string(),
             window_cat_file,
         );
         self.connect_button_cmd(

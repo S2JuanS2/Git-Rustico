@@ -38,6 +38,7 @@ pub fn read_packfile_data(
     for _ in 0..objects {
         let object_entry = read_type_and_length_from_vec(&buffer, &mut offset)?;
         // println!("Object entry: {:?}", object_entry);
+        println!("Object entry: {:?}", object_entry.obj_type);
         let data: Vec<u8> = read_object_data(&buffer, &mut offset)?;
 
         if data.len() != object_entry.obj_length {

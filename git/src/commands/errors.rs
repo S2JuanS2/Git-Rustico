@@ -88,20 +88,24 @@ pub enum CommandsError {
     DeleteReferenceFetchHead,
     ReferenceNotFound,
     InvalidArgumentCountPush,
+    RemoteNotFound,
+    NoTrackingInformationForBranch,
+    MergeNotAllowedError,
+    PullRemoteBranchNotFound,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
         CommandsError::CommandsFromUtil(info) => write!(f, "{}", info),
         CommandsError::CloneMissingRepo => {
-            write!(f, "CloneMissingRepo: Use: git clone <repositorio>")
+            write!(f, "CloneMissingRepo: Use: <repositorio>")
         }
         CommandsError::CommitEmptyIndex => write!(f, "Nada al que hacer Commit"),
         CommandsError::InvalidArgumentCountFetchError => {
-            write!(f, "InvalidArgumentCountFetchError: Use: git fetch")
+            write!(f, "InvalidArgumentCountFetchError")
         }
         CommandsError::CloneMissingRepoError => {
-            write!(f, "CloneMissingRepoError: Use: git clone <repositorio>")
+            write!(f, "CloneMissingRepoError: Use: <repositorio>")
         }
         CommandsError::RepositoryNotInitialized => write!(f, "RepositoryNotInitialized: Use: git init"),
         CommandsError::CreateGitConfig => write!(f, "CreateGitConfig: No se pudo crear el archivo de configuración de Git"),
@@ -116,7 +120,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::FetchHeadFileNotFound => write!(f, "FetchHeadFileNotFound: No se encontró el archivo FETCH_HEAD"),
         CommandsError::InvalidConfigFile => write!(f, "InvalidConfigFile: Archivo de configuración inválido"),
         CommandsError::InvalidEntryConfigFile => write!(f, "InvalidEntryConfigFile: Entrada inválida en el archivo de configuración"),
-        CommandsError::InvalidArgumentCountAddError => write!(f, "Número de argumentos inválido para el comando add.\nUsar: git add <file name>"),
+        CommandsError::InvalidArgumentCountAddError => write!(f, "Número de argumentos inválido para el comando add.\nUsar: <file name>"),
         CommandsError::InvalidArgumentCountError => write!(f, "Número de argumentos inválido.\nUse: cargo run -- <path config>"),
         CommandsError::InvalidSrcDirectoryError => write!(f, "Directorio de código fuente inválido, revise su archivo de configuración."),
         CommandsError::GenericError => write!(f, "Error generico."),
@@ -146,43 +150,47 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::PathToStringError => write!(f, "No se pudo convertir el path a str"),
         CommandsError::DirectoryOpenError => write!(f, "No se pudo abrir el directorio"),
         CommandsError::InvalidArgumentCountBranchError => write!(f, "Número de argumentos inválido para el comando branch."),
-        CommandsError::InvalidArgumentCountCatFileError => write!(f, "Número de argumentos inválido para el comando cat-file.\nUsar: git cat-file <flag> <object hash>"),
+        CommandsError::InvalidArgumentCountCatFileError => write!(f, "Número de argumentos inválido para el comando cat-file.\nUsar: <object hash>"),
         CommandsError::FlagCatFileNotRecognizedError => write!(f, "Flag no reconocida para el comando cat-file"),
         CommandsError::InvalidArgumentCountCheckoutError => write!(f, "Número de argumentos inválido para el comando checkout."),
         CommandsError::FlagCheckoutNotRecognisedError => write!(f, "Flag no reconocida para el comando checkout"),
-        CommandsError::InvalidArgumentCountCloneError => write!(f, "Número de argumentos inválido para el comando clone.\nUsar: git clone <url> <path>"),
-        CommandsError::InvalidArgumentCountCommitError => write!(f, "Número de argumentos inválido para el comando commit.\nUsar: git commit -m <message>"),
+        CommandsError::InvalidArgumentCountCloneError => write!(f, "Número de argumentos inválido para el comando clone.\nUsar: <url path>"),
+        CommandsError::InvalidArgumentCountCommitError => write!(f, "Número de argumentos inválido para el comando commit.\nUsar: <message>"),
         CommandsError::FlagCommitNotRecognizedError => write!(f, "Flag no reconocida para el comando commit"),
-        CommandsError::InvalidArgumentCountHashObjectError => write!(f, "Número de argumentos inválido para el comando hash-object.\nUsar: git hash-object <file name>"),
+        CommandsError::InvalidArgumentCountHashObjectError => write!(f, "Número de argumentos inválido para el comando hash-object.\nUsar: <file name>"),
         CommandsError::FlagHashObjectNotRecognizedError => write!(f, "Flag no reconocida para el comando hash-object"),
         CommandsError::InvalidArgumentCountInitError => write!(f, "Número de argumentos inválido para el comando init.\nUsar: git init"),
-        CommandsError::InvalidArgumentCountStatusError => write!(f, "Número de argumentos inválido para el comando status.\nUsar: git status"),
-        CommandsError::InvalidArgumentCountLogError => write!(f, "Número de argumentos inválido para el comando log.\nUsar: git log"),
-        CommandsError::InvalidArgumentCountMergeError => write!(f, "Número de argumentos inválido para el comando merge.\nUsar: git merge <branch name>"),
-        CommandsError::InvalidArgumentCountPullError => write!(f, "Número de argumentos inválido para el comando pull.\nUsar: git pull <remote name> <branch name>"),
-        CommandsError::InvalidArgumentCountPushError => write!(f, "Número de argumentos inválido para el comando push.\nUsar: git push <remote name> <branch name>"),
-        CommandsError::InvalidArgumentCountRemoteError => write!(f, "Número de argumentos inválido para el comando remote.\nUsar: git remote <flag> <remote name> <url>"),
-        CommandsError::InvalidArgumentCountRmError => write!(f, "Número de argumentos inválido para el comando rm.\nUsar: git rm <file name>"),
-        CommandsError::InvalidArgumentCountLsFilesError => write!(f, "Número de argumentos inválido para el comando ls-files.\nUsar: git ls-files o git ls-files <flag>"),
+        CommandsError::InvalidArgumentCountStatusError => write!(f, "Número de argumentos inválido para el comando status.\n"),
+        CommandsError::InvalidArgumentCountLogError => write!(f, "Número de argumentos inválido para el comando log.\n"),
+        CommandsError::InvalidArgumentCountMergeError => write!(f, "Número de argumentos inválido para el comando merge.\nUsar: <branch name>"),
+        CommandsError::InvalidArgumentCountPullError => write!(f, "Número de argumentos inválido para el comando pull.\nUsar: <branch name>"),
+        CommandsError::InvalidArgumentCountPushError => write!(f, "Número de argumentos inválido para el comando push.\nUsar: <branch name>"),
+        CommandsError::InvalidArgumentCountRemoteError => write!(f, "Número de argumentos inválido para el comando remote.\nUsar: <flag> <remote name> <url>"),
+        CommandsError::InvalidArgumentCountRmError => write!(f, "Número de argumentos inválido para el comando rm.\nUsar: <file name>"),
+        CommandsError::InvalidArgumentCountLsFilesError => write!(f, "Número de argumentos inválido para el comando ls-files.\nUsar: <flag>"),
         CommandsError::FlagLsFilesNotRecognizedError => write!(f, "Flag no reconocida para el comando ls-files"),
-        CommandsError::InvalidArgumentCountLsTreeError => write!(f, "Número de argumentos inválido para el comando ls-tree.\nUsar: git ls-tree o git ls-tree <tree-hash>"),
+        CommandsError::InvalidArgumentCountLsTreeError => write!(f, "Número de argumentos inválido para el comando ls-tree.\nUsar: <tree-hash>"),
         CommandsError::InvalidTreeHashError => write!(f, "fatal: not a tree object"),
         CommandsError::InvalidArgumentShowRefError => write!(f, "Número de argumentos inválido para el comando show-ref.\nUsar: git show-ref"),
-        CommandsError::InvalidArgumentCountCheckIgnoreError => write!(f, "Número de argumentos inválido para el comando check-ignore.\nUsar: git check-ignore <path name> o git check-ignore --stdin"),
+        CommandsError::InvalidArgumentCountCheckIgnoreError => write!(f, "Número de argumentos inválido para el comando check-ignore.\nUsar: <path name> o --stdin"),
         CommandsError::RemoteAlreadyExistsError => write!(f, "El repositorio remoto ya existe"),
         CommandsError::RemoteDoesNotExistError => write!(f, "El repositorio remoto no existe"),
-        CommandsError::InvalidArgumentCountTagError => write!(f, "Número de argumentos inválido para el comando tag.\nUsar: git tag .."),
+        CommandsError::InvalidArgumentCountTagError => write!(f, "Número de argumentos inválido para el comando tag.\nUsar: <name_tag> <msg> o <name_tag_delete>"),
         CommandsError::TagDirectoryOpenError => write!(f, "No se pudo abrir el directorio de la tag"),
         CommandsError::ReadTagsError => write!(f, "Error al leer la tag"),
         CommandsError::TagAlreadyExistsError => write!(f, "Ya existe una tag con ese nombre"),
         CommandsError::TagNotExistsError => write!(f, "La tag no existe"),
-        CommandsError::InvalidArgumentCountRebaseError => write!(f, "Número de argumentos inválido para el comando rebase.\nUsar: git rebase <branch name>"),
+        CommandsError::InvalidArgumentCountRebaseError => write!(f, "Número de argumentos inválido para el comando rebase.\nUsar: <branch name>"),
         CommandsError::BranchNotFound => write!(f, "La branch no existe"),
         CommandsError::PullCurrentBranchNotFound => write!(f, "Erro al hacer pull, no se pudo obtener la branch actual"),
         CommandsError::DeleteReferenceFetchHead => write!(f, "No se pudo borrar la referencia en FETCH_HEAD"),
         CommandsError::ReferenceNotFound => write!(f, "No se encontró la referencia"),
         // CommandsError::InvalidArgumentCountPush => write!(f, "Número de argumentos inválido para el comando push.\nUsar: git push <remote name> <branch name>"),
         CommandsError::InvalidArgumentCountPush => write!(f, "Número de argumentos inválido para el comando push.\nUsar: git push"),
+        CommandsError::RemoteNotFound => write!(f, "No se encontró el repositorio remoto"),
+        CommandsError::NoTrackingInformationForBranch => write!(f, "No se encontró información de seguimiento para la branch"),
+        CommandsError::MergeNotAllowedError => write!(f, "No se puede hacer merge. La branch no está actualizada con respecto a la branch remota"),
+        CommandsError::PullRemoteBranchNotFound => write!(f, "No se encontró la branch remota"),
     }
 }
 

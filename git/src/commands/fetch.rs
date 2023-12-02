@@ -25,22 +25,44 @@ use super::errors::CommandsError;
 
 #[derive(Debug)]
 pub enum FetchStatus {
-    Success,
-    NoUpdates,
-    BranchNotFound,
-    BranchHasNoExistingCommits,
+    // Success(String),
+    NoUpdatesRemote(String),
+    NoUpdatesBranch(String),
+    UpdatesBranch(String),
+    BranchNotFound(String),
+    BranchHasNoExistingCommits(String),
+    SomeRemotesUpdated(String),
 }
 
 impl fmt::Display for FetchStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FetchStatus::Success => write!(f, "El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
-            FetchStatus::NoUpdates => write!(f, "No hay nuevas actualizaciones. Todo está actualizado."),
-            FetchStatus::BranchNotFound => write!(f, "La branch no existe en el repositorio remoto."),
-            FetchStatus::BranchHasNoExistingCommits => write!(f, "La branch no tiene commits."),
+            // FetchStatus::Success(String) => write!(f, "El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
+            FetchStatus::NoUpdatesRemote(s) => write!(f, "No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", s),
+            FetchStatus::NoUpdatesBranch(s) => write!(f, "No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", s),
+            FetchStatus::UpdatesBranch(s) => write!(f, "Se actualizaron los objetos de la branch:\n{}", s),
+            FetchStatus::BranchNotFound(s) => write!(f, "La branch: {}\nNo existe en el repositorio remoto. Haga push", s),
+            FetchStatus::BranchHasNoExistingCommits(s) => write!(f, "La branch: {}\nNo tiene commits. Realice add y commit", s),
+            FetchStatus::SomeRemotesUpdated(s) => write!(f, "Se actualizaron las siguientes branch:\n{}", s),
         }
     }
     
+}
+
+impl FetchStatus
+{
+    pub fn to_string(&self) -> String
+    {
+        match self {
+            // FetchStatus::Success(String) => format!("El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
+            FetchStatus::NoUpdatesRemote(s) => format!("No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", s),
+            FetchStatus::NoUpdatesBranch(s) => format!("No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", s),
+            FetchStatus::UpdatesBranch(s) => format!("Se actualizaron los objetos de la branch: {}", s),
+            FetchStatus::BranchNotFound(s) => format!("La branch: {}\nNo existe en el repositorio remoto. Haga push", s),
+            FetchStatus::BranchHasNoExistingCommits(s) => format!("La branch: {}\nNo tiene commits. Realice add y commit", s),
+            FetchStatus::SomeRemotesUpdated(s) => format!("Se actualizaron las siguientes branch:\n{}", s),
+        }
+    }
 }
 
 // use super::cat_file::git_cat_file;
@@ -70,7 +92,6 @@ impl fmt::Display for FetchStatus {
 /// * Otros errores de `CommandsError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<FetchStatus, CommandsError> {
-    println!("Entre al handle fetch");
     if args.len() >= 2 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
@@ -97,21 +118,42 @@ pub fn git_fetch_all(
     ip: &str,
     port: &str,
     repo_local: &str,
+) -> Result<FetchStatus, CommandsError>
+{
+    // Obtengo los remotos en uso
+    let git_config = GitConfig::new_from_file(repo_local)?;
+    let remotes = git_config.get_remotes_in_use();
+    let mut status = Vec::new();
+
+    for name_remote in remotes {
+        let url_remote = &git_config.get_remote_url_by_name(&name_remote)?;
+        let status_remote = _git_fetch_all(socket, ip, port, repo_local, &url_remote, &name_remote)?;
+        status.push(status_remote.to_string());
+    }
+
+    Ok(FetchStatus::SomeRemotesUpdated(status.join("\n")))
+}
+
+
+pub fn _git_fetch_all(
+    socket: &mut TcpStream,
+    ip: &str,
+    port: &str,
+    repo_local: &str,
+    url_remote: &str,
+    remote_branch: &str
 ) -> Result<FetchStatus, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
-    let git_config = GitConfig::new_from_file(repo_local)?;
-    let repo_remoto = git_config.get_remote_repo()?;
-
-    println!("Fetch del repositorio remoto: {}", repo_remoto);
+    println!("Fetch del repositorio remoto: {}", url_remote);
 
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
-        GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
+        GitRequest::generate_request_string(RequestCommand::UploadPack, url_remote, ip, port);
 
     // Reference Discovery
     let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
-    let mut server = reference_discovery(socket, message, repo_remoto, &my_capacibilities)?;
+    let mut server = reference_discovery(socket, message, url_remote, &my_capacibilities)?;
     
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
@@ -121,22 +163,26 @@ pub fn git_fetch_all(
     let content = receive_packfile(socket)?;
     if content.is_empty()
     {
-        return Ok(FetchStatus::NoUpdates);
+        return Ok(FetchStatus::NoUpdatesRemote(url_remote.to_string()));
     }
     let refs = server.get_references_for_updating()?;
 
-    if !is_already_update(repo_local, &refs)? {
+    if !is_already_update(repo_local, &refs, &remote_branch)? {
         if save_objects(content, repo_local).is_err() {
             return Err(CommandsError::RepositoryNotInitialized);
         };
-        save_references(&refs, repo_local)?;
-        let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+        save_references(&refs, repo_local, remote_branch)?;
+        let mut fetch_head = FetchHead::new_from_file(repo_local)?;
+        fetch_head.update_references(&refs, url_remote)?;
         fetch_head.write(repo_local)?;
+        let mut status = Vec::new();
+        for reference in refs {
+            status.push(format!("{} --> {}", reference.get_ref_path(), reference.get_hash()));
+        }
+        return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
     }else{
-        return Ok(FetchStatus::NoUpdates)
+        return Ok(FetchStatus::NoUpdatesRemote(url_remote.to_string()))
     }
-
-    Ok(FetchStatus::Success)
 }
 
 pub fn git_fetch_branch(
@@ -149,28 +195,31 @@ pub fn git_fetch_branch(
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
-    let repo_remoto = git_config.get_remote_repo()?;
+    println!("Config: {:?}", git_config);
 
-    println!("Fetch del repositorio remoto: {}", repo_remoto);
+    let url_remoto = &git_config.get_branch_url_by_name(name_branch)?;
+    let remote_branch = &git_config.get_remote_by_branch_name(name_branch)?;
+
+    println!("Fetch del repositorio remoto: {}", url_remoto);
     
     // Valido si la branch existe en el repositorio local
     let rfs_fetch = format!("refs/heads/{}", name_branch);
     let path_complete = format!("{}/.git/{}", repo_local, rfs_fetch);
     if !Path::new(&path_complete).exists() {
-        return Ok(FetchStatus::BranchHasNoExistingCommits);
+        return Ok(FetchStatus::BranchHasNoExistingCommits(name_branch.to_string()));
     }
 
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
-        GitRequest::generate_request_string(RequestCommand::UploadPack, repo_remoto, ip, port);
+        GitRequest::generate_request_string(RequestCommand::UploadPack, url_remoto, ip, port);
 
     // Reference Discovery
     let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
-    let mut server = reference_discovery(socket, message, repo_remoto, &my_capacibilities)?;
+    let mut server = reference_discovery(socket, message, url_remoto, &my_capacibilities)?;
     if !server.contains_reference(&rfs_fetch)
     {
         send_flush(socket, UtilError::SendFlushCancelConnection)?;
-        return Ok(FetchStatus::BranchNotFound)
+        return Ok(FetchStatus::BranchNotFound(name_branch.to_string()))
     }
 
     // Packfile Negotiation
@@ -184,24 +233,31 @@ pub fn git_fetch_branch(
 
     if content.is_empty()
     {
-        return Ok(FetchStatus::NoUpdates);
+        return Ok(FetchStatus::NoUpdatesBranch(name_branch.to_string()));
     }
 
     let refs = server.get_references_for_updating()?;
+    println!("Refs: {:?}", refs);
 
-    if !is_already_update(repo_local, &refs)? {
+    if !is_already_update(repo_local, &refs, &remote_branch)? {
         if save_objects(content, repo_local).is_err() {
             println!("Error al guardar los objetos");
             return Err(CommandsError::RepositoryNotInitialized);
         };
-        save_references(&refs, repo_local)?;
-        let fetch_head = FetchHead::new(&refs, repo_remoto)?;
+        save_references(&refs, repo_local, remote_branch)?;
+        let mut fetch_head = FetchHead::new_from_file(repo_local)?;
+        fetch_head.update_references(&refs, url_remoto)?;
         fetch_head.write(repo_local)?;
+        let mut status = Vec::new();
+        for reference in refs {
+            status.push(format!("{} --> {}", reference.get_ref_path(), reference.get_hash()));
+        }
+        return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
     }else{
-        return Ok(FetchStatus::NoUpdates)
+        return Ok(FetchStatus::NoUpdatesBranch(name_branch.to_string()))
     }
 
-    Ok(FetchStatus::Success)
+    // Ok(FetchStatus::SomeRemotesUpdated(format!("{} --> {}", name_branch, refs.)))
 }
 
 /// Recibe las referencias del servidor y las compara los hashes de cada branch con el repositorio local,
@@ -211,15 +267,21 @@ pub fn git_fetch_branch(
 ///
 /// * `repo_local`: Directorio del repositorio local
 /// * `refs`: Referencias del servidor
+/// * `name_remote`: Nombre del repositorio remoto
 ///
 /// # Errores
 ///
 /// Devuelve un error del tipo `CommandsError` si hay problemas
 ///
-fn is_already_update(repo_local: &str, refs: &Vec<Reference>) -> Result<bool, CommandsError> {
+fn is_already_update(repo_local: &str, refs: &Vec<Reference>, name_remote: &str) -> Result<bool, CommandsError> {
 
     let mut found = false;
-    let branches = get_branch_remote(repo_local)?;
+    let branches = match get_branch_remote(repo_local, name_remote)
+    {
+        Ok(branches) => branches,
+        Err(CommandsError::BranchDirectoryOpenError) => return Ok(false),
+        Err(e) => return Err(e),
+    };
 
     if branches.is_empty(){
         return Ok(false)
@@ -285,7 +347,7 @@ pub fn get_branches_remote(server: &GitServer) -> Result<Vec<(String,String)>,Co
 /// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
-fn save_references(references: &Vec<Reference>, repo_path: &str) -> Result<(), CommandsError> {
+fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &str) -> Result<(), CommandsError> {
 
     // Si no existe el directorio .git/refs/remotes lo crea
     let directory_remotes = format!("{}/.git/refs/remotes", repo_path); 
@@ -293,7 +355,7 @@ fn save_references(references: &Vec<Reference>, repo_path: &str) -> Result<(), C
     create_directory(directory_remotes)?;
 
     // Si no existe el directorio .git/refs/remotes/origin lo crea
-    let refs_dir_path = format!("{}/.git/refs/remotes/origin", repo_path);
+    let refs_dir_path = format!("{}/.git/refs/remotes/{}", repo_path, name_remote);
     ensure_directory_clean(&refs_dir_path)?;
 
     // Escribe los hashes en archivos individuales

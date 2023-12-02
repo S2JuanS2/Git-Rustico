@@ -1,3 +1,4 @@
+use crate::commands::config::GitConfig;
 use crate::commands::fetch::{git_fetch_branch, FetchStatus};
 use crate::commands::fetch_head::FetchHead;
 use crate::commands::merge::{git_merge, get_conflict_path};
@@ -47,7 +48,7 @@ pub fn git_pull(
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Pull del repositorio remoto ...");
-
+    let mut status = Vec::new();
     let current_rfs = match Reference::get_current_references(repo_local)
     {
         Ok(rfs) => rfs,
@@ -56,36 +57,24 @@ pub fn git_pull(
     let name_branch = current_rfs.get_name();
     
     let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
-    println!("Result: {:?}", result);
-    match result {
-        FetchStatus::BranchNotFound => return Ok(format!("{}", FetchStatus::BranchNotFound)),
-        FetchStatus::NoUpdates => return Ok(format!("{}", FetchStatus::NoUpdates)),
-        FetchStatus::BranchHasNoExistingCommits => return Ok(format!("{}", FetchStatus::BranchHasNoExistingCommits)),
-        FetchStatus::Success => (),
-    }
+    status.push(format!("{}", result));
 
     // Esto pasa cuando ya hicimos fetch anteriormente y no mergeamos
     let mut fetch_head = FetchHead::new_from_file(repo_local)?;
     if !fetch_head.references_needs_update(current_rfs.get_name())
     {
-        return Ok(format!("{}", FetchStatus::NoUpdates));
+        status.push(format!("No hay actualizaciones para mergear"));
+        return Ok(status.join("\n"));
     }
 
-    
-    let update_rfs = fetch_head.get_references(current_rfs.get_name())?;
-    
-    // [TODO #6]
-    // Dado current references y update references, hacer merge
-    // Datos:
-    // current_rfs.get_hash() -> hash del commit actual
-    // update_rfs.get_hash() -> hash del commit remoto
-    // current_rfs.get_name() -> nombre de la branch actual
-    // update_rfs.get_name() -> nombre de la branch remota
-    // current_rfs.get_path() -> path del archivo de la branch actual
-    // update_rfs.get_path() -> path del archivo de la branch remota
-    // repo_local -> path del repo local
+    let git_config = GitConfig::new_from_file(repo_local)?;
+    let _remote_branch_ref = match git_config.get_remote_branch_ref(name_branch)
+    {
+        Some(rfs) => rfs,
+        None => return Err(CommandsError::PullRemoteBranchNotFound),
+    };
 
-    let merge_result = git_merge(repo_local, update_rfs.get_ref_path())?;
+    let merge_result = git_merge(repo_local, _remote_branch_ref)?;
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);
         println!("error: The following file would be overwritten by merge:\n\t{}\nAborting.", path_conflict);
@@ -96,7 +85,7 @@ pub fn git_pull(
     
 
     // Actualizo el fetch_head si todo salio bien
-    fetch_head.delete_references(current_rfs.get_name())?;
+    fetch_head.branch_already_merged(current_rfs.get_name())?;
     fetch_head.write(repo_local)?;
 
     Ok("Pullcito naciendo".to_string())

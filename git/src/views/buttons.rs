@@ -4,6 +4,9 @@ pub const BUTTON_INIT: &str = "button_init";
 pub const BUTTON_BRANCH: &str = "button_branch";
 pub const BUTTON_STATUS: &str = "button_status";
 pub const BUTTON_CAT_FILE: &str = "button_cat-file";
+pub const BUTTON_CMD_CAT_FILE_P: &str = "button_cmd_cat-file_p";
+pub const BUTTON_CMD_CAT_FILE_T: &str = "button_cmd_cat-file_t";
+pub const BUTTON_CMD_CAT_FILE_S: &str = "button_cmd_cat-file_s";
 pub const BUTTON_PULL: &str = "button_pull";
 pub const BUTTON_PUSH: &str = "button_push";
 pub const BUTTON_FETCH: &str = "button_fetch";
@@ -21,10 +24,11 @@ pub const BUTTON_LS_TREE: &str = "button_ls_tree";
 pub const BUTTON_LS_FILES: &str = "button_ls_files";
 pub const BUTTON_CHECK_IGNORE: &str = "button_check_ignore";
 pub const BUTTON_TAG: &str = "button_tag";
+pub const BUTTON_TAG_CREATE: &str = "button_tag_create";
+pub const BUTTON_TAG_DELETE: &str = "button_tag_delete";
 pub const BUTTON_REBASE: &str = "button_rebase";
 pub const BUTTON_CMD_CLONE: &str = "button_cmd_clone";
 pub const BUTTON_CMD_HASH_OBJECT: &str = "button_cmd_hash-object";
-pub const BUTTON_CMD_CAT_FILE: &str = "button_cmd_cat-file";
 pub const BUTTON_CMD_FETCH: &str = "button_cmd_fetch";
 pub const BUTTON_CMD_PUSH: &str = "button_cmd_push";
 pub const BUTTON_CMD_PULL: &str = "button_cmd_pull";
@@ -38,6 +42,9 @@ pub fn get_buttons() -> Vec<String> {
         BUTTON_BRANCH.to_string(),
         BUTTON_STATUS.to_string(),
         BUTTON_CAT_FILE.to_string(),
+        BUTTON_CMD_CAT_FILE_P.to_string(),
+        BUTTON_CMD_CAT_FILE_S.to_string(),
+        BUTTON_CMD_CAT_FILE_T.to_string(),
         BUTTON_PULL.to_string(),
         BUTTON_PUSH.to_string(),
         BUTTON_FETCH.to_string(),
@@ -55,10 +62,11 @@ pub fn get_buttons() -> Vec<String> {
         BUTTON_LS_FILES.to_string(),
         BUTTON_CHECK_IGNORE.to_string(),
         BUTTON_TAG.to_string(),
+        BUTTON_TAG_CREATE.to_string(),
+        BUTTON_TAG_DELETE.to_string(),
         BUTTON_REBASE.to_string(),
         BUTTON_CMD_CLONE.to_string(),
         BUTTON_CMD_HASH_OBJECT.to_string(),
-        BUTTON_CMD_CAT_FILE.to_string(),
         BUTTON_CMD_FETCH.to_string(),
         BUTTON_CMD_PUSH.to_string(),
         BUTTON_CMD_PULL.to_string(),
