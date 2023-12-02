@@ -134,10 +134,11 @@ pub fn git_branch_create(directory: &str, branch_name: &str) -> Result<String, C
 // Devuelve un vector con los nombres de las branchs
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn get_branch_remote(directory: &str) -> Result<Vec<String>, CommandsError> {
-    // "directory/.git/refs/remote/origin"
+/// 'name_remote': Nombre del repositorio remoto.
+pub fn get_branch_remote(directory: &str, name_remote: &str) -> Result<Vec<String>, CommandsError> {
+    // "directory/.git/refs/remote/name_remote"
     let directory_git = format!("{}/{}", directory, GIT_DIR);
-    let branch_dir = Path::new(&directory_git).join("refs/remotes/origin");
+    let branch_dir = Path::new(&directory_git).join(format!("refs/remotes/{}", name_remote));
 
     let entries = match fs::read_dir(branch_dir) {
         Ok(entries) => entries,

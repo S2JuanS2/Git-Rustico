@@ -123,13 +123,13 @@ impl FetchHead {
     /// 
     pub fn new(
         references: &Vec<Reference>,
-        remote_repo: &str
+        url_remote: &str
     ) -> Result<FetchHead, CommandsError> {
         let mut entries = Vec::new();
         for reference in references {
             let commit_hash = reference.get_hash().to_string();
             let branch_name = reference.get_name().to_string();
-            let entry = FetchHeadEntry::new(commit_hash, branch_name, Label::Merge.to_string(), remote_repo.to_string());
+            let entry = FetchHeadEntry::new(commit_hash, branch_name, Label::Merge.to_string(), url_remote.to_string());
             entries.push(entry?);
         }
         Ok(FetchHead {
