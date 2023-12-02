@@ -892,6 +892,7 @@ mod tests {
         let expected_content = "\
                                 [remote \"origin\"]\n\
                                 \turl = git@github.com:example/repo.git\n\
+                                \tfetch = +refs/heads/*:refs/remotes/origin/*\n\
                                 [branch \"main\"]\n\
                                 \tremote = origin\n";
                                 
