@@ -67,7 +67,7 @@ pub fn git_pull(
     }
 
     let git_config = GitConfig::new_from_file(repo_local)?;
-    let remote_branch_ref = match git_config.get_remote_branch_ref(name_branch)
+    let _remote_branch_ref = match git_config.get_remote_branch_ref(name_branch)
     {
         Some(rfs) => rfs,
         None => return Err(CommandsError::PullRemoteBranchNotFound),
