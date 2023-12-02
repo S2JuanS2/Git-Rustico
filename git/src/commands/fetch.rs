@@ -172,9 +172,8 @@ pub fn _git_fetch_all(
             return Err(CommandsError::RepositoryNotInitialized);
         };
         save_references(&refs, repo_local, remote_branch)?;
-        // Aqui debo leer el FetchHead y actualizarlo
-        // NO pisarlo porque perderias las referencias de otros remotos
-        let fetch_head = FetchHead::new(&refs, url_remote)?;
+        let mut fetch_head = FetchHead::new_from_file(repo_local)?;
+        fetch_head.update_references(&refs, url_remote)?;
         fetch_head.write(repo_local)?;
         let mut status = Vec::new();
         for reference in refs {
@@ -246,7 +245,8 @@ pub fn git_fetch_branch(
             return Err(CommandsError::RepositoryNotInitialized);
         };
         save_references(&refs, repo_local, remote_branch)?;
-        let fetch_head = FetchHead::new(&refs, url_remoto)?;
+        let mut fetch_head = FetchHead::new_from_file(repo_local)?;
+        fetch_head.update_references(&refs, url_remoto)?;
         fetch_head.write(repo_local)?;
         let mut status = Vec::new();
         for reference in refs {

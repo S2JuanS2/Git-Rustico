@@ -174,7 +174,9 @@ impl FetchHead {
     }
 
     /// Crea una nueva instancia de `FetchHead` leyendo el contenido del archivo FETCH_HEAD en el repositorio.
+    /// Si el archivo no existe devuelva una instancia vacía de `FetchHead`.
     ///
+    /// 
     /// # Arguments
     ///
     /// * `repo_path` - Ruta al directorio del repositorio local.
@@ -301,7 +303,8 @@ fn extract_branch_info(branch_info: &str) -> Result<(String, String), CommandsEr
 }
 
 /// Lee el contenido del archivo FETCH_HEAD y crea una instancia de `FetchHead` con las entradas correspondientes.
-///
+/// Si el archivo no existe devuelva una instancia vacía de `FetchHead`.
+/// 
 /// # Arguments
 ///
 /// * `path` - Ruta al archivo FETCH_HEAD en el repositorio.
@@ -318,7 +321,9 @@ fn _read_fetch_head(fetch_head_path: &str) -> Result<FetchHead, CommandsError> {
     let file = match fs::File::open(fetch_head_path)
     {
         Ok(file) => file,
-        Err(_) => return Err(CommandsError::FetchHeadFileNotFound),
+        Err(_) => return Ok(FetchHead {
+            entries: HashMap::new(),
+        })
     };
     let mut entries = HashMap::new();
     for line in io::BufReader::new(file).lines() {
