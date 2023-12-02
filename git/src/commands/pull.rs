@@ -72,7 +72,7 @@ pub fn git_pull(
     }
 
     
-    let _update_rfs = fetch_head.get_references(current_rfs.get_name())?;
+    let _update_rfs = fetch_head.get_reference_to_merge(current_rfs.get_name())?;
     
     // [TODO #6]
     // Dado current references y update references, hacer merge
@@ -88,7 +88,7 @@ pub fn git_pull(
     
 
     // Actualizo el fetch_head si todo salio bien
-    fetch_head.delete_references(current_rfs.get_name())?;
+    fetch_head.branch_already_merged(current_rfs.get_name())?;
     fetch_head.write(repo_local)?;
 
     Ok("Pullcito naciendo".to_string())
