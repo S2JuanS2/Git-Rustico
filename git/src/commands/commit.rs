@@ -166,18 +166,29 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
         .expect("Time error")
         .as_secs();
 
-    let content = format!(
-        "tree {}\nparent {}\nauthor {} <{}> {} -0300\ncommitter {} <{}> {} -0300\n\n{}\n",
-        tree_hash,
-        parent_hash,
-        commit.get_author_name(),
-        commit.get_author_email(),
-        timestamp,
-        commit.get_committer_name(),
-        commit.get_committer_email(),
-        timestamp,
-        commit.get_message()
-    );
+    let content;   
+    if parent_hash == PARENT_INITIAL {
+        content = format!(
+            "tree {}\nauthor {} <{}> 1701527496 -0300\ncommitter {} <{}> 1701527496 -0300\n\n{}\n",
+            tree_hash,
+            commit.get_author_name(),
+            commit.get_author_email(),
+            commit.get_committer_name(),
+            commit.get_committer_email(),
+            commit.get_message()
+        );
+    }else{
+        content = format!(
+            "tree {}\nparent {}\nauthor {} <{}> 1701624338 -0300\ncommitter {} <{}> 1701624338 -0300\n\n{}\n",
+            tree_hash,
+            parent_hash,
+            commit.get_author_name(),
+            commit.get_author_email(),
+            commit.get_committer_name(),
+            commit.get_committer_email(),
+            commit.get_message()
+        );
+    }
     content
 }
 
