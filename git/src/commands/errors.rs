@@ -94,6 +94,7 @@ pub enum CommandsError {
     PullRemoteBranchNotFound,
     InvalidArgumentPush,
     PushCurrentBranchNotFound,
+    SendMessageReferenceUpdate,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -195,6 +196,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::PullRemoteBranchNotFound => write!(f, "No se encontró la branch remota"),
         CommandsError::InvalidArgumentPush => write!(f, "Use: git push o git push all"),
         CommandsError::PushCurrentBranchNotFound => write!(f, "No se encontró la branch actual"),
+        CommandsError::SendMessageReferenceUpdate => write!(f, "No se pudo enviar el mensaje de actualización de referencia"),
     }
 }
 
