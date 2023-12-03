@@ -92,7 +92,6 @@ pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, Util
         }
     }
     handle_last_subtree(&mut tree, &sub_tree, &folder_name, git_dir)?;
-
     let tree_hash = builder_object_tree(git_dir, &tree)?;
 
     Ok(tree_hash)
@@ -126,10 +125,10 @@ fn handle_folder_entry(
     if folder_name != path_parts[0] {
         handle_subtree(tree, sub_tree, folder_name, git_dir)?;
         *folder_name = path_parts[0].to_string();
-        let sub_blob = format!("{} {} {}\n", mode, new_path_str, hash);
+        let sub_blob = format!("{} {} {}\n", new_path_str, mode, hash);
         sub_tree.push_str(&sub_blob);
     } else {
-        let sub_blob = format!("{} {} {}\n", mode, new_path_str, hash);
+        let sub_blob = format!("{} {} {}\n", new_path_str, mode, hash);
         sub_tree.push_str(&sub_blob);
     }
 
