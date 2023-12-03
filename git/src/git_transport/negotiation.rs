@@ -541,6 +541,35 @@ pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_se
     send_message(writer, &message, UtilError::UploadRequest)
 }
 
+pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut GitServer) -> Result<Vec<(String, String, String)>, UtilError>
+{
+    let update_request = match pkt_line::read(stream)
+    {
+        Ok(lines) => lines,
+        Err(_) => return Err(UtilError::ReceiveReferenceUpdateRequest),
+    };
+    
+    let mut result = Vec::new();
+    for request in &update_request {
+        // 00677d1665144a3a975c05f1f43902ddaf084e784dbe 74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/debug\n
+        if let Ok(line_str) = std::str::from_utf8(request) {
+            let parts = line_str.split_ascii_whitespace().collect::<Vec<&str>>();
+            if parts.len() != 3 {
+                return Err(UtilError::InvalidReferenceUpdateRequest);
+            }
+            if !is_valid_obj_id(parts[0]) || !is_valid_obj_id(parts[1]) {
+                return Err(UtilError::InvalidObjectId);
+            }
+            let old = parts[0].to_string();
+            let new = parts[1].to_string();
+            let reference = parts[2].to_string();
+            result.push((old, new, reference));
+        }
+        // let (old, new, reference) = process_reference_update_request(request)?;
+    }
+
+    Ok(result)
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK};
 use crate::git_server::GitServer;
-use crate::git_transport::negotiation::receive_request;
+use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
 use crate::util::connections::send_message;
 use crate::util::errors::UtilError;
 use crate::util::objects::ObjectType;
@@ -176,6 +176,8 @@ impl GitRequest {
                 handle_upload_pack(stream, &path_repo)
             }
             RequestCommand::ReceivePack => {
+                let path_repo = get_path_repository(root, &self.pathname)?;
+                handle_receive_pack(stream, &path_repo);
                 println!("ReceivePack");
                 println!("Funcion aun no implementada");
                 Ok("".to_string())
@@ -363,6 +365,21 @@ pub fn get_objects_fetch(git_server: &mut GitServer, _confirmed_hashes: Vec<Stri
     // }
     _objects
 }
+
+
+pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError>{
+    let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
+    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
+    println!("Server: {:?}", server);
+    server.send_references(stream)?;
+
+    let requests = receive_reference_update_request(stream, &mut server)?;
+    // let mut objects = get_objects();
+
+    println!("Funcion aun no implementada");
+    Ok(())
+}
+
 
 #[cfg(test)]
 mod tests {
