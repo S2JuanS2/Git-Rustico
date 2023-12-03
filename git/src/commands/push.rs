@@ -137,25 +137,21 @@ pub fn git_push_branch(
         None => ZERO_ID.to_string(), // Creo en el remoto
     };
 
+    println!("Prev hash: {}", prev_hash);
     let current_hash = push.get_hash(); // Commit local
+    println!("Current hash: {}", current_hash);
     
-    if !is_necessary_to_update(push, &current_hash, &prev_hash)?
-    {
-        return Ok(push.get_status());
-    }
-
+    // if !is_necessary_to_update(push, &current_hash, &prev_hash)?
+    // {
+    //     return Ok(push.get_status());
+    // }
+    println!("Necesito actualizar");
     // AViso que actualizare mi branch
     reference_update(socket, &prev_hash, &current_hash, &push.branch.get_ref_path())?;
-
-    // Envio el packfile
-    // TODO #6
-    // Se debe enviar el packfile al servidor
-    // Por mientras solo sera una una branch
-    // desde el hash previo hasta el hash actual
-    // Necesito una funcion que me devuelva el vector de objetos como el clone
+    println!("Se actualizo la referencia");
+    
     let objects = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
-
-    send_packfile(socket, &server, objects)?;
+    send_packfile(socket, &server, objects, true)?;
     push.add_status("Se envio el packfile ...");
 
     // No se que me enviara el servidor
@@ -284,7 +280,8 @@ pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Resu
 ///
 fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str) -> Result<(), CommandsError>
 {   
-    let message = format!("{} {} {}", hash_prev, hash_update, path_ref);
+    let message = format!("{} {} {}\n", hash_prev, hash_update, path_ref);
+    let message = pkt_line::add_length_prefix(&message, message.len());
     send_message(socket, &message, UtilError::SendMessageReferenceUpdate)?;
     send_flush(socket, UtilError::SendMessageReferenceUpdate)?;
     Ok(())

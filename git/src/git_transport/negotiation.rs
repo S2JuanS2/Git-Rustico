@@ -316,10 +316,10 @@ fn receive_request_type(
 ///
 pub fn sent_references_valid_client(
     stream: &mut dyn Write,
-    references: &Vec<Reference>,
+    hash: &Vec<String>,
 ) -> Result<(), UtilError> {
-    for rfs in references {
-        let message = format!("ACK{} continue\n", rfs.get_hash());
+    for h in hash {
+        let message = format!("ACK{} continue\n", h);
         let message = pkt_line::add_length_prefix(&message, message.len());
         send_message(stream, &message, UtilError::UploadRequest)?;
     }
@@ -343,9 +343,9 @@ pub fn sent_references_valid_client(
 ///
 pub fn send_acknowledge_last_reference(
     writer: &mut dyn Write,
-    references: &Vec<Reference>,
+    confirmed_hashes: &Vec<String>,
 ) -> Result<(), UtilError> {
-    let message = format!("ACK {}\n", references[references.len() - 1].get_hash());
+    let message = format!("ACK {}\n", confirmed_hashes[confirmed_hashes.len() - 1]);
     send_message(writer, &message, UtilError::SendLastACKConf)
 }
 

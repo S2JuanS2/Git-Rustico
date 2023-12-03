@@ -1,12 +1,12 @@
 pub mod handle_references;
 pub mod reference_information;
 
-use std::io::Write;
+use std::{io::Write, collections::HashSet};
 
 
 use crate::{
     consts::VERSION_DEFAULT,
-    git_transport::{advertised::AdvertisedRefLine, references::Reference},
+    git_transport::{advertised::AdvertisedRefLine, references::{Reference, ReferenceType}},
     util::{
         connections::{send_flush, send_message},
         errors::UtilError,
@@ -371,6 +371,37 @@ impl GitServer {
     pub fn get_remote_reference_hash(&self, path_reference: &str) -> Option<String> {
         self.handle_references.get_remote_reference_hash(path_reference)
     }
+    
+    /// Filtra las referencias disponibles en base a un conjunto de hashes confirmados.
+    ///
+    /// Esta función retiene solo las referencias cuyos hashes no están presentes en
+    /// el conjunto de hashes confirmados. Es decir, filtra las referencias no confirmadas.
+    ///
+    /// # Argumentos
+    ///
+    pub fn filter_available_references(&mut self, confirmed_hash: &Vec<String>) {
+        retain_unconfirmed_references(&mut self.available_references, &confirmed_hash);
+    }
+
+    /// Elimina la referencia "HEAD" de la lista de referencias disponibles.
+    ///
+    /// Esta función busca la referencia "HEAD" en la lista de referencias disponibles
+    /// y la elimina si se encuentra. Si no hay ninguna referencia "HEAD", la función
+    /// no realiza ninguna acción.
+    ///
+    /// # Ejemplo
+    ///
+    pub fn delete_head_in_available_references(&mut self) {
+        let mut index = None;
+        for i in 0..self.available_references.len() {
+            if self.available_references[i].get_type() == ReferenceType::Head {
+                index = Some(i);
+            }
+        }
+        if let Some(index) = index {
+            self.available_references.remove(index);
+        }
+    }
 }
 
 /// Filtra las referencias basándose en un conjunto de hash de referencias.
@@ -412,6 +443,11 @@ fn retain_common_values(vec1: &mut Vec<String>, vec2: &[String]) {
     let set2: std::collections::HashSet<_> = vec2.iter().collect();
 
     vec1.retain(|item| set2.contains(item));
+}
+
+fn retain_unconfirmed_references(references: &mut Vec<Reference>, confirmed_hash: &Vec<String>) {
+    let confirmed_hash: HashSet<String> = HashSet::from_iter(confirmed_hash.iter().cloned());
+    references.retain(|reference| !confirmed_hash.contains(reference.get_hash()));
 }
 
 #[cfg(test)]
@@ -485,5 +521,21 @@ mod tests {
 
         // Verificar que vec1 esté vacío después de la retención.
         assert!(vec1.is_empty());
+    }
+
+    #[test]
+    fn filter_available_references() {
+        // Crear dos vectores con algunos elementos en común.
+        let mut vec1 = vec![
+            Reference::new("hash1", "HEAD").unwrap(),
+            Reference::new("hash2", "refs/tags/v1").unwrap(),
+            Reference::new("hash3", "refs/heads/main").unwrap(),
+        ];
+        let hash: Vec<String> = vec!["hash1".to_string(), "hash2".to_string()];
+        // Retener solo los elementos comunes entre los dos vectores.
+        retain_unconfirmed_references(&mut vec1, &hash);
+        assert_eq!(vec1.len(), 1);
+        assert_eq!(vec1, vec![Reference::new("hash3", "refs/heads/main").unwrap()]);
+        
     }
 }

@@ -31,7 +31,7 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
     let log_rebase_branch = get_log_from_branch(directory, branch_name)?;
 
     formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
-    let result_merge = try_for_merge(directory, branch_name)?;
+    let result_merge = try_for_merge(directory, branch_name, &client, "rebase")?;
 
     formatted_result.push_str(result_merge.as_str());
     if !result_merge.contains("CONFLICT") {
@@ -83,7 +83,7 @@ fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &
 /// 'directory': directorio del repositorio local
 /// 'current_branch': nombre de la branch actual
 fn update_parent(content_commit: String, last_commit_rebase_branch: &String, first_commit_current_branch: &String, directory: &str, current_branch: String) -> Result<(), CommandsError> {
-    let new_content = rewrite_commit(content_commit, last_commit_rebase_branch);
+    let new_content = rewrite_commit(&content_commit, last_commit_rebase_branch);
     let lines_new_content: Vec<&str> = new_content.lines().collect();
     let new_commit_in_log = format!("{}\n{}\n{}\n{}\n\n{}", first_commit_current_branch, lines_new_content[1], lines_new_content[2], lines_new_content[3], lines_new_content[5]);
     let path_current_branch = format!("{}/.git/logs/refs/heads/{}", directory, current_branch);
@@ -108,7 +108,7 @@ fn update_parent(content_commit: String, last_commit_rebase_branch: &String, fir
 /// ###Parametros:
 /// 'content_commit': contenido del primer commit de la branch actual
 /// 'last_commit_rebase_branch': último commit de la branch sobre la que se hizo el rebase
-fn rewrite_commit(content_commit: String, last_commit_rebase_branch: &String) -> String {
+pub fn rewrite_commit(content_commit: &str, last_commit_rebase_branch: &String) -> String {
     let mut new_content = String::new();
     for line in content_commit.lines() {
         if line.starts_with("parent") {
