@@ -369,11 +369,11 @@ pub fn get_objects_fetch(git_server: &mut GitServer, _confirmed_hashes: Vec<Stri
 
 pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError>{
     let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
-    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
+    let mut _server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
     println!("Server: {:?}", server);
     server.send_references(stream)?;
 
-    let requests = receive_reference_update_request(stream, &mut server)?;
+    let requests = receive_reference_update_request(stream)?;
     // let mut objects = get_objects();
 
     println!("Funcion aun no implementada");

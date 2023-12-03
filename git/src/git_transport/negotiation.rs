@@ -541,6 +541,7 @@ pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_se
     send_message(writer, &message, UtilError::UploadRequest)
 }
 
+
 pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut GitServer) -> Result<Vec<ReferencesUpdate>, UtilError>
 {
     let update_request = match pkt_line::read(stream)
@@ -554,24 +555,22 @@ pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut
     }
     let mut result = Vec::new();
 
-    let first = recieve_first_reference_update(&update_request[0])?;
-    result.push(first);
+    let (refs_first, capabilities) = recieve_first_reference_update(&update_request[0])?;
+    result.push(refs_first);
 
     for request in &update_request {
-        // 00677d1665144a3a975c05f1f43902ddaf084e784dbe 74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/debug\n
         if let Ok(line_str) = std::str::from_utf8(request) {
             let refupdate = ReferencesUpdate::new_from_line(line_str)?;
             result.push(refupdate);
         }
-        // let (old, new, reference) = process_reference_update_request(request)?;
     }
 
+    git_server.filter_capabilities_user(&capabilities);
     Ok(result)
 }
 
-pub fn recieve_first_reference_update(line: &Vec<u8>) -> Result<ReferencesUpdate, UtilError>
+pub fn recieve_first_reference_update(line: &Vec<u8>) -> Result<(ReferencesUpdate, Vec<String>), UtilError>
 {
-    // 00677d1665144a3a975c05f1f43902ddaf084e784dbe 74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/debug\n
     if let Ok(line_str) = std::str::from_utf8(&line) {
         let parts = line_str.split('\0').collect::<Vec<&str>>();
         if parts.len() >= 2 {
@@ -579,10 +578,10 @@ pub fn recieve_first_reference_update(line: &Vec<u8>) -> Result<ReferencesUpdate
         }
         if parts.len() == 1 {
             let refupdate = ReferencesUpdate::new_from_line(parts[0])?;
-            return Ok(refupdate);
+            return Ok((refupdate, Vec::new()));
         }
-        let _capabilites = parts[1].split_ascii_whitespace().collect::<Vec<&str>>();
-        return Ok(ReferencesUpdate::new_from_line(parts[0])?)
+        let capabilites: Vec<String> = parts[1].split_ascii_whitespace().map(|s| s.to_string()).collect();
+        return Ok((ReferencesUpdate::new_from_line(parts[0])?, capabilites))
     }
     Err(UtilError::InvalidReferenceUpdateRequest)
 }
