@@ -7,7 +7,7 @@ use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{start_client, send_message, send_flush};
 use crate::util::errors::UtilError;
-use crate::util::{objects, pkt_line};
+use crate::util::pkt_line;
 use crate::util::packfile::send_packfile;
 use std::net::TcpStream;
 

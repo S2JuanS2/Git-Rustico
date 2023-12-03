@@ -1,7 +1,6 @@
 use crate::{
     consts::{PACK_BYTES, PACK_SIGNATURE, PKT_NAK},
     git_server::GitServer,
-    git_transport::references::get_objects,
     util::{connections::send_message, objects::read_type_and_length_from_vec},
 };
 use flate2::read::ZlibDecoder;
