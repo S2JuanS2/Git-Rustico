@@ -36,6 +36,18 @@ impl ReferencesUpdate {
             }
             Ok(ReferencesUpdate::new(old, new, reference))
     }
+
+    pub fn get_old(&self) -> &String {
+        &self.old
+    }
+
+    pub fn get_new(&self) -> &String {
+        &self.new
+    }
+
+    pub fn get_path_refs(&self) -> &String {
+        &self.path_refs
+    }
 }
 
 
