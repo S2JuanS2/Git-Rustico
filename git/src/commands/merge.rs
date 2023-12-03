@@ -413,8 +413,8 @@ fn recovery_tree_merge(
     -> Result<(String, String), CommandsError>{
     let mut strategy: (String, String) = ("".to_string(), "".to_string());
     for line in content_tree.lines() {
-        let file = line.split_whitespace().take(1).collect::<String>();
-        let mode = line.split_whitespace().skip(1).take(1).collect::<String>();
+        let file = line.split_whitespace().skip(1).take(1).collect::<String>();
+        let mode = line.split_whitespace().take(1).collect::<String>();
         let hash_object = line.split_whitespace().skip(2).take(1).collect::<String>();
         let content_file = git_cat_file(directory, &hash_object, "-p")?;
         let path_file_format = format!("{}/{}{}", directory, path, file);

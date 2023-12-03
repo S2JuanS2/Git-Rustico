@@ -1,5 +1,5 @@
 use super::files::{open_file, read_file_string, create_file_replace};
-use crate::consts::{INDEX, TREE, GIT_DIR};
+use crate::consts::{INDEX, GIT_DIR, FILE, DIRECTORY, BLOB};
 use crate::util::errors::UtilError;
 use crate::util::objects::builder_object_tree;
 
@@ -59,9 +59,13 @@ pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, Util
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() >= 3 {
             let file_name = parts[0];
-            let mode = parts[1];
+            let mut mode = parts[1];
             let hash = parts[2];
 
+            if mode == BLOB{
+                mode = FILE;
+            }
+            
             if file_name.contains('/') {
                 handle_folder_entry(
                     &mut tree,
@@ -88,7 +92,6 @@ pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, Util
         }
     }
     handle_last_subtree(&mut tree, &sub_tree, &folder_name, git_dir)?;
-
     let tree_hash = builder_object_tree(git_dir, &tree)?;
 
     Ok(tree_hash)
@@ -155,7 +158,7 @@ fn handle_file_entry(
 ) -> Result<(), UtilError> {
     handle_subtree(tree, sub_tree, folder_name, git_dir)?;
 
-    let blob = format!("{} {} {}\n", file_name, mode, hash);
+    let blob = format!("{} {} {}\n", mode, file_name, hash);
     tree.push_str(&blob);
 
     Ok(())
@@ -182,7 +185,7 @@ fn handle_subtree(
 ) -> Result<(), UtilError> {
     if !sub_tree.is_empty() {
         let hash_sub_tree = recovery_index(sub_tree, git_dir)?;
-        let blob = format!("{} {} {}\n", folder_name, TREE, hash_sub_tree);
+        let blob = format!("{} {} {}\n", DIRECTORY, folder_name, hash_sub_tree);
         tree.push_str(&blob);
         sub_tree.clear();
     }
