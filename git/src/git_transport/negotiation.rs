@@ -548,9 +548,15 @@ pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut
         Ok(lines) => lines,
         Err(_) => return Err(UtilError::ReceiveReferenceUpdateRequest),
     };
+    if update_request.is_empty()
+    {
+        return Err(UtilError::ConnectionIsTerminated);
+    }
     let mut result = Vec::new();
 
-    // Faltaria leer la capacidad
+    let first = recieve_first_reference_update(&update_request[0])?;
+    result.push(first);
+
     for request in &update_request {
         // 00677d1665144a3a975c05f1f43902ddaf084e784dbe 74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/debug\n
         if let Ok(line_str) = std::str::from_utf8(request) {
@@ -562,6 +568,25 @@ pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut
 
     Ok(result)
 }
+
+pub fn recieve_first_reference_update(line: &Vec<u8>) -> Result<ReferencesUpdate, UtilError>
+{
+    // 00677d1665144a3a975c05f1f43902ddaf084e784dbe 74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/debug\n
+    if let Ok(line_str) = std::str::from_utf8(&line) {
+        let parts = line_str.split('\0').collect::<Vec<&str>>();
+        if parts.len() >= 2 {
+            return Err(UtilError::InvalidReferenceUpdateRequest);
+        }
+        if parts.len() == 1 {
+            let refupdate = ReferencesUpdate::new_from_line(parts[0])?;
+            return Ok(refupdate);
+        }
+        let _capabilites = parts[1].split_ascii_whitespace().collect::<Vec<&str>>();
+        return Ok(ReferencesUpdate::new_from_line(parts[0])?)
+    }
+    Err(UtilError::InvalidReferenceUpdateRequest)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

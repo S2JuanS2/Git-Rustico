@@ -92,6 +92,7 @@ pub enum UtilError {
     ReceiveReferenceUpdateRequest,
     InvalidReferenceUpdateRequest,
     InvalidReferencePath,
+    ConnectionIsTerminated,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -184,6 +185,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::ReceiveReferenceUpdateRequest => write!(f, "ReceiveReferenceUpdateRequest: Error al recibir la solicitud de actualización de referencia."),
         UtilError::InvalidReferenceUpdateRequest => write!(f, "InvalidReferenceUpdateRequest: Solicitud de actualización de referencia inválida."),
         UtilError::InvalidReferencePath => write!(f, "InvalidReferencePath: Ruta de referencia inválida."),
+        UtilError::ConnectionIsTerminated => write!(f, "ConnectionIsTerminated: La conexión fue terminada."),
     }
 }
 
