@@ -183,7 +183,7 @@ impl Reference {
             Err(_) => return Err(UtilError::BranchNotFound(name_branch.to_string())),
         };
         let hash = hash.trim();
-        let reference = Reference::new(hash, &ref_path)?;
+        let reference = Reference::new(hash, &format!("refs/heads/{}", name_branch))?;
         Ok(reference)
     }
 }

@@ -3,8 +3,9 @@ use crate::{
     git_server::GitServer,
     util::{connections::send_message, objects::read_type_and_length_from_vec},
 };
-use flate2::read::ZlibDecoder;
+use flate2::{read::ZlibDecoder, bufread::ZlibEncoder, Compression};
 use std::io::{Read, Write};
+use sha1::{Sha1, Digest};
 
 use super::{
     connections::send_bytes,
@@ -144,9 +145,12 @@ pub fn send_packfile(
     server: &GitServer,
     objects: Vec<(ObjectType, Vec<u8>)>
 ) -> Result<(), UtilError> {
+    let mut sha1 = Sha1::new();
+
     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
     // Envio signature
     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
+    sha1.update(&PACK_BYTES);
 
     // Envio version
     send_bytes(
@@ -154,6 +158,7 @@ pub fn send_packfile(
         &server.version.to_be_bytes(),
         UtilError::SendSignaturePackfile,
     )?;
+    sha1.update(&server.version.to_be_bytes());
 
     // Envio numero de objetos
     let number_objects = objects.len() as u32;
@@ -162,11 +167,12 @@ pub fn send_packfile(
         &number_objects.to_be_bytes(),
         UtilError::SendSignaturePackfile,
     )?;
+    sha1.update(&number_objects.to_be_bytes());
     // println!("Number of objects: {}", number_objects);
 
     // Envio de objetos
     for (object_type, content) in objects {
-        send_object(writer, object_type, content)?;
+        send_object(writer, object_type, content, &mut sha1)?;
     }
     Ok(())
 }
@@ -205,6 +211,7 @@ pub fn send_object(
     writer: &mut dyn Write,
     obj_type: ObjectType,
     content: Vec<u8>,
+    sha1: &mut Sha1,
 ) -> Result<(), UtilError> {
     let mut decompressed_data: Vec<u8> = Vec::new();
     let mut zlib_decoder: ZlibDecoder<&[u8]> = ZlibDecoder::new(&content);
@@ -216,11 +223,73 @@ pub fn send_object(
 
     let object = ObjectEntry::new(obj_type, n);
     let mut bytes = object.to_bytes();
+    sha1.update(&object.to_bytes());
+    sha1.update(&content);
     bytes.extend(content);
     send_bytes(writer, &bytes, UtilError::SendObjectPackfile)?;
     Ok(())
 }
 
+// pub fn send_packfile_2(
+//     writer: &mut dyn Write,
+//     server: &GitServer,
+//     objects: Vec<(ObjectType, Vec<u8>)>
+// ) -> Result<(), UtilError> {
+//     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
+//     let mut sha1 = Sha1::new();
+//     // Envio signature
+//     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
+//     sha1.update(&PACK_BYTES);
+
+//     // Envio version
+//     send_bytes(
+//         writer,
+//         &server.version.to_be_bytes(),
+//         UtilError::SendSignaturePackfile,
+//     )?;
+//     sha1.update(&server.version.to_be_bytes());
+
+//     // Envio numero de objetos
+//     let number_objects = objects.len() as u32;
+//     send_bytes(
+//         writer,
+//         &number_objects.to_be_bytes(),
+//         UtilError::SendSignaturePackfile,
+//     )?;
+//     sha1.update(&number_objects.to_be_bytes());
+//     // println!("Number of objects: {}", number_objects);
+
+//     // Envio de objetos
+//     for (object_type, content) in objects {
+//         send_object_2(writer, object_type, content, &mut sha1)?;
+//     }
+//     Ok(())
+// }
+
+pub fn send_object_enconder(
+    writer: &mut dyn Write,
+    obj_type: ObjectType,
+    content: Vec<u8>,
+    sha1: &mut Sha1,
+) -> Result<(), UtilError> {
+    let object = ObjectEntry::new(obj_type, content.len());
+    let mut bytes = object.to_bytes();
+
+    sha1.update(&object.to_bytes());
+    sha1.update(&content);
+
+    let mut compressed_data: Vec<u8> = Vec::new();
+    let mut zlib_encoder: ZlibEncoder<&[u8]> = ZlibEncoder::new(&content, Compression::default());
+
+    let _ = match zlib_encoder.read_to_end(&mut compressed_data) {
+        Ok(n) => n,
+        Err(_) => return Err(UtilError::ObjectSerialization),
+    };
+
+    bytes.extend(compressed_data);
+    send_bytes(writer, &bytes, UtilError::SendObjectPackfile)?;
+    Ok(())
+}
 #[cfg(test)]
 mod tests {
     use super::*;

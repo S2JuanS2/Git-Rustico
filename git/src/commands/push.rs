@@ -131,13 +131,14 @@ pub fn git_push_branch(
         None => ZERO_ID.to_string(), // Creo en el remoto
     };
 
+    println!("Prev hash: {}", prev_hash);
     let current_hash = push.get_hash(); // Commit local
     
     if !is_necessary_to_update(push, &current_hash, &prev_hash)
     {
         return Ok(push.get_status());
     }
-
+    println!("Current hash: {}", current_hash);
     // AViso que actualizare mi branch
     reference_update(socket, &prev_hash, &current_hash, &push.branch.get_ref_path())?;
 

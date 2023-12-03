@@ -87,6 +87,7 @@ pub enum UtilError {
     CurrentBranchNotFound,
     BranchNotFound(String),
     SendMessageReferenceUpdate,
+    ObjectSerialization,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -174,6 +175,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::CurrentBranchNotFound => write!(f, "CurrentBranchNotFound: No se encontró la rama actual."),
         UtilError::BranchNotFound(s) => write!(f, "BranchNotFound: No se encontró la rama: {}", s),
         UtilError::SendMessageReferenceUpdate => write!(f, "SendMessageReferenceUpdate: Error al enviar el mensaje de actualización de referencia."),
+        UtilError::ObjectSerialization => write!(f, "ObjectSerialization: Error al serializar el objeto."),
     }
 }
 
