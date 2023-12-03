@@ -24,7 +24,22 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, Commands
     }
 }
 
-
+/// Obtiene el hash parent del commit
+/// ###Parametros:
+/// 'commit': Commit a buscar el parent
+pub fn get_parent_hashes(
+    commit: String,
+) -> String {
+    let mut hash_parent = PARENT_INITIAL;
+    for line in commit.lines() {
+        if line.starts_with("parent ") {
+            if let Some(hash) = line.strip_prefix("parent ") {
+                hash_parent = hash;
+            }
+        }
+    }
+    hash_parent.to_string()
+}
 
 /// Devuelve el hash de la branch recibida por parametro.
 /// ###Parámetros:
@@ -341,5 +356,15 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(result, Ok("test_branch3".to_string()));
+    }
+
+    #[test]
+    fn test_parent(){
+
+        let commit = "tree 4abc6b1e60a965f4dfefbc673322f1c6e98c8b08\nparent ebc52673798d1baf34d9c8b13022c745bac28880\nauthor S2JuanS2 <juansdelrio@hotmail.com> 1701632634 -0300\ncommitter S2JuanS2 <juansdelrio@hotmail.com> 1701632634 -0300\n\ncarpeta\n";
+
+        let result = get_parent_hashes(commit.to_string());
+
+        assert_eq!(result, "ebc52673798d1baf34d9c8b13022c745bac28880");
     }
 }
