@@ -326,11 +326,33 @@ impl GitServer {
         self.capabilities.contains(&"multi_ack".to_string())
     }
 
+    /// Filtra las referencias del servidor para actualización basado en una lista de rutas de referencias.
+    /// Asi solo se actualizan las referencias que se encuentran en la lista.
+    /// 
+    /// # Argumentos
+    ///
+    /// * `path_references`: Vec<String> que contiene las rutas de las referencias a ser filtradas.
+    ///
+    /// # Devuelve
+    ///
+    /// Un `Result<(), UtilError>` que indica si la operación fue exitosa o si ocurrió un error al filtrar
+    /// las referencias. En caso de error, se proporciona un detalle específico en el tipo `UtilError`.
+    ///
     pub fn filter_references_for_update(&mut self, path_references: Vec<String>) -> Result<(), UtilError>
     {
         self.handle_references.filter_references_for_update(path_references)
     }
     
+    /// Verifica si una referencia específica está presente en las referencias del servidor.
+    ///
+    /// # Argumentos
+    ///
+    /// * `reference`: La referencia que se busca en las referencias del servidor.
+    ///
+    /// # Devuelve
+    ///
+    /// `true` si la referencia está presente en las referencias del servidor, `false` de lo contrario.
+    ///
     pub fn contains_reference(&self, reference: &str) -> bool {
         self.handle_references.contains_reference(reference)
     }
