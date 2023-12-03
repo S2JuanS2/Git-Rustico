@@ -83,7 +83,7 @@
   <object class="GtkImage" id="merge">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="stock">gtk-dnd-multiple</property>
+    <property name="stock">gtk-select-all</property>
   </object>
   <object class="GtkImage" id="pull">
     <property name="visible">True</property>
@@ -99,7 +99,7 @@
   <object class="GtkImage" id="rebas">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="stock">gtk-dnd-multiple</property>
+    <property name="stock">gtk-select-all</property>
   </object>
   <object class="GtkImage" id="remote">
     <property name="visible">True</property>
@@ -633,7 +633,17 @@
   <object class="GtkImage" id="tag">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="stock">gtk-disconnect</property>
+    <property name="stock">gtk-paste</property>
+  </object>
+  <object class="GtkImage" id="tag_create">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-add</property>
+  </object>
+  <object class="GtkImage" id="tag_delete">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-remove</property>
   </object>
   <object class="GtkWindow" id="window_ppal">
     <property name="can_focus">False</property>
@@ -1451,6 +1461,34 @@
             </child>
             <child>
               <object class="GtkBox">
+                <property name="height_request">60</property>
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="border_width">0</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkLabel" id="list_branches">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">None</property>
+                    <property name="wrap">True</property>
+                    <property name="wrap_mode">word-char</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="orientation">vertical</property>
@@ -1799,15 +1837,5 @@
         </child>
       </object>
     </child>
-  </object>
-  <object class="GtkImage" id="tag_create">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-add</property>
-  </object>
-  <object class="GtkImage" id="tag_delete">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-remove</property>
   </object>
 </interface>
