@@ -86,6 +86,7 @@ pub enum UtilError {
     SendFlushCancelConnection,
     CurrentBranchNotFound,
     BranchNotFound(String),
+    SendMessageReferenceUpdate,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -171,7 +172,8 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::ServerCapabilitiesNotSupported => write!(f, "ServerCapabilitiesNotSupported: El servidor no soporta mis capacidades"),
         UtilError::SendFlushCancelConnection => write!(f, "SendFlushCancelConnection: Error al enviar el flush para terminar la conexión."),
         UtilError::CurrentBranchNotFound => write!(f, "CurrentBranchNotFound: No se encontró la rama actual."),
-        UtilError::BranchNotFound(s) => write!(f, "BranchNotFound: No se encontró la rama: {}", s)
+        UtilError::BranchNotFound(s) => write!(f, "BranchNotFound: No se encontró la rama: {}", s),
+        UtilError::SendMessageReferenceUpdate => write!(f, "SendMessageReferenceUpdate: Error al enviar el mensaje de actualización de referencia."),
     }
 }
 

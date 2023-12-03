@@ -7,8 +7,10 @@ use crate::git_transport::git_request::GitRequest;
 use crate::git_transport::references::{Reference, reference_discovery};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
-use crate::util::connections::start_client;
+use crate::util::connections::{start_client, send_message, send_flush};
 use crate::util::errors::UtilError;
+use crate::util::pkt_line;
+use crate::util::packfile::send_packfile;
 use std::net::TcpStream;
 
 
@@ -139,12 +141,30 @@ pub fn git_push_branch(
     
     if !is_necessary_to_update(push, &current_hash, &prev_hash)?
     {
-
         return Ok(push.get_status());
     }
 
-    
+    // AViso que actualizare mi branch
+    reference_update(socket, &prev_hash, &current_hash, &push.branch.get_ref_path())?;
 
+    // Envio el packfile
+    // TODO #6
+    // Se debe enviar el packfile al servidor
+    // Por mientras solo sera una una branch
+    // desde el hash previo hasta el hash actual
+    // Necesito una funcion que me devuelva el vector de objetos como el clone
+    // let objetcs = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
+    let objects = Vec::new();
+    send_packfile(socket, &server, objects)?;
+    push.add_status("Se envio el packfile ...");
+
+    // No se que me enviara el servidor
+    // Por eso leere todo para examinar la respuesta de daemon
+    let lines = pkt_line::read(socket)?;
+    for line in lines
+    {
+        println!("Line in string: {}", String::from_utf8(line).unwrap());
+    }
 
     Ok("Hola, soy baby push!".to_string())
 }
@@ -159,7 +179,19 @@ fn git_push_all(
     Ok("Hola, soy baby push all!".to_string())
 }
 
-
+/// Obtiene el nombre de la rama actual en un repositorio Git local.
+///
+/// # Argumentos
+///
+/// * `path_repo`: Ruta al directorio del repositorio Git.
+///
+/// # Devuelve
+///
+/// Un `Result<String, UtilError>` que contiene el nombre de la rama actual si la operación fue exitosa.
+/// En caso de error, se devuelve un detalle específico en el tipo `UtilError`.
+///
+/// # Ejemplo
+///
 fn get_name_current_branch(path_repo: &str) -> Result<String, UtilError>
 {
     let path: String = format!("{}/.git/HEAD", path_repo);
@@ -179,6 +211,15 @@ fn get_name_current_branch(path_repo: &str) -> Result<String, UtilError>
     }
 }
 
+
+/// Determina si es necesario realizar una operación de actualización (push) en el servidor remoto.
+///
+/// # Argumentos
+///
+/// * `push`: Referencia mutable a un objeto `PushBranch` utilizado para almacenar mensajes de estado.
+/// * `hash_current`: Hash del commit actual en la rama local.
+/// * `hash_prev`: Hash del commit previo en la rama remota.
+///
 fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
 {
     if hash_current == hash_prev
@@ -295,3 +336,24 @@ mod tests {
     }
 }
 
+/// Actualiza una referencia en el servidor Git con los hashes de commits proporcionados.
+///
+/// # Argumentos
+///
+/// * `socket`: Referencia mutable a un flujo TCP utilizado para la comunicación con el servidor.
+/// * `hash_prev`: Hash del commit previo asociado con la referencia.
+/// * `hash_update`: Hash del commit actualizado para la referencia.
+/// * `path_ref`: Ruta de la referencia que se actualizará en el servidor Git.
+///
+/// # Devuelve
+///
+/// Un `Result<(), CommandsError>` que indica si la operación de actualización de referencia fue exitosa o si ocurrió un error.
+/// En caso de error, se proporciona un detalle específico en el tipo `CommandsError`.
+///
+fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str) -> Result<(), CommandsError>
+{   
+    let message = format!("{} {} {}", hash_prev, hash_update, path_ref);
+    send_message(socket, &message, UtilError::SendMessageReferenceUpdate)?;
+    send_flush(socket, UtilError::SendMessageReferenceUpdate)?;
+    Ok(())
+}

@@ -15,6 +15,7 @@ use crate::util::validation::join_paths_correctly;
 use super::negotiation::{
     receive_done, send_acknowledge_last_reference, sent_references_valid_client,
 };
+use super::references::get_objects;
 use super::request_command::RequestCommand;
 
 /// # `GitRequest`
@@ -226,7 +227,11 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
     }
     // Si el cliente solicita todo, esta haciendo un CLONE
     server.update_data(capabilities, wanted_objects);
-    send_packfile(stream, &server, path_repo)?; // Debo modificarlo, el NAK no debe estar dentro
+    let objects = match get_objects(path_repo, &server.available_references[1..]) {
+        Ok(objects) => objects,
+        Err(_) => return Err(UtilError::GetObjectsPackfile),
+    };
+    send_packfile(stream, &server, objects)?; // Debo modificarlo, el NAK no debe estar dentro
     Ok("Clone exitoso".to_string())
 }
 
