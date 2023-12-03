@@ -1,13 +1,14 @@
 use super::errors::CommandsError;
 use crate::commands::config::GitConfig;
 use crate::consts::ZERO_ID;
-use crate::git_server::GitServer;
 use crate::git_transport::git_request::GitRequest;
 use crate::git_transport::references::{Reference, reference_discovery};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{start_client, send_message, send_flush};
 use crate::util::errors::UtilError;
+use crate::util::{objects, pkt_line};
+use crate::util::packfile::send_packfile;
 use std::net::TcpStream;
 
 
@@ -146,9 +147,18 @@ pub fn git_push_branch(
     // Por mientras solo sera una una branch
     // desde el hash previo hasta el hash actual
     // Necesito una funcion que me devuelva el vector de objetos como el clone
-    
-    // Envio el packfile
-    
+    // let objetcs = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
+    let objects = Vec::new();
+    send_packfile(socket, &server, objects)?;
+    push.add_status("Se envio el packfile ...");
+
+    // No se que me enviara el servidor
+    // Por eso leere todo para examinar la respuesta de daemon
+    let lines = pkt_line::read(socket)?;
+    for line in lines
+    {
+        println!("Line in string: {}", String::from_utf8(line).unwrap());
+    }
 
     Ok("Hola, soy baby push!".to_string())
 }

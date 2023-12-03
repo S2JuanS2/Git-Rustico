@@ -143,7 +143,7 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
 pub fn send_packfile(
     writer: &mut dyn Write,
     server: &GitServer,
-    path_repo: &str,
+    objects: Vec<(ObjectType, Vec<u8>)>
 ) -> Result<(), UtilError> {
     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
     // Envio signature
@@ -157,10 +157,6 @@ pub fn send_packfile(
     )?;
 
     // Envio numero de objetos
-    let objects = match get_objects(path_repo, &server.available_references[1..]) {
-        Ok(objects) => objects,
-        Err(_) => return Err(UtilError::GetObjectsPackfile),
-    };
     let number_objects = objects.len() as u32;
     send_bytes(
         writer,
