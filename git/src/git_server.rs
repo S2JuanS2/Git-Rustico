@@ -6,7 +6,7 @@ use std::{io::Write, collections::HashSet};
 
 use crate::{
     consts::VERSION_DEFAULT,
-    git_transport::{advertised::AdvertisedRefLine, references::Reference},
+    git_transport::{advertised::AdvertisedRefLine, references::{Reference, ReferenceType}},
     util::{
         connections::{send_flush, send_message},
         errors::UtilError,
@@ -383,10 +383,18 @@ impl GitServer {
         retain_unconfirmed_references(&mut self.available_references, &confirmed_hash);
     }
 
+    /// Elimina la referencia "HEAD" de la lista de referencias disponibles.
+    ///
+    /// Esta función busca la referencia "HEAD" en la lista de referencias disponibles
+    /// y la elimina si se encuentra. Si no hay ninguna referencia "HEAD", la función
+    /// no realiza ninguna acción.
+    ///
+    /// # Ejemplo
+    ///
     pub fn delete_head_in_available_references(&mut self) {
         let mut index = None;
         for i in 0..self.available_references.len() {
-            if self.available_references[i].get_ref_path() == "HEAD" {
+            if self.available_references[i].get_type() == ReferenceType::Head {
                 index = Some(i);
             }
         }

@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::fmt;
 use std::io::Read;
 use std::net::TcpStream;
@@ -7,7 +6,6 @@ use std::path::Path;
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_request;
-use crate::git_transport::references::Reference;
 use crate::util::connections::send_message;
 use crate::util::errors::UtilError;
 use crate::util::objects::ObjectType;
