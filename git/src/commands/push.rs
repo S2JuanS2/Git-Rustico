@@ -133,9 +133,11 @@ pub fn git_push_branch(
     
     if !is_necessary_to_update(push, &current_hash, &prev_hash)
     {
+
         return Ok(push.get_status());
     }
 
+    
 
 
     Ok("Hola, soy baby push!".to_string())
