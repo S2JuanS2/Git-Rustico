@@ -188,7 +188,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::DeleteReferenceFetchHead => write!(f, "No se pudo borrar la referencia en FETCH_HEAD"),
         CommandsError::ReferenceNotFound => write!(f, "No se encontró la referencia"),
         // CommandsError::InvalidArgumentCountPush => write!(f, "Número de argumentos inválido para el comando push.\nUsar: git push <remote name> <branch name>"),
-        CommandsError::InvalidArgumentCountPush => write!(f, "Número de argumentos inválido para el comando push.\nUsar: git push"),
+        CommandsError::InvalidArgumentCountPush => write!(f, "Número de argumentos inválido para el comando push.\nUsar: git push o git push remote branch"),
         CommandsError::RemoteNotFound => write!(f, "No se encontró el repositorio remoto"),
         CommandsError::NoTrackingInformationForBranch => write!(f, "No se encontró información de seguimiento para la branch"),
         CommandsError::MergeNotAllowedError => write!(f, "No se puede hacer merge. La branch no está actualizada con respecto a la branch remota"),
