@@ -28,6 +28,7 @@ pub struct View {
     label_mail: gtk::Label,
     label_branch: gtk::Label,
     label_path: gtk::Label,
+    label_branches: gtk::Label,
 }
 
 impl View {
@@ -88,6 +89,7 @@ impl View {
         let label_branch: gtk::Label = builder.object("label_branch").ok_or(GitError::ObjectBuildFailed)?;
         let label_mail: gtk::Label = builder.object("mail").ok_or(GitError::ObjectBuildFailed)?;
         let label_path: gtk::Label = builder.object("path").ok_or(GitError::ObjectBuildFailed)?;
+        let label_branches: gtk::Label = builder.object("list_branches").ok_or(GitError::ObjectBuildFailed)?;
 
         let controller = Rc::new(RefCell::new(controller));
         Ok(View {
@@ -106,6 +108,7 @@ impl View {
             label_mail,
             label_branch,
             label_path,
+            label_branches,
         })
     }
     fn set_label_user(&mut self) {
@@ -267,10 +270,12 @@ impl View {
             let controller = Rc::clone(&self.controller);
             let label_branch = self.label_branch.clone();
             let label_path = self.label_path.clone();
+            let label_branches = self.label_branches.clone();
             button.connect_clicked(move |_| {
                 let _ = controller.borrow_mut().set_current_branch();
                 controller.borrow_mut().set_label_branch(&label_branch);
                 controller.borrow_mut().set_label_path(&label_path);
+                controller.borrow_mut().set_branch_list(&label_branches);
             });
         }
     }

@@ -24,6 +24,8 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, Commands
     }
 }
 
+
+
 /// Devuelve el hash de la branch recibida por parametro.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
@@ -61,7 +63,22 @@ pub fn get_current_branch(directory: &str) -> Result<String, CommandsError> {
     Ok(branch)
 }
 
-/// Muestra por pantalla las branch existentes.
+/// Muestra en una etiqueta las branches existentes.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+pub fn git_branch_list_display(directory: &str) -> Result<String, CommandsError> {
+    let branches = get_branch(directory)?;
+    let mut formatted_branches = String::new();
+    for branch in branches {
+        let dir_branch = format!("{}/{}/{}/heads/{}", directory, GIT_DIR, REFS, branch);
+        let file = open_file(&dir_branch)?;
+        let hash = read_file_string(file)?;
+        formatted_branches.push_str(&format!(" - {} [{}]\n", branch, &hash[..7]))
+    }
+    Ok(formatted_branches)
+}
+
+/// Muestra por pantalla las branches existentes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 pub fn git_branch_list(directory: &str) -> Result<String, CommandsError> {
