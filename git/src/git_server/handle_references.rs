@@ -329,4 +329,20 @@ mod tests {
         assert_eq!(handle_references.get_remote_reference_hash("refs/tags/v1.0.0"), Some("ghi789".to_string()));
         assert_eq!(handle_references.get_remote_reference_hash("refs/tags/v1.0.1"), None);
     }
+
+    #[test]
+    fn test_update_references_filtering()
+    {
+        let references = create_references();
+        let mut handle_references = HandleReferences::new_from_references(&references);
+
+        let mut path_references: Vec<String> = Vec::new();
+        path_references.push("refs/heads/main".to_string());
+        path_references.push("refs/heads/feature".to_string());
+
+        handle_references.update_references_filtering(path_references).unwrap();
+        assert_eq!(handle_references.references.len(), 2);
+        assert!(handle_references.references.contains_key("refs/heads/main"));
+        assert!(handle_references.references.contains_key("refs/heads/feature"));
+    }
 }
