@@ -1,8 +1,10 @@
+use super::cat_file::git_cat_file;
+use super::checkout::extract_parent_hash;
 use super::errors::CommandsError;
 use crate::commands::config::GitConfig;
 use crate::consts::ZERO_ID;
 use crate::git_transport::git_request::GitRequest;
-use crate::git_transport::references::{Reference, reference_discovery};
+use crate::git_transport::references::{Reference, reference_discovery, get_objects_from_hash_to_hash};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{start_client, send_message, send_flush};
@@ -57,6 +59,10 @@ impl PushBranch
     fn get_hash(&self) -> String
     {
         self.branch.get_hash().to_string()
+    }
+    fn get_path_local(&self) -> String
+    {
+        self.path_local.to_string()
     }
 }
 /// Comandos que aceptare:
@@ -134,7 +140,7 @@ pub fn git_push_branch(
     println!("Prev hash: {}", prev_hash);
     let current_hash = push.get_hash(); // Commit local
     
-    if !is_necessary_to_update(push, &current_hash, &prev_hash)
+    if !is_necessary_to_update(push, &current_hash, &prev_hash)?
     {
         return Ok(push.get_status());
     }
@@ -148,8 +154,8 @@ pub fn git_push_branch(
     // Por mientras solo sera una una branch
     // desde el hash previo hasta el hash actual
     // Necesito una funcion que me devuelva el vector de objetos como el clone
-    // let objetcs = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
-    let objects = Vec::new();
+    let objects = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
+
     send_packfile(socket, &server, objects)?;
     push.add_status("Se envio el packfile ...");
 
@@ -206,6 +212,7 @@ fn get_name_current_branch(path_repo: &str) -> Result<String, UtilError>
     }
 }
 
+
 /// Determina si es necesario realizar una operación de actualización (push) en el servidor remoto.
 ///
 /// # Argumentos
@@ -214,35 +221,52 @@ fn get_name_current_branch(path_repo: &str) -> Result<String, UtilError>
 /// * `hash_current`: Hash del commit actual en la rama local.
 /// * `hash_prev`: Hash del commit previo en la rama remota.
 ///
-fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: &str) -> bool
+fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
 {
     if hash_current == hash_prev
     {
         push.add_status("No hay cambios que subir");
-        return false;
+        return Ok(false)
     }
-    if is_ancestor(hash_current, hash_prev)
+    if is_ancestor(&push.get_path_local(), hash_current, hash_prev)?
     {
         push.add_status("No hay cambios que subir");
         push.add_status("Esta atrasado ...");
         push.add_status("Haga pull :)");
-        return false;
+        return Ok(false)
     };
-    true
+    Ok(true)
 }
 
 
-fn is_ancestor(_hash_current: &str, hash_prev: &str) -> bool
+pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
 {
     if hash_prev == ZERO_ID
     {
-        return false;
+        return Ok(false);
     }
+
+    if hash_current == hash_prev
+    {
+        return Ok(false)
+    }
+
+    let commit = git_cat_file(directory, hash_current, "-p")?;
+    if let Some(parent_hash) = extract_parent_hash(&commit){
+        if hash_prev == parent_hash{
+            return Ok(true)
+        }else{
+            if is_ancestor(directory, parent_hash, hash_prev)?{
+                return Ok(true)
+            }
+        }
+    };
+
     // [TODO #5]
     // Si el commit local no es ancestro del commit remoto, no se puede hacer push
     // Se debe hacer pull
     // Implementar la logica de ancestro
-    false
+    Ok(false)
 }
 
 /// Actualiza una referencia en el servidor Git con los hashes de commits proporcionados.
@@ -265,4 +289,69 @@ fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, 
     send_message(socket, &message, UtilError::SendMessageReferenceUpdate)?;
     send_flush(socket, UtilError::SendMessageReferenceUpdate)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::commands::{add::git_add, init::git_init, commit::*};
+    use crate::util::files::{read_file_string, open_file};
+
+    use super::*;
+    use std::fs;
+    use std::io::Write;
+
+    #[test]
+    fn commit_test() {
+        let directory = "./test_commit_repo";
+        git_init(directory).expect("Falló en el comando init");
+
+        let file_path = format!("{}/{}", directory, "holamundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let file_path = format!("{}/{}", directory, "chaumundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Chau Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let file_path = format!("{}/{}", directory, "himundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hi Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let test_commit = Commit::new(
+            "prueba".to_string(),
+            "Juan".to_string(),
+            "jdr@fi.uba.ar".to_string(),
+            "Juan".to_string(),
+            "jdr@fi.uba.ar".to_string(),
+        );
+        let branch = format!("{}/.git/refs/heads/master", directory);
+
+        git_add(directory, "holamundo.txt").expect("Fallo en el comando add");
+
+        git_commit(directory, test_commit.clone()).expect("Error commit");
+
+        let file_branch = open_file(&branch).expect("Error open file");
+        let prev_hash = read_file_string(file_branch).expect("Error read file");
+
+        git_add(directory, "chaumundo.txt").expect("Fallo en el comando add");
+
+        git_commit(directory, test_commit.clone()).expect("Error Commit");
+
+        git_add(directory, "himundo.txt").expect("Fallo en el comando add");
+
+        git_commit(directory, test_commit).expect("Error Commit");
+
+        let file_branch = open_file(&branch).expect("Error open file");
+        let hash_current = read_file_string(file_branch).expect("Error read file");
+
+        let result = is_ancestor(directory, &hash_current, &prev_hash).expect("Error ancestor");
+
+        fs::remove_dir_all(directory).expect("Falló al remover los directorios");
+
+        assert_eq!(result, true)
+    }
 }
