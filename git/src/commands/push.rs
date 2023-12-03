@@ -4,7 +4,7 @@ use super::errors::CommandsError;
 use crate::commands::config::GitConfig;
 use crate::consts::ZERO_ID;
 use crate::git_transport::git_request::GitRequest;
-use crate::git_transport::references::{Reference, reference_discovery};
+use crate::git_transport::references::{Reference, reference_discovery, get_objects_from_hash_to_hash};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{start_client, send_message, send_flush};
@@ -153,8 +153,8 @@ pub fn git_push_branch(
     // Por mientras solo sera una una branch
     // desde el hash previo hasta el hash actual
     // Necesito una funcion que me devuelva el vector de objetos como el clone
-    // let objetcs = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
-    let objects = Vec::new();
+    let objects = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
+
     send_packfile(socket, &server, objects)?;
     push.add_status("Se envio el packfile ...");
 
@@ -238,10 +238,8 @@ fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: 
 }
 
 
-fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
+pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
 {
-    println!("current: {}, prev: {}", hash_current, hash_prev);
-
     if hash_prev == ZERO_ID
     {
         return Ok(false);
@@ -270,6 +268,27 @@ fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Result<b
     Ok(false)
 }
 
+/// Actualiza una referencia en el servidor Git con los hashes de commits proporcionados.
+///
+/// # Argumentos
+///
+/// * `socket`: Referencia mutable a un flujo TCP utilizado para la comunicación con el servidor.
+/// * `hash_prev`: Hash del commit previo asociado con la referencia.
+/// * `hash_update`: Hash del commit actualizado para la referencia.
+/// * `path_ref`: Ruta de la referencia que se actualizará en el servidor Git.
+///
+/// # Devuelve
+///
+/// Un `Result<(), CommandsError>` que indica si la operación de actualización de referencia fue exitosa o si ocurrió un error.
+/// En caso de error, se proporciona un detalle específico en el tipo `CommandsError`.
+///
+fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str) -> Result<(), CommandsError>
+{   
+    let message = format!("{} {} {}", hash_prev, hash_update, path_ref);
+    send_message(socket, &message, UtilError::SendMessageReferenceUpdate)?;
+    send_flush(socket, UtilError::SendMessageReferenceUpdate)?;
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
@@ -334,26 +353,4 @@ mod tests {
 
         assert_eq!(result, true)
     }
-}
-
-/// Actualiza una referencia en el servidor Git con los hashes de commits proporcionados.
-///
-/// # Argumentos
-///
-/// * `socket`: Referencia mutable a un flujo TCP utilizado para la comunicación con el servidor.
-/// * `hash_prev`: Hash del commit previo asociado con la referencia.
-/// * `hash_update`: Hash del commit actualizado para la referencia.
-/// * `path_ref`: Ruta de la referencia que se actualizará en el servidor Git.
-///
-/// # Devuelve
-///
-/// Un `Result<(), CommandsError>` que indica si la operación de actualización de referencia fue exitosa o si ocurrió un error.
-/// En caso de error, se proporciona un detalle específico en el tipo `CommandsError`.
-///
-fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str) -> Result<(), CommandsError>
-{   
-    let message = format!("{} {} {}", hash_prev, hash_update, path_ref);
-    send_message(socket, &message, UtilError::SendMessageReferenceUpdate)?;
-    send_flush(socket, UtilError::SendMessageReferenceUpdate)?;
-    Ok(())
 }

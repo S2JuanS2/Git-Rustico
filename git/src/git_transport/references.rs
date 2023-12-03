@@ -1,8 +1,8 @@
 use crate::commands::branch::get_current_branch;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::checkout::{get_tree_hash, extract_parent_hash};
+use crate::commands::push::is_ancestor;
 use crate::consts::PARENT_INITIAL;
-use crate::errors::GitError;
 use crate::git_server::GitServer;
 use crate::util::files::{open_file, read_file, read_file_string};
 use crate::util::objects::ObjectType;
@@ -228,7 +228,7 @@ pub fn recovery_tree(
     directory: &str,
     tree_hash: &str,
     objects: &mut Vec<(ObjectType, Vec<u8>)>,
-) -> Result<(), GitError> {
+) -> Result<(), UtilError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
@@ -265,7 +265,7 @@ pub fn recovery_commits(directory: &str,
     commit: String,
     objects: &mut Vec<(ObjectType, Vec<u8>)>,
     hashes_commits: &mut Vec<String>,
-) -> Result<(), GitError>{
+) -> Result<(), UtilError>{
     let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
     object_commit.1 = get_content(directory, &hash_commit)?;
     save_object_pack(objects, object_commit);
@@ -295,6 +295,41 @@ fn save_object_pack(objects: &mut Vec<(ObjectType, Vec<u8>)>, object: (ObjectTyp
 }
 
 /// Extrae los objetos de un repositorio para guardar los mismos en un vector
+///  (condicionado desde el hash previo al hash actual)
+///
+/// # Argumentos
+///
+/// * `path_local` - directorio del repositorio
+/// * `prev_hash` - hash de la branch previa
+/// * `current_hash` - hash actual
+///
+/// # Retorna
+///
+/// Un vector con el contenido de los objetos si la operación es exitosa.
+/// En caso de error, retorna un error de tipo UtilError.
+pub fn get_objects_from_hash_to_hash(
+    path_local: &str,
+    prev_hash: &str,
+    current_hash: &str
+) -> Result<Vec<(ObjectType, Vec<u8>)>, UtilError> {
+    let mut objects = Vec::new();
+
+    if is_ancestor(path_local, current_hash, prev_hash)? {
+        let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
+        object_commit.1 = get_content(path_local, current_hash)?;
+        save_object_pack(&mut objects, object_commit);
+        let commit = git_cat_file(path_local, current_hash, "-p")?;
+        if let Some(tree_hash) = get_tree_hash(&commit){
+            let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+            object_tree.1 = get_content(path_local, tree_hash)?;
+            save_object_pack(&mut objects, object_tree);
+            recovery_tree(path_local, tree_hash, &mut objects)?;
+        }
+    }
+    Ok(objects)
+}
+
+/// Extrae los objetos de un repositorio para guardar los mismos en un vector
 ///
 /// # Argumentos
 ///
@@ -308,7 +343,7 @@ fn save_object_pack(objects: &mut Vec<(ObjectType, Vec<u8>)>, object: (ObjectTyp
 pub fn get_objects(
     directory: &str,
     references: &[Reference],
-) -> Result<Vec<(ObjectType, Vec<u8>)>, GitError> {
+) -> Result<Vec<(ObjectType, Vec<u8>)>, UtilError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = vec![];
     let mut hashes_commits: Vec<String> = vec![];
     for reference in references.iter() {
@@ -536,6 +571,10 @@ fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
+
+    use crate::commands::{init::git_init, commit::{Commit, git_commit}, add::git_add};
+
     use super::*;
 
     #[test]
@@ -670,5 +709,59 @@ mod tests {
 
         // Assert
         assert_eq!(name, "version1");
+    }
+
+    #[test]
+    fn test_get_object_to_hash(){
+        let directory = "./test_commit_repo";
+        git_init(directory).expect("Falló en el comando init");
+
+        let file_path = format!("{}/{}", directory, "holamundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hola Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let file_path = format!("{}/{}", directory, "chaumundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Chau Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let file_path = format!("{}/{}", directory, "himundo.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Hi Mundo")
+            .expect("Error al escribir en el archivo");
+
+        let test_commit = Commit::new(
+            "prueba".to_string(),
+            "Juan".to_string(),
+            "jdr@fi.uba.ar".to_string(),
+            "Juan".to_string(),
+            "jdr@fi.uba.ar".to_string(),
+        );
+        let branch = format!("{}/.git/refs/heads/master", directory);
+
+        git_add(directory, "holamundo.txt").expect("Fallo en el comando add");
+
+        git_commit(directory, test_commit.clone()).expect("Error commit");
+
+        let file_branch = open_file(&branch).expect("Error open file");
+        let prev_hash = read_file_string(file_branch).expect("Error read file");
+
+        git_add(directory, "chaumundo.txt").expect("Fallo en el comando add");
+
+        git_commit(directory, test_commit.clone()).expect("Error Commit");
+
+        git_add(directory, "himundo.txt").expect("Fallo en el comando add");
+
+        git_commit(directory, test_commit).expect("Error Commit");
+
+        let file_branch = open_file(&branch).expect("Error open file");
+        let hash_current = read_file_string(file_branch).expect("Error read file");
+
+        let objects = get_objects_from_hash_to_hash(directory, &prev_hash, &hash_current).expect("Error get objects");
+
+        fs::remove_dir_all(directory).expect("Falló al remover los directorios");
+
+        assert_eq!(objects.len(), 5)
     }
 }
