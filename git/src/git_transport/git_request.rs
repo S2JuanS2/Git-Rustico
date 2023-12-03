@@ -6,7 +6,7 @@ use std::path::Path;
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
-use crate::util::connections::send_message;
+use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
 use crate::util::objects::ObjectType;
 use crate::util::packfile::send_packfile;
@@ -17,6 +17,7 @@ use super::negotiation::{
     receive_done, send_acknowledge_last_reference, sent_references_valid_client,
 };
 use super::references::get_objects;
+use super::references_update::ReferencesUpdate;
 use super::request_command::RequestCommand;
 
 /// # `GitRequest`
@@ -177,7 +178,7 @@ impl GitRequest {
             }
             RequestCommand::ReceivePack => {
                 let path_repo = get_path_repository(root, &self.pathname)?;
-                handle_receive_pack(stream, &path_repo);
+                handle_receive_pack(stream, &path_repo)?;
                 println!("ReceivePack");
                 println!("Funcion aun no implementada");
                 Ok("".to_string())
@@ -368,18 +369,41 @@ pub fn get_objects_fetch(git_server: &mut GitServer, _confirmed_hashes: Vec<Stri
 
 
 pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError>{
-    let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
-    let mut _server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
-    println!("Server: {:?}", server);
+    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &Vec::new())?;
     server.send_references(stream)?;
 
-    let requests = receive_reference_update_request(stream)?;
+    let requests = receive_reference_update_request(stream, &mut server)?;
+    let objects = receive_packfile(stream)?;
+
+    let status = process_request_update(requests, objects)?;
     // let mut objects = get_objects();
 
     println!("Funcion aun no implementada");
     Ok(())
 }
 
+
+// [TODO #8]
+// Esta funcion es la que se encarga de procesar las actualizaciones de las referencias
+// Y de actualizar el repo
+// Recibe un vector de ReferencesUpdate y un vector de (ObjectType, Vec<u8>)
+// El vector de ReferencesUpdate son las referencias que el cliente quiere actualizar
+// Atributos de ReferencesUpdate:
+// - old: String -> Hash del objeto viejo
+// - new: String -> Hash del objeto nuevo
+// - path_refs: String -> Ruta de la referencia -> Ejemplo: refs/heads/master
+// El vector de (ObjectType, Vec<u8>) son los objetos que el cliente envio
+// Se debera devolver un vector de booleanos, donde cada booleano indica si la actualizacion
+// de la referencia fue exitosa o no
+// Si la actualizacion fue exitosa, el booleano sera true
+// Si la actualizacion no fue exitosa, el booleano sera false
+// 
+pub fn process_request_update(
+    requests: Vec<ReferencesUpdate>,
+    objects: Vec<(ObjectType, Vec<u8>)>,
+) -> Result<Vec<bool>, UtilError> {
+    return Ok(Vec::new());
+}
 
 #[cfg(test)]
 mod tests {

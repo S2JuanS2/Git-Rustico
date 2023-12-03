@@ -565,7 +565,7 @@ pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut
         }
     }
 
-    git_server.filter_capabilities_user(&capabilities);
+    git_server.filter_capabilities_user(&capabilities)?;
     Ok(result)
 }
 
