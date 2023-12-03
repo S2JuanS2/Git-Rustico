@@ -39,12 +39,12 @@ impl ReferencesUpdate {
 }
 
 
-pub fn send_status_update_request(writer: &mut dyn Write, reference: &Vec<(String, bool)>) -> Result<(), UtilError> {
+pub fn send_decompressed_package_status(writer: &mut dyn Write, reference: &Vec<(String, bool)>) -> Result<(), UtilError> {
     // unpack ok\n
     let signature = "unpack ok\n";
     let message = add_length_prefix(signature, signature.len());
     send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
-    
+
     for (reference, status) in reference {
         let message = match status {
             true => format!("ok {}\n", reference),
@@ -53,5 +53,12 @@ pub fn send_status_update_request(writer: &mut dyn Write, reference: &Vec<(Strin
         let message = add_length_prefix(&message, message.len());
         send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
     }
+    Ok(())
+}
+
+pub fn send_decompression_failure_status(writer: &mut dyn Write) -> Result<(), UtilError> {
+    let signature = "Err PaqueteCorrupto\n";
+    let message = add_length_prefix(signature, signature.len());
+    send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
     Ok(())
 }

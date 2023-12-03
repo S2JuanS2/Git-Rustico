@@ -6,6 +6,7 @@ use std::path::Path;
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
+use crate::git_transport::references_update::send_decompressed_package_status;
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
 use crate::util::objects::{ObjectType, ObjectEntry};
@@ -17,7 +18,7 @@ use super::negotiation::{
     receive_done, send_acknowledge_last_reference, sent_references_valid_client,
 };
 use super::references::get_objects;
-use super::references_update::ReferencesUpdate;
+use super::references_update::{ReferencesUpdate, send_decompression_failure_status};
 use super::request_command::RequestCommand;
 
 /// # `GitRequest`
@@ -375,12 +376,11 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
     let requests = receive_reference_update_request(stream, &mut server)?;
     let objects = receive_packfile(stream)?;
 
-    let status = process_request_update(requests, objects)?;
-    // let mut objects = get_objects();
-
-    send_status_update_request(stream, &status);
-    println!("Funcion aun no implementada");
-    Ok(())
+    match process_request_update(requests, objects)
+    {
+        Ok(status) => send_decompressed_package_status(stream, &status),
+        Err(_) => send_decompression_failure_status(stream),
+    }
 }
 
 
@@ -396,6 +396,8 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
 // Se puede devolvera un vector del tipo Vec<(String, bool)>
 // Donde el String es la referencia y el bool es si fue exitosa o no
 // ESto se usara para decirle al cliente si la actualizacion fue exitosa o no
+// EL falso es solo si no se puede actualizar
+// SI el paquete esta corrupto se debe enviar un error
 pub fn process_request_update(
     _requests: Vec<ReferencesUpdate>,
     _objects: Vec<(ObjectEntry, Vec<u8>)>,
