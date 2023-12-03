@@ -158,7 +158,19 @@ impl HandleReferences {
         Ok(references)
     }
 
-    pub fn filter_references_for_update(&mut self, path_references: Vec<String>) -> Result<(), UtilError> {
+    /// Filtra las referencias del servidor para actualización basado en una lista de rutas de referencias.
+    /// Asi solo actualizamos lo que queremos actualizar.
+    ///
+    /// # Argumentos
+    ///
+    /// * `path_references`: Vec<String> que contiene las rutas de las referencias que queremos actualizar.
+    ///
+    /// # Devuelve
+    ///
+    /// Un `Result<(), UtilError>` que indica si la operación fue exitosa o si ocurrió un error al filtrar
+    /// las referencias. En caso de error, se proporciona un detalle específico en el tipo `UtilError`.
+    ///
+    pub fn update_references_filtering(&mut self, path_references: Vec<String>) -> Result<(), UtilError> {
         let mut new_refences: HashMap<String, ReferenceInformation> = HashMap::new();
         for path in path_references {
             if let Some(reference) = self.references.get(&path) {
@@ -169,9 +181,20 @@ impl HandleReferences {
                 new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), local_commit));
             }
         }
+        self.references = new_refences;
         Ok(())
     }
 
+    /// Verifica si una referencia específica está presente en las referencias del servidor.
+    ///
+    /// # Argumentos
+    ///
+    /// * `path`: La ruta de la referencia que se busca en las referencias del servidor.
+    ///
+    /// # Devuelve
+    ///
+    /// `true` si la referencia está presente en las referencias del servidor, `false` de lo contrario.
+    ///
     pub fn contains_reference(&self, path: &str) -> bool {
         self.references.contains_key(path)
     }

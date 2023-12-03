@@ -225,7 +225,7 @@ pub fn git_fetch_branch(
 
     // Packfile Negotiation
     // Solo solicitar una branch
-    server.filter_references_for_update([rfs_fetch].to_vec())?;
+    server.update_references_filtering([rfs_fetch].to_vec())?;
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
 
     // Packfile Data

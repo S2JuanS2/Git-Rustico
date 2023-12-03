@@ -338,9 +338,9 @@ impl GitServer {
     /// Un `Result<(), UtilError>` que indica si la operación fue exitosa o si ocurrió un error al filtrar
     /// las referencias. En caso de error, se proporciona un detalle específico en el tipo `UtilError`.
     ///
-    pub fn filter_references_for_update(&mut self, path_references: Vec<String>) -> Result<(), UtilError>
+    pub fn update_references_filtering(&mut self, path_references: Vec<String>) -> Result<(), UtilError>
     {
-        self.handle_references.filter_references_for_update(path_references)
+        self.handle_references.update_references_filtering(path_references)
     }
     
     /// Verifica si una referencia específica está presente en las referencias del servidor.
