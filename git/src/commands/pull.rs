@@ -36,6 +36,7 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
         client.get_ip(),
         client.get_port(),
         client.get_directory_path(),
+        client.clone(),
     )
 }
 
@@ -45,6 +46,7 @@ pub fn git_pull(
     ip: &str,
     port: &str,
     repo_local: &str,
+    client: Client,
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Pull del repositorio remoto ...");
@@ -76,7 +78,7 @@ pub fn git_pull(
     };
     println!("Remote branch ref: {}", remote_branch_ref);
     println!("Mergeando con el repositorio remoto ...");
-    let merge_result = git_merge(repo_local, &remote_branch_ref)?;
+    let merge_result = git_merge(repo_local, &remote_branch_ref, client)?;
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);
         status.push(format!("Error: El siguiente archivo se sobrescribiría al fusionarlo:\n\t{}\nAborting.", path_conflict));
