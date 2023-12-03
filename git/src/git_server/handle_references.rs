@@ -158,7 +158,19 @@ impl HandleReferences {
         Ok(references)
     }
 
-    pub fn filter_references_for_update(&mut self, path_references: Vec<String>) -> Result<(), UtilError> {
+    /// Filtra las referencias del servidor para actualización basado en una lista de rutas de referencias.
+    /// Asi solo actualizamos lo que queremos actualizar.
+    ///
+    /// # Argumentos
+    ///
+    /// * `path_references`: Vec<String> que contiene las rutas de las referencias que queremos actualizar.
+    ///
+    /// # Devuelve
+    ///
+    /// Un `Result<(), UtilError>` que indica si la operación fue exitosa o si ocurrió un error al filtrar
+    /// las referencias. En caso de error, se proporciona un detalle específico en el tipo `UtilError`.
+    ///
+    pub fn update_references_filtering(&mut self, path_references: Vec<String>) -> Result<(), UtilError> {
         let mut new_refences: HashMap<String, ReferenceInformation> = HashMap::new();
         for path in path_references {
             if let Some(reference) = self.references.get(&path) {
@@ -169,11 +181,40 @@ impl HandleReferences {
                 new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), local_commit));
             }
         }
+        self.references = new_refences;
         Ok(())
     }
 
+    /// Verifica si una referencia específica está presente en las referencias del servidor.
+    ///
+    /// # Argumentos
+    ///
+    /// * `path`: La ruta de la referencia que se busca en las referencias del servidor.
+    ///
+    /// # Devuelve
+    ///
+    /// `true` si la referencia está presente en las referencias del servidor, `false` de lo contrario.
+    ///
     pub fn contains_reference(&self, path: &str) -> bool {
         self.references.contains_key(path)
+    }
+
+    /// Obtiene el hash del commit remoto asociado con una referencia específica en el servidor Git.
+    ///
+    /// # Argumentos
+    ///
+    /// * `path_reference`: La ruta de la referencia para la cual se desea obtener el hash del commit remoto.
+    ///
+    /// # Devuelve
+    ///
+    /// Un `Option<String>` que contiene el hash del commit remoto si la referencia está presente en las referencias del servidor.
+    /// Si la referencia no existe, se devuelve `None`.
+    ///
+    pub fn get_remote_reference_hash(&self, path_reference: &str) -> Option<String> {
+        if let Some(reference) = self.references.get(path_reference) {
+            return Some(reference.get_remote_commit().to_string());
+        }
+        None
     }
 }
 
@@ -286,5 +327,33 @@ mod tests {
         // Verificar que solo se obtenga la referencia que necesita actualización
         assert_eq!(references_for_updating.len(), 1);
         assert_eq!(references_for_updating[0].get_ref_path(), "refs/tags/v1.0.0");
+    }
+
+    #[test]
+    fn test_get_remote_reference_hash() {
+        let references = create_references();
+        let handle_references = HandleReferences::new_from_references(&references);
+
+        // Verificar que se obtenga el hash de la referencia remota
+        assert_eq!(handle_references.get_remote_reference_hash("refs/heads/main"), Some("abc123".to_string()));
+        assert_eq!(handle_references.get_remote_reference_hash("refs/heads/feature"), Some("def456".to_string()));
+        assert_eq!(handle_references.get_remote_reference_hash("refs/tags/v1.0.0"), Some("ghi789".to_string()));
+        assert_eq!(handle_references.get_remote_reference_hash("refs/tags/v1.0.1"), None);
+    }
+
+    #[test]
+    fn test_update_references_filtering()
+    {
+        let references = create_references();
+        let mut handle_references = HandleReferences::new_from_references(&references);
+
+        let mut path_references: Vec<String> = Vec::new();
+        path_references.push("refs/heads/main".to_string());
+        path_references.push("refs/heads/feature".to_string());
+
+        handle_references.update_references_filtering(path_references).unwrap();
+        assert_eq!(handle_references.references.len(), 2);
+        assert!(handle_references.references.contains_key("refs/heads/main"));
+        assert!(handle_references.references.contains_key("refs/heads/feature"));
     }
 }

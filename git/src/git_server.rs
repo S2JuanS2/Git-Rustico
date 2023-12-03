@@ -326,13 +326,50 @@ impl GitServer {
         self.capabilities.contains(&"multi_ack".to_string())
     }
 
-    pub fn filter_references_for_update(&mut self, path_references: Vec<String>) -> Result<(), UtilError>
+    /// Filtra las referencias del servidor para actualización basado en una lista de rutas de referencias.
+    /// Asi solo se actualizan las referencias que se encuentran en la lista.
+    /// 
+    /// # Argumentos
+    ///
+    /// * `path_references`: Vec<String> que contiene las rutas de las referencias a ser filtradas.
+    ///
+    /// # Devuelve
+    ///
+    /// Un `Result<(), UtilError>` que indica si la operación fue exitosa o si ocurrió un error al filtrar
+    /// las referencias. En caso de error, se proporciona un detalle específico en el tipo `UtilError`.
+    ///
+    pub fn update_references_filtering(&mut self, path_references: Vec<String>) -> Result<(), UtilError>
     {
-        self.handle_references.filter_references_for_update(path_references)
+        self.handle_references.update_references_filtering(path_references)
     }
     
+    /// Verifica si una referencia específica está presente en las referencias del servidor.
+    ///
+    /// # Argumentos
+    ///
+    /// * `reference`: La referencia que se busca en las referencias del servidor.
+    ///
+    /// # Devuelve
+    ///
+    /// `true` si la referencia está presente en las referencias del servidor, `false` de lo contrario.
+    ///
     pub fn contains_reference(&self, reference: &str) -> bool {
         self.handle_references.contains_reference(reference)
+    }
+
+    /// Obtiene el hash del commit remoto asociado con una referencia específica en el servidor Git.
+    ///
+    /// # Argumentos
+    ///
+    /// * `path_reference`: La ruta de la referencia para la cual se desea obtener el hash del commit remoto.
+    ///
+    /// # Devuelve
+    ///
+    /// Un `Option<String>` que contiene el hash del commit remoto si la referencia está presente en las referencias del servidor.
+    /// Si la referencia no existe, se devuelve `None`.
+    ///
+    pub fn get_remote_reference_hash(&self, path_reference: &str) -> Option<String> {
+        self.handle_references.get_remote_reference_hash(path_reference)
     }
 }
 

@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self};
 
 use crate::{commands::errors::CommandsError, errors::GitError};
 
@@ -85,6 +85,7 @@ pub enum UtilError {
     ServerCapabilitiesNotSupported,
     SendFlushCancelConnection,
     CurrentBranchNotFound,
+    BranchNotFound(String),
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -170,6 +171,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::ServerCapabilitiesNotSupported => write!(f, "ServerCapabilitiesNotSupported: El servidor no soporta mis capacidades"),
         UtilError::SendFlushCancelConnection => write!(f, "SendFlushCancelConnection: Error al enviar el flush para terminar la conexión."),
         UtilError::CurrentBranchNotFound => write!(f, "CurrentBranchNotFound: No se encontró la rama actual."),
+        UtilError::BranchNotFound(s) => write!(f, "BranchNotFound: No se encontró la rama: {}", s)
     }
 }
 
