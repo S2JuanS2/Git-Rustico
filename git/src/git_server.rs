@@ -357,6 +357,17 @@ impl GitServer {
         self.handle_references.contains_reference(reference)
     }
 
+    /// Obtiene el hash del commit remoto asociado con una referencia específica en el servidor Git.
+    ///
+    /// # Argumentos
+    ///
+    /// * `path_reference`: La ruta de la referencia para la cual se desea obtener el hash del commit remoto.
+    ///
+    /// # Devuelve
+    ///
+    /// Un `Option<String>` que contiene el hash del commit remoto si la referencia está presente en las referencias del servidor.
+    /// Si la referencia no existe, se devuelve `None`.
+    ///
     pub fn get_remote_reference_hash(&self, path_reference: &str) -> Option<String> {
         self.handle_references.get_remote_reference_hash(path_reference)
     }
