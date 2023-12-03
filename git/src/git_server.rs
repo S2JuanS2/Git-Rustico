@@ -372,8 +372,13 @@ impl GitServer {
         self.handle_references.get_remote_reference_hash(path_reference)
     }
     
-    // SI tengo en available_references una referencia que es igual a confirmed_hash
-    // entonces la elimino de available_references
+    /// Filtra las referencias disponibles en base a un conjunto de hashes confirmados.
+    ///
+    /// Esta función retiene solo las referencias cuyos hashes no están presentes en
+    /// el conjunto de hashes confirmados. Es decir, filtra las referencias no confirmadas.
+    ///
+    /// # Argumentos
+    ///
     pub fn filter_available_references(&mut self, confirmed_hash: &Vec<String>) {
         retain_unconfirmed_references(&mut self.available_references, &confirmed_hash);
     }

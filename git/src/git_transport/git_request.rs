@@ -204,13 +204,14 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
 
     if !had_objects.is_empty() {
         // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
+
         server.update_data(capabilities, wanted_objects);
         let local_hashes = search_available_references(path_repo, &had_objects);
         
-        // Si un hash es una referencia, entonces el cliente ya tiene ese objeto
+        // Las referencias al dia las filtro
         server.filter_available_references(&local_hashes);
-        // Confirmo las referencias del usuario que el servidor tiene disponibles
         sent_references_valid_client(stream, &local_hashes)?;
+        // Confirmo las referencias del usuario que el servidor tiene disponibles
         // Actualizo las referencias disponibles del servidor
         // server.update_local_references(&local_references);
 
