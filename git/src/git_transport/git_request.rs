@@ -393,6 +393,10 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
 // - old: String -> Hash del objeto viejo
 // - new: String -> Hash del objeto nuevo
 // - path_refs: String -> Ruta de la referencia -> Ejemplo: refs/heads/master
+// ReferencesUpdate tambien se usara para saber lo que el cliente quiere hacer:
+//   create branch     =  old-id=zero-id  new-id 
+//   delete branch     =  old-id          new-id=zero-id
+//   update branch     =  old-id          new-id 
 // Se puede devolvera un vector del tipo Vec<(String, bool)>
 // Donde el String es la referencia y el bool es si fue exitosa o no
 // ESto se usara para decirle al cliente si la actualizacion fue exitosa o no
