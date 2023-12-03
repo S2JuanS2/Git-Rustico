@@ -175,12 +175,14 @@ fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: 
 {
     if hash_current == hash_prev
     {
-        push.add_status("No hay nada que acuatilizar. Estas al dia :)");
+        push.add_status("No hay cambios que subir");
         return false;
     }
     if is_ancestor(hash_current, hash_prev)
     {
-        push.add_status("No hay nada que acuatilizar. Haga fetch :)");
+        push.add_status("No hay cambios que subir");
+        push.add_status("Esta atrasado ...");
+        push.add_status("Haga pull :)");
         return false;
     };
     true
