@@ -356,6 +356,10 @@ impl GitServer {
     pub fn contains_reference(&self, reference: &str) -> bool {
         self.handle_references.contains_reference(reference)
     }
+
+    pub fn get_remote_reference_hash(&self, path_reference: &str) -> Option<String> {
+        self.handle_references.get_remote_reference_hash(path_reference)
+    }
 }
 
 /// Filtra las referencias basándose en un conjunto de hash de referencias.

@@ -198,6 +198,13 @@ impl HandleReferences {
     pub fn contains_reference(&self, path: &str) -> bool {
         self.references.contains_key(path)
     }
+
+    pub fn get_remote_reference_hash(&self, path_reference: &str) -> Option<String> {
+        if let Some(reference) = self.references.get(path_reference) {
+            return Some(reference.get_remote_commit().to_string());
+        }
+        None
+    }
 }
 
 #[cfg(test)]
@@ -309,5 +316,17 @@ mod tests {
         // Verificar que solo se obtenga la referencia que necesita actualización
         assert_eq!(references_for_updating.len(), 1);
         assert_eq!(references_for_updating[0].get_ref_path(), "refs/tags/v1.0.0");
+    }
+
+    #[test]
+    fn test_get_remote_reference_hash() {
+        let references = create_references();
+        let handle_references = HandleReferences::new_from_references(&references);
+
+        // Verificar que se obtenga el hash de la referencia remota
+        assert_eq!(handle_references.get_remote_reference_hash("refs/heads/main"), Some("abc123".to_string()));
+        assert_eq!(handle_references.get_remote_reference_hash("refs/heads/feature"), Some("def456".to_string()));
+        assert_eq!(handle_references.get_remote_reference_hash("refs/tags/v1.0.0"), Some("ghi789".to_string()));
+        assert_eq!(handle_references.get_remote_reference_hash("refs/tags/v1.0.1"), None);
     }
 }
