@@ -42,8 +42,20 @@ impl PushBranch
         self.status.push(format!("\tUrl del remoto: {}", &self.url_remote));
     }
 
+    fn add_status(&mut self, status: &str)
+    {
+        self.status.push(status.to_string());
+    }
 
+    fn get_status(&self) -> String
+    {
+        self.status.join("\n")
+    }
 
+    fn get_hash(&self) -> String
+    {
+        self.branch.get_hash().to_string()
+    }
 }
 /// Comandos que aceptare:
 /// git push -> push de la rama actual
@@ -77,7 +89,7 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
             &mut socket,
             client.get_ip(),
             client.get_port(),
-            PushBranch::new(path_local.to_string(), &name_branch)?,
+            &mut PushBranch::new(path_local.to_string(), &name_branch)?,
         );
     }
     if args[1] != "all" {
@@ -104,24 +116,26 @@ pub fn git_push_branch(
     socket: &mut TcpStream,
     ip: &str,
     port: &str,
-    push: PushBranch
+    push: &mut PushBranch
 ) -> Result<String, CommandsError> {
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
         GitRequest::generate_request_string(RequestCommand::ReceivePack, &push.url_remote, ip, port);
     
     let server = reference_discovery(socket, message, &push.url_remote, &Vec::new())?;
-    let prev_hash = match server.contains_reference(&push.branch.get_ref_path())
+    let prev_hash = match server.get_remote_reference_hash(&push.branch.get_ref_path())
     {
-        true => "0u093jr029jr0932j09r32j903r29j0".to_string(), // Actualizo en el remoto
-        false => ZERO_ID.to_string(), // Creo en el remoto
+        Some(hash) => hash, // Actualizo en el remoto
+        None => ZERO_ID.to_string(), // Creo en el remoto
     };
 
-    let hash_current = push.branch.get_hash();
-    // Si esta dentro de mi hash no hay que actualizar, habria que hacer pull
-    // 74730d410fcb6603ace96f1dc55ea6196122532d
-    // 0000000000000000000000000000000000000000
+    let current_hash = push.get_hash(); // Commit local
     
+    if !is_necessary_to_update(push, &current_hash, &prev_hash)
+    {
+        return Ok(push.get_status());
+    }
+
 
 
     Ok("Hola, soy baby push!".to_string())
@@ -156,3 +170,33 @@ fn get_name_current_branch(path_repo: &str) -> Result<String, UtilError>
         None => return Err(UtilError::CurrentBranchNotFound)
     }
 }
+
+fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: &str) -> bool
+{
+    if hash_current == hash_prev
+    {
+        push.add_status("No hay nada que acuatilizar. Estas al dia :)");
+        return false;
+    }
+    if is_ancestor(hash_current, hash_prev)
+    {
+        push.add_status("No hay nada que acuatilizar. Haga fetch :)");
+        return false;
+    };
+    true
+}
+
+
+fn is_ancestor(_hash_current: &str, hash_prev: &str) -> bool
+{
+    if hash_prev == ZERO_ID
+    {
+        return false;
+    }
+    // [TODO #5]
+    // Si el commit local no es ancestro del commit remoto, no se puede hacer push
+    // Se debe hacer pull
+    // Implementar la logica de ancestro
+    false
+}
+
