@@ -147,7 +147,6 @@ pub fn send_packfile(
 ) -> Result<(), UtilError> {
     let mut sha1 = Sha1::new();
 
-    send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
     // Envio signature
     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
     sha1.update(&PACK_BYTES);
@@ -172,8 +171,10 @@ pub fn send_packfile(
 
     // Envio de objetos
     for (object_type, content) in objects {
-        send_object(writer, object_type, content, &mut sha1)?;
+        send_object_enconder(writer, object_type, content, &mut sha1)?;
     }
+    let result = sha1.finalize();
+    send_bytes(writer, &result[..], UtilError::SendSha1Packfile)?; // Esto es nuevo, envio el sha1 del packfile
     Ok(())
 }
 
@@ -275,18 +276,19 @@ pub fn send_object_enconder(
     let object = ObjectEntry::new(obj_type, content.len());
     let mut bytes = object.to_bytes();
 
-    sha1.update(&object.to_bytes());
-    sha1.update(&content);
-
+    // sha1.update(&object.to_bytes());
+    
     let mut compressed_data: Vec<u8> = Vec::new();
     let mut zlib_encoder: ZlibEncoder<&[u8]> = ZlibEncoder::new(&content, Compression::default());
-
+    
     let _ = match zlib_encoder.read_to_end(&mut compressed_data) {
         Ok(n) => n,
         Err(_) => return Err(UtilError::ObjectSerialization),
     };
-
+    
+    // sha1.update(&content);
     bytes.extend(compressed_data);
+    sha1.update(&bytes);
     send_bytes(writer, &bytes, UtilError::SendObjectPackfile)?;
     Ok(())
 }

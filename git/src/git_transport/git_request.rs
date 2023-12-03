@@ -3,10 +3,11 @@ use std::io::Read;
 use std::net::TcpStream;
 use std::path::Path;
 
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH};
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::receive_request;
 use crate::git_transport::references::Reference;
+use crate::util::connections::send_message;
 use crate::util::errors::UtilError;
 use crate::util::packfile::{send_packfile, send_packfile_witch_references_client};
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
@@ -231,6 +232,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
         Ok(objects) => objects,
         Err(_) => return Err(UtilError::GetObjectsPackfile),
     };
+    send_message(stream, PKT_NAK, UtilError::SendNAKPackfile)?;
     send_packfile(stream, &server, objects)?; // Debo modificarlo, el NAK no debe estar dentro
     Ok("Clone exitoso".to_string())
 }
