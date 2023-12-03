@@ -1,11 +1,12 @@
 use super::errors::CommandsError;
 use crate::commands::config::GitConfig;
 use crate::consts::ZERO_ID;
+use crate::git_server::GitServer;
 use crate::git_transport::git_request::GitRequest;
 use crate::git_transport::references::{Reference, reference_discovery};
 use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
-use crate::util::connections::start_client;
+use crate::util::connections::{start_client, send_message, send_flush};
 use crate::util::errors::UtilError;
 use std::net::TcpStream;
 
@@ -133,12 +134,21 @@ pub fn git_push_branch(
     
     if !is_necessary_to_update(push, &current_hash, &prev_hash)
     {
-
         return Ok(push.get_status());
     }
 
-    
+    // AViso que actualizare mi branch
+    reference_update(socket, &prev_hash, &current_hash, &push.branch.get_ref_path())?;
 
+    // Envio el packfile
+    // TODO #6
+    // Se debe enviar el packfile al servidor
+    // Por mientras solo sera una una branch
+    // desde el hash previo hasta el hash actual
+    // Necesito una funcion que me devuelva el vector de objetos como el clone
+    
+    // Envio el packfile
+    
 
     Ok("Hola, soy baby push!".to_string())
 }
@@ -204,3 +214,10 @@ fn is_ancestor(_hash_current: &str, hash_prev: &str) -> bool
     false
 }
 
+fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str) -> Result<(), CommandsError>
+{   
+    let message = format!("{} {} {}", hash_prev, hash_update, path_ref);
+    send_message(socket, &message, UtilError::SendMessageReferenceUpdate)?;
+    send_flush(socket, UtilError::SendMessageReferenceUpdate)?;
+    Ok(())
+}
