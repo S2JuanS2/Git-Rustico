@@ -220,7 +220,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
         send_acknowledge_last_reference(stream, &local_hashes)?;
         
         let objects = get_objects_fetch(&mut server, local_hashes);
-        send_packfile(stream, &server, objects)?;
+        send_packfile(stream, &server, objects, true)?;
 
         return Ok("Fetch exitoso".to_string());
     }
@@ -231,7 +231,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
         Err(_) => return Err(UtilError::GetObjectsPackfile),
     };
     send_message(stream, PKT_NAK, UtilError::SendNAKPackfile)?;
-    send_packfile(stream, &server, objects)?; // Debo modificarlo, el NAK no debe estar dentro
+    send_packfile(stream, &server, objects, true)?; // Debo modificarlo, el NAK no debe estar dentro
     Ok("Clone exitoso".to_string())
 }
 

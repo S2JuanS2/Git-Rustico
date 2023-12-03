@@ -151,7 +151,7 @@ pub fn git_push_branch(
     println!("Se actualizo la referencia");
     
     let objects = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
-    send_packfile(socket, &server, objects)?;
+    send_packfile(socket, &server, objects, true)?;
     push.add_status("Se envio el packfile ...");
 
     // No se que me enviara el servidor

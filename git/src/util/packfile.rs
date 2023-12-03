@@ -143,7 +143,8 @@ fn read_objects_contained(reader: &mut dyn Read) -> Result<u32, UtilError> {
 pub fn send_packfile(
     writer: &mut dyn Write,
     server: &GitServer,
-    objects: Vec<(ObjectType, Vec<u8>)>
+    objects: Vec<(ObjectType, Vec<u8>)>,
+    decoder: bool
 ) -> Result<(), UtilError> {
     let mut sha1 = Sha1::new();
 
@@ -169,9 +170,16 @@ pub fn send_packfile(
     sha1.update(&number_objects.to_be_bytes());
     // println!("Number of objects: {}", number_objects);
 
-    // Envio de objetos
-    for (object_type, content) in objects {
-        send_object(writer, object_type, content, &mut sha1)?;
+    if decoder {
+        // Envio de objetos
+        for (object_type, content) in objects {
+            send_object(writer, object_type, content, &mut sha1)?;
+        }
+    } else {
+        // Envio de objetos
+        for (object_type, content) in objects {
+            send_object_enconder(writer, object_type, content, &mut sha1)?;
+        }
     }
     let result = sha1.finalize();
     send_bytes(writer, &result[..], UtilError::SendSha1Packfile)?; // Esto es nuevo, envio el sha1 del packfile
