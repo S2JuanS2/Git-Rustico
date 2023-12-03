@@ -8,7 +8,7 @@ use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
-use crate::util::objects::ObjectType;
+use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
@@ -378,6 +378,7 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
     let status = process_request_update(requests, objects)?;
     // let mut objects = get_objects();
 
+    send_status_update_request(stream, &status);
     println!("Funcion aun no implementada");
     Ok(())
 }
@@ -386,24 +387,22 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
 // [TODO #8]
 // Esta funcion es la que se encarga de procesar las actualizaciones de las referencias
 // Y de actualizar el repo
-// Recibe un vector de ReferencesUpdate y un vector de (ObjectType, Vec<u8>)
+// Recibe un vector de ReferencesUpdate y un vector de (ObjectEntry, Vec<u8>)
 // El vector de ReferencesUpdate son las referencias que el cliente quiere actualizar
 // Atributos de ReferencesUpdate:
 // - old: String -> Hash del objeto viejo
 // - new: String -> Hash del objeto nuevo
 // - path_refs: String -> Ruta de la referencia -> Ejemplo: refs/heads/master
-// El vector de (ObjectType, Vec<u8>) son los objetos que el cliente envio
-// Se debera devolver un vector de booleanos, donde cada booleano indica si la actualizacion
-// de la referencia fue exitosa o no
-// Si la actualizacion fue exitosa, el booleano sera true
-// Si la actualizacion no fue exitosa, el booleano sera false
-// 
+// Se puede devolvera un vector del tipo Vec<(String, bool)>
+// Donde el String es la referencia y el bool es si fue exitosa o no
+// ESto se usara para decirle al cliente si la actualizacion fue exitosa o no
 pub fn process_request_update(
-    requests: Vec<ReferencesUpdate>,
-    objects: Vec<(ObjectType, Vec<u8>)>,
-) -> Result<Vec<bool>, UtilError> {
+    _requests: Vec<ReferencesUpdate>,
+    _objects: Vec<(ObjectEntry, Vec<u8>)>,
+) -> Result<Vec<(String, bool)>, UtilError> {
     return Ok(Vec::new());
 }
+
 
 #[cfg(test)]
 mod tests {

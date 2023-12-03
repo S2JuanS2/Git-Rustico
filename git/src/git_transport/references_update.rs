@@ -1,4 +1,6 @@
-use crate::util::{errors::UtilError, validation::is_valid_obj_id};
+use std::io::Write;
+
+use crate::util::{errors::UtilError, validation::is_valid_obj_id, pkt_line::add_length_prefix, connections::send_message};
 
 use super::references::Reference;
 
@@ -34,4 +36,22 @@ impl ReferencesUpdate {
             }
             Ok(ReferencesUpdate::new(old, new, reference))
     }
+}
+
+
+pub fn send_status_update_request(writer: &mut dyn Write, reference: &Vec<(String, bool)>) -> Result<(), UtilError> {
+    // unpack ok\n
+    let signature = "unpack ok\n";
+    let message = add_length_prefix(signature, signature.len());
+    send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
+    
+    for (reference, status) in reference {
+        let message = match status {
+            true => format!("ok {}\n", reference),
+            false => format!("ng {} non-fast-forward\n", reference),
+        };
+        let message = add_length_prefix(&message, message.len());
+        send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
+    }
+    Ok(())
 }
