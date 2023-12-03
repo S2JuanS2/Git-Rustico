@@ -126,9 +126,9 @@ fn insert_line_between_lines(
 ///
 pub fn save_parent_log(directory: &str, commit: &str, branch_name: &str, path_log: &str) -> Result<(), CommandsError> {
 
-    if let Some(parent_hash) = extract_parent_hash(&commit){
+    if let Some(parent_hash) = extract_parent_hash(commit){
         if parent_hash != PARENT_INITIAL {
-            let mut parent_commit = git_cat_file(directory, &parent_hash, "-p")?;
+            let mut parent_commit = git_cat_file(directory, parent_hash, "-p")?;
             if parent_commit.lines().count() == 5{
                 parent_commit = insert_line_between_lines(&parent_commit, 1, PARENT_INITIAL);
             }

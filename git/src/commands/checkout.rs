@@ -26,11 +26,11 @@ use std::path::Path;
 pub fn handle_checkout(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     let directory = client.get_directory_path();
     if args.len() == 1 {
-        return Ok(git_checkout_switch(directory, args[0])?)
+        Ok(git_checkout_switch(directory, args[0])?)
     } else if args.len() == 2 {
         if args[0] == "-b" {
             git_branch_create(directory, args[1])?;
-            return Ok(git_checkout_switch(directory, args[1])?)
+            Ok(git_checkout_switch(directory, args[1])?)
         } else {
             return Err(CommandsError::FlagCheckoutNotRecognisedError);
         }
@@ -96,10 +96,8 @@ fn load_files(
             let new_path = format!("{}/{}", dir_path, path_file);
             load_files(directory, hash, mode, &new_path)?;
             let new_path_dir = format!("{}/{}", directory, new_path);
-            if mode == 1 && is_folder_empty(&new_path_dir)?{
-                if fs::remove_dir(new_path_dir).is_err(){
-                    return Err(CommandsError::RemoveFileError);
-                };
+            if mode == 1 && is_folder_empty(&new_path_dir)? && fs::remove_dir(new_path_dir).is_err() {
+                return Err(CommandsError::RemoveFileError);
             }
         }
     }

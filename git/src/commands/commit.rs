@@ -247,7 +247,7 @@ fn create_or_replace_commit_into_branch(
 fn check_index_content(git_dir: &str) -> Result<(), CommandsError> {
     let index_content = get_index_content(git_dir)?;
     if index_content.trim().is_empty() {
-        return Err(CommandsError::CommitEmptyIndex.into());
+        return Err(CommandsError::CommitEmptyIndex);
     }
     Ok(())
 }
