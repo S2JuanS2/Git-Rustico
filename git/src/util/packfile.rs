@@ -178,35 +178,6 @@ pub fn send_packfile(
     Ok(())
 }
 
-// pub fn send_packfile_witch_references_client(
-//     writer: &mut dyn Write,
-//     server: &GitServer,
-//     _path_repo: &str,
-// ) -> Result<(), UtilError> {
-//     // [REFACTOR, SE REPITE CON EL HEADER CON send_packfile]
-//     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
-//     // Envio signature
-//     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
-
-//     // Envio version
-//     send_bytes(
-//         writer,
-//         &server.version.to_be_bytes(),
-//         UtilError::SendSignaturePackfile,
-//     )?;
-
-//     // Envio el len
-
-//     // Envio los de objetos
-//     // [TODO - X -> Aun no codees, lo estoy pensando]
-//     // Pero la diferencia de esta funcion, es que no tengo que enviar todos los objs.
-//     // en el server tengo el miembro client_references que tiene un vector con las referencias
-//     // que ya tiene el cliente
-//     // entonces solo tengo que enviar los objetos que el cliente no tiene
-//     // EN resumen, necesito el vector de objetos a enviar para poder continuar con el envio
-
-//     Ok(())
-// }
 
 pub fn send_object(
     writer: &mut dyn Write,
