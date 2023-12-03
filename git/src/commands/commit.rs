@@ -4,12 +4,11 @@ use crate::models::client::Client;
 use crate::util::files::*;
 use crate::util::index::{open_index, recovery_index};
 use crate::util::objects::builder_object_commit;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, FixedOffset, Utc};
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::commands::branch::get_current_branch;
 
@@ -161,23 +160,43 @@ pub fn builder_commit_log(
 /// ###Parametros:
 /// 'commit': Estructura que contiene la información del commit
 fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) -> String {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time error")
-        .as_secs();
-
-    let content = format!(
-        "tree {}\nparent {}\nauthor {} <{}> {} -0300\ncommitter {} <{}> {} -0300\n\n{}\n",
-        tree_hash,
-        parent_hash,
-        commit.get_author_name(),
-        commit.get_author_email(),
-        timestamp,
-        commit.get_committer_name(),
-        commit.get_committer_email(),
-        timestamp,
-        commit.get_message()
-    );
+    
+    let date: DateTime<Utc> = Utc::now();
+    let timestamp = date.timestamp();
+    let offset = FixedOffset::west_opt(3 * 3600).unwrap().to_string();
+    let offset_format: String = offset.chars().filter(|&c| c != ':').collect();
+    println!("{}", offset_format);
+    let content;   
+    if parent_hash == PARENT_INITIAL {
+        content = format!(
+            "tree {}\nauthor {} <{}> {} {}\ncommitter {} <{}> {} {}\n\n{}\n",
+            tree_hash,
+            commit.get_author_name(),
+            commit.get_author_email(),
+            timestamp,
+            offset_format,
+            commit.get_committer_name(),
+            commit.get_committer_email(),
+            timestamp,
+            offset_format,
+            commit.get_message()
+        );
+    }else{
+        content = format!(
+            "tree {}\nparent {}\nauthor {} <{}> {} {}\ncommitter {} <{}> {} {}\n\n{}\n",
+            tree_hash,
+            parent_hash,
+            commit.get_author_name(),
+            commit.get_author_email(),
+            timestamp,
+            offset_format,
+            commit.get_committer_name(),
+            commit.get_committer_email(),
+            timestamp,
+            offset_format,
+            commit.get_message()
+        );
+    }
     content
 }
 
@@ -247,7 +266,7 @@ fn create_or_replace_commit_into_branch(
 fn check_index_content(git_dir: &str) -> Result<(), CommandsError> {
     let index_content = get_index_content(git_dir)?;
     if index_content.trim().is_empty() {
-        return Err(CommandsError::CommitEmptyIndex.into());
+        return Err(CommandsError::CommitEmptyIndex);
     }
     Ok(())
 }

@@ -174,10 +174,7 @@ impl HandleReferences {
         let mut new_refences: HashMap<String, ReferenceInformation> = HashMap::new();
         for path in path_references {
             if let Some(reference) = self.references.get(&path) {
-                let local_commit = match reference.get_local_commit() {
-                    Some(commit) => Some(commit.to_string()),
-                    None => None,
-                };
+                let local_commit = reference.get_local_commit().map(|commit| commit.to_string());
                 new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), local_commit));
             }
         }

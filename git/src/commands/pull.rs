@@ -36,6 +36,7 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
         client.get_ip(),
         client.get_port(),
         client.get_directory_path(),
+        client.clone(),
     )
 }
 
@@ -45,6 +46,7 @@ pub fn git_pull(
     ip: &str,
     port: &str,
     repo_local: &str,
+    client: Client,
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Pull del repositorio remoto ...");
@@ -56,7 +58,7 @@ pub fn git_pull(
     };
     let name_branch = current_rfs.get_name();
     
-    let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
+    let result =  git_fetch_branch(socket, ip, port, repo_local, name_branch)?;
     status.push(format!("{}", result));
     println!("Result del fetch: {}", result);
 
@@ -64,7 +66,7 @@ pub fn git_pull(
     let mut fetch_head = FetchHead::new_from_file(repo_local)?;
     if !fetch_head.references_needs_update(current_rfs.get_name())
     {
-        status.push(format!("No hay actualizaciones para mergear"));
+        status.push("No hay actualizaciones para mergear".to_string());
         return Ok(status.join("\n"));
     }
 
@@ -76,11 +78,11 @@ pub fn git_pull(
     };
     println!("Remote branch ref: {}", remote_branch_ref);
     println!("Mergeando con el repositorio remoto ...");
-    let merge_result = git_merge(repo_local, &remote_branch_ref)?;
+    let merge_result = git_merge(repo_local, &remote_branch_ref, client)?;
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);
         status.push(format!("Error: El siguiente archivo se sobrescribiría al fusionarlo:\n\t{}\nAborting.", path_conflict));
-        status.push(format!("No se puede hacer pull ya que hay conflictos"));
+        status.push("No se puede hacer pull ya que hay conflictos".to_string());
         return Ok(status.join("\n"));
     }
     

@@ -263,7 +263,7 @@ pub fn builder_object_tag(content: &str, git_dir: &str) -> Result<String, UtilEr
     let header = format!("{} {}\0", TAG, content_size);
     let store = header + content;
     
-    let tag_hash = hash_generate(&content);
+    let tag_hash = hash_generate(content);
     
     let file_object = builder_object(git_dir, &tag_hash)?;
     compressor_object(store, file_object)?;

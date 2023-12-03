@@ -180,8 +180,7 @@ fn recovery_blob(
 ) -> Result<usize, CommandsError> {
     if i < content.len(){
         let route: Vec<_> = path_dir_cloned.components().skip(repo_count)
-        .map(|c| c.as_os_str().to_str())
-        .filter_map(|s| s)
+        .filter_map(|c| c.as_os_str().to_str())
         .collect();
         let blob_content = read_blob(&content[i].1)?;
         let blob_content_bytes = blob_content.clone();

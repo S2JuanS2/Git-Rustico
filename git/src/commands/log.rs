@@ -56,6 +56,7 @@ pub fn git_log(directory: &str) -> Result<String, CommandsError> {
 pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
     let mut count_line = 0;
+    let mut first = true;
     for line in lines {
         if count_line == 1 {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -69,12 +70,16 @@ pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
             };
             let date_time = chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
             formatted_result.push_str(&format!("Date: {}\n", date_time));
-        } else if count_line == 6 {
+        } else if count_line == 5 && first {
+            formatted_result.push('\n');
+            formatted_result.push_str(&format!("\t{}\n", line));
+        }else if count_line == 6 && !first{
             formatted_result.push('\n');
             formatted_result.push_str(&format!("\t{}\n", line));
         }
         count_line += 1;
-        if count_line == 7 {
+        if count_line == 7 || (count_line == 6 && first) {
+            first = false;
             count_line = 1;
             formatted_result.push('\n');
         }
@@ -126,9 +131,9 @@ fn insert_line_between_lines(
 ///
 pub fn save_parent_log(directory: &str, commit: &str, branch_name: &str, path_log: &str) -> Result<(), CommandsError> {
 
-    if let Some(parent_hash) = extract_parent_hash(&commit){
+    if let Some(parent_hash) = extract_parent_hash(commit){
         if parent_hash != PARENT_INITIAL {
-            let mut parent_commit = git_cat_file(directory, &parent_hash, "-p")?;
+            let mut parent_commit = git_cat_file(directory, parent_hash, "-p")?;
             if parent_commit.lines().count() == 5{
                 parent_commit = insert_line_between_lines(&parent_commit, 1, PARENT_INITIAL);
             }

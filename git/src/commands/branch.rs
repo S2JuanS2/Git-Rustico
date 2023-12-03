@@ -24,6 +24,23 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, Commands
     }
 }
 
+/// Obtiene el hash parent del commit
+/// ###Parametros:
+/// 'commit': Commit a buscar el parent
+pub fn get_parent_hashes(
+    commit: String,
+) -> String {
+    let mut hash_parent = PARENT_INITIAL;
+    for line in commit.lines() {
+        if line.starts_with("parent ") {
+            if let Some(hash) = line.strip_prefix("parent ") {
+                hash_parent = hash;
+            }
+        }
+    }
+    hash_parent.to_string()
+}
+
 /// Devuelve el hash de la branch recibida por parametro.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
@@ -61,7 +78,22 @@ pub fn get_current_branch(directory: &str) -> Result<String, CommandsError> {
     Ok(branch)
 }
 
-/// Muestra por pantalla las branch existentes.
+/// Muestra en una etiqueta las branches existentes.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+pub fn git_branch_list_display(directory: &str) -> Result<String, CommandsError> {
+    let branches = get_branch(directory)?;
+    let mut formatted_branches = String::new();
+    for branch in branches {
+        let dir_branch = format!("{}/{}/{}/heads/{}", directory, GIT_DIR, REFS, branch);
+        let file = open_file(&dir_branch)?;
+        let hash = read_file_string(file)?;
+        formatted_branches.push_str(&format!(" - {} [{}]\n", branch, &hash[..7]))
+    }
+    Ok(formatted_branches)
+}
+
+/// Muestra por pantalla las branches existentes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 pub fn git_branch_list(directory: &str) -> Result<String, CommandsError> {
@@ -324,5 +356,15 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(result, Ok("test_branch3".to_string()));
+    }
+
+    #[test]
+    fn test_parent(){
+
+        let commit = "tree 4abc6b1e60a965f4dfefbc673322f1c6e98c8b08\nparent ebc52673798d1baf34d9c8b13022c745bac28880\nauthor S2JuanS2 <juansdelrio@hotmail.com> 1701632634 -0300\ncommitter S2JuanS2 <juansdelrio@hotmail.com> 1701632634 -0300\n\ncarpeta\n";
+
+        let result = get_parent_hashes(commit.to_string());
+
+        assert_eq!(result, "ebc52673798d1baf34d9c8b13022c745bac28880");
     }
 }

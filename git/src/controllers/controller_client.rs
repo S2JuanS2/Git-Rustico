@@ -14,7 +14,7 @@ use crate::models::client::Client;
 use crate::util::files::is_git_initialized;
 use crate::util::logger::write_client_log;
 
-use crate::commands::branch::get_current_branch;
+use crate::commands::branch::{get_current_branch, git_branch_list_display};
 use gtk::prelude::LabelExt;
 
 #[derive(Clone)]
@@ -74,6 +74,13 @@ impl Controller {
         let current_branch = get_current_branch(self.client.get_directory_path())?;
         self.current_branch = current_branch;
         Ok(())
+    }
+    pub fn set_branch_list(&self, label_branches: &gtk::Label) {
+        let branches = match git_branch_list_display(self.client.get_directory_path()){
+            Ok(branches) => branches,
+            Err(_) => return eprintln!("Not found branches"),
+        };
+        label_branches.set_text(&branches);
     }
     pub fn set_label_branch(&self, label_branch: &gtk::Label) {
         let current_branch = self.get_current_branch();

@@ -611,7 +611,7 @@ impl GitConfig {
     pub fn get_remotes_in_use(&self) -> HashSet<String>
     {
         let mut remotes = HashSet::new();
-        for (_, branch_info) in &self.branch
+        for branch_info in self.branch.values()
         {
             if let Some(remote) = branch_info.get_value("remote")
             {
@@ -654,13 +654,13 @@ impl GitConfig {
             Some(fetch) => fetch,
             None => return None,
         };
-        let parts = fetch.split(":").collect::<Vec<&str>>();
+        let parts = fetch.split(':').collect::<Vec<&str>>();
         if parts.len() != 2
         {
             return None;
         }
         let location: &str = parts[1].trim();
-        let location = &location.replace("*", name_branch);
+        let location = &location.replace('*', name_branch);
         Some(location.to_string())
     }
 }

@@ -515,13 +515,13 @@ pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError> {
     }
     let hash = line_split
         .next()
-        .ok_or_else(|| UtilError::ExpectedHashInAckResponse)?;
+        .ok_or(UtilError::ExpectedHashInAckResponse)?;
     if !is_valid_obj_id(hash) {
         return Err(UtilError::InvalidHashInAckResponse);
     }
     let status = line_split
         .next()
-        .ok_or_else(|| UtilError::ExpectedStatusInAckResponse)?;
+        .ok_or(UtilError::ExpectedStatusInAckResponse)?;
     if status != "continue" {
         return Err(UtilError::ExpectedStatusContinueInAckResponse);
     }
