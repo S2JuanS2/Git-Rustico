@@ -12,6 +12,32 @@ use std::path::{Path, PathBuf};
 
 use super::cat_file::git_cat_file;
 
+#[derive(Debug)]
+pub struct StatusData {
+    updated_files_list: Vec<(String, String)>,
+    untracked_files_list: Vec<(String, String)>,
+    staged_files_list: Vec<(String, String)>,
+    deleted_files_list: Vec<String>,
+}
+
+impl StatusData {
+    pub fn updated_files_list(&self) -> &Vec<(String, String)> {
+        &self.updated_files_list
+    }
+
+    pub fn untracked_files_list(&self) -> &Vec<(String, String)> {
+        &self.untracked_files_list
+    }
+
+    pub fn staged_files_list(&self) -> &Vec<(String, String)> {
+        &self.staged_files_list
+    }
+
+    pub fn deleted_files_list(&self) -> &Vec<String> {
+        &self.deleted_files_list
+    }
+}
+
 /// Esta función se encarga de llamar al comando status con los parametros necesarios.
 /// ###Parametros:
 /// 'args': Vector de strings que contiene los argumentos que se le pasan a la función status
@@ -67,14 +93,17 @@ pub fn git_status(directory: &str) -> Result<String, CommandsError> {
 
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
     let index_hashes = get_hashes_index(index_files)?;
-    let (updated_files_list, untracked_files_list, staged_files_list, deleted_files_list) =
-        compare_hash_lists(&working_directory_hash_list, &index_hashes, directory);
-    let files_not_commited_list = check_for_commit(directory, staged_files_list)?;
+    let status_data = compare_hash_lists(&working_directory_hash_list, &index_hashes, directory);
+    let updated_files_list = status_data.updated_files_list();
+    let untracked_files_list = status_data.untracked_files_list();
+    let staged_files_list = status_data.staged_files_list();
+    let deleted_files_list = status_data.deleted_files_list();
+    let files_not_commited_list = check_for_commit(directory, staged_files_list.to_vec())?;
     let value = print_changes(
-        updated_files_list,
-        untracked_files_list,
+        updated_files_list.to_vec(),
+        untracked_files_list.to_vec(),
         files_not_commited_list,
-        deleted_files_list,
+        deleted_files_list.to_vec(),
         directory,
     )?;
 
@@ -298,12 +327,7 @@ pub fn compare_hash_lists(
     working_directory_hash_list: &HashMap<String, String>,
     index_hashes: &Vec<(String, String)>,
     directory: &str,
-) -> (
-    Vec<(String, String)>,
-    Vec<(String, String)>,
-    Vec<(String, String)>,
-    Vec<String>,
-) {
+) -> StatusData {
     let mut updated_files_list: Vec<(String, String)> = Vec::new();
     let mut untracked_files_list: Vec<(String, String)> = Vec::new();
     let mut staged_files_list: Vec<(String, String)> = Vec::new();
@@ -336,12 +360,12 @@ pub fn compare_hash_lists(
     }
     let deleted_files_list =
         check_for_deleted_files(index_hashes, working_directory_hash_list, directory);
-    (
+    StatusData {
         updated_files_list,
         untracked_files_list,
         staged_files_list,
         deleted_files_list,
-    )
+    }
 }
 
 /// Devuelve un vector con los nombres de los archivos que se eliminaron del working directory pero siguen en el index.

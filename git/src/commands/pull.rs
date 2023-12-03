@@ -56,7 +56,7 @@ pub fn git_pull(
     };
     let name_branch = current_rfs.get_name();
     
-    let result =  git_fetch_branch(socket, ip, port, repo_local, &name_branch)?;
+    let result =  git_fetch_branch(socket, ip, port, repo_local, name_branch)?;
     status.push(format!("{}", result));
     println!("Result del fetch: {}", result);
 
@@ -64,7 +64,7 @@ pub fn git_pull(
     let mut fetch_head = FetchHead::new_from_file(repo_local)?;
     if !fetch_head.references_needs_update(current_rfs.get_name())
     {
-        status.push(format!("No hay actualizaciones para mergear"));
+        status.push("No hay actualizaciones para mergear".to_string());
         return Ok(status.join("\n"));
     }
 
@@ -80,7 +80,7 @@ pub fn git_pull(
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);
         status.push(format!("Error: El siguiente archivo se sobrescribiría al fusionarlo:\n\t{}\nAborting.", path_conflict));
-        status.push(format!("No se puede hacer pull ya que hay conflictos"));
+        status.push("No se puede hacer pull ya que hay conflictos".to_string());
         return Ok(status.join("\n"));
     }
     

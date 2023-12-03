@@ -116,8 +116,8 @@ pub fn read_file(mut file: File) -> Result<Vec<u8>, UtilError> {
 /// ###Parametros:
 /// 'file': ruta del archivo a eliminar.
 pub fn delete_file(path_file: &str) -> Result<(),UtilError> {
-    if fs::metadata(&path_file).is_ok() {
-        match fs::remove_file(&path_file) {
+    if fs::metadata(path_file).is_ok() {
+        match fs::remove_file(path_file) {
             Ok(_) => (),
             Err(_) => return Err(UtilError::DeleteFileError),
         }
@@ -168,10 +168,10 @@ pub fn ensure_directory_clean(directory: &str) -> Result<(), UtilError> {
 /// Implementación interna que asegura que el directorio esté limpio.
 fn _ensure_directory_clean(directory: &str) -> io::Result<()> {
     if !std::path::Path::new(&directory).exists() {
-        fs::create_dir_all(&directory)?;
+        fs::create_dir_all(directory)?;
     } else {
         // Elimina todos los archivos existentes en el directorio
-        for entry in fs::read_dir(&directory)? {
+        for entry in fs::read_dir(directory)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() {

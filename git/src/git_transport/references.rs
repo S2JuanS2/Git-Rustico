@@ -126,17 +126,7 @@ impl Reference {
     }
 
     pub fn is_valid_references_path(ref_path: &str) -> bool {
-        if ref_path == "HEAD" {
-            true
-        } else if ref_path.starts_with("refs/tags/") {
-            true
-        } else if ref_path.starts_with("refs/heads/") {
-            true
-        } else if ref_path.starts_with("refs/remotes/") {
-            true
-        } else {
-            false
-        }
+        ref_path == "HEAD" || ref_path.starts_with("refs/tags/") || ref_path.starts_with("refs/heads/") || ref_path.starts_with("refs/remotes/")
     }
 
     /// Obtiene la referencia actual (HEAD) de un repositorio local Git.
@@ -267,7 +257,7 @@ pub fn recovery_commits(directory: &str,
     hashes_commits: &mut Vec<String>,
 ) -> Result<(), GitError>{
     let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
-    object_commit.1 = get_content(directory, &hash_commit)?;
+    object_commit.1 = get_content(directory, hash_commit)?;
     save_object_pack(objects, object_commit);
     
     if let Some(parent_hash) = extract_parent_hash(&commit) {

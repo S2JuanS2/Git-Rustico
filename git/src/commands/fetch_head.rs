@@ -165,7 +165,7 @@ impl FetchHead {
     fn _write(&self, fetch_head_path: &str) -> io::Result<()>
     {
         let mut file = fs::File::create(fetch_head_path)?;
-        for (_, entry) in &self.entries {
+        for entry in self.entries.values() {
             let line = format!("{}", entry);
             file.write_all(line.as_bytes())?;
         }
@@ -230,7 +230,7 @@ impl FetchHead {
             None => return Err(CommandsError::ReferenceNotFound),
         };
         if entry.label != Label::Merge {
-            return Err(CommandsError::MergeNotAllowedError);
+            Err(CommandsError::MergeNotAllowedError)
         } else {
             self.entries.remove(branch_name);
             Ok(())
