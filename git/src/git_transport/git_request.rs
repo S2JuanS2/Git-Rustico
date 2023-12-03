@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 use std::io::Read;
 use std::net::TcpStream;
@@ -9,7 +10,8 @@ use crate::git_transport::negotiation::receive_request;
 use crate::git_transport::references::Reference;
 use crate::util::connections::send_message;
 use crate::util::errors::UtilError;
-use crate::util::packfile::{send_packfile, send_packfile_witch_references_client};
+use crate::util::objects::ObjectType;
+use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
 
@@ -202,27 +204,24 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
 
     if !had_objects.is_empty() {
         // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
-
         server.update_data(capabilities, wanted_objects);
-        // [TODO #4]
-        // Dado las referencias(had_objects: Vector de hashes) que el cliente supuestamente tiene
-        // Se deben filtrar las referencias que tiene el servidor
-        // Me debes devolver un Vec<Reference> con las referencias que tenemos en comun
-        // Acordate que el repo esta en path_repo
-        // let local_references = search_available_references(had_objects)
-        let local_references: Vec<Reference> = Vec::new();
+        let local_hashes = search_available_references(path_repo, &had_objects);
+        
+        // Si un hash es una referencia, entonces el cliente ya tiene ese objeto
+        server.filter_available_references(&local_hashes);
         // Confirmo las referencias del usuario que el servidor tiene disponibles
-        sent_references_valid_client(stream, &local_references)?;
+        sent_references_valid_client(stream, &local_hashes)?;
         // Actualizo las referencias disponibles del servidor
-        server.update_local_references(&local_references);
+        // server.update_local_references(&local_references);
 
         // Las confirmaciones terminan con recibiendo un done
         receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
 
         // Envio el ultimo ACK
-        send_acknowledge_last_reference(stream, &local_references)?;
-        // server.save_references_client(obj_hash); // UPDATE
-        send_packfile_witch_references_client(stream, &server, path_repo)?;
+        send_acknowledge_last_reference(stream, &local_hashes)?;
+        
+        let objects = get_objects_fetch(&mut server, local_hashes);
+        send_packfile(stream, &server, objects)?;
 
         return Ok("Fetch exitoso".to_string());
     }
@@ -236,6 +235,28 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
     send_packfile(stream, &server, objects)?; // Debo modificarlo, el NAK no debe estar dentro
     Ok("Clone exitoso".to_string())
 }
+
+
+// [TODO #4]
+// Dado las referencias(local_hash: Vector de hashes) que el cliente supuestamente tiene
+// Se deben filtrar los hash que tiene el servidor
+// Me debes devolver un Vec<String> con los hash que tenemos en comun
+// Acordate que el repo esta en path_repo
+pub fn search_available_references(
+    _path_repo: &str,
+    local_hash: &Vec<String>,
+) -> Vec<String> {
+    let mut _confirmed_commits: Vec<String> = Vec::new();
+    for _hash in local_hash {
+        // Ejemplo de como seria
+        // if reference.la_tenemos() {
+        //     available_references.push(reference);
+        // }
+        println!("AQUI IRIA TU TODO");
+    }
+    _confirmed_commits
+}
+
 
 /// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.
 /// Esta función toma los datos de la solicitud Git y los divide en comandos y argumentos.
@@ -323,6 +344,25 @@ fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> 
         return Err(UtilError::RepoNotFoundError(pathname.to_string()));
     }
     Ok(path_repo)
+}
+
+
+// [TODO #7]
+// Pero la diferencia de esta funcion, es que no tengo que enviar todos los objs.
+// Las referencias que tengo que enviar son las que el cliente no tiene
+// Estan estan en &git_server.available_references
+// Y los hash que el cliente tiene y nosotros validamos que ya teniamos estan en _confirmed_hashes
+// Te elimino el HEAD en las referencias por posibles bugs
+pub fn get_objects_fetch(git_server: &mut GitServer, _confirmed_hashes: Vec<String>) -> Vec<(ObjectType, Vec<u8>)>
+{
+    let mut _objects: Vec<(ObjectType, Vec<u8>)> = Vec::new();
+    git_server.delete_head_in_available_references();
+    let _references = &git_server.available_references;
+    // for reference in &git_server.client_references {
+    //     let mut objects_reference = get_objects(&git_server.path, &[reference.clone()]).unwrap();
+    //     objects.append(&mut objects_reference);
+    // }
+    _objects
 }
 
 #[cfg(test)]
