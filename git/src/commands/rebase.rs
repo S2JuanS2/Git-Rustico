@@ -31,7 +31,7 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
     let log_rebase_branch = get_log_from_branch(directory, branch_name)?;
 
     formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
-    let result_merge = try_for_merge(directory, branch_name, &client, "rebase")?;
+    let result_merge = try_for_merge(directory, &current_branch, branch_name, &client, "rebase")?;
 
     formatted_result.push_str(result_merge.as_str());
     if !result_merge.contains("CONFLICT") {

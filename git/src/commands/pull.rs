@@ -1,3 +1,4 @@
+use crate::commands::branch::get_current_branch;
 use crate::commands::config::GitConfig;
 use crate::commands::fetch::git_fetch_branch;
 use crate::commands::fetch_head::FetchHead;
@@ -106,7 +107,8 @@ pub fn git_pull(
     };
     println!("Remote branch ref: {}", remote_branch_ref);
     println!("Mergeando con el repositorio remoto ...");
-    let merge_result = git_merge(repo_local, &remote_branch_ref, client)?;
+    let current_branch = get_current_branch(repo_local)?;
+    let merge_result = git_merge(repo_local, &current_branch, &remote_branch_ref, client)?;
     println!("Result del merge: {}", merge_result);
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);

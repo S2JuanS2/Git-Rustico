@@ -21,15 +21,16 @@ pub fn handle_merge(args: Vec<&str>, client: Client) -> Result<String, CommandsE
     }
     let directory = client.get_directory_path();
     let branch_name = args[0];
-    git_merge(directory, branch_name, client.clone())
+    let current_branch = get_current_branch(directory)?;
+    git_merge(directory, &current_branch, branch_name, client.clone())
 }
 
 /// Ejecuta la accion de merge en el repositorio local.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
-pub fn git_merge(directory: &str, branch_name: &str, client: Client) -> Result<String, CommandsError> {
-    let formatted_result = try_for_merge(directory, branch_name, &client, "merge")?;
+pub fn git_merge(directory: &str, current_branch: &str, branch_name: &str, client: Client) -> Result<String, CommandsError> {
+    let formatted_result = try_for_merge(directory, current_branch, branch_name, &client, "merge")?;
     Ok(formatted_result)
 }
 
@@ -37,8 +38,8 @@ pub fn git_merge(directory: &str, branch_name: &str, client: Client) -> Result<S
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
-pub fn try_for_merge(directory: &str, branch_name: &str, client: &Client, merge_type: &str) -> Result<String, CommandsError> {
-    let current_branch = get_current_branch(directory)?;
+pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, client: &Client, merge_type: &str) -> Result<String, CommandsError> {
+    // let current_branch = get_current_branch(directory)?;
     let path_current_branch = get_refs_path(directory, &current_branch);
     let path_branch_to_merge = get_refs_path(directory, branch_name);
     let (current_branch_hash, branch_to_merge_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
@@ -711,7 +712,7 @@ mod tests {
             "master".to_string(),
         );
 
-        let result = git_merge(directory, "new_branch", client);
+        let result = git_merge(directory, "master", "new_branch", client);
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
@@ -813,7 +814,7 @@ mod tests {
             "master".to_string(),
         );
 
-        let result = git_merge(directory, "new_branch", client);
+        let result = git_merge(directory, "otra_mas", "new_branch", client);
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
@@ -915,7 +916,7 @@ mod tests {
             "master".to_string(),
         );
 
-        let result = git_merge(directory, "new_branch", client);
+        let result = git_merge(directory, "otra_mas", "new_branch", client);
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
@@ -1005,7 +1006,7 @@ mod tests {
         let log_path_local = format!("{}/.git/logs/refs/heads/new_branch", directory);
         fs::remove_file(log_path_local).expect("Error al remover el archivo");
 
-        let result = git_merge(directory, "refs/remotes/origin/fetch", client);
+        let result = git_merge(directory, "master", "refs/remotes/origin/fetch", client);
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
         assert!(result.is_ok());
@@ -1105,7 +1106,7 @@ mod tests {
         let log_path_local = format!("{}/.git/logs/refs/heads/new_branch", directory);
         fs::remove_file(log_path_local).expect("Error al remover el archivo");
 
-        let result = git_merge(directory, "refs/remotes/origin/fetch", client);
+        let result = git_merge(directory, "master", "refs/remotes/origin/fetch", client);
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
         assert!(result.is_ok());
