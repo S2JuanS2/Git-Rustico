@@ -3,16 +3,18 @@ use std::io::Read;
 use std::net::TcpStream;
 use std::path::Path;
 
-use crate::commands::branch::get_parent_hashes;
+use crate::commands::branch::{get_parent_hashes, get_current_branch};
 use crate::commands::cat_file::git_cat_file;
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL};
+use crate::commands::commit::create_or_replace_commit_into_branch;
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL, GIT_DIR};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
 use crate::git_transport::references_update::send_decompressed_package_status;
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
 use crate::util::files::{open_file, read_file_string};
-use crate::util::objects::{ObjectType, ObjectEntry};
+use crate::util::formats::{hash_generate_with_bytes, compressor_object_with_bytes};
+use crate::util::objects::{ObjectType, ObjectEntry, builder_object};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
@@ -427,7 +429,7 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
     let requests = receive_reference_update_request(stream, &mut server)?;
     let objects = receive_packfile(stream)?;
 
-    match process_request_update(requests, objects)
+    match process_request_update(requests, objects, path_repo)
     {
         Ok(status) => send_decompressed_package_status(stream, &status),
         Err(_) => send_decompression_failure_status(stream),
@@ -454,10 +456,54 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
 // EL falso es solo si no se puede actualizar
 // SI el paquete esta corrupto se debe enviar un error
 pub fn process_request_update(
-    _requests: Vec<ReferencesUpdate>,
-    _objects: Vec<(ObjectEntry, Vec<u8>)>,
+    requests: Vec<ReferencesUpdate>,
+    objects: Vec<(ObjectEntry, Vec<u8>)>,
+    path_repo: &str
 ) -> Result<Vec<(String, bool)>, UtilError> {
-    Ok(Vec::new())
+
+    let mut result_vec: Vec<(String, bool)> = Vec::new();
+    let mut result: (String, bool) = ("".to_string(), false);
+
+    if let Some(branch_hash) = requests.get(0){
+        let path_reference = branch_hash.get_path_refs();
+        let hash_reference_new = branch_hash.get_new();
+        let hash_reference_old = branch_hash.get_old();
+
+        if hash_reference_new != hash_reference_old {
+            for object in objects{
+                if object.0.obj_type == ObjectType::Commit{
+                    let hash_commit = hash_generate_with_bytes(object.1.clone());
+                    let file = builder_object(path_repo, &hash_commit)?;
+                    compressor_object_with_bytes(object.1, file)?;
+                }else if object.0.obj_type == ObjectType::Tree{
+                    let hash_tree = hash_generate_with_bytes(object.1.clone());
+                    let file = builder_object(path_repo, &hash_tree)?;
+                    compressor_object_with_bytes(object.1, file)?;
+                }else if object.0.obj_type == ObjectType::Blob{
+                    let hash_blob = hash_generate_with_bytes(object.1.clone());
+                    let file = builder_object(path_repo, &hash_blob)?;
+                    compressor_object_with_bytes(object.1, file)?;
+                }
+            }
+            let current_branch = get_current_branch(path_repo)?;
+            let branch_current_path = format!("{}/{}/{}", path_repo, GIT_DIR, path_reference);
+            create_or_replace_commit_into_branch(current_branch, branch_current_path, hash_reference_new.to_string())?;
+    
+            result.0 = hash_reference_new.to_string();
+            result.1 = true;
+    
+            result_vec.push(result.clone());   
+        }else{
+            result.0 = "".to_string();
+            result.1 = true;
+            result_vec.push(result.clone());
+        }
+    };
+    if result_vec.is_empty() {
+        result_vec.push(result);
+    }
+
+    Ok(result_vec)
 }
 
 
