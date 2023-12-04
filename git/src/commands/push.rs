@@ -167,10 +167,10 @@ pub fn git_push_branch(
     println!("Socekt: {:?}", socket);
     // No se que me enviara el servidor
     // Por eso leere todo para examinar la respuesta de daemon
-    let mut buf = Vec::new();
-    socket.read_to_end(&mut buf).unwrap_err();
-    println!("Len buf: {}", buf.len());
-    println!("Respuesta del servidor: {:?}", String::from_utf8(buf).unwrap());
+    // let mut buf = Vec::new();
+    // socket.read_to_end(&mut buf).unwrap_err();
+    // println!("Len buf: {}", buf.len());
+    // println!("Respuesta del servidor: {:?}", String::from_utf8(buf).unwrap());
     // let lines = pkt_line::read_pkt_line(socket)?;
     // println!("Line{:?}", lines);
     // println!("Line in string: {}", String::from_utf8(lines).unwrap());
