@@ -13,7 +13,7 @@ use std::{
     net::TcpStream,
 };
 
-use super::references::Reference;
+use super::{references::Reference, references_update::ReferencesUpdate};
 
 /// Envía mensajes de tipo de solicitud (`want` o `have`) al servidor para solicitar
 /// o confirmar referencias.
@@ -539,6 +539,51 @@ pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_se
     }
     message = pkt_line::add_length_prefix(&message, message.len());
     send_message(writer, &message, UtilError::UploadRequest)
+}
+
+
+pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut GitServer) -> Result<Vec<ReferencesUpdate>, UtilError>
+{
+    let update_request = match pkt_line::read(stream)
+    {
+        Ok(lines) => lines,
+        Err(_) => return Err(UtilError::ReceiveReferenceUpdateRequest),
+    };
+    if update_request.is_empty()
+    {
+        return Err(UtilError::ConnectionIsTerminated);
+    }
+    let mut result = Vec::new();
+
+    let (refs_first, capabilities) = recieve_first_reference_update(&update_request[0])?;
+    result.push(refs_first);
+
+    for request in &update_request {
+        if let Ok(line_str) = std::str::from_utf8(request) {
+            let refupdate = ReferencesUpdate::new_from_line(line_str)?;
+            result.push(refupdate);
+        }
+    }
+
+    git_server.filter_capabilities_user(&capabilities)?;
+    Ok(result)
+}
+
+pub fn recieve_first_reference_update(line: &Vec<u8>) -> Result<(ReferencesUpdate, Vec<String>), UtilError>
+{
+    if let Ok(line_str) = std::str::from_utf8(&line) {
+        let parts = line_str.split('\0').collect::<Vec<&str>>();
+        if parts.len() >= 2 {
+            return Err(UtilError::InvalidReferenceUpdateRequest);
+        }
+        if parts.len() == 1 {
+            let refupdate = ReferencesUpdate::new_from_line(parts[0])?;
+            return Ok((refupdate, Vec::new()));
+        }
+        let capabilites: Vec<String> = parts[1].split_ascii_whitespace().map(|s| s.to_string()).collect();
+        return Ok((ReferencesUpdate::new_from_line(parts[0])?, capabilites))
+    }
+    Err(UtilError::InvalidReferenceUpdateRequest)
 }
 
 #[cfg(test)]
