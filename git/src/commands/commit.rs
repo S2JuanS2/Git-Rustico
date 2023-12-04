@@ -248,7 +248,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
 /// 'current_branch': Nombre de la branch actual.
 /// 'branch_current_path': Path del archivo de la branch actual.
 /// 'hash_commit': Hash del commit a escribir.
-fn create_or_replace_commit_into_branch(
+pub fn create_or_replace_commit_into_branch(
     current_branch: String,
     branch_current_path: String,
     hash_commit: String,
