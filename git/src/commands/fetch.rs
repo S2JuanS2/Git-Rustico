@@ -125,6 +125,7 @@ pub fn git_fetch_all(
     let git_config = GitConfig::new_from_file(repo_local)?;
     let remotes = git_config.get_remotes_in_use();
     let mut status = Vec::new();
+    println!("Remotes: {:?}", remotes);
 
     for name_remote in remotes {
         let url_remote = &git_config.get_remote_url_by_name(&name_remote)?;
@@ -155,17 +156,29 @@ pub fn _git_fetch_all(
     // Reference Discovery
     let my_capacibilities:Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
     let mut server = reference_discovery(socket, message, url_remote, &my_capacibilities)?;
-    
+    println!("Reference Discovery");
+
     // Packfile Negotiation
     packfile_negotiation_partial(socket, &mut server, repo_local)?;
+    println!("packfile_negotiation_partial");
 
     // Packfile Data
     let _last_ack = read_pkt_line(socket)?; // Vlidar last ack
+    println!("Recibi el ultimo ack");
+    println!("_last_ack: {:?}", _last_ack);
+    
     let content = receive_packfile(socket)?;
+    for (object, _) in &content {
+        println!("FETCH --- > object: {:?}", object);
+        // println!("bytes: {:?}", bytes);
+    }
     if content.is_empty()
     {
+        println!("No hay actualizaciones");
         return Ok(FetchStatus::NoUpdatesRemote(url_remote.to_string()));
     }
+    println!("receive_packfile --> {:?}", content);
+
     let refs = server.get_references_for_updating()?;
 
     if !is_already_update(repo_local, &refs, &remote_branch)? {

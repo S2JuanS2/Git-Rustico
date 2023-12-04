@@ -66,7 +66,7 @@ pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
             formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
             let timestamp = match parts[3].parse::<i64>(){
                 Ok(t) => t,
-                Err(_) => return Err(CommandsError::GenericError),
+                Err(_) => return Err(CommandsError::TimeStamp),
             };
             let date_time = chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
             formatted_result.push_str(&format!("Date: {}\n", date_time));

@@ -209,24 +209,29 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
 
     if !had_objects.is_empty() {
         // Si el cliente cuenta con objetos ya en su repo, esta haciendo un FETCH
-
+        println!("FETCH");
         server.update_data(capabilities, wanted_objects);
         let local_hashes = search_available_references(path_repo, &had_objects);
-        
+        println!("Local hashes: {:?}", local_hashes);
+
         // Las referencias al dia las filtro
         server.filter_available_references(&local_hashes);
+        println!("Server: {:?}", server);
         sent_references_valid_client(stream, &local_hashes)?;
         // Confirmo las referencias del usuario que el servidor tiene disponibles
         // Actualizo las referencias disponibles del servidor
         // server.update_local_references(&local_references);
 
         // Las confirmaciones terminan con recibiendo un done
+        println!("Recibiendo done");
         receive_done(stream, UtilError::ReceiveDoneConfRefs)?;
+        println!("Recibo el done");
 
         // Envio el ultimo ACK
         send_acknowledge_last_reference(stream, &local_hashes)?;
         
         let objects = get_objects_fetch(&mut server, local_hashes)?;
+        println!("Objects: {:?}", objects);
         send_packfile(stream, &server, objects, true)?;
 
         return Ok("Fetch exitoso".to_string());

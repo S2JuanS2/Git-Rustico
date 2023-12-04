@@ -95,6 +95,7 @@ pub enum CommandsError {
     InvalidArgumentPush,
     PushCurrentBranchNotFound,
     SendMessageReferenceUpdate,
+    TimeStamp,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -127,7 +128,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::InvalidArgumentCountError => write!(f, "Número de argumentos inválido.\nUse: cargo run -- <path config>"),
         CommandsError::InvalidSrcDirectoryError => write!(f, "Directorio de código fuente inválido, revise su archivo de configuración."),
         CommandsError::GenericError => write!(f, "Error generico."),
-        CommandsError::OpenFileError => write!(f, "No se pudo abrir el archivo"),
+        CommandsError::OpenFileError => write!(f, "CommandsError: No se pudo abrir el archivo"),
         CommandsError::RemoveFileError => write!(f, "No se pudo eliminar el archivo"),
         CommandsError::ReadFileError => write!(f, "No se pudo leer el archivo"),
         CommandsError::AlreadyOnThatBranch => write!(f, "Ya estas en esa rama!"),
@@ -197,6 +198,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::InvalidArgumentPush => write!(f, "Use: git push o git push all"),
         CommandsError::PushCurrentBranchNotFound => write!(f, "No se encontró la branch actual"),
         CommandsError::SendMessageReferenceUpdate => write!(f, "No se pudo enviar el mensaje de actualización de referencia"),
+        CommandsError::TimeStamp => write!(f, "No se pudo obtener el timestamp"),
     }
 }
 

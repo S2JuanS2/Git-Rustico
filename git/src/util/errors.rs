@@ -162,7 +162,7 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidHashInAckResponse => write!(f, "InvalidHashInAckResponseError: Hash inválido en la respuesta del ACK."),
         UtilError::ExpectedStatusContinueInAckResponse => write!(f, "ExpectedStatusContinueInAckResponseError: Se esperaba un status continue en la respuesta del ACK."),
         UtilError::CreateDir(info) => writeln!(f, "CreateDirError: Error al crear el directorio {}. ", info),
-        UtilError::OpenFileError => write!(f, "No se pudo abrir el archivo"),
+        UtilError::OpenFileError => write!(f, "UtilError: No se pudo abrir el archivo"),
         UtilError::ReadFileError => write!(f, "No se pudo leer el archivo"),
         UtilError::CreateFileError => write!(f, "No se pudo crear el archivo"),
         UtilError::RemoveFileError => write!(f, "No se pudo eliminar el archivo"),

@@ -146,11 +146,12 @@ pub fn send_packfile(
     objects: Vec<(ObjectType, Vec<u8>)>,
     decoder: bool
 ) -> Result<(), UtilError> {
+    println!("Send packfile");
     let mut sha1 = Sha1::new();
-
     // Envio signature
     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
     sha1.update(&PACK_BYTES);
+    println!("Signature: {:?}", PACK_BYTES);
 
     // Envio version
     send_bytes(
@@ -159,6 +160,7 @@ pub fn send_packfile(
         UtilError::SendSignaturePackfile,
     )?;
     sha1.update(&server.version.to_be_bytes());
+    println!("Version: {}", server.version);
 
     // Envio numero de objetos
     let number_objects = objects.len() as u32;
@@ -167,6 +169,8 @@ pub fn send_packfile(
         &number_objects.to_be_bytes(),
         UtilError::SendSignaturePackfile,
     )?;
+    println!("Number of objects: {}", number_objects);
+
     sha1.update(&number_objects.to_be_bytes());
     // println!("Number of objects: {}", number_objects);
 
