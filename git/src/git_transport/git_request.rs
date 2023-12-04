@@ -16,7 +16,7 @@ use crate::util::validation::join_paths_correctly;
 use super::negotiation::{
     receive_done, send_acknowledge_last_reference, sent_references_valid_client,
 };
-use super::references::get_objects;
+use super::references::{get_objects, get_objects_fetch_with_hash_valid};
 use super::request_command::RequestCommand;
 
 /// # `GitRequest`
@@ -219,7 +219,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
         // Envio el ultimo ACK
         send_acknowledge_last_reference(stream, &local_hashes)?;
         
-        let objects = get_objects_fetch(&mut server, local_hashes);
+        let objects = get_objects_fetch(&mut server, local_hashes)?;
         send_packfile(stream, &server, objects, true)?;
 
         return Ok("Fetch exitoso".to_string());
@@ -352,16 +352,17 @@ fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> 
 // Estan estan en &git_server.available_references
 // Y los hash que el cliente tiene y nosotros validamos que ya teniamos estan en _confirmed_hashes
 // Te elimino el HEAD en las referencias por posibles bugs
-pub fn get_objects_fetch(git_server: &mut GitServer, _confirmed_hashes: Vec<String>) -> Vec<(ObjectType, Vec<u8>)>
+pub fn get_objects_fetch(git_server: &mut GitServer, confirmed_hashes: Vec<String>) -> Result<Vec<(ObjectType, Vec<u8>)>,UtilError>
 {
-    let mut _objects: Vec<(ObjectType, Vec<u8>)> = Vec::new();
     git_server.delete_head_in_available_references();
-    let _references = &git_server.available_references;
-    // for reference in &git_server.client_references {
-    //     let mut objects_reference = get_objects(&git_server.path, &[reference.clone()]).unwrap();
-    //     objects.append(&mut objects_reference);
-    // }
-    _objects
+    let references = &git_server.available_references;
+    let objects = get_objects_fetch_with_hash_valid(
+        &git_server.src_repo,
+        references.to_vec(),
+        &confirmed_hashes
+        )?;
+
+    Ok(objects)
 }
 
 #[cfg(test)]
