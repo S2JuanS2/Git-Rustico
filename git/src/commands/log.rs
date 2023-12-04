@@ -133,8 +133,8 @@ pub fn save_parent_log(directory: &str, commit: &str, branch_name: &str, path_lo
             if parent_commit.lines().count() == 5{
                 parent_commit = insert_line_between_lines(&parent_commit, 1, PARENT_INITIAL);
             }
-            builder_commit_log(directory, &parent_commit, parent_hash, branch_name, path_log)?;
             save_parent_log(directory, &parent_commit, branch_name, path_log)?;
+            builder_commit_log(directory, &parent_commit, parent_hash, branch_name, path_log)?;
 
         }
     };
@@ -162,8 +162,8 @@ pub fn save_log(directory: &str, branch_name: &str, path_log: &str, path_branch:
     if commit_content.lines().count() == 5{
         commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
     }
-    builder_commit_log(directory, &commit_content, &hash_commit, branch_name, path_log)?;
     save_parent_log(directory, &commit_content, branch_name, path_log)?;
+    builder_commit_log(directory, &commit_content, &hash_commit, branch_name, path_log)?;
 
     Ok(())
 }
