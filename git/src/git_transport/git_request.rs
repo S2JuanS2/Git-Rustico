@@ -186,7 +186,6 @@ impl GitRequest {
                 let path_repo = get_path_repository(root, &self.pathname)?;
                 handle_receive_pack(stream, &path_repo)?;
                 println!("ReceivePack");
-                println!("Funcion aun no implementada");
                 Ok("".to_string())
             }
             RequestCommand::UploadArchive => {
@@ -431,8 +430,9 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
     let requests = receive_reference_update_request(stream, &mut server)?;
     println!("Requests: {:?}", requests);
     let objects = receive_packfile(stream)?;
-    println!("Objects: {:?}", objects);
-
+    println!("handle_receive_pack Objects -> : {:?}", objects);
+    // println!("Stream: {:?}", stream);
+    // send_message(stream, "message", UtilError::SendNAKPackfile)?;
     match process_request_update(requests, objects, path_repo)
     {
         Ok(status) => send_decompressed_package_status(stream, &status),
@@ -466,6 +466,11 @@ pub fn process_request_update(
 ) -> Result<Vec<(String, bool)>, UtilError> {
 
     if objects.is_empty() {
+        println!("Objects is empty");
+        // let mut result: Vec<(String, bool)> = Vec::new();
+        // for request in requests {
+        //     result.push((request.get_path_refs().to_string(), false));
+        // }
         return Ok(Vec::new());
     }
     let mut result_vec: Vec<(String, bool)> = Vec::new();
