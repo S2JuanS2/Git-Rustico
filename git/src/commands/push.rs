@@ -95,7 +95,7 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
     if args.len() == 2 
     {
         let name_branch = args[1];
-        let name_remote = args[2];
+        let name_remote = args[0];
         status.push(format!("Branch local: {}", args[0]));
         status.push(format!("Remoto: {}", args[1]));
         let current_rfs = Reference::get_current_references(path_local)?;

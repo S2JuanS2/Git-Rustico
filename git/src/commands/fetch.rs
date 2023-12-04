@@ -105,6 +105,7 @@ pub fn git_fetch_all(
     repo_local: &str,
 ) -> Result<FetchStatus, CommandsError>
 {
+    println!("Estoy aqui");
     // Obtengo los remotos en uso
     let git_config = GitConfig::new_from_file(repo_local)?;
     let remotes = git_config.get_remotes_in_use();

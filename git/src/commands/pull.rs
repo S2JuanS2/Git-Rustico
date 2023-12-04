@@ -11,7 +11,7 @@ use std::net::TcpStream;
 
 /// Acepto:
 /// git pull -> pull del branch actual
-/// git pull <branch> <remote> -> pull del branch especificado del repositorio remoto especificado
+/// git pull <remote> <branch> -> pull del branch <branch> del repositorio remoto <remote>
 /// Maneja el comando "pull".
 ///
 /// Esta función inicia una operación de pull desde el servidor de Git.
@@ -39,8 +39,8 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
     let path_repo = client.get_directory_path(); 
     if args.len() == 2 
     {
-        let name_branch = args[1];
-        let name_remote = args[2];
+        let name_branch = args[0];
+        let name_remote = args[1];
         status.push(format!("Branch local: {}", args[0]));
         status.push(format!("Remoto: {}", args[1]));
         let current_rfs = Reference::get_current_references(path_repo)?;
