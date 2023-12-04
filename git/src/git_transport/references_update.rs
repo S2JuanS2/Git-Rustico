@@ -56,9 +56,12 @@ impl ReferencesUpdate {
 
 pub fn send_decompressed_package_status(writer: &mut dyn Write, reference: &Vec<(String, bool)>) -> Result<(), UtilError> {
     // unpack ok\n
+    // println!("Writer: {:?}", writer);
     let signature = "unpack ok\n";
     let message = add_length_prefix(signature, signature.len());
     send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
+    println!("message unpack: {:?}", message);
+    println!("reference: {:?}", reference);
 
     for (reference, status) in reference {
         let message = match status {
@@ -67,7 +70,9 @@ pub fn send_decompressed_package_status(writer: &mut dyn Write, reference: &Vec<
         };
         let message = add_length_prefix(&message, message.len());
         send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
+        println!("message unpack 2: {:?}", message);
     }
+    println!("FIN!");
     Ok(())
 }
 
@@ -75,5 +80,6 @@ pub fn send_decompression_failure_status(writer: &mut dyn Write) -> Result<(), U
     let signature = "Err PaqueteCorrupto\n";
     let message = add_length_prefix(signature, signature.len());
     send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
+    println!("message unpack error: {:?}", message);
     Ok(())
 }

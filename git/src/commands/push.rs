@@ -11,6 +11,7 @@ use crate::util::connections::{start_client, send_message, send_flush};
 use crate::util::errors::UtilError;
 use crate::util::pkt_line;
 use crate::util::packfile::send_packfile;
+use std::io::Read;
 use std::net::TcpStream;
 
 
@@ -29,6 +30,7 @@ impl PushBranch
     {
         // Obtengo el repositorio remoto
         let git_config = GitConfig::new_from_file(&path_local)?;
+        println!("Git config: {:?}", git_config);
         let branch = Reference::create_from_name_branch(&path_local, name_branch)?;
         let remote_name = git_config.get_remote_by_branch_name(branch.get_name())?;
         let url_remote = git_config.get_remote_url_by_name(&remote_name)?;
@@ -159,17 +161,20 @@ pub fn git_push_branch(
     println!("Se actualizo la referencia");
     
     let objects = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
+    println!("Socekt: {:?}", socket);
     send_packfile(socket, &server, objects, true)?;
     push.add_status("Se envio el packfile ...");
     println!("Se envio el packfile");
-    
+    println!("Socekt: {:?}", socket);
     // No se que me enviara el servidor
     // Por eso leere todo para examinar la respuesta de daemon
-    let lines = pkt_line::read(socket)?;
-    for line in lines
-    {
-        println!("Line in string: {}", String::from_utf8(line).unwrap());
-    }
+    // let mut buf = Vec::new();
+    // socket.read_to_end(&mut buf).unwrap_err();
+    // println!("Len buf: {}", buf.len());
+    // println!("Respuesta del servidor: {:?}", String::from_utf8(buf).unwrap());
+    // let lines = pkt_line::read_pkt_line(socket)?;
+    // println!("Line{:?}", lines);
+    // println!("Line in string: {}", String::from_utf8(lines).unwrap());
 
     Ok("Hola, soy baby push!".to_string())
 }
