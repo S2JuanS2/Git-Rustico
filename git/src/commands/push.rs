@@ -25,14 +25,13 @@ pub struct PushBranch{
 
 impl PushBranch
 {
-    fn new(path_local: String, name_branch: &str) -> Result<Self, CommandsError>
+    fn new(path_local: String, name_branch: &str, status: Vec<String>) -> Result<Self, CommandsError>
     {
         // Obtengo el repositorio remoto
         let git_config = GitConfig::new_from_file(&path_local)?;
         let branch = Reference::create_from_name_branch(&path_local, name_branch)?;
         let remote_name = git_config.get_remote_by_branch_name(branch.get_name())?;
         let url_remote = git_config.get_remote_url_by_name(&remote_name)?;
-        let status = Vec::new();
         let mut push = PushBranch{path_local, remote_name, url_remote, git_config, branch, status};
         push.init_status();
         Ok(push)
@@ -84,31 +83,40 @@ impl PushBranch
 /// Retorna un error si la cantidad de argumentos no es la esperada o si hay problemas al iniciar la conexión con el cliente o ejecutar el comando "git push".
 ///
 pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
-    if !(args.is_empty() || args.len() == 2) {
+    if !args.is_empty() && args.len() != 2 {
         return Err(CommandsError::InvalidArgumentCountPush);
     }
     
     let path_local = client.get_directory_path();
     let mut socket = start_client(client.get_address())?;
+    let name_branch = get_name_current_branch(path_local)?;
+    let mut status = Vec::new();
+
+    if args.len() == 2 
+    {
+        let name_branch = args[1];
+        let name_remote = args[2];
+        status.push(format!("Branch local: {}", args[0]));
+        status.push(format!("Remoto: {}", args[1]));
+        let current_rfs = Reference::get_current_references(path_local)?;
+        let mut git_config: GitConfig = GitConfig::new_from_file(path_local)?;
+        if !git_config.valid_remote(name_remote)
+        {
+            status.push(format!("El repositorio remoto {} no existe", name_remote));
+            return Ok(status.join("\n"));
+        };
+        git_config.add_branch(current_rfs.get_name(), name_remote, &format!("refs/heads/{}", name_branch))?;
+        git_config.write_to_file(path_local)?;
+        status.push("Se asocio el branch local con el remoto".to_string());
+
+    }
     
-    if args.is_empty() {
-        let name_branch = get_name_current_branch(path_local)?;
-        return git_push_branch (
-            &mut socket,
-            client.get_ip(),
-            client.get_port(),
-            &mut PushBranch::new(path_local.to_string(), &name_branch)?,
-        );
-    }
-    if args[1] != "all" {
-        return Err(CommandsError::InvalidArgumentPush);
-    }
-    git_push_all(
+    return git_push_branch (
         &mut socket,
         client.get_ip(),
         client.get_port(),
-        path_local,
-    )
+        &mut PushBranch::new(path_local.to_string(), &name_branch, status)?,
+    );
 }
 
 /// actualiza el repositorio remoto con los cambios del repositorio local
@@ -166,14 +174,14 @@ pub fn git_push_branch(
 }
 
 
-fn git_push_all(
-    _socket: &mut TcpStream,
-    _ip: &str,
-    _port: &str,
-    _path_local: &str,
-) -> Result<String, CommandsError> {
-    Ok("Hola, soy baby push all!".to_string())
-}
+// fn git_push_all(
+//     _socket: &mut TcpStream,
+//     _ip: &str,
+//     _port: &str,
+//     _path_local: &str,
+// ) -> Result<String, CommandsError> {
+//     Ok("Hola, soy baby push all!".to_string())
+// }
 
 /// Obtiene el nombre de la rama actual en un repositorio Git local.
 ///
