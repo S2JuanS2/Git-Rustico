@@ -3,12 +3,15 @@ use std::io::Read;
 use std::net::TcpStream;
 use std::path::Path;
 
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK};
+use crate::commands::branch::get_parent_hashes;
+use crate::commands::cat_file::git_cat_file;
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
 use crate::git_transport::references_update::send_decompressed_package_status;
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
+use crate::util::files::{open_file, read_file_string};
 use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
@@ -246,20 +249,62 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
 // Me debes devolver un Vec<String> con los hash que tenemos en comun
 // Acordate que el repo esta en path_repo
 pub fn search_available_references(
-    _path_repo: &str,
+    path_repo: &str,
     local_hash: &Vec<String>,
 ) -> Vec<String> {
-    let mut _confirmed_commits: Vec<String> = Vec::new();
-    for _hash in local_hash {
+    let mut confirmed_commits: Vec<String> = Vec::new();
+    let commits_in_repo = match get_commits(path_repo) {
+        Ok(commits) => commits,
+        Err(_) => return confirmed_commits,
+    };
+    for hash in local_hash {
         // Ejemplo de como seria
         // if reference.la_tenemos() {
         //     available_references.push(reference);
         // }
         println!("AQUI IRIA TU TODO");
+
+        if commits_in_repo.contains(hash) {
+            confirmed_commits.push(hash.to_string());
+        }
     }
-    _confirmed_commits
+    confirmed_commits
 }
 
+fn get_commits(path_repo: &str) -> Result<Vec<String>, UtilError> {
+    let mut commits: Vec<String> = Vec::new();
+    let branches_path = join_paths_correctly(path_repo, ".git/refs/heads");
+    let branches = match std::fs::read_dir(branches_path) {
+        Ok(branches) => branches,
+        Err(_) => return Err(UtilError::ReadDirError),
+    };
+    for branch in branches {
+        let branch = match branch {
+            Ok(branch) => branch,
+            Err(_) => return Err(UtilError::ReadDirError),
+        };
+        let branch_name = branch.file_name();
+        if let Some(branch_name) = branch_name.to_str() {
+            let branch_path = join_paths_correctly(path_repo, &format!(".git/refs/heads/{}", branch_name));
+            let branch_file = open_file(&branch_path)?;
+            let branch_content = read_file_string(branch_file)?;
+            recover_commits(path_repo, &branch_content, &mut commits)?;
+        }
+    }
+
+    Ok(commits)
+}
+
+fn recover_commits(path_repo: &str, branch_content: &str, mut commits: &mut Vec<String>) -> Result<(), UtilError> {
+    commits.push(branch_content.to_string());
+    let commit_content = git_cat_file(path_repo, branch_content, "-p")?;
+    let parent_commit = get_parent_hashes(commit_content);
+    if parent_commit == PARENT_INITIAL {
+        return Ok(());
+    }
+    recover_commits(path_repo, &parent_commit, &mut commits)?;
+    Ok(())
+}
 
 /// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.
 /// Esta función toma los datos de la solicitud Git y los divide en comandos y argumentos.
