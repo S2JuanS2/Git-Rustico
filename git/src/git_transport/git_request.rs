@@ -197,6 +197,7 @@ impl GitRequest {
 }
 
 fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String, UtilError> {
+    println!("UploadPack");
     let capabilities: Vec<String> = CAPABILITIES_FETCH.iter().map(|&s| s.to_string()).collect();
     let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilities)?;
     // println!("Server: {:?}", server);

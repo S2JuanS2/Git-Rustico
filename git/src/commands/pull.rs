@@ -34,13 +34,13 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
     if !args.is_empty() && args.len() != 2 {
         return Err(CommandsError::InvalidArgumentCountPull);
     }
-
+    println!("Pull ...");
     let mut status = Vec::new();
     let path_repo = client.get_directory_path(); 
     if args.len() == 2 
     {
-        let name_branch = args[0];
-        let name_remote = args[1];
+        let name_remote = args[0];
+        let name_branch = args[1];
         status.push(format!("Branch local: {}", args[0]));
         status.push(format!("Remoto: {}", args[1]));
         let current_rfs = Reference::get_current_references(path_repo)?;
@@ -51,12 +51,13 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
             return Ok(status.join("\n"));
         };
         git_config.add_branch(current_rfs.get_name(), name_remote, &format!("refs/heads/{}", name_branch))?;
-        git_config.write_to_file(path_repo)?;
+        let path_config = format!("{}/.git/config", path_repo);
+        git_config.write_to_file(&path_config)?;
         status.push("Se asocio el branch local con el remoto".to_string());
 
     }
     let mut socket = start_client(client.get_address())?;
-
+    println!("Status: {:?}", status);
     git_pull(
         &mut socket,
         client.get_ip(),
