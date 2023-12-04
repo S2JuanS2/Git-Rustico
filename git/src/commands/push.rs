@@ -30,6 +30,7 @@ impl PushBranch
     {
         // Obtengo el repositorio remoto
         let git_config = GitConfig::new_from_file(&path_local)?;
+        println!("Git config: {:?}", git_config);
         let branch = Reference::create_from_name_branch(&path_local, name_branch)?;
         let remote_name = git_config.get_remote_by_branch_name(branch.get_name())?;
         let url_remote = git_config.get_remote_url_by_name(&remote_name)?;
