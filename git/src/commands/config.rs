@@ -663,6 +663,11 @@ impl GitConfig {
         let location = &location.replace('*', name_branch);
         Some(location.to_string())
     }
+
+    pub fn valid_remote(&self, name_remote: &str) -> bool
+    {
+        self.remotes.contains_key(name_remote)
+    }
 }
 
 // Lee un archivo de configuración en formato especificado y devuelve un HashMap.
