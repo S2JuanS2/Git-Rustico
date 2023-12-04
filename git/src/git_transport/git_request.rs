@@ -3,18 +3,18 @@ use std::io::Read;
 use std::net::TcpStream;
 use std::path::Path;
 
-use crate::commands::branch::{get_parent_hashes, get_current_branch};
+use crate::commands::branch::get_parent_hashes;
 use crate::commands::cat_file::git_cat_file;
-use crate::commands::commit::create_or_replace_commit_into_branch;
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL, GIT_DIR};
+use crate::commands::fetch::{save_objects, save_references};
+use crate::commands::log::save_log;
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
 use crate::git_transport::references_update::send_decompressed_package_status;
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
-use crate::util::files::{open_file, read_file_string};
-use crate::util::formats::{hash_generate_with_bytes, compressor_object_with_bytes};
-use crate::util::objects::{ObjectType, ObjectEntry, builder_object};
+use crate::util::files::{open_file, read_file_string, create_directory, ensure_directory_clean};
+use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
@@ -440,6 +440,42 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
     }
 }
 
+/// Guarda referencias (nombres y hashes) en archivos individuales dentro del directorio de referencias
+/// remotas en un repositorio Git.
+///
+/// Esta función toma un vector de tuplas `(String, String)` que representa pares de nombres y hashes de
+/// referencias. El path del repositorio `repo_path` se utiliza para construir la ruta del directorio de
+/// referencias y, a continuación, se asegura de que el directorio esté limpio. Luego, escribe cada
+/// par de nombre y hash en archivos individuales dentro del directorio.
+///
+/// # Errores
+///
+/// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
+///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
+///
+pub fn save_references_with_name(name: &str, repo_path: &str, name_remote: &str) -> Result<(), UtilError> {
+
+    // Si no existe el directorio .git/refs/remotes lo crea
+    let directory_remotes = format!("{}/.git/refs/remotes/origin", repo_path); 
+    let directory_remotes = Path::new(&directory_remotes);
+    create_directory(directory_remotes)?;
+
+    // Si no existe el directorio .git/refs/remotes/origin lo crea
+    let refs_dir_path = format!("{}/.git/refs/remotes/{}", repo_path, name_remote);
+    ensure_directory_clean(&refs_dir_path)?;
+
+    let log_dir = format!("{}/.git/logs/refs/remotes/origin", repo_path);
+    create_directory(Path::new(&log_dir))?;
+
+    let path_log = format!("logs/refs/remotes/{}", name_remote);
+    
+    let path_branch = format!("refs/remotes/{}", name_remote);
+
+    save_log(repo_path, name, &path_log, &path_branch)?;    
+
+    Ok(())
+}
+
 
 // [TODO #8]
 // Esta funcion es la que se encarga de procesar las actualizaciones de las referencias
@@ -477,32 +513,17 @@ pub fn process_request_update(
         let hash_reference_old = branch_hash.get_old();
 
         if hash_reference_new != hash_reference_old {
-            for object in objects{
-                if object.0.obj_type == ObjectType::Commit{
-                    let hash_commit = hash_generate_with_bytes(object.1.clone());
-                    let file = builder_object(path_repo, &hash_commit)?;
-                    compressor_object_with_bytes(object.1, file)?;
-                }else if object.0.obj_type == ObjectType::Tree{
-                    let hash_tree = hash_generate_with_bytes(object.1.clone());
-                    let file = builder_object(path_repo, &hash_tree)?;
-                    compressor_object_with_bytes(object.1, file)?;
-                }else if object.0.obj_type == ObjectType::Blob{
-                    let hash_blob = hash_generate_with_bytes(object.1.clone());
-                    let file = builder_object(path_repo, &hash_blob)?;
-                    compressor_object_with_bytes(object.1, file)?;
-                }
-            }
-            let current_branch = get_current_branch(path_repo)?;
-            let branch_current_path = format!("{}/{}/{}", path_repo, GIT_DIR, path_reference);
-            create_or_replace_commit_into_branch(current_branch, branch_current_path, hash_reference_new.to_string())?;
-    
+            
+            save_objects(objects, path_repo)?;
+            save_references_with_name("master", path_repo, "master")?;
+
             result.0 = hash_reference_new.to_string();
             result.1 = true;
     
             result_vec.push(result.clone());   
         }else{
-            result.0 = "".to_string();
-            result.1 = true;
+            result.0 = hash_reference_old.to_string();
+            result.1 = false;
             result_vec.push(result.clone());
         }
     };

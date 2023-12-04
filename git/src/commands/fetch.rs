@@ -348,7 +348,7 @@ pub fn get_branches_remote(server: &GitServer) -> Result<Vec<(String,String)>,Co
 /// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
-fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &str) -> Result<(), CommandsError> {
+pub fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &str) -> Result<(), CommandsError> {
 
     // Si no existe el directorio .git/refs/remotes lo crea
     let directory_remotes = format!("{}/.git/refs/remotes/origin", repo_path); 
@@ -392,7 +392,7 @@ fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &s
 ///
 /// Devuelve un `Result` que contiene `Ok(())` en caso de éxito o un error (CommandsError) en caso de fallo.
 ///
-fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(), CommandsError> {
+pub fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(), CommandsError> {
     // Cantidad de objetos recibidos
     let count_objects = content.len();
 
