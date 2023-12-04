@@ -367,7 +367,8 @@ fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &s
         if fs::write(&file_path, hash).is_err() {
             return Err(CommandsError::RemotoNotInitialized);
         };
-        save_log(repo_path, name, "logs/refs/remotes", "refs/remotes/origin")?;
+        let path_log = format!("logs/refs/remotes/{}", name_remote);
+        save_log(repo_path, name, &path_log, "refs/remotes/origin")?;        
     }
 
     Ok(())
