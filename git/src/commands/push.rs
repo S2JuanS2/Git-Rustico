@@ -94,8 +94,8 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
 
     if args.len() == 2 
     {
+        let name_remote = args[0];
         let name_branch = args[1];
-        let name_remote = args[2];
         status.push(format!("Branch local: {}", args[0]));
         status.push(format!("Remoto: {}", args[1]));
         let current_rfs = Reference::get_current_references(path_local)?;
@@ -106,9 +106,9 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
             return Ok(status.join("\n"));
         };
         git_config.add_branch(current_rfs.get_name(), name_remote, &format!("refs/heads/{}", name_branch))?;
-        git_config.write_to_file(path_local)?;
+        let path_config = format!("{}/.git/config", path_local);
+        git_config.write_to_file(&path_config)?;
         status.push("Se asocio el branch local con el remoto".to_string());
-
     }
     
     return git_push_branch (
@@ -161,7 +161,8 @@ pub fn git_push_branch(
     let objects = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
     send_packfile(socket, &server, objects, true)?;
     push.add_status("Se envio el packfile ...");
-
+    println!("Se envio el packfile");
+    
     // No se que me enviara el servidor
     // Por eso leere todo para examinar la respuesta de daemon
     let lines = pkt_line::read(socket)?;

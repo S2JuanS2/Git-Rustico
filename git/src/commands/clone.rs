@@ -96,10 +96,7 @@ pub fn git_clone(
 
     // Packfile Data
     let content = receive_packfile(socket)?;
-    // println!("Receiveeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
-    // for (obj, cont) in &content {
-    //     println!("{:?} --->  {:?}", obj, cont);
-    // }
+
 
     let local_repo_parts: Vec<&str> = local_repo.split('/').collect();
     let status = create_repository(content, local_repo, local_repo_parts.len())?;

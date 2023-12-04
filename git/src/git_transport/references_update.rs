@@ -4,6 +4,7 @@ use crate::util::{errors::UtilError, validation::is_valid_obj_id, pkt_line::add_
 
 use super::references::Reference;
 
+#[derive(Debug)]
 pub struct ReferencesUpdate {
     old: String,
     new: String,
@@ -21,6 +22,7 @@ impl ReferencesUpdate {
 
     pub fn new_from_line(line: &str) -> Result<ReferencesUpdate, UtilError>
     {
+        println!("line: {}", line);
         let parts = line.split_ascii_whitespace().collect::<Vec<&str>>();
             if parts.len() != 3 {
                 return Err(UtilError::InvalidReferenceUpdateRequest);
@@ -31,7 +33,8 @@ impl ReferencesUpdate {
             let old = parts[0].to_string();
             let new = parts[1].to_string();
             let reference = parts[2].to_string();
-            if Reference::is_valid_references_path(&reference) {
+            println!("reference: {}", reference);
+            if !Reference::is_valid_references_path(&reference) {
                 return Err(UtilError::InvalidReferencePath);
             }
             Ok(ReferencesUpdate::new(old, new, reference))
