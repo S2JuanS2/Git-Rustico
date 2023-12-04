@@ -1,5 +1,6 @@
 use crate::consts::*;
 use super::errors::CommandsError;
+use super::log::insert_line_between_lines;
 use crate::models::client::Client;
 use crate::util::files::*;
 use crate::util::index::{open_index, recovery_index};
@@ -165,7 +166,6 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
     let timestamp = date.timestamp();
     let offset = FixedOffset::west_opt(3 * 3600).unwrap().to_string();
     let offset_format: String = offset.chars().filter(|&c| c != ':').collect();
-    println!("{}", offset_format);
     let content;   
     if parent_hash == PARENT_INITIAL {
         content = format!(
@@ -229,8 +229,11 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
     let index_content = open_index(&git_dir)?;
     let tree_hash = recovery_index(&index_content, &git_dir)?;
 
-    let commit_content = commit_content_format(&commit, &tree_hash, &parent_hash);
+    let mut commit_content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
+    if commit_content.lines().count() == 5{
+        commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
+    }
     builder_commit_log(directory, &commit_content, &hash_commit, &current_branch, "logs/refs/heads")?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 

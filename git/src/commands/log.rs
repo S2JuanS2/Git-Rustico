@@ -55,8 +55,8 @@ pub fn git_log(directory: &str) -> Result<String, CommandsError> {
 /// 'formatted_result': String que contiene el resultado de git log formateado
 pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
+       
     let mut count_line = 0;
-    let mut first = true;
     for line in lines {
         if count_line == 1 {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -70,16 +70,12 @@ pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
             };
             let date_time = chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
             formatted_result.push_str(&format!("Date: {}\n", date_time));
-        } else if count_line == 5 && first {
-            formatted_result.push('\n');
-            formatted_result.push_str(&format!("\t{}\n", line));
-        }else if count_line == 6 && !first{
+        } else if count_line == 6 {
             formatted_result.push('\n');
             formatted_result.push_str(&format!("\t{}\n", line));
         }
         count_line += 1;
-        if count_line == 7 || (count_line == 6 && first) {
-            first = false;
+        if count_line == 7  {
             count_line = 1;
             formatted_result.push('\n');
         }
@@ -95,7 +91,7 @@ pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
 /// - `line_number_1`: Numero de linea a modificar
 /// - `new_line`: Linea a agrear
 ///
-fn insert_line_between_lines(
+pub fn insert_line_between_lines(
     original_string: &str,
     line_number_1: usize,
     new_line: &str,
@@ -133,7 +129,10 @@ pub fn save_parent_log(directory: &str, commit: &str, branch_name: &str, path_lo
 
     if let Some(parent_hash) = extract_parent_hash(commit){
         if parent_hash != PARENT_INITIAL {
-            let parent_commit = git_cat_file(directory, parent_hash, "-p")?;
+            let mut parent_commit = git_cat_file(directory, parent_hash, "-p")?;
+            if parent_commit.lines().count() == 5{
+                parent_commit = insert_line_between_lines(&parent_commit, 1, PARENT_INITIAL);
+            }
             builder_commit_log(directory, &parent_commit, parent_hash, branch_name, path_log)?;
             save_parent_log(directory, &parent_commit, branch_name, path_log)?;
 
