@@ -83,13 +83,11 @@ pub fn read_pkt_line(socket: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
     if socket.read_exact(&mut length_buf).is_err() {
         return Err(UtilError::InvalidPacketLineMissingLength);
     };
-    println!("length_buf: {:?}", length_buf);
     let length_hex = String::from_utf8_lossy(&length_buf);
     let length = match u32::from_str_radix(length_hex.trim(), 16) {
         Ok(l) => l,
         Err(_) => return Err(UtilError::InvalidPacketLineLength),
     };
-    println!("length: {:?}", length);
 
     if length == 0 {
         // End of the packet

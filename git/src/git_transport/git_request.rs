@@ -425,10 +425,13 @@ pub fn get_objects_fetch(git_server: &mut GitServer, confirmed_hashes: Vec<Strin
 
 pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError>{
     let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &Vec::new())?;
+    println!("Server: {:?}", server);
     server.send_references(stream)?;
 
     let requests = receive_reference_update_request(stream, &mut server)?;
+    println!("Requests: {:?}", requests);
     let objects = receive_packfile(stream)?;
+    println!("Objects: {:?}", objects);
 
     match process_request_update(requests, objects, path_repo)
     {
@@ -462,6 +465,9 @@ pub fn process_request_update(
     path_repo: &str
 ) -> Result<Vec<(String, bool)>, UtilError> {
 
+    if objects.is_empty() {
+        return Ok(Vec::new());
+    }
     let mut result_vec: Vec<(String, bool)> = Vec::new();
     let mut result: (String, bool) = ("".to_string(), false);
 
@@ -503,7 +509,7 @@ pub fn process_request_update(
     if result_vec.is_empty() {
         result_vec.push(result);
     }
-
+    println!("Result: {:?}", result_vec);
     Ok(result_vec)
 }
 
