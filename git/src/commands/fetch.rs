@@ -244,9 +244,11 @@ pub fn git_fetch_branch(
             return Err(CommandsError::RepositoryNotInitialized);
         };
         save_references(&refs, repo_local, remote_branch)?;
+
         let mut fetch_head = FetchHead::new_from_file(repo_local)?;
         fetch_head.update_references(&refs, url_remoto)?;
         fetch_head.write(repo_local)?;
+
         let mut status = Vec::new();
         for reference in refs {
             status.push(format!("Nueva actualizacion: {} --> {}, haga merge", reference.get_ref_path(), reference.get_hash()));
@@ -349,13 +351,16 @@ pub fn get_branches_remote(server: &GitServer) -> Result<Vec<(String,String)>,Co
 fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &str) -> Result<(), CommandsError> {
 
     // Si no existe el directorio .git/refs/remotes lo crea
-    let directory_remotes = format!("{}/.git/refs/remotes", repo_path); 
+    let directory_remotes = format!("{}/.git/refs/remotes/origin", repo_path); 
     let directory_remotes = Path::new(&directory_remotes);
     create_directory(directory_remotes)?;
 
     // Si no existe el directorio .git/refs/remotes/origin lo crea
     let refs_dir_path = format!("{}/.git/refs/remotes/{}", repo_path, name_remote);
     ensure_directory_clean(&refs_dir_path)?;
+
+    let log_dir = format!("{}/.git/logs/refs/remotes/origin", repo_path);
+    create_directory(Path::new(&log_dir))?;
 
     // Escribe los hashes en archivos individuales
     for reference in references {
@@ -366,7 +371,10 @@ fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &s
             return Err(CommandsError::RemotoNotInitialized);
         };
         let path_log = format!("logs/refs/remotes/{}", name_remote);
-        save_log(repo_path, name, &path_log, "refs/remotes/origin")?;        
+    
+        let path_branch = format!("refs/remotes/{}", name_remote);
+
+        save_log(repo_path, name, &path_log, &path_branch)?;    
     }
 
     Ok(())
