@@ -8,6 +8,10 @@ use crate::models::client::Client;
 use crate::util::connections::start_client;
 use std::net::TcpStream;
 
+
+/// Acepto:
+/// git pull -> pull del branch actual
+/// git pull <branch> <remote> -> pull del branch especificado del repositorio remoto especificado
 /// Maneja el comando "pull".
 ///
 /// Esta función inicia una operación de pull desde el servidor de Git.
@@ -27,16 +31,39 @@ use std::net::TcpStream;
 /// * `CommandsError` - Indica varios errores relacionados con Git que podrían ocurrir durante la operación de pull.
 ///
 pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
-    if !args.is_empty() {
+    if !args.is_empty() && args.len() != 2 {
         return Err(CommandsError::InvalidArgumentCountPull);
     }
+
+    let mut status = Vec::new();
+    let path_repo = client.get_directory_path(); 
+    if args.len() == 2 
+    {
+        let name_branch = args[1];
+        let name_remote = args[2];
+        status.push(format!("Branch local: {}", args[0]));
+        status.push(format!("Remoto: {}", args[1]));
+        let current_rfs = Reference::get_current_references(path_repo)?;
+        let mut git_config: GitConfig = GitConfig::new_from_file(path_repo)?;
+        if !git_config.valid_remote(name_remote)
+        {
+            status.push(format!("El repositorio remoto {} no existe", name_remote));
+            return Ok(status.join("\n"));
+        };
+        git_config.add_branch(current_rfs.get_name(), name_remote, &format!("refs/heads/{}", name_branch))?;
+        git_config.write_to_file(path_repo)?;
+        status.push("Se asocio el branch local con el remoto".to_string());
+
+    }
     let mut socket = start_client(client.get_address())?;
+
     git_pull(
         &mut socket,
         client.get_ip(),
         client.get_port(),
         client.get_directory_path(),
         client.clone(),
+        &mut status,
     )
 }
 
@@ -47,10 +74,10 @@ pub fn git_pull(
     port: &str,
     repo_local: &str,
     client: Client,
+    status: &mut Vec<String>,
 ) -> Result<String, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Pull del repositorio remoto ...");
-    let mut status = Vec::new();
     let current_rfs = match Reference::get_current_references(repo_local)
     {
         Ok(rfs) => rfs,
