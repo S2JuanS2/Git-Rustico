@@ -379,8 +379,8 @@ impl GitServer {
     ///
     /// # Argumentos
     ///
-    pub fn filter_available_references(&mut self, confirmed_hash: &Vec<String>) {
-        retain_unconfirmed_references(&mut self.available_references, &confirmed_hash);
+    pub fn filter_available_references(&mut self, confirmed_hash: &[String]) {
+        retain_unconfirmed_references(&mut self.available_references, confirmed_hash);
     }
 
     /// Elimina la referencia "HEAD" de la lista de referencias disponibles.
@@ -449,7 +449,7 @@ fn retain_common_values(vec1: &mut Vec<String>, vec2: &[String]) {
     vec1.retain(|item| set2.contains(item));
 }
 
-fn retain_unconfirmed_references(references: &mut Vec<Reference>, confirmed_hash: &Vec<String>) {
+fn retain_unconfirmed_references(references: &mut Vec<Reference>, confirmed_hash: &[String]) {
     let confirmed_hash: HashSet<String> = HashSet::from_iter(confirmed_hash.iter().cloned());
     references.retain(|reference| !confirmed_hash.contains(reference.get_hash()));
 }

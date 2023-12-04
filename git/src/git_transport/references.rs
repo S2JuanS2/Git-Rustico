@@ -168,7 +168,7 @@ impl Reference {
     pub fn create_from_name_branch(path_local: &str, name_branch: &str) -> Result<Reference, UtilError>
     {
         let ref_path = format!("{}/.git/refs/heads/{}", path_local, name_branch);
-        let hash = match std::fs::read_to_string(&ref_path) {
+        let hash = match std::fs::read_to_string(ref_path) {
             Ok(reference) => reference,
             Err(_) => return Err(UtilError::BranchNotFound(name_branch.to_string())),
         };
@@ -222,7 +222,7 @@ pub fn recovery_tree(
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let mode = parts[1];
+        let mode = parts[0];
         let hash = parts[2];
         if mode == FILE {
             let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());

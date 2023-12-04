@@ -127,13 +127,13 @@ impl View {
         let controller = Rc::clone(&self.controller);
         let binding = controller.borrow_mut();
         let current_branch = binding.get_current_branch();
-        self.label_branch.set_text(&current_branch);
+        self.label_branch.set_text(current_branch);
     }
     fn set_label_path(&mut self) {
         let controller = Rc::clone(&self.controller);
         let binding = controller.borrow_mut();
         let text_format = binding.get_path_client();
-        self.label_path.set_text(&text_format);
+        self.label_path.set_text(text_format);
     }
 
     fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>) {
@@ -266,7 +266,7 @@ impl View {
         }
     }
     fn clicked_buttons(&self){
-        for (_, button) in &self.buttons {
+        for button in self.buttons.values() {
             let controller = Rc::clone(&self.controller);
             let label_branch = self.label_branch.clone();
             let label_path = self.label_path.clone();

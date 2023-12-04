@@ -300,14 +300,14 @@ fn get_commits(path_repo: &str) -> Result<Vec<String>, UtilError> {
     Ok(commits)
 }
 
-fn recover_commits(path_repo: &str, branch_content: &str, mut commits: &mut Vec<String>) -> Result<(), UtilError> {
+fn recover_commits(path_repo: &str, branch_content: &str, commits: &mut Vec<String>) -> Result<(), UtilError> {
     commits.push(branch_content.to_string());
     let commit_content = git_cat_file(path_repo, branch_content, "-p")?;
     let parent_commit = get_parent_hashes(commit_content);
     if parent_commit == PARENT_INITIAL {
         return Ok(());
     }
-    recover_commits(path_repo, &parent_commit, &mut commits)?;
+    recover_commits(path_repo, &parent_commit, commits)?;
     Ok(())
 }
 
@@ -457,7 +457,7 @@ pub fn process_request_update(
     _requests: Vec<ReferencesUpdate>,
     _objects: Vec<(ObjectEntry, Vec<u8>)>,
 ) -> Result<Vec<(String, bool)>, UtilError> {
-    return Ok(Vec::new());
+    Ok(Vec::new())
 }
 
 

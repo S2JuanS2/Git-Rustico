@@ -50,22 +50,6 @@ impl fmt::Display for FetchStatus {
     
 }
 
-impl FetchStatus
-{
-    pub fn to_string(&self) -> String
-    {
-        match self {
-            // FetchStatus::Success(String) => format!("El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
-            FetchStatus::NoUpdatesRemote(s) => format!("No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", s),
-            FetchStatus::NoUpdatesBranch(s) => format!("No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", s),
-            FetchStatus::UpdatesBranch(s) => format!("Se actualizaron los objetos de la branch: {}", s),
-            FetchStatus::BranchNotFound(s) => format!("La branch: {}\nNo existe en el repositorio remoto. Haga push", s),
-            FetchStatus::BranchHasNoExistingCommits(s) => format!("La branch: {}\nNo tiene commits. Realice add y commit", s),
-            FetchStatus::SomeRemotesUpdated(s) => format!("Se actualizaron las siguientes branch:\n{}", s),
-        }
-    }
-}
-
 // use super::cat_file::git_cat_file;
 
 // const REMOTES_DIR: &str = "refs/remotes/";
@@ -129,7 +113,7 @@ pub fn git_fetch_all(
 
     for name_remote in remotes {
         let url_remote = &git_config.get_remote_url_by_name(&name_remote)?;
-        let status_remote = _git_fetch_all(socket, ip, port, repo_local, &url_remote, &name_remote)?;
+        let status_remote = _git_fetch_all(socket, ip, port, repo_local, url_remote, &name_remote)?;
         status.push(status_remote.to_string());
     }
 
@@ -181,7 +165,7 @@ pub fn _git_fetch_all(
 
     let refs = server.get_references_for_updating()?;
 
-    if !is_already_update(repo_local, &refs, &remote_branch)? {
+    if !is_already_update(repo_local, &refs, remote_branch)? {
         if save_objects(content, repo_local).is_err() {
             return Err(CommandsError::RepositoryNotInitialized);
         };
@@ -193,9 +177,9 @@ pub fn _git_fetch_all(
         for reference in refs {
             status.push(format!("Nueva actualizacion: {} --> {}, haga merge", reference.get_ref_path(), reference.get_hash()));
         }
-        return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
+        Ok(FetchStatus::UpdatesBranch(status.join("\n")))
     }else{
-        return Ok(FetchStatus::NoUpdatesRemote(url_remote.to_string()))
+        Ok(FetchStatus::NoUpdatesRemote(url_remote.to_string()))
     }
 }
 
@@ -253,7 +237,7 @@ pub fn git_fetch_branch(
     let refs = server.get_references_for_updating()?;
     println!("Refs: {:?}", refs);
 
-    if !is_already_update(repo_local, &refs, &remote_branch)? {
+    if !is_already_update(repo_local, &refs, remote_branch)? {
         if save_objects(content, repo_local).is_err() {
             println!("Error al guardar los objetos");
             return Err(CommandsError::RepositoryNotInitialized);
@@ -266,9 +250,9 @@ pub fn git_fetch_branch(
         for reference in refs {
             status.push(format!("Nueva actualizacion: {} --> {}, haga merge", reference.get_ref_path(), reference.get_hash()));
         }
-        return Ok(FetchStatus::UpdatesBranch(status.join("\n")));
+        Ok(FetchStatus::UpdatesBranch(status.join("\n")))
     }else{
-        return Ok(FetchStatus::NoUpdatesBranch(name_branch.to_string()))
+        Ok(FetchStatus::NoUpdatesBranch(name_branch.to_string()))
     }
 
     // Ok(FetchStatus::SomeRemotesUpdated(format!("{} --> {}", name_branch, refs.)))
@@ -302,12 +286,12 @@ fn is_already_update(repo_local: &str, refs: &Vec<Reference>, name_remote: &str)
     }
     for reference in refs{
         for branch in branches.clone() {
-            if String::from(reference.get_name()) == branch {
+            if *reference.get_name() == branch {
                 found = true;
             }
         }
     }
-    if found == false{
+    if !found{
         return Ok(false)
     }
     for branch in branches {

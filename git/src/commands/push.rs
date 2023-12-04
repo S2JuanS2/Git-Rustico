@@ -51,7 +51,7 @@ impl PushBranch
         self.status.push(status.to_string());
     }
 
-    fn get_status(&self) -> String
+    fn _get_status(&self) -> String
     {
         self.status.join("\n")
     }
@@ -60,7 +60,7 @@ impl PushBranch
     {
         self.branch.get_hash().to_string()
     }
-    fn get_path_local(&self) -> String
+    fn _get_path_local(&self) -> String
     {
         self.path_local.to_string()
     }
@@ -92,7 +92,7 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
     let mut socket = start_client(client.get_address())?;
     
     if args.is_empty() {
-        let name_branch = get_name_current_branch(&path_local)?;
+        let name_branch = get_name_current_branch(path_local)?;
         return git_push_branch (
             &mut socket,
             client.get_ip(),
@@ -131,7 +131,7 @@ pub fn git_push_branch(
         GitRequest::generate_request_string(RequestCommand::ReceivePack, &push.url_remote, ip, port);
     
     let server = reference_discovery(socket, message, &push.url_remote, &Vec::new())?;
-    let prev_hash = match server.get_remote_reference_hash(&push.branch.get_ref_path())
+    let prev_hash = match server.get_remote_reference_hash(push.branch.get_ref_path())
     {
         Some(hash) => hash, // Actualizo en el remoto
         None => ZERO_ID.to_string(), // Creo en el remoto
@@ -147,7 +147,7 @@ pub fn git_push_branch(
     // }
     println!("Necesito actualizar");
     // AViso que actualizare mi branch
-    reference_update(socket, &prev_hash, &current_hash, &push.branch.get_ref_path())?;
+    reference_update(socket, &prev_hash, &current_hash, push.branch.get_ref_path())?;
     println!("Se actualizo la referencia");
     
     let objects = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
@@ -203,7 +203,7 @@ fn get_name_current_branch(path_repo: &str) -> Result<String, UtilError>
     match ref_path.trim().split('/').last()
     {
         Some(name) => Ok(name.to_string()),
-        None => return Err(UtilError::CurrentBranchNotFound)
+        None => Err(UtilError::CurrentBranchNotFound)
     }
 }
 
@@ -216,14 +216,14 @@ fn get_name_current_branch(path_repo: &str) -> Result<String, UtilError>
 /// * `hash_current`: Hash del commit actual en la rama local.
 /// * `hash_prev`: Hash del commit previo en la rama remota.
 ///
-fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
+fn _is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
 {
     if hash_current == hash_prev
     {
         push.add_status("No hay cambios que subir");
         return Ok(false)
     }
-    if is_ancestor(&push.get_path_local(), hash_current, hash_prev)?
+    if is_ancestor(&push._get_path_local(), hash_current, hash_prev)?
     {
         push.add_status("No hay cambios que subir");
         push.add_status("Esta atrasado ...");
@@ -248,12 +248,8 @@ pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Resu
 
     let commit = git_cat_file(directory, hash_current, "-p")?;
     if let Some(parent_hash) = extract_parent_hash(&commit){
-        if hash_prev == parent_hash{
+        if hash_prev == parent_hash || is_ancestor(directory, parent_hash, hash_prev)?{
             return Ok(true)
-        }else{
-            if is_ancestor(directory, parent_hash, hash_prev)?{
-                return Ok(true)
-            }
         }
     };
 

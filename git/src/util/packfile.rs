@@ -150,7 +150,7 @@ pub fn send_packfile(
     let mut sha1 = Sha1::new();
     // Envio signature
     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
-    sha1.update(&PACK_BYTES);
+    sha1.update(PACK_BYTES);
     println!("Signature: {:?}", PACK_BYTES);
 
     // Envio version
@@ -159,7 +159,7 @@ pub fn send_packfile(
         &server.version.to_be_bytes(),
         UtilError::SendSignaturePackfile,
     )?;
-    sha1.update(&server.version.to_be_bytes());
+    sha1.update(server.version.to_be_bytes());
     println!("Version: {}", server.version);
 
     // Envio numero de objetos
@@ -171,7 +171,7 @@ pub fn send_packfile(
     )?;
     println!("Number of objects: {}", number_objects);
 
-    sha1.update(&number_objects.to_be_bytes());
+    sha1.update(number_objects.to_be_bytes());
     // println!("Number of objects: {}", number_objects);
 
     if decoder {
