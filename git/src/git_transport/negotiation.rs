@@ -99,10 +99,11 @@ pub fn receive_nak(stream: &mut dyn Read) -> Result<(), UtilError> {
 /// Retorna un `Result` indicando el éxito (`Ok(())`) o un error (`Err(UtilError)`).
 ///
 pub fn receive_done(stream: &mut dyn Read, err: UtilError) -> Result<(), UtilError> {
-    let mut buffer = [0u8; 0]; // Tamaño suficiente para "0009done\n"
+    let mut buffer = [0u8; 9]; // Tamaño suficiente para "0009done\n"
     if stream.read_exact(&mut buffer).is_err() {
         return Err(err);
     }
+    println!("Recibi el done: buffer -> {:?}", buffer);
     let response = String::from_utf8_lossy(&buffer);
 
     if response != PKT_DONE {
@@ -319,11 +320,13 @@ pub fn sent_references_valid_client(
     hash: &Vec<String>,
 ) -> Result<(), UtilError> {
     for h in hash {
-        let message = format!("ACK{} continue\n", h);
+        let message = format!("ACK {} continue\n", h);
         let message = pkt_line::add_length_prefix(&message, message.len());
+        println!("Enviando mensaje: {}", message);
         send_message(stream, &message, UtilError::UploadRequest)?;
     }
     send_message(stream, PKT_NAK, UtilError::SendNAKConfirmReferences)?; // SendNAKConfirmReferences
+    println!("Termine de enviar las referencias enviando un NACK");
     Ok(())
 }
 
@@ -346,6 +349,8 @@ pub fn send_acknowledge_last_reference(
     confirmed_hashes: &Vec<String>,
 ) -> Result<(), UtilError> {
     let message = format!("ACK {}\n", confirmed_hashes[confirmed_hashes.len() - 1]);
+    let message = pkt_line::add_length_prefix(&message, message.len());
+    println!("Enviando ultimo ack: {}", message);
     send_message(writer, &message, UtilError::SendLastACKConf)
 }
 
@@ -383,7 +388,9 @@ pub fn packfile_negotiation_partial(
 
     let ack_references = recive_acknowledgments_multi_ack(stream, server)?;
     server.confirm_local_references(&ack_references);
-
+    
+    println!("ACKS: {:?}", ack_references);
+    println!("Le enviare el done");
     send_done(stream, UtilError::UploadRequestDone)?;
     Ok(())
 }
@@ -469,16 +476,19 @@ fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
 pub fn recive_acknowledgments_multi_ack(stream: &mut TcpStream, server: &GitServer) -> Result<Vec<String>, UtilError> {
     if !server.is_multiack()
     {
+        println!("No es multiack el server!");
         return Err(UtilError::MultiAckNotSupported);
     }
     
     let lines = pkt_line::read(stream)?;
+    println!("Lines: {:?}", lines);
     let mut acks = Vec::new();
     for line in lines {
         if line == b"NAK" {
             break;
         }
         let hash = process_ack_response(line)?;
+        println!("recive_acknowledgments_multi_ack -> Hash: {}", hash);
         acks.push(hash);
     }
     Ok(acks)

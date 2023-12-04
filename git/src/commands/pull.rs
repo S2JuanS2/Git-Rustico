@@ -79,6 +79,7 @@ pub fn git_pull(
     println!("Remote branch ref: {}", remote_branch_ref);
     println!("Mergeando con el repositorio remoto ...");
     let merge_result = git_merge(repo_local, &remote_branch_ref, client)?;
+    println!("Result del merge: {}", merge_result);
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);
         status.push(format!("Error: El siguiente archivo se sobrescribiría al fusionarlo:\n\t{}\nAborting.", path_conflict));
@@ -91,7 +92,8 @@ pub fn git_pull(
     fetch_head.branch_already_merged(current_rfs.get_name())?;
     fetch_head.write(repo_local)?;
 
-    Ok("Pullcito naciendo".to_string())
+    status.push("Baby pull :)".to_string());
+    Ok(status.join("\n"))
 }
 
 

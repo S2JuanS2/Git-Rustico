@@ -70,7 +70,7 @@ impl GitError {
             GitError::GenericError => "Error generico.",
             GitError::ObjectBuildFailed => "No se pudo obtener el objeto del constructor.",
             GitError::GtkFailedInitiliaze => "No se pudo inicializar GTk",
-            GitError::OpenFileError => "No se pudo abrir el archivo",
+            GitError::OpenFileError => "GitError: No se pudo abrir el archivo",
             GitError::RemoveFileError => "No se pudo eliminar el archivo",
             GitError::ReadFileError => "No se pudo leer el archivo",
             GitError::CreateFileError => "Fallo al crear el archivo",
