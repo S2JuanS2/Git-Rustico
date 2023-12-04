@@ -3,12 +3,16 @@ use std::io::Read;
 use std::net::TcpStream;
 use std::path::Path;
 
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK};
+use crate::commands::branch::get_parent_hashes;
+use crate::commands::cat_file::git_cat_file;
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL};
 use crate::git_server::GitServer;
-use crate::git_transport::negotiation::receive_request;
-use crate::util::connections::send_message;
+use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
+use crate::git_transport::references_update::send_decompressed_package_status;
+use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
-use crate::util::objects::ObjectType;
+use crate::util::files::{open_file, read_file_string};
+use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
@@ -17,6 +21,7 @@ use super::negotiation::{
     receive_done, send_acknowledge_last_reference, sent_references_valid_client,
 };
 use super::references::{get_objects, get_objects_fetch_with_hash_valid};
+use super::references_update::{ReferencesUpdate, send_decompression_failure_status};
 use super::request_command::RequestCommand;
 
 /// # `GitRequest`
@@ -176,6 +181,8 @@ impl GitRequest {
                 handle_upload_pack(stream, &path_repo)
             }
             RequestCommand::ReceivePack => {
+                let path_repo = get_path_repository(root, &self.pathname)?;
+                handle_receive_pack(stream, &path_repo)?;
                 println!("ReceivePack");
                 println!("Funcion aun no implementada");
                 Ok("".to_string())
@@ -242,20 +249,62 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
 // Me debes devolver un Vec<String> con los hash que tenemos en comun
 // Acordate que el repo esta en path_repo
 pub fn search_available_references(
-    _path_repo: &str,
+    path_repo: &str,
     local_hash: &Vec<String>,
 ) -> Vec<String> {
-    let mut _confirmed_commits: Vec<String> = Vec::new();
-    for _hash in local_hash {
+    let mut confirmed_commits: Vec<String> = Vec::new();
+    let commits_in_repo = match get_commits(path_repo) {
+        Ok(commits) => commits,
+        Err(_) => return confirmed_commits,
+    };
+    for hash in local_hash {
         // Ejemplo de como seria
         // if reference.la_tenemos() {
         //     available_references.push(reference);
         // }
         println!("AQUI IRIA TU TODO");
+
+        if commits_in_repo.contains(hash) {
+            confirmed_commits.push(hash.to_string());
+        }
     }
-    _confirmed_commits
+    confirmed_commits
 }
 
+fn get_commits(path_repo: &str) -> Result<Vec<String>, UtilError> {
+    let mut commits: Vec<String> = Vec::new();
+    let branches_path = join_paths_correctly(path_repo, ".git/refs/heads");
+    let branches = match std::fs::read_dir(branches_path) {
+        Ok(branches) => branches,
+        Err(_) => return Err(UtilError::ReadDirError),
+    };
+    for branch in branches {
+        let branch = match branch {
+            Ok(branch) => branch,
+            Err(_) => return Err(UtilError::ReadDirError),
+        };
+        let branch_name = branch.file_name();
+        if let Some(branch_name) = branch_name.to_str() {
+            let branch_path = join_paths_correctly(path_repo, &format!(".git/refs/heads/{}", branch_name));
+            let branch_file = open_file(&branch_path)?;
+            let branch_content = read_file_string(branch_file)?;
+            recover_commits(path_repo, &branch_content, &mut commits)?;
+        }
+    }
+
+    Ok(commits)
+}
+
+fn recover_commits(path_repo: &str, branch_content: &str, mut commits: &mut Vec<String>) -> Result<(), UtilError> {
+    commits.push(branch_content.to_string());
+    let commit_content = git_cat_file(path_repo, branch_content, "-p")?;
+    let parent_commit = get_parent_hashes(commit_content);
+    if parent_commit == PARENT_INITIAL {
+        return Ok(());
+    }
+    recover_commits(path_repo, &parent_commit, &mut commits)?;
+    Ok(())
+}
 
 /// Procesa los datos de una solicitud Git y los convierte en una estructura `GitRequest`.
 /// Esta función toma los datos de la solicitud Git y los divide en comandos y argumentos.
@@ -364,6 +413,48 @@ pub fn get_objects_fetch(git_server: &mut GitServer, confirmed_hashes: Vec<Strin
 
     Ok(objects)
 }
+
+
+pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError>{
+    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &Vec::new())?;
+    server.send_references(stream)?;
+
+    let requests = receive_reference_update_request(stream, &mut server)?;
+    let objects = receive_packfile(stream)?;
+
+    match process_request_update(requests, objects)
+    {
+        Ok(status) => send_decompressed_package_status(stream, &status),
+        Err(_) => send_decompression_failure_status(stream),
+    }
+}
+
+
+// [TODO #8]
+// Esta funcion es la que se encarga de procesar las actualizaciones de las referencias
+// Y de actualizar el repo
+// Recibe un vector de ReferencesUpdate y un vector de (ObjectEntry, Vec<u8>)
+// El vector de ReferencesUpdate son las referencias que el cliente quiere actualizar
+// Atributos de ReferencesUpdate:
+// - old: String -> Hash del objeto viejo
+// - new: String -> Hash del objeto nuevo
+// - path_refs: String -> Ruta de la referencia -> Ejemplo: refs/heads/master
+// ReferencesUpdate tambien se usara para saber lo que el cliente quiere hacer:
+//   create branch     =  old-id=zero-id  new-id 
+//   delete branch     =  old-id          new-id=zero-id
+//   update branch     =  old-id          new-id 
+// Se puede devolvera un vector del tipo Vec<(String, bool)>
+// Donde el String es la referencia y el bool es si fue exitosa o no
+// ESto se usara para decirle al cliente si la actualizacion fue exitosa o no
+// EL falso es solo si no se puede actualizar
+// SI el paquete esta corrupto se debe enviar un error
+pub fn process_request_update(
+    _requests: Vec<ReferencesUpdate>,
+    _objects: Vec<(ObjectEntry, Vec<u8>)>,
+) -> Result<Vec<(String, bool)>, UtilError> {
+    return Ok(Vec::new());
+}
+
 
 #[cfg(test)]
 mod tests {

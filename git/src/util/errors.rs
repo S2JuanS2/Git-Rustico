@@ -89,6 +89,11 @@ pub enum UtilError {
     SendMessageReferenceUpdate,
     ObjectSerialization,
     SendSha1Packfile,
+    ReceiveReferenceUpdateRequest,
+    InvalidReferenceUpdateRequest,
+    InvalidReferencePath,
+    ConnectionIsTerminated,
+    SendStatusUpdateRequest,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -178,6 +183,11 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::SendMessageReferenceUpdate => write!(f, "SendMessageReferenceUpdate: Error al enviar el mensaje de actualización de referencia."),
         UtilError::ObjectSerialization => write!(f, "ObjectSerialization: Error al serializar el objeto."),
         UtilError::SendSha1Packfile => write!(f, "SendSha1Packfile: Error al enviar el sha1 del packfile."),
+        UtilError::ReceiveReferenceUpdateRequest => write!(f, "ReceiveReferenceUpdateRequest: Error al recibir la solicitud de actualización de referencia."),
+        UtilError::InvalidReferenceUpdateRequest => write!(f, "InvalidReferenceUpdateRequest: Solicitud de actualización de referencia inválida."),
+        UtilError::InvalidReferencePath => write!(f, "InvalidReferencePath: Ruta de referencia inválida."),
+        UtilError::ConnectionIsTerminated => write!(f, "ConnectionIsTerminated: La conexión fue terminada."),
+        UtilError::SendStatusUpdateRequest => write!(f, "SendStatusUpdateRequest: Error al enviar la solicitud de actualización de estado."),
     }
 }
 

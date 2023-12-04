@@ -402,6 +402,10 @@ impl GitServer {
             self.available_references.remove(index);
         }
     }
+
+    pub fn filter_capabilities_user(&mut self, my_capabilities: &Vec<String>) -> Result<(), UtilError> {
+        GitServer::filter_capabilities(&mut self.capabilities, my_capabilities)
+    }
 }
 
 /// Filtra las referencias basándose en un conjunto de hash de referencias.
