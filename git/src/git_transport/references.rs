@@ -168,7 +168,7 @@ impl Reference {
     pub fn create_from_name_branch(path_local: &str, name_branch: &str) -> Result<Reference, UtilError>
     {
         let ref_path = format!("{}/.git/refs/heads/{}", path_local, name_branch);
-        let hash = match std::fs::read_to_string(&ref_path) {
+        let hash = match std::fs::read_to_string(ref_path) {
             Ok(reference) => reference,
             Err(_) => return Err(UtilError::BranchNotFound(name_branch.to_string())),
         };

@@ -1,9 +1,6 @@
-name=S2JuanS2
-email=juansdelrio@hotmail.com
+name=VBJ
+email=VJM@visionary.com
 path_log=./client.log
 ip=127.0.0.1
 port=9418
-src=client_root/TestFetch
-src=client_root/
-src=client_root/Repo
-src=server_root/Repo
+src=client_root

@@ -84,7 +84,7 @@ impl Controller {
     }
     pub fn set_label_branch(&self, label_branch: &gtk::Label) {
         let current_branch = self.get_current_branch();
-        label_branch.set_text(&current_branch);
+        label_branch.set_text(current_branch);
     }
     pub fn set_label_path(&self, label_path: &gtk::Label) {
         let path = self.get_path_client();

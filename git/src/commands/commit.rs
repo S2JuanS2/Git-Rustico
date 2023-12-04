@@ -165,10 +165,9 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
     let date: DateTime<Utc> = Utc::now();
     let timestamp = date.timestamp();
     let offset = FixedOffset::west_opt(3 * 3600).unwrap().to_string();
-    let offset_format: String = offset.chars().filter(|&c| c != ':').collect();
-    let content;   
+    let offset_format: String = offset.chars().filter(|&c| c != ':').collect();  
     if parent_hash == PARENT_INITIAL {
-        content = format!(
+        format!(
             "tree {}\nauthor {} <{}> {} {}\ncommitter {} <{}> {} {}\n\n{}\n",
             tree_hash,
             commit.get_author_name(),
@@ -180,9 +179,9 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
             timestamp,
             offset_format,
             commit.get_message()
-        );
+        )
     }else{
-        content = format!(
+        format!(
             "tree {}\nparent {}\nauthor {} <{}> {} {}\ncommitter {} <{}> {} {}\n\n{}\n",
             tree_hash,
             parent_hash,
@@ -195,9 +194,8 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
             timestamp,
             offset_format,
             commit.get_message()
-        );
+        )
     }
-    content
 }
 
 /// Esta función genera y crea el objeto commit
