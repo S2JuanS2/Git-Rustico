@@ -235,42 +235,6 @@ pub fn send_object(
     Ok(())
 }
 
-// pub fn send_packfile_2(
-//     writer: &mut dyn Write,
-//     server: &GitServer,
-//     objects: Vec<(ObjectType, Vec<u8>)>
-// ) -> Result<(), UtilError> {
-//     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
-//     let mut sha1 = Sha1::new();
-//     // Envio signature
-//     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
-//     sha1.update(&PACK_BYTES);
-
-//     // Envio version
-//     send_bytes(
-//         writer,
-//         &server.version.to_be_bytes(),
-//         UtilError::SendSignaturePackfile,
-//     )?;
-//     sha1.update(&server.version.to_be_bytes());
-
-//     // Envio numero de objetos
-//     let number_objects = objects.len() as u32;
-//     send_bytes(
-//         writer,
-//         &number_objects.to_be_bytes(),
-//         UtilError::SendSignaturePackfile,
-//     )?;
-//     sha1.update(&number_objects.to_be_bytes());
-//     // println!("Number of objects: {}", number_objects);
-
-//     // Envio de objetos
-//     for (object_type, content) in objects {
-//         send_object_2(writer, object_type, content, &mut sha1)?;
-//     }
-//     Ok(())
-// }
-
 pub fn send_object_enconder(
     writer: &mut dyn Write,
     obj_type: ObjectType,
