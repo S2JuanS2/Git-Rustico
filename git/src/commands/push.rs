@@ -2,7 +2,7 @@ use super::cat_file::git_cat_file;
 use super::checkout::extract_parent_hash;
 use super::errors::CommandsError;
 use crate::commands::config::GitConfig;
-use crate::consts::{ZERO_ID, UNPACK_OK};
+use crate::consts::{ZERO_ID, CAPABILITIES_PUSH};
 use crate::git_transport::git_request::GitRequest;
 use crate::git_transport::references::{Reference, reference_discovery, get_objects_from_hash_to_hash};
 use crate::git_transport::request_command::RequestCommand;
@@ -147,7 +147,8 @@ pub fn git_push_branch(
     let message =
         GitRequest::generate_request_string(RequestCommand::ReceivePack, &push.url_remote, ip, port);
     
-    let server = reference_discovery(socket, message, &push.url_remote, &Vec::new())?;
+    let capacibilities:Vec<String> = CAPABILITIES_PUSH.iter().map(|&s| s.to_string()).collect();
+    let server = reference_discovery(socket, message, &push.url_remote, &capacibilities)?;
     let prev_hash = match server.get_remote_reference_hash(push.branch.get_ref_path())
     {
         Some(hash) => hash, // Actualizo en el remoto
@@ -163,7 +164,7 @@ pub fn git_push_branch(
     //     return Ok(push.get_status());
     // }
     // AViso que actualizare mi branch
-    reference_update(socket, &prev_hash, &current_hash, push.branch.get_ref_path())?;
+    reference_update(socket, &prev_hash, &current_hash, push.branch.get_ref_path(), &capacibilities)?;
     println!("Se actualizo la referencia");
     
     // Envio los objetos que no tiene el remoto
@@ -286,9 +287,19 @@ pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Resu
 /// Un `Result<(), CommandsError>` que indica si la operación de actualización de referencia fue exitosa o si ocurrió un error.
 /// En caso de error, se proporciona un detalle específico en el tipo `CommandsError`.
 ///
-fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str) -> Result<(), CommandsError>
+fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str, capabilities: &Vec<String>) -> Result<(), CommandsError>
 {   
-    let message = format!("{} {} {}\n", hash_prev, hash_update, path_ref);
+    let mut message = format!("{} {} {}", hash_prev, hash_update, path_ref);
+    if capabilities.is_empty()
+    {
+        message.push_str("\n");
+    }
+    else
+    {
+        message.push_str("\0");
+        message.push_str(&capabilities.join(" "));
+        message.push_str("\n");
+    }
     let message = pkt_line::add_length_prefix(&message, message.len());
     send_message(socket, &message, UtilError::SendMessageReferenceUpdate)?;
     send_flush(socket, UtilError::SendMessageReferenceUpdate)?;
@@ -306,7 +317,8 @@ fn read_status_from_server(socket: &mut TcpStream, number_requests: usize) -> Re
         Err(_) => return Err(CommandsError::PushInvalidStatusFromServer)
     
     };
-    if commad_status != UNPACK_OK
+    println!("Status: {}", commad_status);
+    if commad_status != "unpack ok"
     {
         status.push("Push degenado por el servidor".to_string());
         status.push(format!("Error: {}", commad_status));

@@ -98,6 +98,8 @@ pub const WANT: &str = "want";
 
 pub const CAPABILITIES_FETCH: [&str; 1] = ["multi_ack"];
 
+pub const CAPABILITIES_PUSH: [&str; 1] = ["report-status"];
+
 // Directorios
 pub const GIT_DIR: &str = ".git";
 
