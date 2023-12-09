@@ -98,6 +98,8 @@ pub const WANT: &str = "want";
 
 pub const CAPABILITIES_FETCH: [&str; 1] = ["multi_ack"];
 
+pub const CAPABILITIES_PUSH: [&str; 1] = ["report-status"];
+
 // Directorios
 pub const GIT_DIR: &str = ".git";
 
@@ -151,3 +153,7 @@ pub const CONFIG_FILE: &str = "config";
 pub const CONFIG_REMOTE_FETCH: &str = "+refs/heads/*:refs/remotes/origin/*";
 
 pub const ZERO_ID: &str = "0000000000000000000000000000000000000000";
+
+pub const BUFFER_SIZE: usize = 1024;
+
+pub const UNPACK_OK: &str = "unpack ok\n";

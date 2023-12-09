@@ -96,6 +96,7 @@ pub enum CommandsError {
     PushCurrentBranchNotFound,
     SendMessageReferenceUpdate,
     TimeStamp,
+    PushInvalidStatusFromServer
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -199,6 +200,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::PushCurrentBranchNotFound => write!(f, "No se encontró la branch actual"),
         CommandsError::SendMessageReferenceUpdate => write!(f, "No se pudo enviar el mensaje de actualización de referencia"),
         CommandsError::TimeStamp => write!(f, "No se pudo obtener el timestamp"),
+        CommandsError::PushInvalidStatusFromServer => write!(f, "El servidor devolvió un estado inválido"),
     }
 }
 

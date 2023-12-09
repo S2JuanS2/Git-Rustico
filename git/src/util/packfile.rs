@@ -1,5 +1,5 @@
 use crate::{
-    consts::{PACK_BYTES, PACK_SIGNATURE},
+    consts::{PACK_BYTES, PACK_SIGNATURE, BUFFER_SIZE},
     git_server::GitServer,
     util::objects::read_type_and_length_from_vec,
 };
@@ -27,12 +27,13 @@ pub fn read_packfile_data(
     objects: usize,
 ) -> Result<Vec<(ObjectEntry, Vec<u8>)>, UtilError> {
     let mut information: Vec<(ObjectEntry, Vec<u8>)> = Vec::new();
-    let mut buffer: Vec<u8> = Vec::new();
-    match reader.read_to_end(&mut buffer) // Necesita refactorizar, si el packfile es muy grande habra problema
-    {
-        Ok(buffer) => buffer,
-        Err(_) => return Err(UtilError::DataPackFiletReadObject),
-    };
+    // let mut buffer: Vec<u8> = Vec::new();
+    // match reader.read_to_end(&mut buffer) // Necesita refactorizar, si el packfile es muy grande habra problema
+    // {
+    //     Ok(buffer) => buffer,
+    //     Err(_) => return Err(UtilError::DataPackFiletReadObject),
+    // };
+    let buffer = read_data_packfile(reader)?;
     let mut offset: usize = 0;
 
     for _ in 0..objects {
@@ -64,6 +65,32 @@ fn read_object_data(data: &[u8], offset: &mut usize) -> Result<Vec<u8>, UtilErro
     let bytes_read = zlib_decoder.total_in();
     *offset += bytes_read as usize;
     Ok(decompressed_data)
+}
+
+fn read_data_packfile(
+    reader: &mut dyn Read,
+) -> Result<Vec<u8>, UtilError> {
+    let mut buffer = Vec::new();
+    let mut temp_buffer = [0; BUFFER_SIZE];
+    loop {
+        let bytes_read = match reader.read(&mut temp_buffer)
+        {
+            Ok(bytes_read) => bytes_read,
+            Err(_) => return Err(UtilError::DataPackFiletReadObject),
+        }
+        ;
+
+        if bytes_read != BUFFER_SIZE {
+            buffer.extend_from_slice(&temp_buffer[..bytes_read]);
+            println!("Len buffer: {}", buffer.len());
+            println!("Saliii");
+            break;
+        }
+        println!("Reaaaad!");
+        buffer.extend_from_slice(&temp_buffer[..bytes_read]);
+        temp_buffer = [0; BUFFER_SIZE];
+    }
+    Ok(buffer)
 }
 
 /// Lee y verifica la firma del encabezado del archivo PACKFILE a partir del lector proporcionado.
@@ -213,42 +240,6 @@ pub fn send_object(
     send_bytes(writer, &bytes, UtilError::SendObjectPackfile)?;
     Ok(())
 }
-
-// pub fn send_packfile_2(
-//     writer: &mut dyn Write,
-//     server: &GitServer,
-//     objects: Vec<(ObjectType, Vec<u8>)>
-// ) -> Result<(), UtilError> {
-//     send_message(writer, PKT_NAK, UtilError::SendNAKPackfile)?;
-//     let mut sha1 = Sha1::new();
-//     // Envio signature
-//     send_bytes(writer, &PACK_BYTES, UtilError::SendSignaturePackfile)?;
-//     sha1.update(&PACK_BYTES);
-
-//     // Envio version
-//     send_bytes(
-//         writer,
-//         &server.version.to_be_bytes(),
-//         UtilError::SendSignaturePackfile,
-//     )?;
-//     sha1.update(&server.version.to_be_bytes());
-
-//     // Envio numero de objetos
-//     let number_objects = objects.len() as u32;
-//     send_bytes(
-//         writer,
-//         &number_objects.to_be_bytes(),
-//         UtilError::SendSignaturePackfile,
-//     )?;
-//     sha1.update(&number_objects.to_be_bytes());
-//     // println!("Number of objects: {}", number_objects);
-
-//     // Envio de objetos
-//     for (object_type, content) in objects {
-//         send_object_2(writer, object_type, content, &mut sha1)?;
-//     }
-//     Ok(())
-// }
 
 pub fn send_object_enconder(
     writer: &mut dyn Write,
