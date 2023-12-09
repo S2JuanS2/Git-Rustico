@@ -31,6 +31,25 @@ pub fn hash_generate(content: &str) -> String {
     hash_commit
 }
 
+/// Dado un contenido lo comprime
+/// ###Parametros:
+/// 'store': contenido que se comprimirá
+pub fn compressor_object_with_bytes_content(store: Vec<u8>) -> Result<Vec<u8>, UtilError> {
+    let mut compressor = ZlibEncoder::new(Vec::new(), Compression::default());
+
+    match compressor.write_all(&store) {
+        Ok(_) => (),
+        Err(_) => return Err(UtilError::ReadFileError),
+    }
+
+    let compressed_bytes = match compressor.finish() {
+        Ok(compressed_bytes) => compressed_bytes,
+        Err(_) => return Err(UtilError::ReadFileError),
+    };
+
+    Ok(compressed_bytes)
+}
+
 /// Dado un contenido lo comprime y lo guarda en un archivo
 /// ###Parametros:
 /// 'store': contenido que se comprimirá
@@ -54,6 +73,25 @@ pub fn compressor_object_with_bytes(store: Vec<u8>, mut file_object: File) -> Re
     }
 
     Ok(())
+}
+
+/// Dado un contenido lo comprime y retorna el vector comprimido
+/// ###Parametros:
+/// 'store': contenido que se comprimirá
+pub fn compressor_object_content(store: String) -> Result<Vec<u8>, UtilError> {
+    let mut compressor = ZlibEncoder::new(Vec::new(), Compression::default());
+
+    match compressor.write_all(store.as_bytes()) {
+        Ok(_) => (),
+        Err(_) => return Err(UtilError::ReadFileError),
+    }
+
+    let compressed_bytes = match compressor.finish() {
+        Ok(compressed_bytes) => compressed_bytes,
+        Err(_) => return Err(UtilError::ReadFileError),
+    };
+
+    Ok(compressed_bytes)
 }
 
 /// Dado un contenido lo comprime y lo guarda en un archivo

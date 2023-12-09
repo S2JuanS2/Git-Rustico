@@ -5,6 +5,7 @@ use crate::commands::push::is_ancestor;
 use crate::consts::PARENT_INITIAL;
 use crate::git_server::GitServer;
 use crate::util::files::{open_file, read_file, read_file_string};
+use crate::util::formats::{compressor_object_content, decompression_object, compressor_object_with_bytes_content};
 use crate::util::objects::ObjectType;
 use crate::{
     consts::{DIRECTORY, FILE, GIT_DIR, HEAD, REFS_REMOTES, REFS_TAGS, REF_HEADS},
@@ -226,7 +227,8 @@ pub fn recovery_tree(
         let hash = parts[2];
         if mode == FILE {
             let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
-            object_blob.1 = get_content(directory, hash)?;
+            let blob_content = git_cat_file(directory, hash, "-p")?;
+            object_blob.1 = compressor_object_content(blob_content)?;
             save_object_pack(objects, object_blob)
         } else if mode == DIRECTORY {
             let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
@@ -306,13 +308,20 @@ pub fn get_objects_from_hash_to_hash(
 
     if is_ancestor(path_local, current_hash, prev_hash)? {
         let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
-        object_commit.1 = get_content(path_local, current_hash)?;
+        let content_commit = git_cat_file(path_local, current_hash, "-p")?;
+        object_commit.1 = compressor_object_content(content_commit)?;
         save_object_pack(&mut objects, object_commit);
         let commit = git_cat_file(path_local, current_hash, "-p")?;
         if let Some(tree_hash) = get_tree_hash(&commit){
             let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
-            object_tree.1 = get_content(path_local, tree_hash)?;
-            save_object_pack(&mut objects, object_tree);
+            let path = format!("{}/{}/objects/{}", path_local, GIT_DIR, &tree_hash[..2]);
+            let file_path = format!("{}/{}", path, &tree_hash[2..]);
+            let mut decompresed = decompression_object(&file_path)?;
+            if let Some(pos) = decompresed.iter().position(|&x| x == b'\0'){
+                let tree = decompresed.split_off(pos +1);
+                object_tree.1 = compressor_object_with_bytes_content(tree)?;
+                save_object_pack(&mut objects, object_tree);
+            }
             recovery_tree(path_local, tree_hash, &mut objects)?;
         }
     }
