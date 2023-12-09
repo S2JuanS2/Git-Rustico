@@ -27,7 +27,13 @@ pub fn read_packfile_data(
     objects: usize,
 ) -> Result<Vec<(ObjectEntry, Vec<u8>)>, UtilError> {
     let mut information: Vec<(ObjectEntry, Vec<u8>)> = Vec::new();
-    let buffer: Vec<u8> = read_data_packfile(reader)?;
+    // let mut buffer: Vec<u8> = Vec::new();
+    // match reader.read_to_end(&mut buffer) // Necesita refactorizar, si el packfile es muy grande habra problema
+    // {
+    //     Ok(buffer) => buffer,
+    //     Err(_) => return Err(UtilError::DataPackFiletReadObject),
+    // };
+    let buffer = read_data_packfile(reader)?;
     let mut offset: usize = 0;
 
     for _ in 0..objects {
