@@ -151,3 +151,5 @@ pub const CONFIG_FILE: &str = "config";
 pub const CONFIG_REMOTE_FETCH: &str = "+refs/heads/*:refs/remotes/origin/*";
 
 pub const ZERO_ID: &str = "0000000000000000000000000000000000000000";
+
+pub const BUFFER_SIZE: usize = 1024;
