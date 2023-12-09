@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::util::{errors::UtilError, validation::is_valid_obj_id, pkt_line::add_length_prefix, connections::send_message};
+use crate::{util::{errors::UtilError, validation::is_valid_obj_id, pkt_line::add_length_prefix, connections::send_message}, consts::UNPACK_OK};
 
 use super::references::Reference;
 
@@ -55,13 +55,8 @@ impl ReferencesUpdate {
 
 
 pub fn send_decompressed_package_status(writer: &mut dyn Write, reference: &Vec<(String, bool)>) -> Result<(), UtilError> {
-    // unpack ok\n
-    // println!("Writer: {:?}", writer);
-    let signature = "unpack ok\n";
-    let message = add_length_prefix(signature, signature.len());
+    let message = add_length_prefix(UNPACK_OK, UNPACK_OK.len());
     send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
-    println!("message unpack: {:?}", message);
-    println!("reference: {:?}", reference);
 
     for (reference, status) in reference {
         let message = match status {
@@ -70,9 +65,7 @@ pub fn send_decompressed_package_status(writer: &mut dyn Write, reference: &Vec<
         };
         let message = add_length_prefix(&message, message.len());
         send_message(writer, &message, UtilError::SendStatusUpdateRequest)?;
-        println!("message unpack 2: {:?}", message);
     }
-    println!("FIN!");
     Ok(())
 }
 
