@@ -3,7 +3,7 @@ use crate::util::files::{create_file_replace, open_file, read_file_string};
 use super::branch::get_current_branch;
 use super::commit::{Commit, git_commit};
 use super::errors::CommandsError;
-use super::merge::{get_log_from_branch, try_for_merge, logs_just_in_one_branch};
+use super::merge::{get_log_from_branch, try_for_merge, logs_just_in_one_branch, get_branches_hashes, get_refs_path};
 use super::cat_file::git_cat_file;
 
 /// Esta función se encarga de llamar al comando rebase con los parametros necesarios.
@@ -27,8 +27,11 @@ pub fn handle_rebase(args: Vec<&str>, client: Client) -> Result<String, Commands
 pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
     let current_branch = get_current_branch(directory)?;
-    let log_current_branch = get_log_from_branch(directory, &current_branch)?;
-    let log_rebase_branch = get_log_from_branch(directory, branch_name)?;
+    let path_current_branch = get_refs_path(directory, &current_branch);
+    let path_branch_to_merge = get_refs_path(directory, branch_name);
+    let (current_branch_hash, branch_to_merge_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
+    let log_current_branch = get_log_from_branch(directory, &current_branch_hash)?;
+    let log_rebase_branch = get_log_from_branch(directory, &branch_to_merge_hash)?;
 
     formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
     let result_merge = try_for_merge(directory, &current_branch, branch_name, &client, "rebase")?;
@@ -52,8 +55,12 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
 /// 'current_branch': nombre de la branch actual
 /// 'rebase_branch': nombre de la branch sobre la cual se hizo el rebase
 fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &str) -> Result<(), CommandsError> {
-    let log_current_branch = get_log_from_branch(directory, &current_branch)?;
-    let log_rebase_branch = get_log_from_branch(directory, rebase_branch)?;
+    let path_current_branch = get_refs_path(directory, &current_branch);
+    let path_branch_to_rebase = get_refs_path(directory, rebase_branch);
+    let (current_branch_hash, branch_to_rebase_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_rebase)?;
+
+    let log_current_branch = get_log_from_branch(directory, &current_branch_hash)?;
+    let log_rebase_branch = get_log_from_branch(directory, &branch_to_rebase_hash)?;
 
     let log_rebase_branch_cloned = log_rebase_branch.clone();
     let last_commit_rebase_branch = match log_rebase_branch_cloned.last() {
@@ -108,7 +115,7 @@ fn update_parent(content_commit: String, last_commit_rebase_branch: &String, fir
 /// ###Parametros:
 /// 'content_commit': contenido del primer commit de la branch actual
 /// 'last_commit_rebase_branch': último commit de la branch sobre la que se hizo el rebase
-pub fn rewrite_commit(content_commit: &str, last_commit_rebase_branch: &String) -> String {
+pub fn rewrite_commit(content_commit: &str, last_commit_rebase_branch: &str) -> String {
     let mut new_content = String::new();
     for line in content_commit.lines() {
         if line.starts_with("parent") {

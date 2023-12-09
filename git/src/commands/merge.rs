@@ -1,6 +1,7 @@
 use crate::consts::{FILE, GIT_DIR, CONTENT_EMPTY, PARENT_INITIAL};
 use crate::models::client::Client;
 use super::add::add_to_index;
+use super::checkout::extract_parent_hash;
 use super::commit::{Commit, git_commit};
 use super::errors::CommandsError;
 use super::rebase::rewrite_commit;
@@ -9,7 +10,6 @@ use std::fs;
 use std::path::Path;
 use super::branch::get_current_branch;
 use super::cat_file::git_cat_file;
-use super::log::get_parts_commit;
 
 /// Esta función se encarga de llamar al comando merge con los parametros necesarios.
 /// ###Parametros:
@@ -39,7 +39,6 @@ pub fn git_merge(directory: &str, current_branch: &str, branch_name: &str, clien
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
 pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, client: &Client, merge_type: &str) -> Result<String, CommandsError> {
-    // let current_branch = get_current_branch(directory)?;
     let path_current_branch = get_refs_path(directory, &current_branch);
     let path_branch_to_merge = get_refs_path(directory, branch_name);
     let (current_branch_hash, branch_to_merge_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
@@ -48,8 +47,8 @@ pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, c
         formatted_result.push_str("Already up to date.");
         return Ok(formatted_result);
     } else {
-        let log_current_branch = get_log_from_branch(directory, &current_branch)?;
-        let log_merge_branch = get_log_from_branch(directory, branch_name)?;
+        let log_current_branch = get_log_from_branch(directory, &current_branch_hash)?;
+        let log_merge_branch = get_log_from_branch(directory, &branch_to_merge_hash)?;
         if check_if_current_is_up_to_date(&log_current_branch, &log_merge_branch, &mut formatted_result) {
             return Ok(formatted_result);
         }
@@ -62,7 +61,7 @@ pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, c
         let strategy = merge_depending_on_strategy(&hash_parent_current, &hash_parent_merge, &branch_to_merge_hash, directory, branch_name)?;
         if merge_type == "merge" {
             update_refs(directory, &strategy, &path_current_branch, &branch_to_merge_hash, &path_branch_to_merge, client.clone())?;
-            update_logs_refs(directory, &strategy, &current_branch, branch_name)?;
+            update_logs_refs(directory, &strategy, &current_branch, branch_name, &current_branch_hash, &branch_to_merge_hash)?;
         }
         get_result_depending_on_strategy(strategy, &mut formatted_result, current_branch_hash, branch_to_merge_hash, path_current_branch)?;
     }
@@ -112,18 +111,14 @@ fn update_merge_commit_in_other_branch(path_current_branch: &str, path_branch_to
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
-fn update_logs_in_other_branch(directory: &str, branch_name: &str) -> Result<(), CommandsError> {
+fn update_logs_in_other_branch(directory: &str, branch_name: &str, branch_to_merge_hash: &str) -> Result<(), CommandsError> {
     let current_branch = get_current_branch(directory)?;
     let log_current_path = get_log_path(directory, &current_branch);
     let log_current_file = open_file(&log_current_path)?;
     let log_current_content = read_file_string(log_current_file)?;
     let last_commit_in_log_current = get_last_commit_in_log(log_current_content);
 
-    let logs_branch_to_merge = get_log_from_branch(directory, branch_name)?;
-    let logs_count = logs_branch_to_merge.len();
-    let last_commit_in_log_branch_to_merge = logs_branch_to_merge[logs_count - 1].clone();
-
-    let new_commit = rewrite_commit(&last_commit_in_log_current, &last_commit_in_log_branch_to_merge);
+    let new_commit = rewrite_commit(&last_commit_in_log_current, branch_to_merge_hash);
 
     let log_branch_to_merge_path = get_log_path(directory, branch_name);
     let log_branch_to_merge_file = open_file(&log_branch_to_merge_path)?;
@@ -138,7 +133,7 @@ fn update_logs_in_other_branch(directory: &str, branch_name: &str) -> Result<(),
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama
-fn get_refs_path(directory: &str, branch_name: &str) -> String {
+pub fn get_refs_path(directory: &str, branch_name: &str) -> String {
     let mut path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
     if branch_name.contains("remotes") {
         path_branch_to_merge = format!("{}/.git/{}", directory, branch_name);
@@ -166,24 +161,26 @@ fn get_log_path(directory: &str, branch_name: &str) -> String {
 /// 'strategy': tupla que contiene la estrategia de merge utilizada y el archivo en conflicto (u ok si no hay)
 /// 'current_branch': nombre de la rama actual
 /// 'branch_to_merge': nombre de la rama a mergear
-fn update_logs_refs(directory: &str, strategy: &(String, String), current_branch: &str, branch_to_merge: &str) -> Result<(), CommandsError> {
+fn update_logs_refs(directory: &str, strategy: &(String, String), current_branch: &str, branch_to_merge: &str, current_branch_hash: &str, branch_to_merge_hash: &str) -> Result<(), CommandsError> {
     if strategy.0 == "recursive" && strategy.1 == "ok" {
-        update_logs_in_other_branch(directory, branch_to_merge)?;
+        update_logs_in_other_branch(directory, branch_to_merge, branch_to_merge_hash)?;
     } else if strategy.0 == "fast-forward" {
-        let logs_current_branch = get_log_from_branch(directory, current_branch)?;
-        let logs_merge_branch = get_log_from_branch(directory, branch_to_merge)?;
+        let logs_current_branch = get_log_from_branch(directory, &current_branch_hash)?;
+        let logs_merge_branch = get_log_from_branch(directory, &branch_to_merge_hash)?;
         let logs_just_in_merge_branch = logs_just_in_one_branch(logs_merge_branch.to_vec(), logs_current_branch.to_vec());
+        // revertir el orden de logs_just_in_merge_branch
+        let logs_just_in_merge_branch = logs_just_in_merge_branch.iter().rev().collect::<Vec<_>>();
         let log_merge_path = get_log_path(directory, branch_to_merge);
         let log_merge_file = open_file(&log_merge_path)?;
         let log_merge_content = read_file_string(log_merge_file)?;
 
         let new_commits: String = log_merge_content
             .lines()
-            .skip_while(|&line| !line.contains(&logs_just_in_merge_branch[0]))
+            .skip_while(|&line| !line.contains(logs_just_in_merge_branch[0]))
             .collect::<Vec<&str>>()
             .join("\n");
 
-        let log_current_path = format!("{}/.git/logs/refs/heads/{}", directory, current_branch);
+        let log_current_path = get_log_path(directory, current_branch);
         let log_current_file = open_file(&log_current_path)?;
         let mut log_current_content = read_file_string(log_current_file)?;
         log_current_content.push_str(format!("\n{}", new_commits).as_str());
@@ -241,11 +238,17 @@ pub fn get_first_commit_of_each_branch(
     let mut first_commit_merge_branch = &log_merge_branch[0];
 
     if !logs_just_in_current_branch.is_empty() {
-        first_commit_current_branch = &logs_just_in_current_branch[0];
+        first_commit_current_branch = match &logs_just_in_current_branch.last() {
+            Some(commit) => commit,
+            None => first_commit_current_branch,
+        }
     }
 
     if !logs_just_in_merge_branch.is_empty() {
-        first_commit_merge_branch = &logs_just_in_merge_branch[0];
+        first_commit_merge_branch = match &logs_just_in_merge_branch.last() {
+            Some(commit) => commit,
+            None => first_commit_merge_branch,
+        }
     }
     (
         first_commit_current_branch.to_string(),
@@ -274,17 +277,23 @@ pub fn get_branches_hashes(
 /// 'branch': nombre de la rama
 pub fn get_log_from_branch(
     directory: &str,
-    branch: &str,
+    hash: &str,
 ) -> Result<Vec<String>, CommandsError> {
 
-    let log_path = get_log_path(directory, branch);
-    let log_file = open_file(&log_path)?;
-    let log_content = read_file_string(log_file)?;
-    let log_content_lines = log_content.lines().map(|line| line.to_string()).collect::<Vec<_>>();
-    let log_current_branch = get_parts_commit(log_content_lines)?;
-    let log_current_branch = get_commits_from_log(log_current_branch);
+    let mut log_current_branch: Vec<String> = Vec::new();
+    let commit_content = git_cat_file(directory, hash, "-p")?;
+    add_commit_to_log(directory, &mut log_current_branch, hash, commit_content)?;
     
     Ok(log_current_branch)
+}
+
+fn add_commit_to_log(directory: &str, log_current_branch: &mut Vec<String>, hash: &str, commit_content: String) -> Result<(), CommandsError> {
+    log_current_branch.push(hash.to_string());
+    if let Some(parent_hash) = extract_parent_hash(&commit_content) {
+        let commit_content = git_cat_file(directory, parent_hash, "-p")?;
+        add_commit_to_log(directory, log_current_branch, parent_hash, commit_content)?;
+    }
+    Ok(())
 }
 
 /// Obtiene el resultado del merge dependiendo de la estrategia de merge utilizada.
@@ -387,11 +396,9 @@ pub fn check_if_current_is_up_to_date(
     formatted_result: &mut String,
 ) -> bool {
     for commit in log_current_branch.iter() {
-        if let Some(last_hash_merge_branch) = log_merge_branch.last() {
-            if commit == last_hash_merge_branch.as_str() {
-                formatted_result.push_str("Already up to date.");
-                return true;
-            }
+        if commit == log_merge_branch[0].as_str() {
+            formatted_result.push_str("Already up to date.");
+            return true;
         }
     }
     false
@@ -424,7 +431,7 @@ fn recovery_tree_merge(
             let path_file_format_clean_str = path_file_format_clean.to_str().ok_or(CommandsError::PathToStringError)?;
             let git_dir = format!("{}/{}", directory, GIT_DIR);
             if hash_parent_current == hash_parent_merge {
-                // RECURSIVE STRATEGY: me falta hacer el merge commit
+                // RECURSIVE STRATEGY
                 if let Ok(metadata) = fs::metadata(&path_file_format) {
                     if metadata.is_file() {
                         compare_files(
@@ -729,22 +736,6 @@ mod tests {
         file.write_all(b"Archivo a commitear")
             .expect("Error al escribir en el archivo");
 
-        let file_path2 = format!("{}/{}", directory, "tocommitinnew1.txt");
-        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
-        file2
-            .write_all(b"Otro archivo a commitear")
-            .expect("Error al escribir en el archivo");
-
-        let file_path3 = format!("{}/{}", directory, "tocommitinnew2.txt");
-        let mut file = fs::File::create(&file_path3).expect("Falló al crear el archivo");
-        file.write_all(b"Archivo a commitear 2")
-            .expect("Error al escribir en el archivo");
-
-        let file_path4 = format!("{}/{}", directory, "tocommitinotra.txt");
-        let mut file = fs::File::create(&file_path4).expect("Falló al crear el archivo");
-        file.write_all(b"Archivo a commitear 3")
-            .expect("Error al escribir en el archivo");
-
         git_add(directory, "tocommitinmaster.txt").expect("Error al agregar el archivo");
 
         let test_commit1 = Commit::new(
@@ -761,6 +752,17 @@ mod tests {
         git_branch_create(directory, "otra_mas").expect("Error al crear la rama");
 
         git_checkout_switch(directory, "new_branch").expect("Error al cambiar de rama");
+
+        let file_path2 = format!("{}/{}", directory, "tocommitinnew1.txt");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2
+            .write_all(b"Otro archivo a commitear")
+            .expect("Error al escribir en el archivo");
+
+        let file_path3 = format!("{}/{}", directory, "tocommitinnew2.txt");
+        let mut file = fs::File::create(&file_path3).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear 2")
+            .expect("Error al escribir en el archivo");
 
         git_add(directory, "tocommitinnew1.txt").expect("Error al agregar el archivo");
 
@@ -790,7 +792,7 @@ mod tests {
 
         let file_path4 = format!("{}/{}", directory, "tocommitinnew2.txt");
         let mut file = fs::File::create(&file_path4).expect("Falló al crear el archivo");
-        file.write_all(b"Archivo a commitear 232")
+        file.write_all(b"Archivo a commitear 32")
             .expect("Error al escribir en el archivo");
 
         git_add(directory, "tocommitinnew2.txt").expect("Error al agregar el archivo");
@@ -842,11 +844,6 @@ mod tests {
         file.write_all(b"Archivo a commitear 2")
             .expect("Error al escribir en el archivo");
 
-        let file_path4 = format!("{}/{}", directory, "tocommitinotra.txt");
-        let mut file = fs::File::create(&file_path4).expect("Falló al crear el archivo");
-        file.write_all(b"Archivo a commitear 3")
-            .expect("Error al escribir en el archivo");
-
         git_add(directory, "tocommitinmaster.txt").expect("Error al agregar el archivo");
 
         let test_commit1 = Commit::new(
@@ -917,7 +914,7 @@ mod tests {
         );
 
         let result = git_merge(directory, "otra_mas", "new_branch", client);
-
+        
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
         assert!(result.is_ok());
@@ -1107,6 +1104,90 @@ mod tests {
         fs::remove_file(log_path_local).expect("Error al remover el archivo");
 
         let result = git_merge(directory, "master", "refs/remotes/origin/fetch", client);
+
+        fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn git_merge_remote_and_local_paths() {
+        let directory = "./test_merge_remote_and_local_paths";
+        git_init(directory).expect("Error al iniciar el repositorio");
+
+        let file_path = format!("{}/{}", directory, "tocommitinmaster.txt");
+        let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear")
+            .expect("Error al escribir en el archivo");
+
+        let file_path2 = format!("{}/{}", directory, "tocommitonlyonmaster1.txt");
+        let mut file2 = fs::File::create(&file_path2).expect("Falló al crear el archivo");
+        file2.write_all(b"Otro archivo a commitear")
+            .expect("Error al escribir en el archivo");
+
+        let file_path3 = format!("{}/{}", directory, "tocommitonlyonmaster2.txt");
+        let mut file = fs::File::create(&file_path3).expect("Falló al crear el archivo");
+        file.write_all(b"Archivo a commitear 2")
+            .expect("Error al escribir en el archivo");
+
+        git_add(directory, "tocommitinmaster.txt").expect("Error al agregar el archivo");
+
+        let test_commit1 = Commit::new(
+            "prueba".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+        git_commit(directory, test_commit1).expect("Error al commitear");
+
+        // para copiar el commit a una branch remota
+        git_branch_create(directory, "new_branch").expect("Error al crear la rama");
+
+        // agrego un commit mas solo a master
+        git_add(directory, "tocommitonlyonmaster1.txt").expect("Error al agregar el archivo");
+        git_add(directory, "tocommitonlyonmaster2.txt").expect("Error al agregar el archivo");
+
+        let test_commit2 = Commit::new(
+            "para master".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "Valen".to_string(),
+            "vlanzillotta@fi.uba.ar".to_string(),
+        );
+
+        git_commit(directory, test_commit2).expect("Error al commitear");
+
+        let new_branch_path = format!("{}/.git/refs/heads/{}", directory, "new_branch");
+        let new_branch_file = open_file(&new_branch_path).expect("Error al abrir el archivo");
+        let new_branch_hash = read_file_string(new_branch_file).expect("Error al leer el archivo");
+
+        create_dir_all(format!("{}/.git/logs", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs/remotes", directory)).expect("Error al crear el directorio");
+        create_dir_all(format!("{}/.git/logs/refs/remotes/origin", directory)).expect("Error al crear el directorio");
+
+        let log_new = open_file(format!("{}/.git/logs/refs/heads/new_branch", directory).as_str()).expect("Error al abrir el archivo");
+        let log_new_content = read_file_string(log_new).expect("Error al leer el archivo");
+
+        let log_remote = format!("{}/.git/logs/refs/remotes/origin/fetch", directory);
+        create_file_replace(&log_remote, &log_new_content).expect("Error al crear el archivo");
+
+        let remote_branch_path = format!("{}/.git/refs/remotes/origin/fetch", directory);
+        create_file_replace(&remote_branch_path, &new_branch_hash).expect("Error al crear el archivo");
+
+        let client: Client = Client::new(
+            "Valen".to_string(), 
+            "vlanzillotta@fi.uba.ar".to_string(),
+            "19992020".to_string(),
+            "9090".to_string(),
+            "localhost".to_string(),
+            "./".to_string(),
+            "master".to_string(),
+        );
+        
+        git_checkout_switch(directory, "new_branch").expect("Error al cambiar de rama");
+
+        let result = git_merge(directory, "refs/remotes/origin/fetch", "master", client);
 
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
         assert!(result.is_ok());
