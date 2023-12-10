@@ -433,12 +433,16 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
     let requests = receive_reference_update_request(stream, &mut server)?;
     let objects = receive_packfile(stream)?;
     println!("handle_receive_pack Objects -> : {:?}", objects);
-    // println!("Stream: {:?}", stream);
-    // send_message(stream, "message", UtilError::SendNAKPackfile)?;
+    // El server no enviara estatus
+    // match process_request_update(requests, objects, path_repo)
+    // {
+        //     Ok(status) => send_decompressed_package_status(stream, &status),
+        //     Err(_) => send_decompression_failure_status(stream),
+    // }
     match process_request_update(requests, objects, path_repo)
     {
-        Ok(status) => send_decompressed_package_status(stream, &status),
-        Err(_) => send_decompression_failure_status(stream),
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
     }
 }
 

@@ -173,8 +173,8 @@ pub fn git_push_branch(
     push.add_status("Se enviaron los objetos al remoto");
     
     // REcibo el estatus del push
-    let status_server = read_status_from_server(socket, 1)?; // 1 -> Solo una branch 
-    push.add_status_vec(status_server);
+    // let status_server = read_status_from_server(socket, 1)?; // 1 -> Solo una branch 
+    // push.add_status_vec(status_server);
     Ok(push.get_status())
 }
 
