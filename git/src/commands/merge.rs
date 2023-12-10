@@ -41,8 +41,10 @@ pub fn git_merge(directory: &str, current_branch: &str, branch_name: &str, clien
 pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, client: &Client, merge_type: &str) -> Result<String, CommandsError> {
     let path_current_branch = get_refs_path(directory, &current_branch);
     let path_branch_to_merge = get_refs_path(directory, branch_name);
+
     let (current_branch_hash, branch_to_merge_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
     let mut formatted_result = String::new();
+    
     if current_branch_hash == branch_to_merge_hash || current_branch_hash == branch_name {
         formatted_result.push_str("Already up to date.");
         return Ok(formatted_result);
@@ -150,7 +152,11 @@ fn get_log_path(directory: &str, branch_name: &str) -> String {
     let mut log_path = format!("{}/.git/logs/refs/heads/{}", directory, branch_name);
     if branch_name.contains("remotes") {
         let branch_path = branch_name.split('/').collect::<Vec<_>>();
-        log_path = format!("{}/.git/logs/refs/remotes/{}/{}", directory, branch_path[2], branch_path[3]);
+        if branch_path.len() >= 4 {
+            log_path = format!("{}/.git/logs/refs/remotes/{}/{}", directory, branch_path[2], branch_path[3]);
+        }else{
+            log_path = format!("{}/.git/logs/refs/remotes/{}", directory, branch_path[2]);
+        }
     }
     log_path
 }

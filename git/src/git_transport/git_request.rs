@@ -8,14 +8,14 @@ use crate::commands::cat_file::git_cat_file;
 use crate::commands::fetch::save_objects;
 use crate::commands::log::save_log;
 use crate::commands::merge::git_merge;
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL, CAPABILITIES_PUSH};
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL, CAPABILITIES_PUSH, GIT_DIR};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
 use crate::git_transport::references_update::send_decompressed_package_status;
 use crate::models::client::Client;
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
-use crate::util::files::{open_file, read_file_string, create_directory, ensure_directory_clean};
+use crate::util::files::{open_file, read_file_string, create_directory, ensure_directory_clean, create_file};
 use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
@@ -390,7 +390,6 @@ fn get_components_request(bytes: &[u8]) -> Result<(&[u8], Vec<String>), UtilErro
 fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> {
     let path_repo = join_paths_correctly(root, pathname);
     let path = Path::new(&path_repo);
-    println!("{:?}", path);
     if !(path.exists() && path.is_dir()) {
         return Err(UtilError::RepoNotFoundError(pathname.to_string()));
     }
@@ -459,23 +458,14 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
 /// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
-pub fn save_references_with_name(name: &str, repo_path: &str, name_remote: &str) -> Result<(), UtilError> {
-
-    // Si no existe el directorio .git/refs/remotes lo crea
-    let directory_remotes = format!("{}/.git/refs/remotes/origin", repo_path); 
-    let directory_remotes = Path::new(&directory_remotes);
-    create_directory(directory_remotes)?;
-
-    // Si no existe el directorio .git/refs/remotes/origin lo crea
-    let refs_dir_path = format!("{}/.git/refs/remotes/{}", repo_path, name_remote);
-    ensure_directory_clean(&refs_dir_path)?;
+fn save_references_with_name(name: &str, repo_path: &str) -> Result<(), UtilError> {
 
     let log_dir = format!("{}/.git/logs/refs/remotes/origin", repo_path);
     create_directory(Path::new(&log_dir))?;
 
-    let path_log = format!("logs/refs/remotes/{}", name_remote);
+    let path_log = format!("logs/refs/remotes", );
     
-    let path_branch = format!("refs/remotes/{}", name_remote);
+    let path_branch = format!("refs/remotes");
 
     save_log(repo_path, name, &path_log, &path_branch)?;    
 
@@ -522,28 +512,34 @@ pub fn process_request_update(
         let path_reference = branch_hash.get_path_refs();
         let hash_reference_new = branch_hash.get_new();
         let hash_reference_old = branch_hash.get_old();
-
         if hash_reference_new != hash_reference_old {
-            
+
             save_objects(objects, path_repo)?;
-            save_references_with_name("master", path_repo, "master")?;
+            let current_branch_path = path_reference.split('/').collect::<Vec<_>>();
+            let mut current_branch = "master";
+            if current_branch_path.len() >= 3 {
+                current_branch = current_branch_path[2];
+            }
+            let branch_path = format!("{}/{}/{}/{}", path_repo, GIT_DIR, "refs/remotes", current_branch);
+            create_file(branch_path.as_str(), hash_reference_new.as_str())?;
+            save_references_with_name("master", path_repo)?;
 
             let client: Client = Client::new(
-                "Valen".to_string(), 
-                "vlanzillotta@fi.uba.ar".to_string(),
+                "test".to_string(), 
+                "test@fi.uba.ar".to_string(),
                 "19992020".to_string(),
                 "9090".to_string(),
                 "localhost".to_string(),
                 "./".to_string(),
                 "master".to_string(),
             );
-            let result_merge = git_merge(path_repo, "refs/remotes/master/master", path_reference, client)?;
+            let path_ref = format!("{}/{}", "refs/remotes", current_branch);
+            let result_merge = git_merge(path_repo, current_branch, &path_ref, client)?;
             if result_merge.contains("CONFLICT") {
                 result.0 = hash_reference_old.to_string();
                 result.1 = false;
                 result_vec.push(result.clone());
             }
-
             result.0 = hash_reference_new.to_string();
             result.1 = true;
     
@@ -557,7 +553,6 @@ pub fn process_request_update(
     if result_vec.is_empty() {
         result_vec.push(result);
     }
-    println!("Result: {:?}", result_vec);
     Ok(result_vec)
 }
 
