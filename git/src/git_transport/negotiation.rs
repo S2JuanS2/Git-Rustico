@@ -582,9 +582,10 @@ pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut
 pub fn recieve_first_reference_update(line: &[u8]) -> Result<(ReferencesUpdate, Vec<String>), UtilError>
 {
     if let Ok(line_str) = std::str::from_utf8(line) {
-        println!("Linea: {}", line_str);
+        println!("recieve_first_reference_update: {}", line_str);
         let parts = line_str.split('\0').collect::<Vec<&str>>();
-        if parts.len() >= 2 {
+        println!("parts: {:?}", parts);
+        if parts.len() > 2 {
             return Err(UtilError::InvalidReferenceUpdateRequest);
         }
         if parts.len() == 1 {
@@ -592,6 +593,7 @@ pub fn recieve_first_reference_update(line: &[u8]) -> Result<(ReferencesUpdate, 
             return Ok((refupdate, Vec::new()));
         }
         let capabilites: Vec<String> = parts[1].split_ascii_whitespace().map(|s| s.to_string()).collect();
+        println!("capabilites: {:?}", capabilites);
         return Ok((ReferencesUpdate::new_from_line(parts[0])?, capabilites))
     }
     Err(UtilError::InvalidReferenceUpdateRequest)
