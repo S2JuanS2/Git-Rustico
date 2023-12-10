@@ -7,10 +7,12 @@ use crate::commands::branch::get_parent_hashes;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::fetch::{save_objects, save_references};
 use crate::commands::log::save_log;
+use crate::commands::merge::git_merge;
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
 use crate::git_transport::references_update::send_decompressed_package_status;
+use crate::models::client::Client;
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
 use crate::util::files::{open_file, read_file_string, create_directory, ensure_directory_clean};
@@ -520,6 +522,22 @@ pub fn process_request_update(
             
             save_objects(objects, path_repo)?;
             save_references_with_name("master", path_repo, "master")?;
+
+            let client: Client = Client::new(
+                "Valen".to_string(), 
+                "vlanzillotta@fi.uba.ar".to_string(),
+                "19992020".to_string(),
+                "9090".to_string(),
+                "localhost".to_string(),
+                "./".to_string(),
+                "master".to_string(),
+            );
+            let result_merge = git_merge(path_repo, "refs/remotes/master/master", path_reference, client)?;
+            if result_merge.contains("CONFLICT") {
+                result.0 = hash_reference_old.to_string();
+                result.1 = false;
+                result_vec.push(result.clone());
+            }
 
             result.0 = hash_reference_new.to_string();
             result.1 = true;
