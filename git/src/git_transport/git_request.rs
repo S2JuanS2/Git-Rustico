@@ -8,7 +8,7 @@ use crate::commands::cat_file::git_cat_file;
 use crate::commands::fetch::save_objects;
 use crate::commands::log::save_log;
 use crate::commands::merge::git_merge;
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL};
+use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL, CAPABILITIES_PUSH};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
 use crate::git_transport::references_update::send_decompressed_package_status;
@@ -425,19 +425,24 @@ pub fn get_objects_fetch(git_server: &mut GitServer, confirmed_hashes: Vec<Strin
 
 
 pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError>{
-    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &Vec::new())?;
+    let capabilitites: Vec<String> = CAPABILITIES_PUSH.iter().map(|&s| s.to_string()).collect();
+    let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilitites)?;
     println!("Server: {:?}", server);
     server.send_references(stream)?;
 
     let requests = receive_reference_update_request(stream, &mut server)?;
     let objects = receive_packfile(stream)?;
     println!("handle_receive_pack Objects -> : {:?}", objects);
-    // println!("Stream: {:?}", stream);
-    // send_message(stream, "message", UtilError::SendNAKPackfile)?;
+    // El server no enviara estatus
+    // match process_request_update(requests, objects, path_repo)
+    // {
+        //     Ok(status) => send_decompressed_package_status(stream, &status),
+        //     Err(_) => send_decompression_failure_status(stream),
+    // }
     match process_request_update(requests, objects, path_repo)
     {
-        Ok(status) => send_decompressed_package_status(stream, &status),
-        Err(_) => send_decompression_failure_status(stream),
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
     }
 }
 

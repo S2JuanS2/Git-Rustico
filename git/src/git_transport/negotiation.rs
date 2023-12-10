@@ -583,7 +583,7 @@ pub fn recieve_first_reference_update(line: &[u8]) -> Result<(ReferencesUpdate, 
 {
     if let Ok(line_str) = std::str::from_utf8(line) {
         let parts = line_str.split('\0').collect::<Vec<&str>>();
-        if parts.len() >= 2 {
+        if parts.len() > 2 {
             return Err(UtilError::InvalidReferenceUpdateRequest);
         }
         if parts.len() == 1 {
