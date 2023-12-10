@@ -215,6 +215,42 @@ fn get_content(directory: &str, hash_object: &str) -> Result<Vec<u8>, UtilError>
 /// # Retorna
 ///
 /// En caso de error, retorna un error de tipo GitError.
+pub fn recovery_tree_clone(
+    directory: &str,
+    tree_hash: &str,
+    objects: &mut Vec<(ObjectType, Vec<u8>)>,
+) -> Result<(), UtilError> {
+    let tree_content = git_cat_file(directory, tree_hash, "-p")?;
+    for line in tree_content.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let mode = parts[0];
+        let hash = parts[2];
+        if mode == FILE {
+            let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
+            let blob_content = get_content(directory, hash)?;
+            object_blob.1 = blob_content;
+            save_object_pack(objects, object_blob)
+        } else if mode == DIRECTORY {
+            let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+            object_tree.1 = get_content(directory, hash)?;
+            save_object_pack(objects, object_tree);
+            recovery_tree_clone(directory, hash, objects)?;
+        }
+    }
+    Ok(())
+}
+
+/// Recorre los sub-tree recursivamente y los agrega al vector objects
+///
+/// # Argumentos
+///
+/// * `directory` - directorio del repositorio
+/// * `tree_hash` - Hash del tree
+/// * `objects` - Vector para guardar los objetos a enviar
+///
+/// # Retorna
+///
+/// En caso de error, retorna un error de tipo GitError.
 pub fn recovery_tree(
     directory: &str,
     tree_hash: &str,
@@ -376,7 +412,7 @@ pub fn get_objects_fetch_with_hash_valid(
                 let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
                 object_tree.1 = get_content(directory, tree_hash)?;
                 save_object_pack(&mut objects, object_tree);
-                recovery_tree(directory, tree_hash, &mut objects)?;
+                recovery_tree_clone(directory, tree_hash, &mut objects)?;
                 }
             }
         }
@@ -419,7 +455,7 @@ pub fn get_objects(
 
             save_object_pack(&mut objects, object_tree);
 
-            recovery_tree(directory, tree_hash, &mut objects)?;
+            recovery_tree_clone(directory, tree_hash, &mut objects)?;
         };
         for hash_commit in hashes_commits.clone(){
             let content_commit = git_cat_file(directory, &hash_commit, "-p")?;
@@ -427,7 +463,7 @@ pub fn get_objects(
                 let mut object_subtree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
                 object_subtree.1 = get_content(directory, tree_hash)?;
                 save_object_pack(&mut objects, object_subtree);
-                recovery_tree(directory, tree_hash, &mut objects)?;
+                recovery_tree_clone(directory, tree_hash, &mut objects)?;
             };
         }
     }

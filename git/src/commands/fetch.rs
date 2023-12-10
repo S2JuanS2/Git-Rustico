@@ -417,7 +417,7 @@ pub fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Resu
 fn recovery_blob(
     hash: &str,
     content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
-    mut i: usize,
+    i: usize,
     repo: &str,
 ) -> Result<usize, CommandsError> {
     if i < content.len(){
@@ -426,8 +426,6 @@ fn recovery_blob(
         let object_dir = format!("{}/{}/{}/{}", repo, DIR_OBJECTS, &hash[..2], &hash[2..]);
         if !Path::new(&object_dir).exists(){
             builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
-        }else{
-            i -= 1;
         }
     }
     Ok(i)
