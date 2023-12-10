@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::commands::branch::get_parent_hashes;
 use crate::commands::cat_file::git_cat_file;
-use crate::commands::fetch::{save_objects, save_references};
+use crate::commands::fetch::save_objects;
 use crate::commands::log::save_log;
 use crate::commands::merge::git_merge;
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL};

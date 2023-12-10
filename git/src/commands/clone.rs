@@ -182,6 +182,7 @@ fn recovery_blob(
         let blob_content = read_blob(&content[i].1)?;
         let blob_content_bytes = blob_content.clone();
         if !path_dir_cloned.exists(){
+            println!("{:?}", route);
             add_to_index(repo.to_string(), &route.join("/"), hash.to_string())?;
             builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
             if let Some(str_path) = path_dir_cloned.to_str() {
