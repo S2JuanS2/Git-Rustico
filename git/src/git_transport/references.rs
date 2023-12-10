@@ -222,9 +222,8 @@ pub fn recovery_tree_clone(
 ) -> Result<(), UtilError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     for line in tree_content.lines() {
-        println!("{}", line);
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let mode = parts[1];
+        let mode = parts[0];
         let hash = parts[2];
         if mode == FILE {
             let mut object_blob: (ObjectType, Vec<u8>) = (ObjectType::Blob, Vec::new());
@@ -413,7 +412,7 @@ pub fn get_objects_fetch_with_hash_valid(
                 let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
                 object_tree.1 = get_content(directory, tree_hash)?;
                 save_object_pack(&mut objects, object_tree);
-                recovery_tree(directory, tree_hash, &mut objects)?;
+                recovery_tree_clone(directory, tree_hash, &mut objects)?;
                 }
             }
         }
