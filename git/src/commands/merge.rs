@@ -536,11 +536,6 @@ fn compare_files(
     let content_file_local = read_file_string(file)?;
     if content_file_local != content_file {
         // CONFLICTO
-        if branch_to_merge.contains("remotes") {
-            strategy.0 = "recursive".to_string();
-            strategy.1 = path_file_format.to_string();
-            return Ok(());
-        }
         let path_conflict = check_each_line(
             path_file_format,
             content_file_local,
