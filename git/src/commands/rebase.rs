@@ -89,7 +89,7 @@ fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &
 /// 'first_commit_current_branch': primer commit de la branch actual
 /// 'directory': directorio del repositorio local
 /// 'current_branch': nombre de la branch actual
-fn update_parent(content_commit: String, last_commit_rebase_branch: &String, first_commit_current_branch: &String, directory: &str, current_branch: String) -> Result<(), CommandsError> {
+fn update_parent(content_commit: String, last_commit_rebase_branch: &str, first_commit_current_branch: &String, directory: &str, current_branch: String) -> Result<(), CommandsError> {
     let new_content = rewrite_commit(&content_commit, last_commit_rebase_branch);
     let lines_new_content: Vec<&str> = new_content.lines().collect();
     let new_commit_in_log = format!("{}\n{}\n{}\n{}\n\n{}", first_commit_current_branch, lines_new_content[1], lines_new_content[2], lines_new_content[3], lines_new_content[5]);

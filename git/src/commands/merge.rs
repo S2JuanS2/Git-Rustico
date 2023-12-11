@@ -39,7 +39,7 @@ pub fn git_merge(directory: &str, current_branch: &str, branch_name: &str, clien
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
 pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, client: &Client, merge_type: &str) -> Result<String, CommandsError> {
-    let path_current_branch = get_refs_path(directory, &current_branch);
+    let path_current_branch = get_refs_path(directory, current_branch);
     let path_branch_to_merge = get_refs_path(directory, branch_name);
 
     let (current_branch_hash, branch_to_merge_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
@@ -63,7 +63,7 @@ pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, c
         let strategy = merge_depending_on_strategy(&hash_parent_current, &hash_parent_merge, &branch_to_merge_hash, directory, branch_name)?;
         if merge_type == "merge" {
             update_refs(directory, &strategy, &path_current_branch, &branch_to_merge_hash, &path_branch_to_merge, client.clone())?;
-            update_logs_refs(directory, &strategy, &current_branch, branch_name, &current_branch_hash, &branch_to_merge_hash)?;
+            update_logs_refs(directory, &strategy, current_branch, branch_name, &current_branch_hash, &branch_to_merge_hash)?;
         }
         get_result_depending_on_strategy(strategy, &mut formatted_result, current_branch_hash, branch_to_merge_hash, path_current_branch)?;
     }
@@ -171,8 +171,8 @@ fn update_logs_refs(directory: &str, strategy: &(String, String), current_branch
     if strategy.0 == "recursive" && strategy.1 == "ok" {
         update_logs_in_other_branch(directory, branch_to_merge, branch_to_merge_hash)?;
     } else if strategy.0 == "fast-forward" {
-        let logs_current_branch = get_log_from_branch(directory, &current_branch_hash)?;
-        let logs_merge_branch = get_log_from_branch(directory, &branch_to_merge_hash)?;
+        let logs_current_branch = get_log_from_branch(directory, current_branch_hash)?;
+        let logs_merge_branch = get_log_from_branch(directory, branch_to_merge_hash)?;
         let logs_just_in_merge_branch = logs_just_in_one_branch(logs_merge_branch.to_vec(), logs_current_branch.to_vec());
         // revertir el orden de logs_just_in_merge_branch
         let logs_just_in_merge_branch = logs_just_in_merge_branch.iter().rev().collect::<Vec<_>>();
