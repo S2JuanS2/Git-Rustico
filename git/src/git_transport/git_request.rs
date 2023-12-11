@@ -436,6 +436,9 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
     server.send_references(stream)?;
 
     let requests = receive_reference_update_request(stream, &mut server)?;
+    if requests.is_empty() {
+        return Ok(());
+    }
     let objects = receive_packfile(stream)?;
     println!("handle_receive_pack Objects -> : {:?}", objects);
     // El server no enviara estatus
