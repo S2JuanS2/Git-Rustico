@@ -185,9 +185,7 @@ impl GitRequest {
             }
             RequestCommand::ReceivePack => {
                 let path_repo = get_path_repository(root, &self.pathname)?;
-                handle_receive_pack(stream, &path_repo)?;
-                println!("ReceivePack");
-                Ok("".to_string())
+                handle_receive_pack(stream, &path_repo)
             }
             RequestCommand::UploadArchive => {
                 println!("Funcion aun no implementada");
@@ -429,15 +427,18 @@ pub fn get_objects_fetch(git_server: &mut GitServer, confirmed_hashes: Vec<Strin
 }
 
 
-pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<(), UtilError>{
+pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String, UtilError>{
     let capabilitites: Vec<String> = CAPABILITIES_PUSH.iter().map(|&s| s.to_string()).collect();
     let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilitites)?;
     println!("Server: {:?}", server);
     server.send_references(stream)?;
 
     let requests = receive_reference_update_request(stream, &mut server)?;
+    if requests.is_empty() {
+        return Ok("El cliente no solicito referencias".to_string());
+    }
     let objects = receive_packfile(stream)?;
-    println!("handle_receive_pack Objects -> : {:?}", objects);
+    // println!("handle_receive_pack Objects -> : {:?}", objects);
     // El server no enviara estatus
     // match process_request_update(requests, objects, path_repo)
     // {
@@ -446,7 +447,7 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
     // }
     match process_request_update(requests, objects, path_repo)
     {
-        Ok(_) => Ok(()),
+        Ok(_) => Ok("Se pusheo correctamente".to_string()),
         Err(e) => Err(e),
     }
 }

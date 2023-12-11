@@ -581,7 +581,7 @@ pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut
     };
     if update_request.is_empty()
     {
-        return Err(UtilError::ConnectionIsTerminated);
+        return Ok(Vec::new());
     }
     let mut result = Vec::new();
 
