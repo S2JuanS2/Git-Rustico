@@ -277,6 +277,11 @@ pub fn search_available_references(
             confirmed_commits.push(hash.to_string());
         }
     }
+    if confirmed_commits.is_empty(){
+        if let Some(current_hash) = local_hash.get(0) {
+            confirmed_commits.push(current_hash.to_string())
+        }
+    }
     confirmed_commits
 }
 
