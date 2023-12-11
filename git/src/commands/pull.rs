@@ -42,19 +42,19 @@ pub fn handle_pull(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
     {
         let name_remote = args[0];
         let name_branch = args[1];
-        status.push(format!("Branch local: {}", args[0]));
-        status.push(format!("Remoto: {}", args[1]));
+        status.push(format!("Local branch: {}", args[0]));
+        status.push(format!("Remote: {}", args[1]));
         let current_rfs = Reference::get_current_references(path_repo)?;
         let mut git_config: GitConfig = GitConfig::new_from_file(path_repo)?;
         if !git_config.valid_remote(name_remote)
         {
-            status.push(format!("El repositorio remoto {} no existe", name_remote));
+            status.push(format!("Remote repository {} does not exist", name_remote));
             return Ok(status.join("\n"));
         };
         git_config.add_branch(current_rfs.get_name(), name_remote, &format!("refs/heads/{}", name_branch))?;
         let path_config = format!("{}/.git/config", path_repo);
         git_config.write_to_file(&path_config)?;
-        status.push("Se asocio el branch local con el remoto".to_string());
+        status.push("The local branch was associated with the remote".to_string());
 
     }
     let mut socket = start_client(client.get_address())?;
@@ -95,7 +95,7 @@ pub fn git_pull(
     let mut fetch_head = FetchHead::new_from_file(repo_local)?;
     if !fetch_head.references_needs_update(current_rfs.get_name())
     {
-        status.push("No hay actualizaciones para mergear".to_string());
+        status.push("No updates to merge".to_string());
         return Ok(status.join("\n"));
     }
 
@@ -112,8 +112,8 @@ pub fn git_pull(
     println!("Result del merge: {}", merge_result);
     if merge_result.contains("CONFLICT") {
         let path_conflict = get_conflict_path(&merge_result);
-        status.push(format!("Error: El siguiente archivo se sobrescribiría al fusionarlo:\n\t{}\nAborting.", path_conflict));
-        status.push("No se puede hacer pull ya que hay conflictos".to_string());
+        status.push(format!("[ERROR] The following file will be overwritten when merged:\n\t{}\nAborting.", path_conflict));
+        status.push("Cannot do pull since there are conflicts".to_string());
         return Ok(status.join("\n"));
     }
     
