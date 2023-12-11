@@ -440,7 +440,7 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<()
         return Ok(());
     }
     let objects = receive_packfile(stream)?;
-    println!("handle_receive_pack Objects -> : {:?}", objects);
+    // println!("handle_receive_pack Objects -> : {:?}", objects);
     // El server no enviara estatus
     // match process_request_update(requests, objects, path_repo)
     // {
