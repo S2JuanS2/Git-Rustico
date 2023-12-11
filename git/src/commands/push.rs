@@ -41,9 +41,9 @@ impl PushBranch
     fn init_status(&mut self)
     {
         self.status.push(format!("Pushing to {}...", &self.branch.get_name()));
-        self.status.push(format!("\tRepositorio local {}", &self.path_local));
-        self.status.push(format!("\tRepositorio remoto {}", &self.remote_name));
-        self.status.push(format!("\tUrl del remoto: {}", &self.url_remote));
+        self.status.push(format!("\tLocal repository: {}", &self.path_local));
+        self.status.push(format!("\tRemote repository: {}", &self.remote_name));
+        self.status.push(format!("\tRemote URL: <{}>", &self.url_remote));
     }
 
     fn add_status(&mut self, status: &str)
@@ -105,19 +105,19 @@ pub fn handle_push(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
     {
         let name_remote = args[0];
         let name_branch = args[1];
-        status.push(format!("Branch local: {}", args[0]));
-        status.push(format!("Remoto: {}", args[1]));
+        status.push(format!("Local Branch: {}", args[0]));
+        status.push(format!("Remote: {}", args[1]));
         let current_rfs = Reference::get_current_references(path_local)?;
         let mut git_config: GitConfig = GitConfig::new_from_file(path_local)?;
         if !git_config.valid_remote(name_remote)
         {
-            status.push(format!("El repositorio remoto {} no existe", name_remote));
+            status.push(format!("Remote repository {} does not exist", name_remote));
             return Ok(status.join("\n"));
         };
         git_config.add_branch(current_rfs.get_name(), name_remote, &format!("refs/heads/{}", name_branch))?;
         let path_config = format!("{}/.git/config", path_local);
         git_config.write_to_file(&path_config)?;
-        status.push("Se asocio el branch local con el remoto".to_string());
+        status.push("The local branch was associated with the remote".to_string());
     }
     
     return git_push_branch (
@@ -172,7 +172,7 @@ pub fn git_push_branch(
     let objects = get_objects_from_hash_to_hash(&push.path_local, &prev_hash, &current_hash)?;
     if !objects.is_empty()
     {
-        push.add_status("Se enviaron los objetos al remoto");
+        push.add_status("[STATUS] The objects were sent to the remote");
     }
     send_packfile(socket, &server, objects, true)?;
     // Recibo el estatus del push
@@ -236,14 +236,14 @@ fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: 
 {
     if hash_current == hash_prev
     {
-        push.add_status("No hay cambios que subir");
+        push.add_status("There are no changes to push");
         return Ok(false)
     }
     if !is_ancestor(&push.get_path_local(), hash_current, hash_prev)?
     {
-        push.add_status("No hay cambios que subir");
-        push.add_status("Esta atrasado ...");
-        push.add_status("Haga pull :)");
+        push.add_status("[ERROR] Failed to push");
+        push.add_status("[ERROR] Updates were rejected because the tip of your current branch is behind");
+        push.add_status("\tUse git pull");
         return Ok(false)
     };
     Ok(true)

@@ -41,7 +41,7 @@ impl fmt::Display for FetchStatus {
             // FetchStatus::Success(String) => write!(f, "El fetch se completó exitosamente. Se recuperaron nuevas actualizaciones."),
             FetchStatus::NoUpdatesRemote(s) => write!(f, "No hay nuevas actualizaciones en el repositorio remoto: {}. Todo está actualizado.", s),
             FetchStatus::NoUpdatesBranch(s) => write!(f, "No hay nuevas actualizaciones en la branch: {}. Todo está actualizado.", s),
-            FetchStatus::UpdatesBranch(s) => write!(f, "Se actualizaron los objetos de la branch:\n{}", s),
+            FetchStatus::UpdatesBranch(s) => write!(f, "Branch objects updated:\n{}", s),
             FetchStatus::BranchNotFound(s) => write!(f, "La branch: {}\nNo existe en el repositorio remoto. Haga push", s),
             FetchStatus::BranchHasNoExistingCommits(s) => write!(f, "La branch: {}\nNo tiene commits. Realice add y commit", s),
             FetchStatus::SomeRemotesUpdated(s) => write!(f, "Se actualizaron las siguientes branch:\n{}", s),
@@ -176,7 +176,7 @@ pub fn _git_fetch_all(
         fetch_head.write(repo_local)?;
         let mut status = Vec::new();
         for reference in refs {
-            status.push(format!("Nueva actualizacion: {} --> {}, haga merge", reference.get_ref_path(), reference.get_hash()));
+            status.push(format!("New update: {} --> {}, Can merge", reference.get_ref_path(), reference.get_hash()));
         }
         Ok(FetchStatus::UpdatesBranch(status.join("\n")))
     }else{
@@ -251,7 +251,7 @@ pub fn git_fetch_branch(
 
         let mut status = Vec::new();
         for reference in refs {
-            status.push(format!("Nueva actualizacion: {} --> {}, haga merge", reference.get_ref_path(), reference.get_hash()));
+            status.push(format!("New update: {} --> {}, Can merge", reference.get_ref_path(), reference.get_hash()));
         }
         Ok(FetchStatus::UpdatesBranch(status.join("\n")))
     }else{
