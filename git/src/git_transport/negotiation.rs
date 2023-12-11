@@ -15,6 +15,26 @@ use std::{
 
 use super::{references::Reference, references_update::ReferencesUpdate};
 
+pub struct PackfileNegotiation {
+    pub capabilities: Vec<String>,
+    pub wanted_objects: Vec<String>,
+    pub common_objects: Vec<String>,
+}
+
+impl PackfileNegotiation {
+    pub fn new(capabilities: Vec<String>, wanted_objects: Vec<String>, common_objects: Vec<String>) -> Self {
+        Self {
+            capabilities,
+            wanted_objects,
+            common_objects,
+        }
+    }
+
+    pub fn get_components(&self) -> (Vec<String>, Vec<String>, Vec<String>) {
+        (self.capabilities.clone(), self.wanted_objects.clone(), self.common_objects.clone())
+    }
+}
+
 /// Envía mensajes de tipo de solicitud (`want` o `have`) al servidor para solicitar
 /// o confirmar referencias.
 ///
@@ -132,32 +152,32 @@ pub fn receive_done(stream: &mut dyn Read, err: UtilError) -> Result<(), UtilErr
 
 pub fn receive_request(
     stream: &mut dyn Read,
-) -> Result<(Vec<String>, Vec<String>, Vec<String>), UtilError> {
+) -> Result<PackfileNegotiation, UtilError> {
     // Want
     println!("Recibiendo solicitudes...");
     let lines = pkt_line::read(stream)?;
     if lines.is_empty()
     {
-        return Ok((Vec::new(), Vec::new(), Vec::new()));
+        return Ok(PackfileNegotiation::new(Vec::new(), Vec::new(), Vec::new()));
     }
     for line in &lines {
         println!("want -> {}", String::from_utf8_lossy(line));
     }
-    let (capacilities, request) = process_received_requests_want(lines)?;
+    let (capabilities, request) = process_received_requests_want(lines)?;
 
     let lines = pkt_line::read(stream)?;
     for line in &lines {
         println!("have -> {}", String::from_utf8_lossy(line));
     }
     if lines.len() == 1 && lines[0] == b"done" {
-        return Ok((capacilities, request, Vec::new()));
+        return Ok(PackfileNegotiation::new(capabilities, request, Vec::new()));
     }
 
     // Have
     let request_have = receive_request_type(lines, "have", UtilError::UnexpectedRequestNotHave)?;
     println!("Termine de procesar el have");
     // Done
-    Ok((capacilities, request, request_have))
+    Ok(PackfileNegotiation::new(capabilities, request, request_have))
 }
 
 /// Procesa las solicitudes recibidas a partir de un conjunto de líneas de bytes.
@@ -189,7 +209,7 @@ fn process_received_requests_want(
     let mut request = Vec::new();
 
     // Want and capabilities
-    let (hash, capacilities) = extraction_capabilities(&lines[0])?;
+    let (hash, capabilities) = extraction_capabilities(&lines[0])?;
     request.push(hash);
 
     // Want
@@ -200,7 +220,7 @@ fn process_received_requests_want(
     )?;
 
     request.extend(want);
-    Ok((capacilities, request))
+    Ok((capabilities, request))
 }
 
 /// Extrae las capacidades y el hash de una línea de bytes.
@@ -241,12 +261,12 @@ fn extraction_capabilities(line: &[u8]) -> Result<(String, Vec<String>), UtilErr
     if !is_valid_obj_id(hash) {
         return Err(UtilError::InvalidObjectId);
     }
-    let capacilities = line_split
+    let capabilities = line_split
         .collect::<Vec<&str>>()
         .iter()
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
-    Ok((hash.to_string(), capacilities))
+    Ok((hash.to_string(), capabilities))
 }
 
 /// Extrae y procesa las solicitudes de un tipo específico a partir de un conjunto de líneas.

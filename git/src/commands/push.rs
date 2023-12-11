@@ -51,7 +51,7 @@ impl PushBranch
         self.status.push(status.to_string());
     }
 
-    fn add_status_vec(&mut self, status: Vec<String>)
+    fn _add_status_vec(&mut self, status: Vec<String>)
     {
         for s in status
         {
@@ -292,13 +292,13 @@ fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, 
     let mut message = format!("{} {} {}", hash_prev, hash_update, path_ref);
     if capabilities.is_empty()
     {
-        message.push_str("\n");
+        message.push('\n');
     }
     else
     {
-        message.push_str("\0");
+        message.push('\0');
         message.push_str(&capabilities.join(" "));
-        message.push_str("\n");
+        message.push('\n');
     }
     let message = pkt_line::add_length_prefix(&message, message.len());
     send_message(socket, &message, UtilError::SendMessageReferenceUpdate)?;
@@ -307,7 +307,7 @@ fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, 
 }
 
 
-fn read_status_from_server(socket: &mut TcpStream, number_requests: usize) -> Result<Vec<String>, CommandsError>
+fn _read_status_from_server(socket: &mut TcpStream, number_requests: usize) -> Result<Vec<String>, CommandsError>
 {
     let mut status = Vec::new();
     let commad_status = pkt_line::read_pkt_line(socket)?;

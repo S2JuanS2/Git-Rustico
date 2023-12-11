@@ -11,11 +11,10 @@ use crate::commands::merge::git_merge;
 use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL, CAPABILITIES_PUSH, GIT_DIR};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
-use crate::git_transport::references_update::send_decompressed_package_status;
 use crate::models::client::Client;
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
-use crate::util::files::{open_file, read_file_string, create_directory, ensure_directory_clean, create_file};
+use crate::util::files::{open_file, read_file_string, create_directory, create_file};
 use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
@@ -25,7 +24,7 @@ use super::negotiation::{
     receive_done, send_acknowledge_last_reference, sent_references_valid_client,
 };
 use super::references::{get_objects, get_objects_fetch_with_hash_valid};
-use super::references_update::{ReferencesUpdate, send_decompression_failure_status};
+use super::references_update::ReferencesUpdate;
 use super::request_command::RequestCommand;
 
 /// # `GitRequest`
@@ -206,7 +205,9 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
     // println!("Server: {:?}", server);
     server.send_references(stream)?;
     // println!("Envie las referencias");
-    let (capabilities, wanted_objects, had_objects) = receive_request(stream)?;
+    let pack_negotation = receive_request(stream)?;
+    let (capabilities, wanted_objects, had_objects) = pack_negotation.get_components();
+
     if capabilities.is_empty() && wanted_objects.is_empty() && had_objects.is_empty() {
         return Ok("No solicito referencias".to_string());
     }
@@ -468,9 +469,9 @@ fn save_references_with_name(name: &str, repo_path: &str) -> Result<(), UtilErro
     let log_dir = format!("{}/.git/logs/refs/remotes/origin", repo_path);
     create_directory(Path::new(&log_dir))?;
 
-    let path_log = format!("logs/refs/remotes", );
+    let path_log = "logs/refs/remotes".to_string();
     
-    let path_branch = format!("refs/remotes");
+    let path_branch = "refs/remotes".to_string();
 
     save_log(repo_path, name, &path_log, &path_branch)?;    
 
