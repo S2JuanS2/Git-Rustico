@@ -161,6 +161,7 @@ pub fn git_push_branch(
     
     if !is_necessary_to_update(push, &current_hash, &prev_hash)?
     {
+        send_flush(socket, UtilError::CloseConnection)?; // Envio el flush
          return Ok(push.get_status());
     }
     // AViso que actualizare mi branch
