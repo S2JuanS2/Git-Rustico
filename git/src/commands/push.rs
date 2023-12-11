@@ -68,7 +68,7 @@ impl PushBranch
     {
         self.branch.get_hash().to_string()
     }
-    fn _get_path_local(&self) -> String
+    fn get_path_local(&self) -> String
     {
         self.path_local.to_string()
     }
@@ -159,10 +159,10 @@ pub fn git_push_branch(
     let current_hash = push.get_hash(); // Commit local
     println!("Current hash: {}", current_hash);
     
-    // if !is_necessary_to_update(push, &current_hash, &prev_hash)?
-    // {
-    //     return Ok(push.get_status());
-    // }
+    if !is_necessary_to_update(push, &current_hash, &prev_hash)?
+    {
+         return Ok(push.get_status());
+    }
     // AViso que actualizare mi branch
     reference_update(socket, &prev_hash, &current_hash, push.branch.get_ref_path(), &capacibilities)?;
     println!("Se actualizo la referencia");
@@ -229,14 +229,14 @@ fn get_name_current_branch(path_repo: &str) -> Result<String, UtilError>
 /// * `hash_current`: Hash del commit actual en la rama local.
 /// * `hash_prev`: Hash del commit previo en la rama remota.
 ///
-fn _is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
+fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
 {
     if hash_current == hash_prev
     {
         push.add_status("No hay cambios que subir");
         return Ok(false)
     }
-    if is_ancestor(&push._get_path_local(), hash_current, hash_prev)?
+    if !is_ancestor(&push.get_path_local(), hash_current, hash_prev)?
     {
         push.add_status("No hay cambios que subir");
         push.add_status("Esta atrasado ...");
