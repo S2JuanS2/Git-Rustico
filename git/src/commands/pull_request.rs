@@ -6,6 +6,8 @@ pub struct PRInfo {
     pub head: String,
     pub base: String,
 }
+pub fn handle_pr(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
+}
 
 impl PRInfo {
     pub fn new(title: &str, body: &str, head: &str, base: &str) -> PRInfo {
