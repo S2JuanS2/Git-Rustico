@@ -1,6 +1,6 @@
 use super::endpoint::{create_pull_requests, get_pull_request, list_commits, list_pull_requests, merge_pull_request, update_pull_request};
 
-enum PrOperation {
+pub enum PrOperation {
     Create,
     List,
     Get,
