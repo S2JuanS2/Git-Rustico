@@ -91,3 +91,54 @@ pub fn update_pull_request(name_repo: String, number: u32) -> String{
     // /repos/{repo}/pulls/{number}
     format!("repos/{}/pulls/{}", name_repo, number)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_pull_requests() {
+        let name_repo = "my_repo".to_string();
+        let expected_result = "repos/my_repo/pulls".to_string();
+        assert_eq!(create_pull_requests(name_repo), expected_result);
+    }
+
+    #[test]
+    fn test_list_pull_requests() {
+        let name_repo = "my_repo".to_string();
+        let expected_result = "repos/my_repo/pulls".to_string();
+        assert_eq!(list_pull_requests(name_repo), expected_result);
+    }
+
+    #[test]
+    fn test_get_pull_request() {
+        let name_repo = "my_repo".to_string();
+        let number = 123;
+        let expected_result = "repos/my_repo/pulls/123".to_string();
+        assert_eq!(get_pull_request(name_repo, number), expected_result);
+    }
+
+    #[test]
+    fn test_list_commits() {
+        let name_repo = "my_repo".to_string();
+        let number = 123;
+        let expected_result = "repos/my_repo/pulls/123/commits".to_string();
+        assert_eq!(list_commits(name_repo, number), expected_result);
+    }
+
+    #[test]
+    fn test_merge_pull_request() {
+        let name_repo = "my_repo".to_string();
+        let number = 123;
+        let expected_result = "repos/my_repo/pulls/123/merge".to_string();
+        assert_eq!(merge_pull_request(name_repo, number), expected_result);
+    }
+
+    #[test]
+    fn test_update_pull_request() {
+        let name_repo = "my_repo".to_string();
+        let number = 123;
+        let expected_result = "repos/my_repo/pulls/123".to_string();
+        assert_eq!(update_pull_request(name_repo, number), expected_result);
+    }
+}
