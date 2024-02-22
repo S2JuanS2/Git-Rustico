@@ -1,3 +1,5 @@
+use crate::api::http_operation::HttpOperation;
+
 pub struct PRInfo {
     pub owner: String,
     pub repo: String,
@@ -6,7 +8,7 @@ pub struct PRInfo {
     pub head: String,
     pub base: String,
 }
-pub fn handle_pr(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
+pub fn handle_pr(pr_info: PRInfo, operation: HttpOperation) -> Result<String, CommandsError> {
 }
 
 impl PRInfo {

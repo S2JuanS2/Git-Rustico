@@ -1,4 +1,4 @@
-enum HttpOperation
+pub enum HttpOperation
 {
     Get,
     Post,
