@@ -84,6 +84,18 @@ fn process_request(
     }
 }
 
+/// Maneja la conexión de un cliente, incluyendo la recepción y procesamiento de solicitudes.
+///
+/// # Arguments
+///
+/// * `stream` - Un mutable de referencia a la conexión TCP del cliente.
+/// * `tx` - Un Arc de un Mutex que contiene el transmisor para enviar mensajes de registro.
+/// * `root_directory` - Una cadena que representa el directorio raíz.
+///
+/// # Returns
+///
+/// Retorna un `Result` que contiene `()` en caso de éxito o un `GitError` en caso de fallo.
+/// 
 fn handle_client(
     stream: &mut TcpStream,
     tx: Arc<Mutex<Sender<String>>>,
@@ -126,6 +138,19 @@ fn main() -> Result<(), GitError> {
     Ok(())
 }
 
+
+/// Acepta conexiones entrantes y maneja cada cliente en un hilo separado.
+///
+/// # Arguments
+///
+/// * `listener` - Una referencia al escuchador de TCP.
+/// * `tx` - El transmisor para enviar mensajes de registro.
+/// * `src` - Una cadena que representa el directorio fuente.
+///
+/// # Returns
+///
+/// Retorna un `Result` que contiene un vector de `JoinHandle<()>` en caso de éxito o un `GitError` en caso de fallo.
+/// 
 fn receive_client(
     listener: &TcpListener,
     tx: Sender<String>,
