@@ -12,6 +12,19 @@ use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
+/// Recibe una solicitud del cliente y la procesa.
+///
+/// # Arguments
+///
+/// * `stream` - Un mutable de referencia a la conexión TCP del cliente.
+/// * `signature` - Una cadena que representa la firma del cliente.
+/// * `tx` - Un Arc de un Mutex que contiene el transmisor para enviar mensajes de registro.
+///
+/// # Returns
+///
+/// Retorna un `Result` que contiene una `GitRequest` en caso de éxito o un `GitError` en caso 
+/// de fallo.
+/// 
 fn receive_request(
     stream: &mut TcpStream,
     signature: String,
@@ -33,6 +46,20 @@ fn receive_request(
     }
 }
 
+/// Procesa una solicitud recibida del cliente.
+///
+/// # Arguments
+///
+/// * `stream` - Un mutable de referencia a la conexión TCP del cliente.
+/// * `tx` - Un Arc de un Mutex que contiene el transmisor para enviar mensajes de registro.
+/// * `signature` - Una referencia a la cadena que representa la firma del cliente.
+/// * `request` - Una referencia a la solicitud `GitRequest` recibida.
+/// * `root_directory` - Una cadena que representa el directorio raíz.
+///
+/// # Returns
+///
+/// Retorna un `Result` que contiene `()` en caso de éxito o un `GitError` en caso de fallo.
+/// 
 fn process_request(
     stream: &mut TcpStream,
     tx: &Arc<Mutex<Sender<String>>>,
