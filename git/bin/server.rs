@@ -117,7 +117,7 @@ fn main() -> Result<(), GitError> {
     let config = Config::new(args)?;
     print!("{}", config);
 
-    let address = format!("{}:{}", config.ip, config.port);
+    let address = format!("{}:{}", config.ip, config.port_daemon);
 
     // Escucha en la dirección IP y el puerto deseados
     let listener = start_server(&address)?;
@@ -132,7 +132,13 @@ fn main() -> Result<(), GitError> {
         let _ = receive_client(&listener, tx, &config.src);
     });
 
-    clients.join().expect("No hay clientes");
+    // let clients_http = thread::spawn(move || {
+    //     let _ = receive_client_http(&listener, tx, &config.src);
+    // });
+
+    
+    // clients_http.join().expect("No hay clientes en HTTP");
+    clients.join().expect("No hay clientes en git-daemon");
     log.join().expect("No se pudo escribir el archivo de log");
 
     Ok(())

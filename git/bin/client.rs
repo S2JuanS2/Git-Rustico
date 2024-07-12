@@ -11,13 +11,13 @@ fn main() -> Result<(), GitError> {
     let config = Config::new(args)?;
     print!("{}", config);
 
-    let address = format!("{}:{}", config.ip, config.port);
+    let address = format!("{}:{}", config.ip, config.port_daemon);
 
     let client = Client::new(
         config.name,
         config.email,
         config.ip,
-        config.port,
+        config.port_daemon,
         address,
         config.src,
         config.path_log,
