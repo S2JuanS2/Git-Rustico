@@ -58,7 +58,7 @@ pub const PORT_MIN: u16 = 1024;
 pub const GIT_DAEMON_PORT: u16 = 9418;
 
 // Puerto por defecto para HTTP
-pub const HTTP_PORT_DEFAULT: u16 = 80;
+pub const HTTP_PORT_DEFAULT: u16 = 8080;
 
 // Request de git-upload-pack
 pub const GIT_UPLOAD_PACK: &str = "git-upload-pack";
