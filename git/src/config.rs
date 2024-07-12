@@ -37,6 +37,7 @@ pub struct Config {
     pub path_log: String,
     pub ip: String,
     pub port_daemon: String,
+    pub port_http: String,
     pub src: String,
 }
 
@@ -62,6 +63,7 @@ impl Config {
             path_log: LOG_PATH_DEFAULT.to_string(),
             ip: IP_DEFAULT.to_string(),
             port_daemon: GIT_DAEMON_PORT.to_string(),
+            port_http: HTTP_PORT_DEFAULT.to_string(),
             src: SRC_DEFAULT.to_string(),
         };
 
@@ -124,6 +126,7 @@ pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
         "path_log" => config.path_log = valid_path_log(value)?,
         "ip" => config.ip = valid_ip(value)?,
         "port_daemon" => config.port_daemon = valid_port(value)?,
+        "port_http" => config.port_http = valid_port(value)?,
         "src" => config.src = valid_directory_src(value)?, //value.to_string()
         _ => return Err(GitError::InvalidConfigurationValueError),
     }

@@ -3,4 +3,5 @@ email=VJM@visionary.com
 path_log=./client.log
 ip=127.0.0.1
 port_daemon=9418
+port_http=80
 src=client_root
