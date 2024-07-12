@@ -23,7 +23,7 @@ El archivo de configuración del cliente debe tener el siguiente formato:
     email=VJM@visionary.com
     path_log=./client.log
     ip=127.0.0.1
-    port=9418
+    port_daemon=9418
     src=client_root
 ```
 Explicación de los campos:
@@ -32,7 +32,7 @@ Explicación de los campos:
 - email: Correo electrónico del cliente.
 - path_log: Ruta al archivo de log del cliente.
 - ip: Dirección IP del servidor al que se conectará el cliente.
-- port: Puerto en el que el cliente se conectará al servidor.
+- port_daemon: Puerto en el que el cliente se conectará al servidor.
 - src: Directorio raíz del cliente donde se almacenarán los datos.
 
 ## Archivo de Configuración del Servidor
@@ -44,7 +44,7 @@ El archivo de configuración del servidor debe tener el siguiente formato:
     email=servercito@tu.servercito.com
     path_log=./history.log
     ip=127.0.0.1
-    port=9418
+    port_daemon=9418
     src=./server_root
 ```
 
@@ -54,7 +54,7 @@ Explicación de los campos:
 - email: Correo electrónico del servidor.
 - path_log: Ruta al archivo de log del servidor.
 - ip: Dirección IP en la que el servidor escuchará las conexiones.
-- port: Puerto en el que el servidor aceptará conexiones.
+- port_daemon: Puerto en el que el servidor aceptará conexiones.
 - src: Directorio raíz del servidor donde se almacenarán los datos del repositorio.
 
 
