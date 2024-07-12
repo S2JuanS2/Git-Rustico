@@ -2,5 +2,6 @@ name=Servercito
 email=servercito@tu.servercito.com
 path_log=./history.log
 ip=127.0.0.1
-port=9418
+port_daemon=9418
+port_http=8080
 src=./server_root

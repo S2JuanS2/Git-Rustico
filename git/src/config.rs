@@ -36,7 +36,8 @@ pub struct Config {
     pub email: String,
     pub path_log: String,
     pub ip: String,
-    pub port: String,
+    pub port_daemon: String,
+    pub port_http: String,
     pub src: String,
 }
 
@@ -44,8 +45,8 @@ impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "Config:{{Name: {}, Email: {}, Log Path: {}, Ip: {}, Port: {}, Src: {}}}",
-            self.name, self.email, self.path_log, self.ip, self.port, self.src
+            "Config:{{Name: {}, Email: {}, Log Path: {}, Ip: {}, port_daemon: {}, Src: {}}}",
+            self.name, self.email, self.path_log, self.ip, self.port_daemon, self.src
         )
     }
 }
@@ -61,7 +62,8 @@ impl Config {
             email: String::new(),
             path_log: LOG_PATH_DEFAULT.to_string(),
             ip: IP_DEFAULT.to_string(),
-            port: GIT_DAEMON_PORT.to_string(),
+            port_daemon: GIT_DAEMON_PORT.to_string(),
+            port_http: HTTP_PORT_DEFAULT.to_string(),
             src: SRC_DEFAULT.to_string(),
         };
 
@@ -117,15 +119,14 @@ pub fn process_line(line: &str, config: &mut Config) -> Result<(), GitError> {
     let mut parts = line.split('=');
     let key = parts.next().ok_or(GitError::InvalidConfigFormatError)?;
     let value = parts.next().ok_or(GitError::InvalidConfigFormatError)?;
-    // let key = parts.next().unwrap();
-    // let value = parts.next().unwrap();
 
     match key {
         "name" => config.name = value.to_string(),
         "email" => config.email = valid_email(value)?,
         "path_log" => config.path_log = valid_path_log(value)?,
         "ip" => config.ip = valid_ip(value)?,
-        "port" => config.port = valid_port(value)?,
+        "port_daemon" => config.port_daemon = valid_port(value)?,
+        "port_http" => config.port_http = valid_port(value)?,
         "src" => config.src = valid_directory_src(value)?, //value.to_string()
         _ => return Err(GitError::InvalidConfigurationValueError),
     }
@@ -145,7 +146,7 @@ mod tests {
         assert_eq!(config.email, String::new());
         assert_eq!(config.path_log, LOG_PATH_DEFAULT.to_string());
         assert_eq!(config.ip, IP_DEFAULT.to_string());
-        assert_eq!(config.port, GIT_DAEMON_PORT.to_string());
+        assert_eq!(config.port_daemon, GIT_DAEMON_PORT.to_string());
     }
 
     #[test]

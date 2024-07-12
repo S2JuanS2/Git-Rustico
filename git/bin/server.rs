@@ -84,6 +84,18 @@ fn process_request(
     }
 }
 
+/// Maneja la conexión de un cliente, incluyendo la recepción y procesamiento de solicitudes.
+///
+/// # Arguments
+///
+/// * `stream` - Un mutable de referencia a la conexión TCP del cliente.
+/// * `tx` - Un Arc de un Mutex que contiene el transmisor para enviar mensajes de registro.
+/// * `root_directory` - Una cadena que representa el directorio raíz.
+///
+/// # Returns
+///
+/// Retorna un `Result` que contiene `()` en caso de éxito o un `GitError` en caso de fallo.
+/// 
 fn handle_client(
     stream: &mut TcpStream,
     tx: Arc<Mutex<Sender<String>>>,
@@ -105,7 +117,7 @@ fn main() -> Result<(), GitError> {
     let config = Config::new(args)?;
     print!("{}", config);
 
-    let address = format!("{}:{}", config.ip, config.port);
+    let address = format!("{}:{}", config.ip, config.port_daemon);
 
     // Escucha en la dirección IP y el puerto deseados
     let listener = start_server(&address)?;
@@ -120,12 +132,31 @@ fn main() -> Result<(), GitError> {
         let _ = receive_client(&listener, tx, &config.src);
     });
 
-    clients.join().expect("No hay clientes");
+    // let clients_http = thread::spawn(move || {
+    //     let _ = receive_client_http(&listener, tx, &config.src);
+    // });
+
+    
+    // clients_http.join().expect("No hay clientes en HTTP");
+    clients.join().expect("No hay clientes en git-daemon");
     log.join().expect("No se pudo escribir el archivo de log");
 
     Ok(())
 }
 
+
+/// Acepta conexiones entrantes y maneja cada cliente en un hilo separado.
+///
+/// # Arguments
+///
+/// * `listener` - Una referencia al escuchador de TCP.
+/// * `tx` - El transmisor para enviar mensajes de registro.
+/// * `src` - Una cadena que representa el directorio fuente.
+///
+/// # Returns
+///
+/// Retorna un `Result` que contiene un vector de `JoinHandle<()>` en caso de éxito o un `GitError` en caso de fallo.
+/// 
 fn receive_client(
     listener: &TcpListener,
     tx: Sender<String>,
