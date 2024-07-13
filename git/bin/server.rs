@@ -112,6 +112,16 @@ fn handle_client_daemon(
     Ok(())
 }
 
+
+/// Punto de entrada del servidor Git y servidor HTTP.
+///
+/// Esta función configura y lanza los servidores de Git y HTTP, y maneja la 
+/// recepción y procesamiento de las conexiones de los clientes.
+/// 
+/// # Returns
+///
+/// Retorna un `Result` que contiene `()` en caso de éxito o un `GitError` en caso de fallo.
+/// 
 fn main() -> Result<(), GitError> {
     let args: Vec<String> = env::args().collect();
     let config = Config::new(args)?;
@@ -151,7 +161,19 @@ fn main() -> Result<(), GitError> {
 }
 
 
-
+/// Acepta conexiones entrantes y maneja cada cliente en un hilo separado.
+///
+/// # Arguments
+///
+/// * `listener` - Una referencia al escuchador de TCP.
+/// * `shared_tx` - Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// * `src` - Una cadena que representa el directorio fuente.
+/// * `handler` - Una función que maneja la conexión del cliente.
+///
+/// # Returns
+///
+/// Retorna un `Result` que contiene un vector de `JoinHandle<()>` en caso de éxito o un `GitError` en caso de fallo.
+/// 
 fn receive_client(
     listener: &TcpListener,
     shared_tx: Arc<Mutex<Sender<String>>>,
