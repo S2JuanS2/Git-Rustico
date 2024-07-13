@@ -2,6 +2,7 @@ use git::config::Config;
 use git::errors::GitError;
 use git::git_transport::git_request::GitRequest;
 use git::util::connections::start_server;
+use git::util::errors::UtilError;
 use git::util::logger::{
     get_client_signature, handle_log_file, log_client_connect, log_client_disconnection_error,
     log_client_disconnection_success, log_message,
@@ -113,54 +114,6 @@ fn handle_client_daemon(
 }
 
 
-/// Punto de entrada del servidor Git y servidor HTTP.
-///
-/// Esta función configura y lanza los servidores de Git y HTTP, y maneja la 
-/// recepción y procesamiento de las conexiones de los clientes.
-/// 
-/// # Returns
-///
-/// Retorna un `Result` que contiene `()` en caso de éxito o un `GitError` en caso de fallo.
-/// 
-fn main() -> Result<(), GitError> {
-    let args: Vec<String> = env::args().collect();
-    let config = Config::new(args)?;
-    print!("{}", config);
-
-    let address_daemon = format!("{}:{}", config.ip, config.port_daemon);
-    let listener_daemon = start_server(&address_daemon)?;
-
-    let address_http = format!("{}:{}", config.ip, config.port_http);
-    let listener_http: TcpListener = start_server(&address_http)?;
-
-    let (tx, rx) = mpsc::channel();
-    let shared_tx = Arc::new(Mutex::new(tx));
-
-    let log: JoinHandle<()> = thread::spawn(move || {
-        let _ = handle_log_file(&config.path_log, rx);
-    });
-
-    let src = config.src.clone();
-    let tx_daemon = Arc::clone(&shared_tx);
-    let clients = thread::spawn(move || {
-        let _ = receive_client(&listener_daemon, tx_daemon, &src, handle_client_daemon);
-    });
-
-    let src = config.src.clone();
-    let tx_http = Arc::clone(&shared_tx);
-    let clients_http = thread::spawn(move || {
-        let _ = receive_client(&listener_http, tx_http, &src, handle_client_http);
-    });
-
-    
-    clients_http.join().expect("No hay clientes en HTTP");
-    clients.join().expect("No hay clientes en git-daemon");
-    log.join().expect("No se pudo escribir el archivo de log");
-
-    Ok(())
-}
-
-
 /// Acepta conexiones entrantes y maneja cada cliente en un hilo separado.
 ///
 /// # Arguments
@@ -206,5 +159,68 @@ fn handle_client_http(
     _root_directory: String,
 ) -> Result<(), GitError> {
     print!("HTTP");
+    Ok(())
+}
+
+fn initialize_config() -> Result<Config, GitError> {
+    let args: Vec<String> = env::args().collect();
+    Config::new(args)
+}
+
+fn create_listener(ip: &str, port: &String) -> Result<TcpListener, GitError> {
+    let address = format!("{}:{}", ip, port);
+    Ok(start_server(&address)?)
+}
+
+fn start_logging(path_log: String) -> Result<(Arc<Mutex<Sender<String>>>, JoinHandle<()>), GitError> {
+    let (tx, rx) = mpsc::channel();
+    let shared_tx = Arc::new(Mutex::new(tx));
+    let log_handle = thread::spawn(move || {
+        let _ = handle_log_file(&path_log, rx);
+    });
+    Ok((shared_tx, log_handle))
+}
+
+fn start_server_thread(
+    listener: TcpListener,
+    shared_tx: Arc<Mutex<Sender<String>>>,
+    src: String,
+    handler: fn(&mut TcpStream, Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>,
+) -> Result<JoinHandle<()>, GitError> {
+    let handle = thread::spawn(move || {
+        let _ = receive_client(&listener, shared_tx, &src, handler);
+    });
+    Ok(handle)
+}
+
+fn wait_for_threads(log_handle: JoinHandle<()>, daemon_handle: JoinHandle<()>, http_handle: JoinHandle<()>) {
+    log_handle.join().expect("No se pudo escribir el archivo de log");
+    daemon_handle.join().expect("No hay clientes en git-daemon");
+    http_handle.join().expect("No hay clientes en HTTP");
+}
+
+/// Punto de entrada del servidor Git y servidor HTTP.
+///
+/// Esta función configura y lanza los servidores de Git y HTTP, y maneja la 
+/// recepción y procesamiento de las conexiones de los clientes.
+/// 
+/// # Returns
+///
+/// Retorna un `Result` que contiene `()` en caso de éxito o un `GitError` en caso de fallo.
+/// 
+fn main() -> Result<(), GitError> {
+    let config = initialize_config()?;
+    print!("{}", config);
+
+    let listener_daemon = create_listener(&config.ip, &config.port_daemon)?;
+    let listener_http = create_listener(&config.ip, &config.port_http)?;
+
+    let (shared_tx, log_handle) = start_logging(config.path_log)?;
+
+    let clients_daemon_handle = start_server_thread(listener_daemon, Arc::clone(&shared_tx), config.src.clone(), handle_client_daemon)?;
+    let clients_http_handle = start_server_thread(listener_http, shared_tx, config.src.clone(), handle_client_http)?;
+
+    wait_for_threads(log_handle, clients_daemon_handle, clients_http_handle);
+
     Ok(())
 }
