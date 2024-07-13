@@ -121,24 +121,25 @@ fn main() -> Result<(), GitError> {
     let listener_daemon = start_server(&address_daemon)?;
 
     let address_http = format!("{}:{}", config.ip, config.port_http);
-    let listener_http = start_server(&address_http)?;
+    let listener_http: TcpListener = start_server(&address_http)?;
 
     let (tx, rx) = mpsc::channel();
+    let shared_tx = Arc::new(Mutex::new(tx));
 
     let log: JoinHandle<()> = thread::spawn(move || {
         let _ = handle_log_file(&config.path_log, rx);
     });
 
-    let tx_1= tx.clone();
     let src = config.src.clone();
+    let tx_daemon = Arc::clone(&shared_tx);
     let clients = thread::spawn(move || {
-        let _ = receive_client(&listener_daemon, tx_1, &src, handle_client_daemon);
+        let _ = receive_client(&listener_daemon, tx_daemon, &src, handle_client_daemon);
     });
 
-    let tx_2 = tx.clone();
     let src = config.src.clone();
+    let tx_http = Arc::clone(&shared_tx);
     let clients_http = thread::spawn(move || {
-        let _ = receive_client(&listener_http, tx_2, &src, handle_client_http);
+        let _ = receive_client(&listener_http, tx_http, &src, handle_client_http);
     });
 
     
@@ -189,11 +190,11 @@ fn main() -> Result<(), GitError> {
 
 fn receive_client(
     listener: &TcpListener,
-    tx: Sender<String>,
+    shared_tx: Arc<Mutex<Sender<String>>>,
     src: &str,
     handler: fn(&mut TcpStream, Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>,
 ) -> Result<Vec<JoinHandle<()>>, GitError> {
-    let shared_tx = Arc::new(Mutex::new(tx));
+    // let shared_tx = Arc::new(Mutex::new(tx));
     let mut handles: Vec<JoinHandle<()>> = vec![];
     for stream in listener.incoming() {
         match stream {
