@@ -2,7 +2,6 @@ use git::config::Config;
 use git::errors::GitError;
 use git::git_transport::git_request::GitRequest;
 use git::util::connections::start_server;
-use git::util::errors::UtilError;
 use git::util::logger::{
     get_client_signature, handle_log_file, log_client_connect, log_client_disconnection_error,
     log_client_disconnection_success, log_message,
