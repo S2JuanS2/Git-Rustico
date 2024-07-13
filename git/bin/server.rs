@@ -151,42 +151,6 @@ fn main() -> Result<(), GitError> {
 }
 
 
-/// Acepta conexiones entrantes y maneja cada cliente en un hilo separado.
-///
-/// # Arguments
-///
-/// * `listener` - Una referencia al escuchador de TCP.
-/// * `tx` - El transmisor para enviar mensajes de registro.
-/// * `src` - Una cadena que representa el directorio fuente.
-///
-/// # Returns
-///
-/// Retorna un `Result` que contiene un vector de `JoinHandle<()>` en caso de éxito o un `GitError` en caso de fallo.
-/// 
-// fn receive_client_daemon(
-//     listener: &TcpListener,
-//     tx: Sender<String>,
-//     src: &str,
-// ) -> Result<Vec<JoinHandle<()>>, GitError> {
-//     let shared_tx = Arc::new(Mutex::new(tx));
-//     let mut handles: Vec<JoinHandle<()>> = vec![];
-//     for stream in listener.incoming() {
-//         match stream {
-//             Ok(mut stream) => {
-//                 let tx = Arc::clone(&shared_tx);
-//                 println!("Nueva conexión: {:?}", stream.local_addr());
-//                 let root_directory = src.to_string().clone();
-//                 handles.push(std::thread::spawn(move || {
-//                     let _ = handle_client_daemon(&mut stream, tx, root_directory);
-//                 }));
-//             }
-//             Err(e) => {
-//                 eprintln!("Error al aceptar la conexión: {}", e);
-//             }
-//         }
-//     }
-//     Ok(handles)
-// }
 
 fn receive_client(
     listener: &TcpListener,
