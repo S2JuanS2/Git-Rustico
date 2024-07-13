@@ -96,7 +96,7 @@ fn process_request(
 ///
 /// Retorna un `Result` que contiene `()` en caso de éxito o un `GitError` en caso de fallo.
 /// 
-fn handle_client(
+fn handle_client_daemon(
     stream: &mut TcpStream,
     tx: Arc<Mutex<Sender<String>>>,
     root_directory: String,
@@ -117,10 +117,11 @@ fn main() -> Result<(), GitError> {
     let config = Config::new(args)?;
     print!("{}", config);
 
-    let address = format!("{}:{}", config.ip, config.port_daemon);
+    let address_daemon = format!("{}:{}", config.ip, config.port_daemon);
+    let listener_daemon = start_server(&address_daemon)?;
 
-    // Escucha en la dirección IP y el puerto deseados
-    let listener = start_server(&address)?;
+    let address_http = format!("{}:{}", config.ip, config.port_http);
+    let listener_http = start_server(&address_http)?;
 
     let (tx, rx) = mpsc::channel();
 
@@ -128,16 +129,20 @@ fn main() -> Result<(), GitError> {
         let _ = handle_log_file(&config.path_log, rx);
     });
 
+    let tx_1= tx.clone();
+    let src = config.src.clone();
     let clients = thread::spawn(move || {
-        let _ = receive_client(&listener, tx, &config.src);
+        let _ = receive_client(&listener_daemon, tx_1, &src, handle_client_daemon);
     });
 
-    // let clients_http = thread::spawn(move || {
-    //     let _ = receive_client_http(&listener, tx, &config.src);
-    // });
+    let tx_2 = tx.clone();
+    let src = config.src.clone();
+    let clients_http = thread::spawn(move || {
+        let _ = receive_client(&listener_http, tx_2, &src, handle_client_http);
+    });
 
     
-    // clients_http.join().expect("No hay clientes en HTTP");
+    clients_http.join().expect("No hay clientes en HTTP");
     clients.join().expect("No hay clientes en git-daemon");
     log.join().expect("No se pudo escribir el archivo de log");
 
@@ -157,10 +162,36 @@ fn main() -> Result<(), GitError> {
 ///
 /// Retorna un `Result` que contiene un vector de `JoinHandle<()>` en caso de éxito o un `GitError` en caso de fallo.
 /// 
+// fn receive_client_daemon(
+//     listener: &TcpListener,
+//     tx: Sender<String>,
+//     src: &str,
+// ) -> Result<Vec<JoinHandle<()>>, GitError> {
+//     let shared_tx = Arc::new(Mutex::new(tx));
+//     let mut handles: Vec<JoinHandle<()>> = vec![];
+//     for stream in listener.incoming() {
+//         match stream {
+//             Ok(mut stream) => {
+//                 let tx = Arc::clone(&shared_tx);
+//                 println!("Nueva conexión: {:?}", stream.local_addr());
+//                 let root_directory = src.to_string().clone();
+//                 handles.push(std::thread::spawn(move || {
+//                     let _ = handle_client_daemon(&mut stream, tx, root_directory);
+//                 }));
+//             }
+//             Err(e) => {
+//                 eprintln!("Error al aceptar la conexión: {}", e);
+//             }
+//         }
+//     }
+//     Ok(handles)
+// }
+
 fn receive_client(
     listener: &TcpListener,
     tx: Sender<String>,
     src: &str,
+    handler: fn(&mut TcpStream, Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>,
 ) -> Result<Vec<JoinHandle<()>>, GitError> {
     let shared_tx = Arc::new(Mutex::new(tx));
     let mut handles: Vec<JoinHandle<()>> = vec![];
@@ -171,7 +202,7 @@ fn receive_client(
                 println!("Nueva conexión: {:?}", stream.local_addr());
                 let root_directory = src.to_string().clone();
                 handles.push(std::thread::spawn(move || {
-                    let _ = handle_client(&mut stream, tx, root_directory);
+                    let _ = handler(&mut stream, tx, root_directory);
                 }));
             }
             Err(e) => {
@@ -180,4 +211,13 @@ fn receive_client(
         }
     }
     Ok(handles)
+}
+
+fn handle_client_http(
+    _stream: &mut TcpStream,
+    _tx: Arc<Mutex<Sender<String>>>,
+    _root_directory: String,
+) -> Result<(), GitError> {
+    print!("HTTP");
+    Ok(())
 }
