@@ -4,4 +4,4 @@ path_log=./client.log
 ip=127.0.0.1
 port_daemon=9418
 port_http=8080
-src=client_root
+src=client_root/One
