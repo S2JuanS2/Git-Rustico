@@ -268,8 +268,14 @@ pub fn recovery_tree(
             save_object_pack(objects, object_blob)
         } else if mode == DIRECTORY {
             let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
-            object_tree.1 = get_content(directory, hash)?;
-            save_object_pack(objects, object_tree);
+            let path = format!("{}/{}/objects/{}", directory, GIT_DIR, &hash[..2]);
+            let file_path = format!("{}/{}", path, &hash[2..]);
+            let mut decompresed = decompression_object(&file_path)?;
+            if let Some(pos) = decompresed.iter().position(|&x| x == b'\0'){
+                let tree = decompresed.split_off(pos +1);
+                object_tree.1 = compressor_object_with_bytes_content(tree)?;
+                save_object_pack(objects, object_tree);
+            }
             recovery_tree(directory, hash, objects)?;
         }
     }
