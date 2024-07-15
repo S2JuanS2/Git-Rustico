@@ -1,10 +1,11 @@
 use std::fmt::{self};
 
-use crate::{commands::errors::CommandsError, errors::GitError};
+use crate::{commands::errors::CommandsError, errors::GitError, servers::errors::ServerError};
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum UtilError {
     UtilFromCommands(String), // Para tener polimorfismo con CommandsError
+    UtilFromServer(String), // Para tener polimorfismo con ServerError
     InvalidPacketLine,
     ServerConnection,
     ClientConnection,
@@ -100,6 +101,7 @@ pub enum UtilError {
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
         UtilError::UtilFromCommands(info) => write!(f, "{}", info),
+        UtilError::UtilFromServer(info) => write!(f, "{}", info),
         UtilError::InvalidPacketLine => write!(f, "InvalidPacketLineError: Error al leer una línea de paquete."),
         UtilError::ServerConnection => write!(f, "ServerConnectionError: Error al iniciar el servidor."),
         UtilError::ClientConnection => write!(f, "ClientConnectionError: Error al iniciar el cliente."),
@@ -196,6 +198,12 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 impl From<CommandsError> for UtilError {
     fn from(error: CommandsError) -> Self {
         UtilError::UtilFromCommands(format!("{}", error))
+    }
+}
+
+impl From<ServerError> for UtilError {
+    fn from(error: ServerError) -> Self {
+        UtilError::UtilFromServer(format!("{}", error))
     }
 }
 
