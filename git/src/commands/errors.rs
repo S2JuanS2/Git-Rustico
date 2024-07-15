@@ -1,10 +1,11 @@
 use std::fmt;
 
-use crate::{errors::GitError, util::errors::UtilError};
+use crate::{errors::GitError, servers::errors::ServerError, util::errors::UtilError};
 
 #[derive(Clone, PartialEq)]
 pub enum CommandsError {
     CommandsFromUtil(String), // Para tener polimofismo con UtilError
+    CommandsFromServer(String), // Para tener polimofismo con ServerError
     CloneMissingRepo,
     CommitEmptyIndex,
     InvalidArgumentCountFetchError,
@@ -102,6 +103,7 @@ pub enum CommandsError {
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
         CommandsError::CommandsFromUtil(info) => write!(f, "{}", info),
+        CommandsError::CommandsFromServer(info) => write!(f, "{}", info),
         CommandsError::CloneMissingRepo => {
             write!(f, "CloneMissingRepo: Use: <repositorio>")
         }
@@ -213,6 +215,12 @@ impl From<CommandsError> for GitError {
 impl From<UtilError> for CommandsError {
     fn from(error: UtilError) -> Self {
         CommandsError::CommandsFromUtil(format!("{}", error))
+    }
+}
+
+impl From<ServerError> for CommandsError {
+    fn from(error: ServerError) -> Self {
+        CommandsError::CommandsFromServer(format!("{}", error))
     }
 }
 
