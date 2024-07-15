@@ -6,12 +6,18 @@ use crate::{commands::errors::CommandsError, errors::GitError, util::errors::Uti
 pub enum ServerError {
     SeverFromUtil(String),
     SeverFromCommands(String),
+    ServerConnection,
+    ServerDebug,
+    ReadHttpRequest,
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match error {
         ServerError::SeverFromUtil(e) => write!(f, "Error del servidor: {}", e),
         ServerError::SeverFromCommands(e) => write!(f, "Error del servidor: {}", e),
+        ServerError::ServerConnection => write!(f, "Error de conexión del servidor, no se pudo iniciar el servidor."),
+        ServerError::ServerDebug => write!(f, "Error de depuración del servidor. Si estas en entrega final sos un boludo por usar este error"),
+        ServerError::ReadHttpRequest => write!(f, "Error al leer la solicitud HTTP del cliente."),
     }
 }
 
