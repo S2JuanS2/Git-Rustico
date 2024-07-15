@@ -5,7 +5,7 @@ use super::checkout::extract_parent_hash;
 use super::commit::{Commit, git_commit};
 use super::errors::CommandsError;
 use super::rebase::rewrite_commit;
-use crate::util::files::{create_file_replace, open_file, read_file_string};
+use crate::util::files::{create_directory, create_file_replace, open_file, read_file_string};
 use std::fs;
 use std::path::Path;
 use super::branch::get_current_branch;
@@ -426,12 +426,14 @@ fn recovery_tree_merge(
     path: &str)
     -> Result<(String, String), CommandsError>{
     let mut strategy: (String, String) = ("".to_string(), "".to_string());
+
     for line in content_tree.lines() {
         let file = line.split_whitespace().skip(1).take(1).collect::<String>();
         let mode = line.split_whitespace().take(1).collect::<String>();
         let hash_object = line.split_whitespace().skip(2).take(1).collect::<String>();
         let content_file = git_cat_file(directory, &hash_object, "-p")?;
         let path_file_format = format!("{}/{}{}", directory, path, file);
+
         if mode == FILE {
             let path_file_format_clean = Path::new(&path_file_format).strip_prefix(directory).unwrap();
             let path_file_format_clean_str = path_file_format_clean.to_str().ok_or(CommandsError::PathToStringError)?;
@@ -460,10 +462,12 @@ fn recovery_tree_merge(
                 // FAST-FORWARD STRATEGY
                 create_file_replace(&path_file_format, &content_file)?;
                 add_to_index(git_dir, path_file_format_clean_str, hash_object)?;
+                
                 strategy.0 = "fast-forward".to_string();
                 strategy.1 = "ok".to_string();
             }
         }else{
+            create_directory(Path::new(&path_file_format))?;
             let path = format!("{}{}/", path, file);
             let content_tree = git_cat_file(directory, &hash_object, "-p")?;
             recovery_tree_merge(directory,
