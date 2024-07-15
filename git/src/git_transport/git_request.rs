@@ -540,8 +540,8 @@ pub fn process_request_update(
                 "./".to_string(),
                 "master".to_string(),
             );
-            let path_ref = format!("{}/{}", "refs/remotes", current_branch);
-            let result_merge = git_merge(path_repo, current_branch, &path_ref, client)?;
+            let remote_branch = format!("{}/{}", "refs/remotes", current_branch);
+            let result_merge = git_merge(path_repo, current_branch, &remote_branch, client)?;
             if result_merge.contains("CONFLICT") {
                 result.0 = hash_reference_old.to_string();
                 result.1 = false;
