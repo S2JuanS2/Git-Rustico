@@ -349,10 +349,19 @@ pub fn get_objects_from_hash_to_hash(
     let mut objects = Vec::new();
 
     if is_ancestor(path_local, current_hash, prev_hash)? {
-        let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
-        let content_commit = git_cat_file(path_local, current_hash, "-p")?;
-        object_commit.1 = compressor_object_content(content_commit)?;
-        save_object_pack(&mut objects, object_commit);
+    
+        let mut hash_commit: String = current_hash.to_string();
+        while prev_hash != hash_commit {
+            let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
+            let content_commit = git_cat_file(path_local, &hash_commit, "-p")?;
+            object_commit.1 = compressor_object_content(content_commit.clone())?;
+            save_object_pack(&mut objects, object_commit);
+            hash_commit = get_parent_hashes(content_commit.clone());
+            if hash_commit == PARENT_INITIAL {
+                hash_commit = prev_hash.to_string();
+            }
+        }
+
         let commit = git_cat_file(path_local, current_hash, "-p")?;
         if let Some(tree_hash) = get_tree_hash(&commit){
             let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
