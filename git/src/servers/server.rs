@@ -11,8 +11,6 @@ use std::thread::JoinHandle;
 use std::{env, thread};
 
 
-
-
 /// Recibe una solicitud del cliente y la procesa.
 ///
 /// # Arguments

@@ -20,8 +20,4 @@ pub mod git_server;
 
 pub mod api;
 
-pub mod http_server;
-
-pub mod daemon_server;
-
 pub mod servers;
