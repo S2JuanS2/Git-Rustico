@@ -3,13 +3,29 @@ use std::net::{TcpListener, TcpStream};
 use crate::config::Config;
 use crate::errors::GitError;
 use crate::git_transport::git_request::GitRequest;
-use crate::util::connections::start_server;
 use crate::util::logger::{handle_log_file, log_client_disconnection_error, log_message};
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{self, Sender};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
+use super::errors::ServerError;
+
+/// Inicia un servidor en la dirección IP y puerto proporcionados.
+///
+/// # Argumentos
+/// - `ip`: Una cadena de texto que representa la dirección IP y puerto en los que se
+///   debe iniciar el servidor en el formato "ip:puerto".
+///
+/// # Retorno
+/// Un Result que indica si el servidor se inició con éxito (Ok) y devuelve un TcpListener para
+/// aceptar conexiones entrantes, o si se produjo un error (Err) de UtilError, como un error de conexión.
+pub fn start_server(ip: &str) -> Result<TcpListener, ServerError> {
+    match TcpListener::bind(ip) {
+        Ok(listener) => Ok(listener),
+        Err(_) => Err(ServerError::ServerConnection),
+    }
+}
 
 /// Recibe una solicitud del cliente y la procesa.
 ///

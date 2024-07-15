@@ -6,7 +6,6 @@ use crate::git_transport::negotiation::receive_nak;
 use crate::git_transport::negotiation::upload_request_type;
 use std::io::Read;
 use std::io::Write;
-use std::net::TcpListener;
 use std::net::TcpStream;
 
 use super::errors::UtilError;
@@ -14,21 +13,6 @@ use super::objects::ObjectEntry;
 use super::packfile::read_packfile_data;
 use super::packfile::read_packfile_header;
 
-/// Inicia un servidor en la dirección IP y puerto proporcionados.
-///
-/// # Argumentos
-/// - `ip`: Una cadena de texto que representa la dirección IP y puerto en los que se
-///   debe iniciar el servidor en el formato "ip:puerto".
-///
-/// # Retorno
-/// Un Result que indica si el servidor se inició con éxito (Ok) y devuelve un TcpListener para
-/// aceptar conexiones entrantes, o si se produjo un error (Err) de UtilError, como un error de conexión.
-pub fn start_server(ip: &str) -> Result<TcpListener, UtilError> {
-    match TcpListener::bind(ip) {
-        Ok(listener) => Ok(listener),
-        Err(_) => Err(UtilError::ServerConnection),
-    }
-}
 
 /// Inicia una conexión de cliente con el servidor en la dirección IP proporcionada.
 ///
