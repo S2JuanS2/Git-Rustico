@@ -6,7 +6,6 @@ use crate::models::client::Client;
 use crate::util::files::*;
 use crate::util::index::{open_index, recovery_index};
 use crate::util::objects::builder_object_commit;
-use crate::commands::cat_file::git_cat_file;
 use crate::commands::checkout::get_tree_hash;
 use chrono::{DateTime, Local, FixedOffset, Utc};
 use std::fs;
