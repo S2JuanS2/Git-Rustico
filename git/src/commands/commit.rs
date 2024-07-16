@@ -6,6 +6,8 @@ use crate::models::client::Client;
 use crate::util::files::*;
 use crate::util::index::{open_index, recovery_index};
 use crate::util::objects::builder_object_commit;
+use crate::commands::cat_file::git_cat_file;
+use crate::commands::checkout::get_tree_hash;
 use chrono::{DateTime, Local, FixedOffset, Utc};
 use std::fs;
 use std::fs::OpenOptions;
@@ -256,11 +258,14 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
 
     let index_content = open_index(&git_dir)?;
     let tree_hash = recovery_index(&index_content, &git_dir)?;
-
-    if tree_hash == parent_hash {
-        return Ok("nothing to commit, working tree clean".to_string());
+    if parent_hash != PARENT_INITIAL {
+        let content_commit = git_cat_file(directory, &parent_hash, "-p")?;
+        if let Some(hash_tree_commit) = get_tree_hash(&content_commit){
+            if tree_hash == hash_tree_commit {
+                return Ok("nothing to commit, working tree clean".to_string());
+            }
+        };
     }
-    
     let mut commit_content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
     if commit_content.lines().count() == 5{
