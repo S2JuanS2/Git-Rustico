@@ -92,7 +92,7 @@ fn get_modified_or_untracked_files(
     let index_lines = get_lines_in_index(index_content.to_string());
     let index_hashes = get_hashes_index(index_lines)?;
 
-    let status_data = compare_hash_lists(&working_directory_hash_list, &index_hashes, directory);
+    let status_data = compare_hash_lists(&working_directory_hash_list, &index_hashes, directory)?;
 
     let updated_files_list = status_data.updated_files_list();
     let untracked_files_list = status_data.untracked_files_list();
