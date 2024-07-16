@@ -1,6 +1,7 @@
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
+use serde_json::Value;
 // use http_request::HttpRequest;
 
 use crate::errors::GitError;
@@ -19,7 +20,7 @@ pub fn handle_client_http(
     let request = read_request(stream)?;
     // Parsear la solicitud HTTP
     let _http_request = parse_http_request(&request)?;
-    // // Manejar la solicitud HTTP
+    // Manejar la solicitud HTTP
     // let response = handle_http_request(request, tx)?;
     
     // // Enviar la respuesta al cliente
@@ -48,6 +49,10 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
         lines[(index + 1)..].join("\n")
     } else {
         String::new()
+    };
+    let body: Value = match serde_json::from_str(&body) {
+        Ok(body) => body,
+        Err(_) => return Err(ServerError::HttpParseBody),
     };
 
     Ok(HttpRequest::new(method, path, body))
