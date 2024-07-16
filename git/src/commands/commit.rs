@@ -14,7 +14,7 @@ use std::path::Path;
 
 use crate::commands::branch::{get_current_branch, get_parent_hashes};
 
-use super::status::{get_index_content, is_files_to_commit};
+use super::status::get_index_content;
 
 const COMMIT_EDITMSG: &str = "COMMIT_EDITMSG";
 const BRANCH_DIR: &str = "refs/heads/";
@@ -240,10 +240,6 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
     let git_dir = format!("{}/{}", directory, GIT_DIR);
     check_index_content(&git_dir)?;
 
-    if is_files_to_commit(directory)? {
-        return Ok("nothing to commit, working tree clean".to_string())
-    }
-
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
 
@@ -261,6 +257,10 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
     let index_content = open_index(&git_dir)?;
     let tree_hash = recovery_index(&index_content, &git_dir)?;
 
+    if tree_hash == parent_hash {
+        return Ok("nothing to commit, working tree clean".to_string());
+    }
+    
     let mut commit_content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
     if commit_content.lines().count() == 5{

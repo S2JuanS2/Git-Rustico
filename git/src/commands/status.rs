@@ -1,4 +1,5 @@
 use crate::consts::*;
+use crate::util::index::{open_index, recovery_index};
 use super::check_ignore::{check_gitignore, get_gitignore_content};
 use super::errors::CommandsError;
 use crate::models::client::Client;
@@ -18,6 +19,7 @@ pub struct StatusData {
     untracked_files_list: Vec<(String, String)>,
     staged_files_list: Vec<(String, String)>,
     deleted_files_list: Vec<String>,
+    deleted_staged_files_list: Vec<String>,
 }
 
 impl StatusData {
@@ -35,6 +37,10 @@ impl StatusData {
 
     pub fn deleted_files_list(&self) -> &Vec<String> {
         &self.deleted_files_list
+    }
+
+    pub fn deleted_staged_files_list(&self) -> &Vec<String> {
+        &self.deleted_staged_files_list
     }
 }
 
@@ -93,17 +99,19 @@ pub fn git_status(directory: &str) -> Result<String, CommandsError> {
 
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
     let index_hashes = get_hashes_index(index_files)?;
-    let status_data = compare_hash_lists(&working_directory_hash_list, &index_hashes, directory);
+    let status_data = compare_hash_lists(&working_directory_hash_list, &index_hashes, directory)?;
     let updated_files_list = status_data.updated_files_list();
     let untracked_files_list = status_data.untracked_files_list();
     let staged_files_list = status_data.staged_files_list();
     let deleted_files_list = status_data.deleted_files_list();
+    let deleted_staged_files_list = status_data.deleted_staged_files_list();
     let files_not_commited_list = check_for_commit(directory, staged_files_list.to_vec())?;
     let value = print_changes(
         updated_files_list.to_vec(),
         untracked_files_list.to_vec(),
         files_not_commited_list,
         deleted_files_list.to_vec(),
+        deleted_staged_files_list.to_vec(),
         directory,
     )?;
 
@@ -146,12 +154,14 @@ pub fn get_index_content(directory_git: &str) -> Result<String, CommandsError> {
 /// 'untracked_files_list': vector con los archivos que no estan trackeados.
 /// 'files_not_commited_list': vector con los archivos que estan en el staging area y se van a incluir en el proximo commit.
 /// 'deleted_files_list': vector con los archivos que se eliminaron del working directory pero siguen en el index.
+/// 'deleted_staged_files_list': vector con los archivos que se eliminaron del working directory y del index.
 /// 'directory': directorio del repositorio local.
 fn print_changes(
     updated_files_list: Vec<(String, String)>,
     untracked_files_list: Vec<(String, String)>,
     files_not_commited_list: Vec<String>,
     deleted_files_list: Vec<String>,
+    deleted_staged_files_list: Vec<String>,
     directory: &str,
 ) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
@@ -163,6 +173,7 @@ fn print_changes(
         && untracked_files_list.is_empty()
         && files_not_commited_list.is_empty()
         && deleted_files_list.is_empty()
+        && deleted_staged_files_list.is_empty()
     {
         branch_up_to_date(&mut formatted_result, head_branch_name);
     }
@@ -183,13 +194,17 @@ fn print_changes(
             directory,
         );
     }
-    if !files_not_commited_list.is_empty() {
-        branch_missing_commits(&mut formatted_result, &files_not_commited_list);
+    if !files_not_commited_list.is_empty() || !deleted_staged_files_list.is_empty() {
+        branch_missing_commits(&mut formatted_result, &files_not_commited_list, &deleted_staged_files_list);
     }
 
     Ok(formatted_result)
 }
 
+/// Verifica si un archivo fue eliminado del working directory pero sigue en el index.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'file_name': nombre del archivo.
 pub fn is_files_to_delete(directory: &str, file_name: &str) -> Result<bool, CommandsError> {
 
     let dir_git = format!("{}/{}", directory, GIT_DIR);
@@ -209,18 +224,28 @@ pub fn is_files_to_delete(directory: &str, file_name: &str) -> Result<bool, Comm
     Ok(false)
 }
 
+/// Verifica si hay archivos para commitear.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
 pub fn is_files_to_commit(directory: &str) -> Result<bool, CommandsError> {
     let dir_git = format!("{}/{}", directory, GIT_DIR);
 
-    let index_content = get_index_content(&dir_git)?;
+    let index_content = open_index(&dir_git)?;
+    let tree_hash = recovery_index(&index_content, &dir_git)?;
 
-    let index_files = get_lines_in_index(index_content);
+    let current_branch = get_head_branch(directory)?;
+    let head_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
 
-    let index_hashes = get_hashes_index(index_files)?;
+    let mut contents = String::new();
+    if fs::metadata(&head_branch).is_ok() {
+        let file = open_file(&head_branch)?;
+        contents = read_file_string(file)?;
+    }
 
-    let files_not_commited_list = check_for_commit(directory, index_hashes)?;
-
-    Ok(files_not_commited_list.is_empty())
+    if contents.is_empty() || tree_hash == contents {
+        return Ok(false)
+    }
+    Ok(true)
 }
 
 /// Muestra los archivos con cambios que no estan en el staging area.
@@ -293,12 +318,17 @@ fn branch_with_untracked_files(
 /// ###Parámetros:
 /// 'formatted_result': string con el resultado del status formateado.
 /// 'files_not_commited_list': vector con los nombres de los archivos que estan en el staging area y se van a incluir en el proximo commit.
-fn branch_missing_commits(formatted_result: &mut String, files_not_commited_list: &Vec<String>) {
+/// 'deleted_staged_files_list': vector con los nombres de los archivos que se eliminaron del working directory y del index, que se incluiran en el proximo commit.
+fn branch_missing_commits(formatted_result: &mut String, files_not_commited_list: &Vec<String>, deleted_staged_files_list: &Vec<String>) {
     formatted_result.push_str("\n\nChanges to be committed:\n");
     formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n\n");
 
     for file in files_not_commited_list {
         formatted_result.push_str(&format!("\tmodified:\t{}\n", file));
+    }
+
+    for file in deleted_staged_files_list {
+        formatted_result.push_str(&format!("\tdeleted:\t{}\n", file));
     }
 }
 
@@ -314,11 +344,12 @@ fn branch_up_to_date(formatted_result: &mut String, head_branch_name: String) {
     formatted_result.push_str("\nnothing to commit, working tree clean\n");
 }
 
-/// Compara los hashes de los archivos del directorio de trabajo con los del index y devuelve cuatro vectores:
+/// Compara los hashes de los archivos del directorio de trabajo con los del index y devuelve cinco vectores en un struct StatusData:
 /// - updated_files_list: vector con los archivos que se modificaron y no se actualizaron en el staging area.
 /// - untracked_files_list: vector con los archivos que no estan trackeados.
 /// - staged_files_list: vector con los archivos que estan en el staging area y se van a incluir en el proximo commit.
 /// - deleted_files_list: vector con los archivos que se eliminaron del working directory pero siguen en el index.
+/// - deleted_staged_files_list: vector con los archivos que se eliminaron del working directory y del index.
 /// ###Parámetros:
 /// 'working_directory_hash_list': HashMap con los nombres de los archivos en el working directory y sus hashes.
 /// 'index_hashes': vector con los nombres de los archivos en el index y sus hashes.
@@ -327,7 +358,7 @@ pub fn compare_hash_lists(
     working_directory_hash_list: &HashMap<String, String>,
     index_hashes: &Vec<(String, String)>,
     directory: &str,
-) -> StatusData {
+) -> Result<StatusData, CommandsError> {
     let mut updated_files_list: Vec<(String, String)> = Vec::new();
     let mut untracked_files_list: Vec<(String, String)> = Vec::new();
     let mut staged_files_list: Vec<(String, String)> = Vec::new();
@@ -360,12 +391,14 @@ pub fn compare_hash_lists(
     }
     let deleted_files_list =
         check_for_deleted_files(index_hashes, working_directory_hash_list, directory);
-    StatusData {
+    let deleted_staged_files_list = check_for_deleted_staged_files(index_hashes, directory)?;
+    Ok(StatusData {
         updated_files_list,
         untracked_files_list,
         staged_files_list,
         deleted_files_list,
-    }
+        deleted_staged_files_list,
+    })
 }
 
 /// Devuelve un vector con los nombres de los archivos que se eliminaron del working directory pero siguen en el index.
@@ -396,6 +429,73 @@ pub fn check_for_deleted_files(
         }
     }
     deleted_files_list
+}
+
+/// Devuelve un vector con los nombres de los archivos que se eliminaron del working directory y del index.
+/// ###Parámetros:
+/// 'index_hashes': vector con los nombres de los archivos en el index y sus hashes.
+/// 'directory': directorio del repositorio local.
+pub fn check_for_deleted_staged_files(
+    index_hashes: &Vec<(String, String)>,
+    directory: &str,
+) -> Result<Vec<String>, CommandsError> {
+    let mut deleted_staged_files_list: Vec<String> = Vec::new();
+    if is_files_to_commit(directory)? {
+        let current_branch = get_head_branch(directory)?;
+        let head_branch = format!("{}/.git/refs/heads/{}", directory, current_branch);
+
+        let mut current_commit = String::new();
+        if fs::metadata(&head_branch).is_ok() {
+            let file = open_file(&head_branch)?;
+            current_commit = read_file_string(file)?;
+        }
+        let current_commit_content = git_cat_file(directory, &current_commit, "-p")?;
+        let current_commit_lines = current_commit_content.split('\n');
+        let mut files_in_tree = Vec::new();
+        for line in current_commit_lines {
+            if line.starts_with("tree") {
+                let tree_parts: Vec<&str> = line.split_whitespace().collect();
+                get_files_in_tree(directory, tree_parts[1], &mut files_in_tree)?;
+            }
+        }
+        for file in files_in_tree {
+            let mut found_file_in_tree = false;
+            for index_hash in index_hashes {
+                if file == index_hash.0 {
+                    found_file_in_tree = true;
+                }
+            }
+            if !found_file_in_tree {
+                deleted_staged_files_list.push(file);
+            }
+        
+        }
+    }
+    Ok(deleted_staged_files_list)
+}
+
+/// Recorre el arbol de archivos que se le pasa como parametro y devuelve un vector con los nombres de los archivos en ese tree.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'tree_hash': hash del arbol de archivos.
+/// 'files_in_tree': vector con los nombres de los archivos en el arbol de archivos.
+fn get_files_in_tree(
+    directory: &str,
+    tree_hash: &str,
+    files_in_tree: &mut Vec<String>,
+) -> Result<(), CommandsError> {
+    let tree_content = git_cat_file(directory, tree_hash, "-p")?;
+    let tree_lines = tree_content.split('\n');
+    for tree_line in tree_lines {
+        if !tree_line.is_empty(){
+            let tree_parts: Vec<&str> = tree_line.split_whitespace().collect();
+            if git_cat_file(directory, tree_parts[2], "-t")? == "tree" {
+                get_files_in_tree(directory, tree_parts[2], files_in_tree)?;
+            }
+            files_in_tree.push(tree_parts[1].to_string());
+        }
+    }
+    Ok(())
 }
 
 /// Se para en el ultimo commit de la branch actual y reconstruye el arbol de archivos incluidos
