@@ -15,13 +15,10 @@ pub fn handle_client_http(
     _tx: Arc<Mutex<Sender<String>>>,
     _root_directory: String,
 ) -> Result<(), GitError> {
-    print!("HTTP");
     // Leer datos del cliente
     let request = read_request(stream)?;
-    // // Parsear la solicitud HTTP
-    let http_request = parse_http_request(&request)?;
-    println!("Llegue");
-    println!("{:?}", http_request);
+    // Parsear la solicitud HTTP
+    let _http_request = parse_http_request(&request)?;
     // // Manejar la solicitud HTTP
     // let response = handle_http_request(request, tx)?;
     
