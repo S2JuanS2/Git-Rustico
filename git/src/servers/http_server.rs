@@ -1,3 +1,3 @@
 pub mod http_request;
 pub mod utils;
-pub mod connection;
+pub mod http_connection;

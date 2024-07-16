@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use git::errors::GitError;
 use git::servers::daemon_server::handle_client_daemon;
-use git::servers::http_server::connection::handle_client_http;
+use git::servers::http_server::http_connection::handle_client_http;
 use git::servers::server::{create_listener, initialize_config, 
     start_logging, start_server_thread, 
     wait_for_threads};

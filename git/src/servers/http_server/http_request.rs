@@ -5,9 +5,9 @@ use super::utils::read_request;
 
 #[derive(Debug)]
 pub struct HttpRequest {
-    method: String,
-    path: String,
-    body: String,
+    pub method: String,
+    pub path: String,
+    pub body: String,
 }
 
 impl HttpRequest {
@@ -20,11 +20,5 @@ impl HttpRequest {
         println!("{}", content);
         // pass
         return Ok(HttpRequest::new("GET".to_string(), "/".to_string(), "".to_string()));
-    }
-
-    pub fn print(&self) {
-        println!("Method: {}", self.method);
-        println!("Path: {}", self.path);
-        println!("Body: {}", self.body);
     }
 }
