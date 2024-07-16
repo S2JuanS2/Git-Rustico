@@ -1,3 +1,4 @@
+use crate::commands::cat_file::git_cat_file;
 use crate::consts::*;
 use super::errors::CommandsError;
 use super::log::insert_line_between_lines;
@@ -11,7 +12,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 
-use crate::commands::branch::get_current_branch;
+use crate::commands::branch::{get_current_branch, get_parent_hashes};
 
 use super::status::{get_index_content, is_files_to_commit};
 
@@ -97,6 +98,39 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, Commands
     );
 
     git_commit(directory, commit)
+}
+
+/// Devuelve un vector con todos los commits del repositorio recibido por parámetro
+/// ###Parametros:
+/// 'directory': Directorio del git
+pub fn get_commits(directory: &str) -> Result<Vec<String>, CommandsError> {
+
+    let mut commits: Vec<String> = Vec::new();
+
+    let current_branch = get_current_branch(directory)?;
+    let git_dir = format!("{}/{}", directory, GIT_DIR);
+    let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
+
+    let mut current_commit = String::new();
+    if fs::metadata(&branch_current_path).is_ok() {
+        let file = open_file(&branch_current_path)?;
+        current_commit = read_file_string(file)?;
+    }
+    commits.push(current_commit.clone());
+
+    loop {
+        let content_commit = git_cat_file(directory, &current_commit, "-p")?;
+        let parent_hash = get_parent_hashes(content_commit);
+
+            if parent_hash != PARENT_INITIAL {
+                commits.push(parent_hash.to_string());
+                current_commit = parent_hash.to_string();
+            }else{
+                break;
+            }
+    }
+    return Ok(commits)
+
 }
 
 /// Creará el archivo donde se guarda el mensaje del commit

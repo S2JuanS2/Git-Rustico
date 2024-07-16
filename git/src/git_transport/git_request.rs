@@ -270,8 +270,6 @@ pub fn search_available_references(
         // if reference.la_tenemos() {
         //     available_references.push(reference);
         // }
-        println!("AQUI IRIA TU TODO");
-
         if commits_in_repo.contains(hash) {
             confirmed_commits.push(hash.to_string());
         }
