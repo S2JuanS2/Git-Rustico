@@ -1,6 +1,7 @@
 use crate::commands::branch::{get_current_branch, get_branch, get_parent_hashes};
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::checkout::{get_tree_hash, extract_parent_hash};
+use crate::commands::commit::get_commits;
 use crate::commands::push::is_ancestor;
 use crate::consts::PARENT_INITIAL;
 use crate::git_server::GitServer;
@@ -394,21 +395,23 @@ pub fn get_objects_from_hash_to_hash(
 /// En caso de error, retorna un error de tipo UtilError.
 pub fn get_objects_fetch_with_hash_valid(
     directory: &str,
-    references: Vec<Reference>,
+    _references: Vec<Reference>,
     confirmed_hashes: &Vec<String>
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, UtilError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = Vec::new();
+    
+    let commits_in_repo = get_commits(directory)?;
 
     let mut available = true;
     let mut send_hashes: Vec<String> = Vec::new();
-    for refe in references{
-        for hash in confirmed_hashes{
-            if refe.get_hash() == hash{
+    for refe in commits_in_repo{
+        for hash in confirmed_hashes.into_iter(){
+            if refe == hash.to_string(){
                 available = false;
             }
         }
         if available{
-            send_hashes.push(refe.get_hash().to_string());
+            send_hashes.push(refe.to_string());
         }
         available = true;
     }
@@ -418,21 +421,18 @@ pub fn get_objects_fetch_with_hash_valid(
         let file_current_branch = open_file(&branch_current_path)?;
         let hash_commit_current_branch = read_file_string(file_current_branch)?;
         for hash in send_hashes.clone() {
-            if hash == hash_commit_current_branch{
-                let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
-                object_commit.1 = get_content(directory, &hash_commit_current_branch)?;
-                save_object_pack(&mut objects, object_commit);
-                let commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
-                if let Some(tree_hash) = get_tree_hash(&commit){
-                let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
-                object_tree.1 = get_content(directory, tree_hash)?;
-                save_object_pack(&mut objects, object_tree);
-                recovery_tree_clone(directory, tree_hash, &mut objects)?;
-                }
+            let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
+            object_commit.1 = get_content(directory, &hash)?;
+            save_object_pack(&mut objects, object_commit);
+            let commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
+                
+            if let Some(tree_hash) = get_tree_hash(&commit){
+            let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+            object_tree.1 = get_content(directory, tree_hash)?;
+            save_object_pack(&mut objects, object_tree);
+            recovery_tree_clone(directory, tree_hash, &mut objects)?;
             }
         }
-        let commit_content = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
-        let _parent_hash = get_parent_hashes(commit_content);
     }
 
     Ok(objects)
