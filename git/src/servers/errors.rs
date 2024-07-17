@@ -10,6 +10,7 @@ pub enum ServerError {
     ServerDebug,
     ReadHttpRequest,
     HttpParseBody,
+    MethodNotAllowed,
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -20,6 +21,7 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::ServerDebug => write!(f, "Error de depuración del servidor. Si estas en entrega final sos un boludo por usar este error"),
         ServerError::ReadHttpRequest => write!(f, "Error al leer la solicitud HTTP del cliente."),
         ServerError::HttpParseBody => write!(f, "Error al parsear el cuerpo de la solicitud HTTP."),
+        ServerError::MethodNotAllowed => write!(f, "Método HTTP no permitido."),
     }
 }
 

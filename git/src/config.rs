@@ -141,6 +141,7 @@ mod tests {
     fn test_new_creates_default_config() {
         let args = vec!["git".to_string(), "testfile".to_string()];
         let result = Config::new(args);
+        println!("{:?}", result);
         let config = result.unwrap();
         assert_eq!(config.name, String::new());
         assert_eq!(config.email, String::new());

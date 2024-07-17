@@ -228,7 +228,7 @@ mod tests {
         assert!(result.is_ok());
 
         let content = result.unwrap();
-        assert_eq!(content, &[]);
+        assert_eq!(content.len(), 0);
     }
 
     #[test]
