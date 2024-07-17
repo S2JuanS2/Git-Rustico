@@ -164,7 +164,7 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
         return Err(CommandsError::BranchNotFoundError);
     }
     
-    if !is_files_to_commit(directory)? {
+    if is_files_to_commit(directory)? {
         return Ok("Please commit your changes\nAborting".to_string())
     }
     

@@ -4,6 +4,7 @@ use super::check_ignore::{check_gitignore, get_gitignore_content};
 use super::errors::CommandsError;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file, read_file_string};
+use crate::commands::checkout::get_tree_hash;
 use crate::util::formats::hash_generate;
 use std::collections::HashMap;
 use std::fs;
@@ -242,8 +243,14 @@ pub fn is_files_to_commit(directory: &str) -> Result<bool, CommandsError> {
         contents = read_file_string(file)?;
     }
 
-    if contents.is_empty() || tree_hash == contents {
+    if contents.is_empty(){
         return Ok(false)
+    }else{
+        let content_commit = git_cat_file(directory, &contents, "-p")?;
+        let tree_hash_commit = get_tree_hash(&content_commit).unwrap_or(PARENT_INITIAL);
+        if tree_hash == tree_hash_commit {
+            return Ok(false)
+        }
     }
     Ok(true)
 }
