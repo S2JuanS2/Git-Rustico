@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
-use crate::{git_transport::references::{Reference, ReferenceType}, util::errors::UtilError};
+use crate::{consts::PARENT_INITIAL, git_transport::references::{Reference, ReferenceType}, util::errors::UtilError};
 
 use super::reference_information::ReferenceInformation;
 
@@ -173,9 +173,16 @@ impl HandleReferences {
     pub fn update_references_filtering(&mut self, path_references: Vec<String>) -> Result<(), UtilError> {
         let mut new_refences: HashMap<String, ReferenceInformation> = HashMap::new();
         for path in path_references {
-            if let Some(reference) = self.references.get(&path) {
-                let local_commit = reference.get_local_commit().map(|commit| commit.to_string());
-                new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), local_commit));
+            let file_ref = path.clone();
+            if fs::metadata(file_ref).is_ok(){
+                if let Some(reference) = self.references.get(&path) {
+                    let local_commit = reference.get_local_commit().map(|commit| commit.to_string());
+                    new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), local_commit));
+                }
+            }else{
+                if let Some(reference) = self.references.get(&path) {
+                    new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), Some(PARENT_INITIAL.to_string())));
+                }
             }
         }
         self.references = new_refences;

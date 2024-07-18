@@ -222,6 +222,8 @@ pub fn get_refs_path(directory: &str, branch_name: &str) -> String {
     let mut path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
     if branch_name.contains("remotes") {
         path_branch_to_merge = format!("{}/.git/{}", directory, branch_name);
+    }else if branch_name.contains("/") && !branch_name.contains("remotes"){
+        path_branch_to_merge = format!("{}/.git/refs/remotes/{}", directory, branch_name);
     }
     path_branch_to_merge
 }
@@ -239,6 +241,11 @@ fn get_log_path(directory: &str, branch_name: &str) -> String {
             log_path = format!("{}/.git/logs/refs/remotes/{}/{}", directory, branch_path[2], branch_path[3]);
         }else{
             log_path = format!("{}/.git/logs/refs/remotes/{}", directory, branch_path[2]);
+        }
+    }else{
+        let branch_path = branch_name.split('/').collect::<Vec<_>>();
+        if branch_path.len() == 2 {
+            log_path = format!("{}/.git/logs/refs/remotes/{}/{}", directory, branch_path[0], branch_path[1]);
         }
     }
     log_path

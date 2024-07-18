@@ -86,8 +86,8 @@ pub fn git_pull(
         Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),
     };
     let name_branch = current_rfs.get_name();
-    
-    let result =  git_fetch_branch(socket, ip, port, repo_local, name_branch)?;
+                                                                        //obtener el name_remote
+    let result =  git_fetch_branch(socket, ip, port, repo_local, "origin", name_branch)?;
     status.push(format!("{}", result));
     println!("Result del fetch: {}", result);
 
