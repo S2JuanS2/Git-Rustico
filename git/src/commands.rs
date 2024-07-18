@@ -34,4 +34,3 @@ pub mod status;
 pub mod tag;
 pub mod fetch_head;
 pub mod rebase;
-pub mod pull_request;

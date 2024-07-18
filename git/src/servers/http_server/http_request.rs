@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use serde_json::Value;
 use crate::{servers::errors::ServerError, util::logger::log_message};
-use super::utils::read_request;
+use super::{pr::PullRequest, utils::read_request};
 
 /// Representa una solicitud HTTP.
 ///
@@ -10,9 +10,9 @@ use super::utils::read_request;
 /// 
 #[derive(Debug, PartialEq)]
 pub struct HttpRequest {
-    pub method: String,
-    pub path: String,
-    pub body: Value,
+    method: String,
+    path: String,
+    body: Value,
 }
 
 impl HttpRequest {
@@ -64,59 +64,153 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+    pub fn handle_http_request(&self, source: &String,tx: &Arc<Mutex<Sender<String>>>, signature: &String) -> Result<String, ServerError> {
         // Manejar la solicitud HTTP
+        let pr = self.build_pull_request_from_body(tx, signature)?;
         match self.method.as_str() {
-            "GET" => self.handle_get_request(),
-            "POST" => self.handle_post_request(tx),
-            "PUT" => self.handle_put_request(tx),
-            "PATCH" => self.handle_patch_request(tx),
+            "GET" => self.handle_get_request(&pr, source, tx),
+            "POST" => self.handle_post_request(&pr, source, tx),
+            "PUT" => self.handle_put_request(&pr, source, tx),
+            "PATCH" => self.handle_patch_request(&pr, source, tx),
             _ => Err(ServerError::MethodNotAllowed),
         }
     }
 
-    fn handle_get_request(&self) -> Result<String, ServerError> {
-        let message = format!("GET request to path: {}", self.path);
-        println!("{}", message);
-        Ok(message)
+    /// Obtiene la ruta de la solicitud HTTP.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve una referencia a la ruta de la solicitud.
+    pub fn get_path(&self) -> &str {
+        &self.path
     }
 
-    fn handle_post_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let message = self.body["message"].as_str().unwrap_or("No message");
-        let message = message.to_string();
-        let message = format!("POST request to path: {} with message: {}", self.path, message);
-        log_message(&tx, &message);
-        println!("{}", message);
-
-        // Fijarme si existe la carpeta .pr en source
-        // Si no existe, crearla
-
-        // Fijarte si existe una carpeta en .pr con el nombre del repositorio en el servidor, 
-        // sino lo hay crearlo
-
-        // Fijarme si el pr existe en la carpeta del repositorio, sino existe crearlo
-
-        
-        Ok(message)
+     /// Maneja una solicitud HTTP GET.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `pr` - Una referencia a la estructura `PullRequest`.
+    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
+    fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls"] => {
+                return pr.list_pull_request(repo_name, src, tx);
+            },
+            ["repos", repo_name, "pulls", pull_number] => {
+                return pr.get_pull_request(repo_name, pull_number, src, tx);
+            },
+            ["repos", repo_name, "pulls", pull_number, "commits"] => {
+                return pr.list_commits(repo_name, pull_number, src, tx);
+            },
+            _ => {
+                return Err(ServerError::MethodNotAllowed);
+            }
+        }
+    }
+    
+    /// Maneja una solicitud HTTP POST.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `pr` - Una referencia a la estructura `PullRequest`.
+    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
+    fn handle_post_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls"] => {
+                return pr.create_pull_requests(repo_name, src, tx);
+            }
+            _ => {
+                return Err(ServerError::MethodNotAllowed);
+            }
+        }
+    }
+    
+     /// Maneja una solicitud HTTP PUT.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `pr` - Una referencia a la estructura `PullRequest`.
+    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
+    fn handle_put_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls", pull_number, "merge"] => {
+                return pr.merge_pull_request(repo_name, pull_number, src, tx);
+            },
+            _ => {
+                return Err(ServerError::MethodNotAllowed);
+            }
+        }
+    }
+    
+    /// Maneja una solicitud HTTP PATCH.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `pr` - Una referencia a la estructura `PullRequest`.
+    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
+    fn handle_patch_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls", pull_number] => {
+                return pr.modify_pull_request(repo_name, pull_number, src, tx);
+            },
+            _ => {
+                Err(ServerError::MethodNotAllowed)
+            }
+        }
     }
 
-    fn handle_put_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let message = self.body["message"].as_str().unwrap_or("No message");
-        let message = message.to_string();
-        let message = format!("PUT request to path: {} with message: {}", self.path, message);
-        log_message(&tx, &message);
-        println!("{}", message);
-        Ok(message)
+     /// Crea una estructura `PullRequest` desde el cuerpo de la solicitud HTTP.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    /// * `signature` - Una referencia a la firma del cliente.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la estructura `PullRequest` en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
+    fn build_pull_request_from_body(&self, tx: &Arc<Mutex<Sender<String>>>, signature: &String) -> Result<PullRequest, ServerError> {
+        match PullRequest::from_json(&self.body)
+        {
+            Ok(pr) => Ok(pr),
+            Err(e) => {
+                let message = format!("{}Error en la solicitud HTTP. Error: {}", signature, e);
+                log_message(&tx, &message);
+                println!("{}", message);
+                Err(ServerError::HttpParseBody)
+            }
+        }
     }
 
-    fn handle_patch_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let message = self.body["message"].as_str().unwrap_or("No message");
-        let message = message.to_string();
-        let message = format!("PATCH request to path: {} with message: {}", self.path, message);
-        log_message(&tx, &message);
-        println!("{}", message);
-        Ok(message)
-    }
 }
 
 

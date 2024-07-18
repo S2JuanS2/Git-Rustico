@@ -163,3 +163,10 @@ pub const UNPACK_OK: &str = "unpack ok\n";
 
 // Pull Request
 pub const PR_FOLDER: &str = ".pr";
+
+// Signature
+pub const CLIENT_SIGNATURE: &str = "Client => ";
+
+pub const HTPP_SIGNATURE: &str = "HTTP |";
+
+pub const DAEMON_SIGNATURE: &str = "Daemon |";
