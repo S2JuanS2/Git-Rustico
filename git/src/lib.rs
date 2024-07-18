@@ -18,6 +18,4 @@ pub mod git_transport;
 
 pub mod git_server;
 
-pub mod api;
-
 pub mod servers;
