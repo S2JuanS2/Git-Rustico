@@ -2,7 +2,6 @@ use serde_json::Value;
 use crate::{servers::errors::ServerError, util::logger::log_message};
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
-
 #[derive(Debug)]
 pub struct PullRequest {
     pub owner: String,

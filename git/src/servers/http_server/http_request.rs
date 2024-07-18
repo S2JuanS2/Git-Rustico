@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use serde_json::Value;
-use crate::servers::errors::ServerError;
-use super::{handle_pr::{handle_get_request, handle_patch_request, handle_post_request, handle_put_request}, pr::PullRequest, utils::read_request};
+use crate::{servers::errors::ServerError, util::logger::log_message};
+use super::{pr::PullRequest, utils::read_request};
 
 /// Representa una solicitud HTTP.
 ///
@@ -10,9 +10,9 @@ use super::{handle_pr::{handle_get_request, handle_patch_request, handle_post_re
 /// 
 #[derive(Debug, PartialEq)]
 pub struct HttpRequest {
-    pub method: String,
-    pub path: String,
-    pub body: Value,
+    method: String,
+    path: String,
+    body: Value,
 }
 
 impl HttpRequest {
@@ -64,13 +64,14 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, pr: &PullRequest, source: &String,tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+    pub fn handle_http_request(&self, source: &String,tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         // Manejar la solicitud HTTP
+        let pr = self.create_struct_pr(tx)?;
         match self.method.as_str() {
-            "GET" => handle_get_request(&self, pr, source, tx),
-            "POST" => handle_post_request(&self, pr, source, tx),
-            "PUT" => handle_put_request(&self, pr, source, tx),
-            "PATCH" => handle_patch_request(&self, pr, source, tx),
+            "GET" => self.handle_get_request(&pr, source, tx),
+            "POST" => self.handle_post_request(&pr, source, tx),
+            "PUT" => self.handle_put_request(&pr, source, tx),
+            "PATCH" => self.handle_patch_request(&pr, source, tx),
             _ => Err(ServerError::MethodNotAllowed),
         }
     }
@@ -78,6 +79,74 @@ impl HttpRequest {
     pub fn get_path(&self) -> &str {
         &self.path
     }
+
+    fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls"] => {
+                return pr.list_pull_request(repo_name, src, tx);
+            },
+            ["repos", repo_name, "pulls", pull_number] => {
+                return pr.get_pull_request(repo_name, pull_number, src, tx);
+            },
+            ["repos", repo_name, "pulls", pull_number, "commits"] => {
+                return pr.list_commits(repo_name, pull_number, src, tx);
+            },
+            _ => {
+                return Err(ServerError::MethodNotAllowed);
+            }
+        }
+    }
+    
+    fn handle_post_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls"] => {
+                return pr.create_pull_requests(repo_name, src, tx);
+            }
+            _ => {
+                return Err(ServerError::MethodNotAllowed);
+            }
+        }
+    }
+    
+    fn handle_put_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls", pull_number, "merge"] => {
+                return pr.merge_pull_request(repo_name, pull_number, src, tx);
+            },
+            _ => {
+                return Err(ServerError::MethodNotAllowed);
+            }
+        }
+    }
+    
+    fn handle_patch_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls", pull_number] => {
+                return pr.modify_pull_request(repo_name, pull_number, src, tx);
+            },
+            _ => {
+                Err(ServerError::MethodNotAllowed)
+            }
+        }
+    }
+
+    fn create_struct_pr(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<PullRequest, ServerError> {
+        match PullRequest::from_json(&self.body)
+        {
+            Ok(pr) => Ok(pr),
+            Err(e) => {
+                let message = format!("Error en la solicitud HTTP. Error: {}", e);
+                log_message(&tx, &message);
+                println!("{}", message);
+                Err(ServerError::HttpParseBody)
+            }
+        }
+    }
+
 }
 
 
