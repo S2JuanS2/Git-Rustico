@@ -2,6 +2,8 @@ use serde_json::Value;
 
 use crate::servers::errors::ServerError;
 
+
+#[derive(Debug)]
 pub struct PullRequest {
     pub owner: String,
     pub repo: String,
@@ -12,25 +14,22 @@ pub struct PullRequest {
 }
 
 impl PullRequest {
-    pub fn from_json(json: Value) -> Result<Self, ServerError> {
-        let owner = match json["owner"].as_str()
-        {
-            Some(owner) => owner.to_string(),
-            None => return Err(ServerError::HttpNoOwnerFound),
-        };
-        let repo = match json["repo"].as_str()
-        {
-            Some(repo) => repo.to_string(),
-            None => return Err(ServerError::HttpNoRepoFound),
-        };
+    pub fn from_json(json: &Value) -> Result<Self, ServerError> {
+        let owner = json["owner"].as_str()
+            .ok_or(ServerError::HttpNoOwnerFound)?
+            .to_string();
+
+        let repo = json["repo"].as_str()
+            .ok_or(ServerError::HttpNoRepoFound)?
+            .to_string();
 
         Ok(PullRequest {
-            owner: owner,
-            repo: repo,
-            title: json["title"].as_str().map(|s| s.to_string()),
-            body: json["body"].as_str().map(|s| s.to_string()),
-            head: json["head"].as_str().map(|s| s.to_string()),
-            base: json["base"].as_str().map(|s| s.to_string()),
+            owner,
+            repo,
+            title: json["title"].as_str().map(ToString::to_string),
+            body: json["body"].as_str().map(ToString::to_string),
+            head: json["head"].as_str().map(ToString::to_string),
+            base: json["base"].as_str().map(ToString::to_string),
         })
     }
 }

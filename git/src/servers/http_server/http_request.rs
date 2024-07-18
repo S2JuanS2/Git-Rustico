@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use serde_json::Value;
-use crate::{servers::errors::ServerError, util::logger::log_message};
-use super::utils::read_request;
+use crate::servers::errors::ServerError;
+use super::{handle_pr::{handle_get_request, handle_patch_request, handle_post_request, handle_put_request}, pr::PullRequest, utils::read_request};
 
 /// Representa una solicitud HTTP.
 ///
@@ -64,58 +64,15 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+    pub fn handle_http_request(&self, _pr: PullRequest, _source: &str,tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         // Manejar la solicitud HTTP
         match self.method.as_str() {
-            "GET" => self.handle_get_request(),
-            "POST" => self.handle_post_request(tx),
-            "PUT" => self.handle_put_request(tx),
-            "PATCH" => self.handle_patch_request(tx),
+            "GET" => handle_get_request(&self),
+            "POST" => handle_post_request(&self, tx),
+            "PUT" => handle_put_request(&self, tx),
+            "PATCH" => handle_patch_request(&self, tx),
             _ => Err(ServerError::MethodNotAllowed),
         }
-    }
-
-    fn handle_get_request(&self) -> Result<String, ServerError> {
-        let message = format!("GET request to path: {}", self.path);
-        println!("{}", message);
-        Ok(message)
-    }
-
-    fn handle_post_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let message = self.body["message"].as_str().unwrap_or("No message");
-        let message = message.to_string();
-        let message = format!("POST request to path: {} with message: {}", self.path, message);
-        log_message(&tx, &message);
-        println!("{}", message);
-
-        // Fijarme si existe la carpeta .pr en source
-        // Si no existe, crearla
-
-        // Fijarte si existe una carpeta en .pr con el nombre del repositorio en el servidor, 
-        // sino lo hay crearlo
-
-        // Fijarme si el pr existe en la carpeta del repositorio, sino existe crearlo
-
-        
-        Ok(message)
-    }
-
-    fn handle_put_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let message = self.body["message"].as_str().unwrap_or("No message");
-        let message = message.to_string();
-        let message = format!("PUT request to path: {} with message: {}", self.path, message);
-        log_message(&tx, &message);
-        println!("{}", message);
-        Ok(message)
-    }
-
-    fn handle_patch_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let message = self.body["message"].as_str().unwrap_or("No message");
-        let message = message.to_string();
-        let message = format!("PATCH request to path: {} with message: {}", self.path, message);
-        log_message(&tx, &message);
-        println!("{}", message);
-        Ok(message)
     }
 }
 
