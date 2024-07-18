@@ -132,6 +132,8 @@ pub fn receive_client(
                 }));
             }
             Err(e) => {
+                let message = format!("Error al aceptar la conexión: {}", e);
+                log_message(&shared_tx, &message);
                 eprintln!("Error al aceptar la conexión: {}", e);
             }
         }

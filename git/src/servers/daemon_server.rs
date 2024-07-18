@@ -1,6 +1,7 @@
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
+use crate::consts::DAEMON_SIGNATURE;
 use crate::errors::GitError;
 use crate::util::logger::{get_client_signature, log_client_connect, log_client_disconnection_success};
 use super::server::{process_request, receive_request};
@@ -25,7 +26,7 @@ pub fn handle_client_daemon(
     root_directory: String,
 ) -> Result<(), GitError> {
     log_client_connect(stream, &tx);
-    let signature = get_client_signature(stream)?;
+    let signature = get_client_signature(stream, &DAEMON_SIGNATURE.to_string())?;
 
     let request = receive_request(stream, signature.clone(), tx.clone())?;
 

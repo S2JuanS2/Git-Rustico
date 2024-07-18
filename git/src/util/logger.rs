@@ -147,9 +147,9 @@ pub fn log_client_connect(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>) {
 ///
 /// Devuelve un error si no se puede obtener la dirección del cliente o si ocurre algún problema.
 ///
-pub fn get_client_signature(stream: &TcpStream) -> Result<String, UtilError> {
+pub fn get_client_signature(stream: &TcpStream, name_server: &String) -> Result<String, UtilError> {
     match stream.peer_addr() {
-        Ok(addr) => Ok(format!("Client {} => ", addr)),
+        Ok(addr) => Ok(format!("{} | Client {} => ", addr, name_server)),
         Err(_) => Ok("Cliente desconocido => ".to_string()),
     }
 }
