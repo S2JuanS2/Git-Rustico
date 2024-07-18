@@ -78,7 +78,7 @@ impl Controller {
     pub fn set_branch_list(&self, label_branches: &gtk::Label) {
         let branches = match git_branch_list_display(self.client.get_directory_path()){
             Ok(branches) => branches,
-            Err(_) => return eprintln!("Not found branches"),
+            Err(_) => return,
         };
         label_branches.set_text(&branches);
     }
