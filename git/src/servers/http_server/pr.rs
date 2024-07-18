@@ -1,5 +1,5 @@
 use serde_json::Value;
-use crate::{commands::log, servers::errors::ServerError, util::logger::log_message};
+use crate::{servers::errors::ServerError, util::logger::log_message};
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
 
@@ -59,5 +59,19 @@ impl PullRequest {
         println!("{}", message);
         log_message(&tx, &message);
         Ok("Commits listed".to_string())
+    }
+
+    pub fn merge_pull_request(&self,repo_name: &str, pull_number: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let message = format!("PUT request to path: /repos/{}/pulls/{}/merge", repo_name, pull_number);
+        println!("{}", message);
+        log_message(&tx, &message);
+        Ok("Pull request merged".to_string())
+    }
+
+    pub fn modify_pull_request(&self,repo_name: &str, pull_number: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let message = format!("PATCH request to path: /repos/{}/pulls/{}", repo_name, pull_number);
+        println!("{}", message);
+        log_message(&tx, &message);
+        Ok("Pull request modified".to_string())
     }
 }

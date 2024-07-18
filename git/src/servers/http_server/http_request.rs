@@ -69,8 +69,8 @@ impl HttpRequest {
         match self.method.as_str() {
             "GET" => handle_get_request(&self, pr, source, tx),
             "POST" => handle_post_request(&self, pr, source, tx),
-            "PUT" => handle_put_request(&self, tx),
-            "PATCH" => handle_patch_request(&self, tx),
+            "PUT" => handle_put_request(&self, pr, source, tx),
+            "PATCH" => handle_patch_request(&self, pr, source, tx),
             _ => Err(ServerError::MethodNotAllowed),
         }
     }
