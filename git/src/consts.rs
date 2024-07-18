@@ -160,3 +160,6 @@ pub const ZERO_ID: &str = "0000000000000000000000000000000000000000";
 pub const BUFFER_SIZE: usize = 1024;
 
 pub const UNPACK_OK: &str = "unpack ok\n";
+
+// Pull Request
+pub const PR_FOLDER: &str = ".pr";
