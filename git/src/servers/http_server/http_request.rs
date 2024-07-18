@@ -8,7 +8,7 @@ use super::utils::read_request;
 /// Esta estructura contiene los datos principales de una solicitud HTTP, como el método,
 /// la ruta y el cuerpo de la solicitud.
 /// 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct HttpRequest {
     pub method: String,
     pub path: String,
@@ -155,4 +155,40 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
     };
 
     Ok(HttpRequest::new(method, path, body))
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_parse_valid_request() {
+        let request_str = "POST /path HTTP/1.1\r\nContent-Length: 18\r\n\r\n{\"key\": \"value\"}";
+        let expected_request = HttpRequest {
+            method: "POST".to_string(),
+            path: "/path".to_string(),
+            body: json!({"key": "value"}),
+        };
+        assert_eq!(parse_http_request(request_str).unwrap(), expected_request);
+    }
+
+    #[test]
+    fn test_parse_empty_request() {
+        let request_str = "";
+        assert!(parse_http_request(request_str).is_err());
+    }
+
+    #[test]
+    fn test_parse_invalid_request_line() {
+        let request_str = "GET";
+        assert!(parse_http_request(request_str).is_err());
+    }
+
+    #[test]
+    fn test_parse_invalid_json_body() {
+        let request_str = "POST /path HTTP/1.1\r\nContent-Length: 18\r\n\r\n{\"key\": \"value\"";
+        assert!(parse_http_request(request_str).is_err());
+    }
 }
