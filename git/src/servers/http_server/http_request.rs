@@ -66,7 +66,7 @@ impl HttpRequest {
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
     pub fn handle_http_request(&self, source: &String,tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         // Manejar la solicitud HTTP
-        let pr = self.create_struct_pr(tx)?;
+        let pr = self.build_pull_request_from_body(tx)?;
         match self.method.as_str() {
             "GET" => self.handle_get_request(&pr, source, tx),
             "POST" => self.handle_post_request(&pr, source, tx),
@@ -76,10 +76,27 @@ impl HttpRequest {
         }
     }
 
+    /// Obtiene la ruta de la solicitud HTTP.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve una referencia a la ruta de la solicitud.
     pub fn get_path(&self) -> &str {
         &self.path
     }
 
+     /// Maneja una solicitud HTTP GET.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `pr` - Una referencia a la estructura `PullRequest`.
+    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
     fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         let path_segments: Vec<&str> = self.get_path().split('/').collect();
         match path_segments.as_slice() {
@@ -98,6 +115,18 @@ impl HttpRequest {
         }
     }
     
+    /// Maneja una solicitud HTTP POST.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `pr` - Una referencia a la estructura `PullRequest`.
+    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
     fn handle_post_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         let path_segments: Vec<&str> = self.get_path().split('/').collect();
         match path_segments.as_slice() {
@@ -110,6 +139,18 @@ impl HttpRequest {
         }
     }
     
+     /// Maneja una solicitud HTTP PUT.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `pr` - Una referencia a la estructura `PullRequest`.
+    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
     fn handle_put_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         let path_segments: Vec<&str> = self.get_path().split('/').collect();
         match path_segments.as_slice() {
@@ -122,6 +163,18 @@ impl HttpRequest {
         }
     }
     
+    /// Maneja una solicitud HTTP PATCH.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `pr` - Una referencia a la estructura `PullRequest`.
+    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
     fn handle_patch_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         let path_segments: Vec<&str> = self.get_path().split('/').collect();
         match path_segments.as_slice() {
@@ -134,7 +187,17 @@ impl HttpRequest {
         }
     }
 
-    fn create_struct_pr(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<PullRequest, ServerError> {
+     /// Crea una estructura `PullRequest` desde el cuerpo de la solicitud HTTP.
+    ///
+    /// # Parámetros
+    /// 
+    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    ///
+    /// # Retornos
+    /// 
+    /// Devuelve un `Result` que contiene la estructura `PullRequest` en caso de éxito o un `ServerError` en caso de fallo.
+    /// 
+    fn build_pull_request_from_body(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<PullRequest, ServerError> {
         match PullRequest::from_json(&self.body)
         {
             Ok(pr) => Ok(pr),
