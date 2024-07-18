@@ -14,7 +14,7 @@ pub fn handle_client_http(
     root_directory: String,
 ) -> Result<(), GitError> {
         // Loggear la conexión del cliente
-        log_client_connect(stream, &tx);
+        log_client_connect(stream, &tx, &HTPP_SIGNATURE.to_string());
         let signature = get_client_signature(stream, &HTPP_SIGNATURE.to_string())?;
 
     match _handle_client_http(stream, root_directory, &tx, &signature) {

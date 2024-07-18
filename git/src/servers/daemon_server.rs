@@ -25,7 +25,7 @@ pub fn handle_client_daemon(
     tx: Arc<Mutex<Sender<String>>>,
     root_directory: String,
 ) -> Result<(), GitError> {
-    log_client_connect(stream, &tx);
+    log_client_connect(stream, &tx, &DAEMON_SIGNATURE.to_string());
     let signature = get_client_signature(stream, &DAEMON_SIGNATURE.to_string())?;
 
     let request = receive_request(stream, signature.clone(), tx.clone())?;
