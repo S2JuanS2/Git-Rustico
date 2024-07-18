@@ -1,33 +1,36 @@
 use crate::{servers::errors::ServerError, util::logger::log_message};
-use super::http_request::HttpRequest;
+use super::{http_request::HttpRequest, pr::PullRequest};
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
 
-pub fn handle_get_request(request: &HttpRequest) -> Result<String, ServerError> {
-    let message = format!("GET request to path: {}", request.path);
-    println!("{}", message);
-    Ok(message)
+pub fn handle_get_request(request: &HttpRequest, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+    let path_segments: Vec<&str> = request.get_path().split('/').collect();
+    match path_segments.as_slice() {
+        ["repos", repo_name, "pulls"] => {
+            return pr.list_pull_request(repo_name, src, tx);
+        },
+        ["repos", repo_name, "pulls", pull_number] => {
+            return pr.get_pull_request(repo_name, pull_number, src, tx);
+        },
+        ["repos", repo_name, "pulls", pull_number, "commits"] => {
+            return pr.list_commits(repo_name, pull_number, src, tx);
+        },
+        _ => {
+            return Err(ServerError::MethodNotAllowed);
+        }
+    }
 }
 
-pub fn handle_post_request(request: &HttpRequest, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-    let message = request.body["message"].as_str().unwrap_or("No message");
-    let message = message.to_string();
-    let message = format!("POST request to path: {} with message: {}", request.path, message);
-    log_message(&tx, &message);
-    println!("{}", message);
-
-    // Fijarme si existe la carpeta .pr en source
-    // Si no existe, crearla
-
-    // Fijarte si existe una carpeta en .pr con el nombre del repositorio en el servidor, 
-    // sino lo hay crearlo
-
-    // Fijarme si el pr existe en la carpeta del repositorio, sino existe crearlo
-
-    // Crear un archivo con el nombre del pr en la carpeta del pr
-
-    // Escribir el contenido del pr en el archivo
-    Ok(message)
+pub fn handle_post_request(request: &HttpRequest, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+    let path_segments: Vec<&str> = request.get_path().split('/').collect();
+    match path_segments.as_slice() {
+        ["repos", repo_name, "pulls"] => {
+            return pr.create_pull_requests(repo_name, src, tx);
+        }
+        _ => {
+            return Err(ServerError::MethodNotAllowed);
+        }
+    }
 }
 
 pub fn handle_put_request(request: &HttpRequest, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {

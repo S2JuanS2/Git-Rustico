@@ -64,15 +64,19 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, _pr: PullRequest, _source: &str,tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+    pub fn handle_http_request(&self, pr: &PullRequest, source: &String,tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         // Manejar la solicitud HTTP
         match self.method.as_str() {
-            "GET" => handle_get_request(&self),
-            "POST" => handle_post_request(&self, tx),
+            "GET" => handle_get_request(&self, pr, source, tx),
+            "POST" => handle_post_request(&self, pr, source, tx),
             "PUT" => handle_put_request(&self, tx),
             "PATCH" => handle_patch_request(&self, tx),
             _ => Err(ServerError::MethodNotAllowed),
         }
+    }
+
+    pub fn get_path(&self) -> &str {
+        &self.path
     }
 }
 

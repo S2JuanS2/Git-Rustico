@@ -1,6 +1,6 @@
 use serde_json::Value;
-
-use crate::servers::errors::ServerError;
+use crate::{commands::log, servers::errors::ServerError, util::logger::log_message};
+use std::sync::{mpsc::Sender, Arc, Mutex};
 
 
 #[derive(Debug)]
@@ -31,5 +31,33 @@ impl PullRequest {
             head: json["head"].as_str().map(ToString::to_string),
             base: json["base"].as_str().map(ToString::to_string),
         })
+    }
+
+    pub fn create_pull_requests(&self,repo_name: &str, _src: &String,tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let message = format!("POST request to path: /repos/{}/pulls", repo_name);
+        println!("{}", message);
+        log_message(&tx, &message);
+        Ok("Pull request created".to_string())
+    }
+
+    pub fn list_pull_request(&self,repo_name: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let message = format!("GET request to path: /repos/{}/pulls", repo_name);
+        println!("{}", message);
+        log_message(&tx, &message);
+        Ok("Pull request listed".to_string())
+    }
+
+    pub fn get_pull_request(&self,repo_name: &str, pull_number: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let message = format!("GET request to path: /repos/{}/pulls/{}", repo_name, pull_number);
+        println!("{}", message);
+        log_message(&tx, &message);
+        Ok("Pull request retrieved".to_string())
+    }
+
+    pub fn list_commits(&self,repo_name: &str, pull_number: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+        let message = format!("GET request to path: /repos/{}/pulls/{}/commits", repo_name, pull_number);
+        println!("{}", message);
+        log_message(&tx, &message);
+        Ok("Commits listed".to_string())
     }
 }
