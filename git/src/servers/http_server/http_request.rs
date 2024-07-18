@@ -76,32 +76,36 @@ impl HttpRequest {
     }
 
     fn handle_get_request(&self) -> Result<String, ServerError> {
-        println!("GET request to path: {}", self.path);
-        Ok(format!("GET request to path: {}", self.path))
+        let message = format!("GET request to path: {}", self.path);
+        println!("{}", message);
+        Ok(message)
     }
 
     fn handle_post_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         let message = self.body["message"].as_str().unwrap_or("No message");
         let message = message.to_string();
+        let message = format!("POST request to path: {} with message: {}", self.path, message);
         log_message(&tx, &message);
-        println!("POST request to path: {} with message: {}", self.path, message);
-        Ok(format!("POST request to path: {} with message: {}", self.path, message))
+        println!("{}", message);
+        Ok(message)
     }
 
     fn handle_put_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         let message = self.body["message"].as_str().unwrap_or("No message");
         let message = message.to_string();
+        let message = format!("PUT request to path: {} with message: {}", self.path, message);
         log_message(&tx, &message);
-        println!("PUT request to path: {} with message: {}", self.path, message);
-        Ok(format!("PUT request to path: {} with message: {}", self.path, message))
+        println!("{}", message);
+        Ok(message)
     }
 
     fn handle_patch_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         let message = self.body["message"].as_str().unwrap_or("No message");
         let message = message.to_string();
+        let message = format!("PATCH request to path: {} with message: {}", self.path, message);
         log_message(&tx, &message);
-        println!("PATCH request to path: {} with message: {}", self.path, message);
-        Ok(format!("PATCH request to path: {} with message: {}", self.path, message))
+        println!("{}", message);
+        Ok(message)
     }
 }
 
