@@ -87,6 +87,16 @@ impl HttpRequest {
         let message = format!("POST request to path: {} with message: {}", self.path, message);
         log_message(&tx, &message);
         println!("{}", message);
+
+        // Fijarme si existe la carpeta .pr en source
+        // Si no existe, crearla
+
+        // Fijarte si existe una carpeta en .pr con el nombre del repositorio en el servidor, 
+        // sino lo hay crearlo
+
+        // Fijarme si el pr existe en la carpeta del repositorio, sino existe crearlo
+
+        
         Ok(message)
     }
 
