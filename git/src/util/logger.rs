@@ -127,7 +127,7 @@ pub fn handle_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), UtilE
 pub fn log_client_connect(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>, name_server: &String) {
     match stream.peer_addr() {
         Ok(addr) => {
-            let message = format!("{} Conexión establecida con {}", addr, name_server);
+            let message = format!("{} Conexión establecida con {}", name_server, addr);
             log_message(tx, &message);
         }
         Err(_) => {
@@ -177,9 +177,11 @@ pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signatu
     log_message(tx, &message)
 }
 
-pub fn log_http_request_error(error: &String, tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
-    let message = format!("{}Error en la solicitud HTTP. Error: {}", signature, error);
-    log_message(tx, &message)
+pub fn log_http_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<String>>>) {
+    let message = format!("{}Error en la solicitud HTTP.", signature);
+    log_message(&tx, &message);
+    let message = format!("{}Error: {}", signature, error);
+    log_message(&tx, &message);
 }
 
 #[cfg(test)]

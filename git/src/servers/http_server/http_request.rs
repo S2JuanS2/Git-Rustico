@@ -1,6 +1,6 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use serde_json::Value;
-use crate::{servers::errors::ServerError, util::logger::log_message};
+use crate::{servers::errors::ServerError, util::logger::log_http_request_error};
 use super::{pr::PullRequest, utils::read_request};
 
 /// Representa una solicitud HTTP.
@@ -203,9 +203,7 @@ impl HttpRequest {
         {
             Ok(pr) => Ok(pr),
             Err(e) => {
-                let message = format!("{}Error en la solicitud HTTP. Error: {}", signature, e);
-                log_message(&tx, &message);
-                println!("{}", message);
+                log_http_request_error(&e.to_string(), signature, tx);
                 Err(ServerError::HttpParseBody)
             }
         }

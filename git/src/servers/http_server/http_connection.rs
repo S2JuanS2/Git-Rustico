@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
 use crate::consts::HTPP_SIGNATURE;
 use crate::errors::GitError;
-use crate::util::logger::{get_client_signature, log_client_connect, log_client_disconnection_error, log_client_disconnection_success};
+use crate::util::logger::{get_client_signature, log_client_connect, log_client_disconnection_error, log_client_disconnection_success, log_http_request_error};
 // use crate::servers::errors::ServerError;
 use super::http_request::HttpRequest;
 
@@ -13,9 +13,9 @@ pub fn handle_client_http(
     tx: Arc<Mutex<Sender<String>>>,
     root_directory: String,
 ) -> Result<(), GitError> {
-        // Loggear la conexión del cliente
-        log_client_connect(stream, &tx, &HTPP_SIGNATURE.to_string());
-        let signature = get_client_signature(stream, &HTPP_SIGNATURE.to_string())?;
+    // Loggear la conexión del cliente
+    log_client_connect(stream, &tx, &HTPP_SIGNATURE.to_string());
+    let signature = get_client_signature(stream, &HTPP_SIGNATURE.to_string())?;
 
     match _handle_client_http(stream, root_directory, &tx, &signature) {
         Ok(_) => {
@@ -23,6 +23,7 @@ pub fn handle_client_http(
             Ok(())
         },
         Err(e) => {
+            log_http_request_error(&e.to_string(), &signature, &tx);
             log_client_disconnection_error(&tx, &signature);
             Err(e)
         }
