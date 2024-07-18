@@ -34,6 +34,21 @@ pub fn read_request(reader: &mut dyn Read) -> Result<String, ServerError> {
     Ok(String::from_utf8_lossy(&request).to_string())
 }
 
+/// Crea una carpeta de pull request (PR) dentro del directorio fuente especificado.
+///
+/// Esta función construye la ruta a la carpeta PR utilizando la ruta del directorio fuente proporcionada
+/// y el nombre predefinido `PR_FOLDER`. Luego, intenta crear el directorio en la ruta construida.
+///
+/// # Parámetros
+/// - `src`: Una referencia de cadena que representa la ruta al directorio fuente donde se debe crear la carpeta PR.
+///
+/// # Retornos
+/// - `Result<(), ServerError>`: Devuelve `Ok(())` si el directorio se crea correctamente,
+///   de lo contrario, devuelve un `Err(ServerError::CreatePrFolderError)` indicando un fallo al crear el directorio.
+///
+/// # Errores
+/// - `ServerError::CreatePrFolderError`: Este error se devuelve si la creación del directorio falla.
+///
 pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
     let pr_folder_path = format!("{}/{}", src, PR_FOLDER);
     let pr_folder_path = std::path::Path::new(&pr_folder_path);
