@@ -1,10 +1,12 @@
-#[derive(Debug, PartialEq)]
+use std::fmt;
+
 /// Enumeración que representa los posibles errores que pueden ocurrir durante la ejecución
 /// del programa Git.
 ///
 /// Cada variante de este enum representa un tipo específico de error que puede ocurrir, y
 /// se utiliza para identificar y manejar los errores de manera adecuada.
 ///
+#[derive(PartialEq)]
 pub enum GitError {
     MissingConfigPathError,
     ConfigFileError,
@@ -94,5 +96,21 @@ impl GitError {
             GitError::DirEntryError => "Falló al obtener la entrada del directorio",
             GitError::NotAGitRepository => "not a git repository",
         }
+    }
+}
+
+fn format_error(error: &GitError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", error.message())
+}
+
+impl fmt::Display for GitError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        format_error(self, f)
+    }
+}
+
+impl fmt::Debug for GitError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        format_error(self, f)
     }
 }

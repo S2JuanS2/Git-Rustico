@@ -1,6 +1,6 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use serde_json::Value;
-use crate::{servers::errors::ServerError, util::logger::log_message};
+use crate::servers::errors::ServerError;
 use super::{pr::PullRequest, utils::read_request};
 
 /// Representa una solicitud HTTP.
@@ -56,6 +56,8 @@ impl HttpRequest {
     /// # Argumentos
     ///
     /// * `tx` - Un transmisor sincronizado para enviar mensajes.
+    /// * source - Una referencia a la cadena que contiene el directorio fuente.
+    /// * `signature` - La firma del cliente.
     ///
     /// # Errores
     ///
@@ -64,9 +66,9 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, source: &String,tx: &Arc<Mutex<Sender<String>>>, signature: &String) -> Result<String, ServerError> {
+    pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<String, ServerError> {
         // Manejar la solicitud HTTP
-        let pr = self.build_pull_request_from_body(tx, signature)?;
+        let pr = PullRequest::from_json(&self.body)?;
         match self.method.as_str() {
             "GET" => self.handle_get_request(&pr, source, tx),
             "POST" => self.handle_post_request(&pr, source, tx),
@@ -183,30 +185,6 @@ impl HttpRequest {
             },
             _ => {
                 Err(ServerError::MethodNotAllowed)
-            }
-        }
-    }
-
-     /// Crea una estructura `PullRequest` desde el cuerpo de la solicitud HTTP.
-    ///
-    /// # Parámetros
-    /// 
-    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
-    /// * `signature` - Una referencia a la firma del cliente.
-    ///
-    /// # Retornos
-    /// 
-    /// Devuelve un `Result` que contiene la estructura `PullRequest` en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn build_pull_request_from_body(&self, tx: &Arc<Mutex<Sender<String>>>, signature: &String) -> Result<PullRequest, ServerError> {
-        match PullRequest::from_json(&self.body)
-        {
-            Ok(pr) => Ok(pr),
-            Err(e) => {
-                let message = format!("{}Error en la solicitud HTTP. Error: {}", signature, e);
-                log_message(&tx, &message);
-                println!("{}", message);
-                Err(ServerError::HttpParseBody)
             }
         }
     }
