@@ -1,5 +1,5 @@
 use std::io::Read;
-use crate::servers::errors::ServerError;
+use crate::{consts::PR_FOLDER, servers::errors::ServerError, util::files::create_directory};
 
 /// Reads an HTTP request from a reader, returning it as a String.
 ///
@@ -32,6 +32,16 @@ pub fn read_request(reader: &mut dyn Read) -> Result<String, ServerError> {
         }
     }
     Ok(String::from_utf8_lossy(&request).to_string())
+}
+
+pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
+    let pr_folder_path = format!("{}/{}", src, PR_FOLDER);
+    let pr_folder_path = std::path::Path::new(&pr_folder_path);
+    match create_directory(&pr_folder_path) 
+    {
+        Ok(_) => Ok(()),
+        Err(_) => Err(ServerError::CreatePrFolderError),
+    }
 }
 
 #[cfg(test)]

@@ -11,6 +11,7 @@ pub enum ServerError {
     ReadHttpRequest,
     HttpParseBody,
     MethodNotAllowed,
+    CreatePrFolderError,
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -22,6 +23,7 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::ReadHttpRequest => write!(f, "Error al leer la solicitud HTTP del cliente."),
         ServerError::HttpParseBody => write!(f, "Error al parsear el cuerpo de la solicitud HTTP."),
         ServerError::MethodNotAllowed => write!(f, "Método HTTP no permitido."),
+        ServerError::CreatePrFolderError => write!(f, "Error al crear la carpeta de PR."),
     }
 }
 
