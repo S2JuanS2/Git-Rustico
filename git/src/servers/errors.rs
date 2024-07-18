@@ -12,6 +12,8 @@ pub enum ServerError {
     HttpParseBody,
     MethodNotAllowed,
     CreatePrFolderError,
+    HttpNoOwnerFound,
+    HttpNoRepoFound
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -24,6 +26,8 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::HttpParseBody => write!(f, "Error al parsear el cuerpo de la solicitud HTTP."),
         ServerError::MethodNotAllowed => write!(f, "Método HTTP no permitido."),
         ServerError::CreatePrFolderError => write!(f, "Error al crear la carpeta de PR."),
+        ServerError::HttpNoOwnerFound => write!(f, "No se encontró el propietario del repositorio en la solicitud."),
+        ServerError::HttpNoRepoFound => write!(f, "No se encontró el repositorio en la solicitud."),
     }
 }
 
