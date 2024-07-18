@@ -1,11 +1,13 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
-
 use serde_json::Value;
-
 use crate::{servers::errors::ServerError, util::logger::log_message};
-
 use super::utils::read_request;
 
+/// Representa una solicitud HTTP.
+///
+/// Esta estructura contiene los datos principales de una solicitud HTTP, como el método,
+/// la ruta y el cuerpo de la solicitud.
+/// 
 #[derive(Debug)]
 pub struct HttpRequest {
     pub method: String,
@@ -14,17 +16,54 @@ pub struct HttpRequest {
 }
 
 impl HttpRequest {
+    /// Crea una nueva instancia de `HttpRequest`.
+    ///
+    /// # Argumentos
+    ///
+    /// * `method` - El método HTTP.
+    /// * `path` - La ruta del recurso solicitado.
+    /// * `body` - El cuerpo de la solicitud, representado como un objeto JSON.
+    ///
+    /// # Retorna
+    ///
+    /// Retorna una nueva instancia de `HttpRequest`.
+    /// 
     pub fn new(method: String, path: String, body: Value) -> Self {
         HttpRequest { method, path, body }
     }
 
+    /// Crea una nueva instancia de `HttpRequest` a partir de un lector.
+    ///
+    /// # Argumentos
+    ///
+    /// * `reader` - Un lector que implementa el trait `Read`.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `ServerError` si ocurre un error al leer o parsear la solicitud.
+    ///
+    /// # Retorna
+    ///
+    /// Retorna una nueva instancia de `HttpRequest`.
+    /// 
     pub fn new_from_reader(reader: &mut dyn std::io::Read) -> Result<Self, ServerError> {
-        // Leer datos del cliente
         let request = read_request(reader)?;
-        // Parsear la solicitud HTTP
         parse_http_request(&request)
     }
 
+    /// Maneja la solicitud HTTP y ejecuta la acción correspondiente.
+    ///
+    /// # Argumentos
+    ///
+    /// * `tx` - Un transmisor sincronizado para enviar mensajes.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `ServerError` si el método HTTP no es soportado o si ocurre un error al manejar la solicitud.
+    ///
+    /// # Retorna
+    ///
+    /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
     pub fn handle_http_request(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
         // Manejar la solicitud HTTP
         match self.method.as_str() {
@@ -67,6 +106,28 @@ impl HttpRequest {
 }
 
 
+/// Parsea una solicitud HTTP en una instancia de `HttpRequest`.
+///
+/// Esta función toma una cadena que representa una solicitud HTTP completa y la analiza para
+/// extraer el método HTTP, la ruta y el cuerpo de la solicitud. Si la solicitud no es válida,
+/// retorna un error `ServerError`.
+///
+/// # Argumentos
+///
+/// * `request` - Una cadena que representa la solicitud HTTP completa.
+///
+/// # Errores
+///
+/// Retorna `ServerError` en los siguientes casos:
+/// - Si la solicitud no contiene suficientes líneas para ser válida.
+/// - Si la línea de solicitud no tiene el formato esperado.
+/// - Si el cuerpo de la solicitud no es un JSON válido.
+///
+/// # Retorna
+///
+/// Retorna un `Result` que contiene una instancia de `HttpRequest` en caso de éxito, o un `ServerError`
+/// en caso de error.
+///
 fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
     let lines: Vec<&str> = request.lines().collect();
     if lines.len() < 1 {
