@@ -101,16 +101,16 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, Commands
     git_commit(directory, commit)
 }
 
-/// Devuelve un vector con todos los commits del repositorio recibido por parámetro
+/// Devuelve un vector con todos los commits de una rama del repositorio recibido por parámetro
 /// ###Parametros:
 /// 'directory': Directorio del git
-pub fn get_commits(directory: &str) -> Result<Vec<String>, CommandsError> {
+/// 'branch': nombre de la rama
+pub fn get_commits(directory: &str, branch: &str) -> Result<Vec<String>, CommandsError> {
 
     let mut commits: Vec<String> = Vec::new();
 
-    let current_branch = get_current_branch(directory)?;
     let git_dir = format!("{}/{}", directory, GIT_DIR);
-    let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
+    let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, branch);
 
     let mut current_commit = String::new();
     if fs::metadata(&branch_current_path).is_ok() {

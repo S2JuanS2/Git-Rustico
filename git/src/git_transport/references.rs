@@ -395,42 +395,48 @@ pub fn get_objects_from_hash_to_hash(
 /// En caso de error, retorna un error de tipo UtilError.
 pub fn get_objects_fetch_with_hash_valid(
     directory: &str,
-    _references: Vec<Reference>,
+    references: Vec<Reference>,
     confirmed_hashes: &Vec<String>
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, UtilError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = Vec::new();
-    
-    let commits_in_repo = get_commits(directory)?;
+    println!("{:?}", confirmed_hashes);
 
-    let mut available = true;
-    let mut send_hashes: Vec<String> = Vec::new();
-    for refe in commits_in_repo{
-        for hash in confirmed_hashes.into_iter(){
-            if refe == hash.to_string(){
-                available = false;
+    if references.len() > 0 {
+        println!("{:?}", references[0].get_name());
+        let commits_in_repo = get_commits(directory, references[0].get_name())?;
+    
+        let mut available = true;
+        let mut send_hashes: Vec<String> = Vec::new();
+        for refe in commits_in_repo{
+            for hash in confirmed_hashes.into_iter(){
+                if refe == hash.to_string(){
+                    available = false;
+                }
             }
+            if available{
+                send_hashes.push(refe.to_string());
+            }
+            available = true;
         }
-        if available{
-            send_hashes.push(refe.to_string());
-        }
-        available = true;
-    }
-    let branches = get_branch(directory)?;
-    for branch in branches {
-        let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
-        let file_current_branch = open_file(&branch_current_path)?;
-        let hash_commit_current_branch = read_file_string(file_current_branch)?;
-        for hash in send_hashes.clone() {
-            let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
-            object_commit.1 = get_content(directory, &hash)?;
-            save_object_pack(&mut objects, object_commit);
-            let commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
-                
-            if let Some(tree_hash) = get_tree_hash(&commit){
-            let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
-            object_tree.1 = get_content(directory, tree_hash)?;
-            save_object_pack(&mut objects, object_tree);
-            recovery_tree_clone(directory, tree_hash, &mut objects)?;
+        println!("{:?}", send_hashes);
+        let branches = get_branch(directory)?;
+        for branch in branches {
+            let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
+            let file_current_branch = open_file(&branch_current_path)?;
+            let hash_commit_current_branch = read_file_string(file_current_branch)?;
+            for hash in send_hashes.clone() {
+                let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
+                object_commit.1 = get_content(directory, &hash)?;
+                save_object_pack(&mut objects, object_commit);
+                let commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
+                    
+                if let Some(tree_hash) = get_tree_hash(&commit){
+                    println!("tree enviado: {}", tree_hash);
+                let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+                object_tree.1 = get_content(directory, tree_hash)?;
+                save_object_pack(&mut objects, object_tree);
+                recovery_tree_clone(directory, tree_hash, &mut objects)?;
+                }
             }
         }
     }

@@ -77,7 +77,7 @@ impl fmt::Display for FetchStatus {
 /// * Otros errores de `CommandsError`: Pueden ocurrir errores relacionados con la conexión al servidor Git, la inicialización del socket o el proceso de fetch.
 ///
 pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<FetchStatus, CommandsError> {
-    if args.len() >= 2 {
+    if args.len() >= 3 || args.len() == 1 {
         return Err(CommandsError::InvalidArgumentCountFetchError);
     }
     let mut socket = start_client(client.get_address())?;
@@ -95,6 +95,7 @@ pub fn handle_fetch(args: Vec<&str>, client: Client) -> Result<FetchStatus, Comm
         client.get_port(),
         client.get_directory_path(),
         args[0],
+        args[1],
     )
 }
 
@@ -189,24 +190,20 @@ pub fn git_fetch_branch(
     ip: &str,
     port: &str,
     repo_local: &str,
-    name_branch: &str,
+    name_remote: &str,
+    name_branch: &str
 ) -> Result<FetchStatus, CommandsError> {
     // Obtengo el repositorio remoto
     println!("Repositorio local: {}", repo_local);
     let git_config = GitConfig::new_from_file(repo_local)?;
     println!("Config: {:?}", git_config);
 
-    let url_remoto = &git_config.get_branch_url_by_name(name_branch)?;
-    let remote_branch = &git_config.get_remote_by_branch_name(name_branch)?;
+    let url_remoto = &git_config.get_remote_url_by_name(name_remote)?;
+    println!("url: {}", url_remoto);
 
     println!("Fetch del repositorio remoto: {}", url_remoto);
-    
-    // Valido si la branch existe en el repositorio local
+
     let rfs_fetch = format!("refs/heads/{}", name_branch);
-    let path_complete = format!("{}/.git/{}", repo_local, rfs_fetch);
-    if !Path::new(&path_complete).exists() {
-        return Ok(FetchStatus::BranchHasNoExistingCommits(name_branch.to_string()));
-    }
 
     // Prepara la solicitud "git-upload-pack" para el servidor
     let message =
@@ -238,12 +235,12 @@ pub fn git_fetch_branch(
     let refs = server.get_references_for_updating()?;
     println!("Refs: {:?}", refs);
 
-    if !is_already_update(repo_local, &refs, remote_branch)? {
+    if !is_already_update(repo_local, &refs, name_branch)? {
         if save_objects(content, repo_local).is_err() {
             println!("Error al guardar los objetos");
             return Err(CommandsError::RepositoryNotInitialized);
         };
-        save_references(&refs, repo_local, remote_branch)?;
+        save_references(&refs, repo_local, name_remote)?;
 
         let mut fetch_head = FetchHead::new_from_file(repo_local)?;
         fetch_head.update_references(&refs, url_remoto)?;
@@ -351,22 +348,22 @@ pub fn get_branches_remote(server: &GitServer) -> Result<Vec<(String,String)>,Co
 pub fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote: &str) -> Result<(), CommandsError> {
 
     // Si no existe el directorio .git/refs/remotes lo crea
-    let directory_remotes = format!("{}/.git/refs/remotes/origin", repo_path); 
+    let directory_remotes = format!("{}/.git/refs/remotes", repo_path); 
     let directory_remotes = Path::new(&directory_remotes);
     create_directory(directory_remotes)?;
 
     // Si no existe el directorio .git/refs/remotes/origin lo crea
     let refs_dir_path = format!("{}/.git/refs/remotes/{}", repo_path, name_remote);
-    ensure_directory_clean(&refs_dir_path)?;
+    //ensure_directory_clean(&refs_dir_path)?;  NO VA?
 
-    let log_dir = format!("{}/.git/logs/refs/remotes/origin", repo_path);
+    let log_dir = format!("{}/.git/logs/refs/remotes/{}", repo_path, name_remote);
     create_directory(Path::new(&log_dir))?;
 
     // Escribe los hashes en archivos individuales
     for reference in references {
-        let name = reference.get_name();
+        let name_branch = reference.get_name();
         let hash = reference.get_hash();
-        let file_path = format!("{}/{}", refs_dir_path, name);
+        let file_path = format!("{}/{}", refs_dir_path, name_branch);
         if fs::write(&file_path, hash).is_err() {
             return Err(CommandsError::RemotoNotInitialized);
         };
@@ -374,7 +371,7 @@ pub fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote
     
         let path_branch = format!("refs/remotes/{}", name_remote);
 
-        save_log(repo_path, name, &path_log, &path_branch)?;    
+        save_log(repo_path, name_branch, &path_log, &path_branch)?;    
     }
 
     Ok(())
@@ -457,9 +454,11 @@ fn recovery_tree(
             i = recovery_blob(hash, content, i, repo)?;
         } else if mode == DIRECTORY {
             i += 1;
-            let tree_content = read_tree(&content[i].1)?;
-            builder_object_tree(repo, &tree_content)?;
-            i = recovery_tree(tree_content, &path_dir_repo, content, i, repo)?;
+            if i < content.len() {
+                let tree_content = read_tree(&content[i].1)?;
+                builder_object_tree(repo, &tree_content)?;
+                i = recovery_tree(tree_content, &path_dir_repo, content, i, repo)?;
+            }
         }
     }
     Ok(i)
