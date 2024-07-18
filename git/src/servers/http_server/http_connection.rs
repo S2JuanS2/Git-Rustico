@@ -14,11 +14,11 @@ pub fn handle_client_http(
 ) -> Result<(), GitError> {
     // Loggear la conexión del cliente
     log_client_connect(stream, &tx);
-    let _signature = get_client_signature(stream)?;
+    let signature = get_client_signature(stream)?;
     // Creo la solicitud HTTP
     let request = HttpRequest::new_from_reader(stream)?;
     // Manejar la solicitud HTTP
-    let _response = request.handle_http_request(&root_directory, &tx)?;
+    let _response = request.handle_http_request(&root_directory, &tx, &signature)?;
     // // Enviar la respuesta al cliente
     // send_response(stream, &response)?;
     

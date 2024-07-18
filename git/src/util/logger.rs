@@ -176,6 +176,11 @@ pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signatu
     log_message(tx, &message)
 }
 
+pub fn log_http_request_error(error: &String, tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
+    let message = format!("{}Error en la solicitud HTTP. Error: {}", signature, error);
+    log_message(tx, &message)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -64,9 +64,9 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, source: &String,tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+    pub fn handle_http_request(&self, source: &String,tx: &Arc<Mutex<Sender<String>>>, signature: &String) -> Result<String, ServerError> {
         // Manejar la solicitud HTTP
-        let pr = self.build_pull_request_from_body(tx)?;
+        let pr = self.build_pull_request_from_body(tx, signature)?;
         match self.method.as_str() {
             "GET" => self.handle_get_request(&pr, source, tx),
             "POST" => self.handle_post_request(&pr, source, tx),
@@ -192,17 +192,18 @@ impl HttpRequest {
     /// # Parámetros
     /// 
     /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
+    /// * `signature` - Una referencia a la firma del cliente.
     ///
     /// # Retornos
     /// 
     /// Devuelve un `Result` que contiene la estructura `PullRequest` en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn build_pull_request_from_body(&self, tx: &Arc<Mutex<Sender<String>>>) -> Result<PullRequest, ServerError> {
+    fn build_pull_request_from_body(&self, tx: &Arc<Mutex<Sender<String>>>, signature: &String) -> Result<PullRequest, ServerError> {
         match PullRequest::from_json(&self.body)
         {
             Ok(pr) => Ok(pr),
             Err(e) => {
-                let message = format!("Error en la solicitud HTTP. Error: {}", e);
+                let message = format!("{}Error en la solicitud HTTP. Error: {}", signature, e);
                 log_message(&tx, &message);
                 println!("{}", message);
                 Err(ServerError::HttpParseBody)
