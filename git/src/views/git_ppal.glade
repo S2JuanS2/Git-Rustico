@@ -12,6 +12,16 @@
     <property name="can_focus">False</property>
     <property name="stock">gtk-index</property>
   </object>
+  <object class="GtkImage" id="branch2">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-delete</property>
+  </object>
+  <object class="GtkImage" id="branch_add">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-add</property>
+  </object>
   <object class="GtkImage" id="catfile">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -126,7 +136,6 @@
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Push</property>
     <property name="resizable">False</property>
-    <property name="deletable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -145,7 +154,7 @@
             <property name="can_focus">True</property>
             <property name="margin_left">10</property>
             <property name="margin_right">10</property>
-            <property name="placeholder_text" translatable="yes">&lt;name branch&gt;</property>
+            <property name="placeholder_text" translatable="yes">&lt;remote&gt; &lt;branch&gt;</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -162,7 +171,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="margin_top">10</property>
-                <property name="label" translatable="yes">    &lt;branch&gt;</property>
+                <property name="label" translatable="yes">              Ingrese el nombre del repositorio remoto y la rama
+                  (El campo vacío enviará la rama actual)</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -208,7 +218,6 @@
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Clone</property>
     <property name="resizable">False</property>
-    <property name="deletable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -229,7 +238,7 @@
             <property name="can_focus">True</property>
             <property name="margin_left">10</property>
             <property name="margin_right">10</property>
-            <property name="placeholder_text" translatable="yes">&lt;name repository&gt;</property>
+            <property name="placeholder_text" translatable="yes">&lt;URL repository&gt;</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -247,7 +256,7 @@
                 <property name="can_focus">False</property>
                 <property name="margin_left">20</property>
                 <property name="margin_top">10</property>
-                <property name="label" translatable="yes">    &lt;name repository&gt;</property>
+                <property name="label" translatable="yes">          Ingrese la URL del repositorio a clonar</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -292,9 +301,7 @@
   </object>
   <object class="GtkWindow" id="window_dialog_cat-file">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Cat-file</property>
     <property name="resizable">False</property>
-    <property name="deletable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -325,6 +332,19 @@
           <object class="GtkBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="margin_top">10</property>
+                <property name="label" translatable="yes">          Ingrese el hash del objeto</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
             <child>
               <object class="GtkButton" id="button_cmd_cat-file_p">
                 <property name="label" translatable="yes">Content</property>
@@ -396,7 +416,6 @@
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Hash-Oobject</property>
     <property name="resizable">False</property>
-    <property name="deletable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -427,6 +446,19 @@
           <object class="GtkBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="margin_top">10</property>
+                <property name="label" translatable="yes">       Ingrese un nombre de archivo del espacio de trabajo</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
             <child>
               <object class="GtkButton" id="button_cmd_hash-object">
                 <property name="visible">True</property>
@@ -465,7 +497,6 @@
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Fetch</property>
     <property name="resizable">False</property>
-    <property name="deletable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -484,7 +515,7 @@
             <property name="can_focus">True</property>
             <property name="margin_left">10</property>
             <property name="margin_right">10</property>
-            <property name="placeholder_text" translatable="yes">&lt;name branch&gt;</property>
+            <property name="placeholder_text" translatable="yes">&lt;remote&gt; &lt;branch&gt;</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -501,7 +532,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="margin_top">10</property>
-                <property name="label" translatable="yes">    &lt;branch&gt;</property>
+                <property name="label" translatable="yes">          Ingrese el nombre del repositorio remoto y la rama
+                  (El campo vacío enviará la rama actual)</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -547,7 +579,6 @@
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Pull</property>
     <property name="resizable">False</property>
-    <property name="deletable">False</property>
     <child type="titlebar">
       <placeholder/>
     </child>
@@ -566,7 +597,7 @@
             <property name="can_focus">True</property>
             <property name="margin_left">10</property>
             <property name="margin_right">10</property>
-            <property name="placeholder_text" translatable="yes">&lt;name branch&gt;</property>
+            <property name="placeholder_text" translatable="yes">&lt;remote&gt; &lt;branch&gt;</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -583,7 +614,8 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="margin_top">10</property>
-                <property name="label" translatable="yes">     &lt;branch&gt;</property>
+                <property name="label" translatable="yes">          Ingrese el nombre del repositorio remoto y la rama
+                  (El campo vacío enviará la rama actual)</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -1421,7 +1453,7 @@
                 <property name="orientation">vertical</property>
                 <child>
                   <object class="GtkButton" id="button_branch">
-                    <property name="label" translatable="yes">Branch</property>
+                    <property name="label" translatable="yes">List branches</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
@@ -1435,19 +1467,58 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkEntry" id="entry_branch">
-                    <property name="width_request">168</property>
-                    <property name="height_request">25</property>
+                  <object class="GtkBox">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="width_chars">0</property>
-                    <property name="placeholder_text" translatable="yes">&lt;Name branch&gt;</property>
-                    <property name="input_purpose">terminal</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkEntry" id="entry_branch">
+                        <property name="width_request">168</property>
+                        <property name="height_request">25</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="width_chars">0</property>
+                        <property name="placeholder_text" translatable="yes">&lt;Name branch&gt;</property>
+                        <property name="input_purpose">terminal</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="button_branch_create">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="image">branch_add</property>
+                        <property name="always_show_image">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="padding">3</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="button_branch_remove">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="image">branch2</property>
+                        <property name="always_show_image">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
-                    <property name="pack_type">end</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
@@ -1832,6 +1903,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
+                    <property name="padding">1</property>
                     <property name="position">3</property>
                   </packing>
                 </child>

@@ -13,7 +13,7 @@ use std::path::Path;
 /// 'client': Cliente que contiene el directorio del repositorio local
 pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
     let directory = client.get_directory_path();
-    if args.is_empty() {
+    if args.len() >= 1 && args[0] == "-l" {
         git_branch_list(directory)
     } else if args.len() == 1 {
         git_branch_create(directory, args[0])
@@ -102,9 +102,9 @@ pub fn git_branch_list(directory: &str) -> Result<String, CommandsError> {
     let mut formatted_branches = String::new();
     for branch in branches {
         if branch == current_branch {
-            formatted_branches.push_str(&format!(" *- {}\n", branch))
+            formatted_branches.push_str(&format!(" * {}\n", branch))
         } else {
-            formatted_branches.push_str(&format!(" - {}\n", branch))
+            formatted_branches.push_str(&format!("    {}\n", branch))
         }
     }
 

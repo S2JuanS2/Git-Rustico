@@ -2,6 +2,8 @@ pub const BUTTON_CLEAR: &str = "button_clear";
 pub const BUTTON_SEND: &str = "button_send";
 pub const BUTTON_INIT: &str = "button_init";
 pub const BUTTON_BRANCH: &str = "button_branch";
+pub const BUTTON_BRANCH_CREATE: &str = "button_branch_create";
+pub const BUTTON_BRANCH_REMOVE: &str = "button_branch_remove";
 pub const BUTTON_STATUS: &str = "button_status";
 pub const BUTTON_CAT_FILE: &str = "button_cat-file";
 pub const BUTTON_CMD_CAT_FILE_P: &str = "button_cmd_cat-file_p";
@@ -40,6 +42,8 @@ pub fn get_buttons() -> Vec<String> {
         BUTTON_SEND.to_string(),
         BUTTON_INIT.to_string(),
         BUTTON_BRANCH.to_string(),
+        BUTTON_BRANCH_CREATE.to_string(),
+        BUTTON_BRANCH_REMOVE.to_string(),
         BUTTON_STATUS.to_string(),
         BUTTON_CAT_FILE.to_string(),
         BUTTON_CMD_CAT_FILE_P.to_string(),

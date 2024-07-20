@@ -189,7 +189,7 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
     load_files_tree(directory, &current_branch_name, 1)?;
     load_files_tree(directory, branch_switch_name, 0)?;
 
-    let response = format!("Switched to branch {}", branch_switch_name);
+    let response = format!("Switched to branch '{}'", branch_switch_name);
     Ok(response)
 }
 
