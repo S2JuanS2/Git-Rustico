@@ -181,7 +181,7 @@ pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<
         Err(_) => return Err(CommandsError::BranchDirectoryOpenError),
     };
 
-    let content = format!("ref: /refs/heads/{}\n", branch_switch_name);
+    let content = format!("ref: refs/heads/{}\n", branch_switch_name);
     if file.write_all(content.as_bytes()).is_err() {
         return Err(CommandsError::BranchFileWriteError);
     }

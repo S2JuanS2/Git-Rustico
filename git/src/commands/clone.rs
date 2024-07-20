@@ -134,18 +134,19 @@ fn create_repository(
     let path_dir_cloned = Path::new(repo);
     git_init(repo)?;
     let git_dir = format!("{}/{}", repo, GIT_DIR);
-
+    let mut first_tree = 0;
     let mut i = 0;
     while i < count_objects {
         if content[i].0.obj_type == ObjectType::Commit {
             handle_commit(&content, &git_dir, i)?;
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
-            i = match handle_tree(&content, &git_dir, i, path_dir_cloned, repo_count) {
+            i = match handle_tree(&content, &git_dir, i, path_dir_cloned, repo_count, first_tree) {
                 Ok(i) => i,
                 Err(e) => return Err(e),
             };
             i += 1;
+            first_tree = 1;
         }else if content[i].0.obj_type == ObjectType::Blob{
             i += 1;
         }
@@ -173,7 +174,8 @@ fn recovery_blob(
     content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
     mut i: usize,
     repo: &str,
-    repo_count: usize
+    repo_count: usize,
+    first_tree: usize
 ) -> Result<usize, CommandsError> {
     if i < content.len(){
         let route: Vec<_> = path_dir_cloned.components().skip(repo_count)
@@ -183,10 +185,12 @@ fn recovery_blob(
         let blob_content_bytes = blob_content.clone();
         if !path_dir_cloned.exists(){
             println!("{:?}", route);
-            add_to_index(repo.to_string(), &route.join("/"), hash.to_string())?;
             builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
             if let Some(str_path) = path_dir_cloned.to_str() {
-                create_file_replace(str_path, &blob_content)?;
+                if first_tree == 0{
+                    add_to_index(repo.to_string(), &route.join("/"), hash.to_string())?;
+                    create_file_replace(str_path, &blob_content)?;
+                }
             }
         }else{
             i -= 1;
@@ -216,6 +220,7 @@ fn recovery_tree(
     mut i: usize,
     repo: &str,
     repo_count: usize,
+    first_tree: usize
 ) -> Result<usize, CommandsError> {
     for line in tree_content.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
@@ -234,16 +239,18 @@ fn recovery_tree(
             let path_dir_cloned = path_dir_cloned.join(file_name);
             if mode == FILE {
                 i += 1;
-                i = recovery_blob(hash, &path_dir_cloned, content, i, repo, repo_count)?;
+                i = recovery_blob(hash, &path_dir_cloned, content, i, repo, repo_count, first_tree)?;
                 
             } else if mode == DIRECTORY {
                 i += 1;
                 if i < content.len(){
-                    create_directory(&path_dir_cloned)?;
+                    if first_tree == 0{
+                        create_directory(&path_dir_cloned)?;
+                    }
                     let tree_content = read_tree(&content[i].1)?;
                     builder_object_tree(repo, &tree_content)?;
                     let count = i;
-                    i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo, repo_count)?;
+                    i = recovery_tree(tree_content, &path_dir_cloned, content, i, repo, repo_count, first_tree)?;
                     if count == i{
                         i -= 1;
                     }
@@ -322,10 +329,11 @@ fn handle_tree(
     git_dir: &str,
     i: usize,
     path_dir_cloned: &Path,
-    repo_count: usize
+    repo_count: usize,
+    first_tree: usize
 ) -> Result<usize, CommandsError> {
     let tree_content = read_tree(&content[i].1)?;
     builder_object_tree(git_dir, &tree_content)?;
-    let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir, repo_count)?;
+    let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir, repo_count, first_tree)?;
     Ok(i)
 }
