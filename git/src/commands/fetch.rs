@@ -397,91 +397,20 @@ pub fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Resu
     let git_dir = format!("{}/{}", git_dir, GIT_DIR);
 
     let mut i = 0;
-    while i < count_objects {
+    while i < count_objects{
         if content[i].0.obj_type == ObjectType::Commit {
-            handle_commit(&content, &git_dir, i)?;
+            let commit_content = read_commit(&content[i].1)?;
+            builder_object_commit(&commit_content, &git_dir)?;
             i += 1;
         } else if content[i].0.obj_type == ObjectType::Tree {
-            i = handle_tree(&content, &git_dir, i, path_dir_cloned)?;
+            let tree_content = read_tree(&content[i].1)?;
+            builder_object_tree(&git_dir, &tree_content)?;
             i += 1;
         }else if content[i].0.obj_type == ObjectType::Blob{
+            let blob_content = read_blob(&content[i].1)?;
+            builder_object_blob(blob_content.into_bytes(), &git_dir)?;
             i += 1;
         }
     }
     Ok(())
-}
-
-fn recovery_blob(
-    hash: &str,
-    content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
-    i: usize,
-    repo: &str,
-) -> Result<usize, CommandsError> {
-    if i < content.len(){
-        let blob_content = read_blob(&content[i].1)?;
-        let blob_content_bytes = blob_content.clone();
-        let object_dir = format!("{}/{}/{}/{}", repo, DIR_OBJECTS, &hash[..2], &hash[2..]);
-        if !Path::new(&object_dir).exists(){
-            builder_object_blob(blob_content_bytes.into_bytes(), repo)?;
-        }
-    }
-    Ok(i)
-}
-
-fn recovery_tree(
-    tree_content: String,
-    path_dir_repo: &Path,
-    content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
-    mut i: usize,
-    repo: &str,
-) -> Result<usize, CommandsError> {
-    for line in tree_content.lines() {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        let mode;
-        let file_name;
-        if parts[0] == FILE || parts[0] == DIRECTORY {
-            mode = parts[0];
-            file_name = parts[1];
-        }else{
-            file_name = parts[0];
-            mode = parts[1];
-        }
-        let hash = parts[2];
-
-        let path_dir_repo = path_dir_repo.join(file_name);
-        if mode == FILE {
-            i += 1;
-            i = recovery_blob(hash, content, i, repo)?;
-        } else if mode == DIRECTORY {
-            i += 1;
-            if i < content.len() {
-                let tree_content = read_tree(&content[i].1)?;
-                builder_object_tree(repo, &tree_content)?;
-                i = recovery_tree(tree_content, &path_dir_repo, content, i, repo)?;
-            }
-        }
-    }
-    Ok(i)
-}
-
-fn handle_commit(
-    content: &[(ObjectEntry, Vec<u8>)],
-    git_dir: &str,
-    i: usize,
-) -> Result<(), CommandsError> {
-    let commit_content = read_commit(&content[i].1)?;
-    builder_object_commit(&commit_content, git_dir)?;
-    Ok(())
-}
-
-fn handle_tree(
-    content: &Vec<(ObjectEntry, Vec<u8>)>,
-    git_dir: &str,
-    i: usize,
-    path_dir_cloned: &Path,
-) -> Result<usize, CommandsError> {
-    let tree_content = read_tree(&content[i].1)?;
-    builder_object_tree(git_dir, &tree_content)?;
-    let i = recovery_tree(tree_content, path_dir_cloned, content, i, git_dir)?;
-    Ok(i)
 }
