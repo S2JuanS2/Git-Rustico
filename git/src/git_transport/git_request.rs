@@ -472,7 +472,7 @@ fn save_references_with_name_head(name: &str, repo_path: &str) -> Result<(), Uti
     
     let path_branch = "refs/heads".to_string();
 
-    save_log(repo_path, name, &path_log, &path_branch)?;    
+    //save_log(repo_path, name, &path_log, &path_branch)?;    
 
     Ok(())
 }
