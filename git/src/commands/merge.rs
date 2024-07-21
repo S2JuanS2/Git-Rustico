@@ -70,8 +70,10 @@ pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, c
         }
         get_result_depending_on_strategy(strategy, &mut formatted_result, current_branch_hash.clone(), branch_to_merge_hash.clone(), path_current_branch)?;
     }
-    
-    update_work_directory(directory, &branch_to_merge_hash, &mut formatted_result)?; //FALTA PROBAR VARIOS CONFLICTOS
+    if current_branch == get_current_branch(directory)?{
+        println!("es master");
+        update_work_directory(directory, &branch_to_merge_hash, &mut formatted_result)?;
+    }
     
     Ok(formatted_result)
 }

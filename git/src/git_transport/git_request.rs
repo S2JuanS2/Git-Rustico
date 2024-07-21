@@ -14,7 +14,7 @@ use crate::git_transport::negotiation::{receive_request, receive_reference_updat
 use crate::models::client::Client;
 use crate::util::connections::{send_message, receive_packfile};
 use crate::util::errors::UtilError;
-use crate::util::files::{open_file, read_file_string, create_directory, create_file};
+use crate::util::files::{create_directory, create_file, create_file_replace, open_file, read_file_string};
 use crate::util::objects::{ObjectType, ObjectEntry};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
@@ -463,7 +463,34 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<St
 /// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
-fn save_references_with_name(name: &str, repo_path: &str) -> Result<(), UtilError> {
+fn save_references_with_name_head(name: &str, repo_path: &str) -> Result<(), UtilError> {
+
+    let log_dir = format!("{}/.git/logs/refs/heads", repo_path);
+    create_directory(Path::new(&log_dir))?;
+
+    let path_log = "logs/refs/heads".to_string();
+    
+    let path_branch = "refs/heads".to_string();
+
+    save_log(repo_path, name, &path_log, &path_branch)?;    
+
+    Ok(())
+}
+
+/// Guarda referencias (nombres y hashes) en archivos individuales dentro del directorio de referencias
+/// remotas en un repositorio Git.
+///
+/// Esta función toma un vector de tuplas `(String, String)` que representa pares de nombres y hashes de
+/// referencias. El path del repositorio `repo_path` se utiliza para construir la ruta del directorio de
+/// referencias y, a continuación, se asegura de que el directorio esté limpio. Luego, escribe cada
+/// par de nombre y hash en archivos individuales dentro del directorio.
+///
+/// # Errores
+///
+/// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
+///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
+///
+fn save_references_with_name_remote(name: &str, repo_path: &str) -> Result<(), UtilError> {
 
     let log_dir = format!("{}/.git/logs/refs/remotes/origin", repo_path);
     create_directory(Path::new(&log_dir))?;
@@ -476,7 +503,6 @@ fn save_references_with_name(name: &str, repo_path: &str) -> Result<(), UtilErro
 
     Ok(())
 }
-
 
 // [TODO #8]
 // Esta funcion es la que se encarga de procesar las actualizaciones de las referencias
@@ -525,35 +551,46 @@ pub fn process_request_update(
             if current_branch_path.len() >= 3 {
                 current_branch = current_branch_path[2];
             }
-            let branch_path = format!("{}/{}/{}/{}", path_repo, GIT_DIR, "refs/remotes", current_branch);
-            create_file(branch_path.as_str(), hash_reference_new.as_str())?;
-            save_references_with_name("master", path_repo)?;
+            let mut branch_path = format!("{}/{}/{}/{}", path_repo, GIT_DIR, "refs/heads", current_branch);
 
-            let client: Client = Client::new(
-                "test".to_string(), 
-                "test@fi.uba.ar".to_string(),
-                "19992020".to_string(),
-                "9090".to_string(),
-                "localhost".to_string(),
-                "./".to_string(),
-                "master".to_string(),
-            );
-            let remote_branch = format!("{}/{}", "refs/remotes", current_branch);
-            let result_merge = git_merge(path_repo, current_branch, &remote_branch, client)?;
-            if result_merge.contains("CONFLICT") {
+            let mut new = 0;
+            let path = Path::new(&branch_path);
+            if path.exists(){
+                new = 1;
+            }
+            create_file(branch_path.as_str(), hash_reference_new.as_str())?;
+            save_references_with_name_head(current_branch, path_repo)?;
+            branch_path = format!("{}/{}/{}/{}", path_repo, GIT_DIR, "refs/remotes", current_branch);
+            create_file_replace(branch_path.as_str(), hash_reference_new.as_str())?;
+            save_references_with_name_remote(current_branch, path_repo)?;
+
+            if new == 1{
+                let client: Client = Client::new(
+                    "test".to_string(), 
+                    "test@fi.uba.ar".to_string(),
+                    "19992020".to_string(),
+                    "9090".to_string(),
+                    "localhost".to_string(),
+                    path_repo.to_string(),
+                    current_branch.to_string(),
+                );
+                let remote_branch = format!("{}/{}", "refs/remotes", current_branch);
+                let result_merge = git_merge(path_repo, current_branch, &remote_branch, client)?;
+                if result_merge.contains("CONFLICT") {
+                    result.0 = hash_reference_old.to_string();
+                    result.1 = false;
+                    result_vec.push(result.clone());
+                }
+                result.0 = hash_reference_new.to_string();
+                result.1 = true;
+        
+                result_vec.push(result.clone());   
+                }else{
                 result.0 = hash_reference_old.to_string();
                 result.1 = false;
                 result_vec.push(result.clone());
+                }
             }
-            result.0 = hash_reference_new.to_string();
-            result.1 = true;
-    
-            result_vec.push(result.clone());   
-        }else{
-            result.0 = hash_reference_old.to_string();
-            result.1 = false;
-            result_vec.push(result.clone());
-        }
     };
     if result_vec.is_empty() {
         result_vec.push(result);

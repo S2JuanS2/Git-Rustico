@@ -254,7 +254,7 @@ pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Resu
 {
     if hash_prev == ZERO_ID
     {
-        return Ok(false);
+        return Ok(true);
     }
 
     if hash_current == hash_prev

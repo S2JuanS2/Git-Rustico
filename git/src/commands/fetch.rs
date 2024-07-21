@@ -9,7 +9,7 @@ use crate::git_transport::request_command::RequestCommand;
 use crate::models::client::Client;
 use crate::util::connections::{receive_packfile, start_client, send_flush};
 use crate::util::errors::UtilError;
-use crate::util::files::{ensure_directory_clean, create_directory};
+use crate::util::files::create_directory;
 use crate::util::objects::{
     builder_object_blob, builder_object_commit, builder_object_tree, read_blob, read_commit,
     read_tree, ObjectEntry, ObjectType,

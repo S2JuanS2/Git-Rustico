@@ -34,7 +34,7 @@ pub fn create_directory(directory: &Path) -> Result<(), UtilError> {
     Ok(())
 }
 
-/// Crea un archivo si no existe.
+/// Crea un archivo  exista o no.
 /// ###Parametros:
 /// 'file': archivo a crear.
 /// 'content': contenido que se escribirá en el archivo.
