@@ -170,3 +170,7 @@ pub const CLIENT_SIGNATURE: &str = "Client => ";
 pub const HTPP_SIGNATURE: &str = "HTTP |";
 
 pub const DAEMON_SIGNATURE: &str = "Daemon |";
+
+pub const HTTP_VERSION: &str = "HTTP/1.1";
+
+pub const CRLF: &str = "\r\n\r\n";

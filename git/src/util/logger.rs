@@ -184,6 +184,11 @@ pub fn log_http_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sen
     log_message(&tx, &message);
 }
 
+pub fn log_message_with_signature(tx: &Arc<Mutex<Sender<String>>>, signature: &str, message: &str) {
+    let message = format!("{} {}", signature, message);
+    log_message(&tx, &message);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

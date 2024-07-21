@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use serde_json::Value;
-use crate::servers::errors::ServerError;
-use super::{pr::PullRequest, utils::read_request};
+use crate::{consts::HTTP_VERSION, servers::errors::ServerError};
+use super::{pr::PullRequest, status_code::StatusCode, utils::read_request};
 
 /// Representa una solicitud HTTP.
 ///
@@ -66,7 +66,7 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<String, ServerError> {
+    pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<StatusCode, ServerError> {
         // Manejar la solicitud HTTP
         let pr = PullRequest::from_json(&self.body)?;
         match self.method.as_str() {
@@ -99,7 +99,7 @@ impl HttpRequest {
     /// 
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
+    fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = self.get_path().split('/').collect();
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
@@ -112,7 +112,7 @@ impl HttpRequest {
                 return pr.list_commits(repo_name, pull_number, src, tx);
             },
             _ => {
-                return Err(ServerError::MethodNotAllowed);
+                return Err(ServerError::InvalidGetPathError);
             }
         }
     }
@@ -129,14 +129,15 @@ impl HttpRequest {
     /// 
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn handle_post_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+    fn handle_post_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        let path_segments: Vec<&str> = segment_path(&self.get_path());
+        println!("{:?}", path_segments);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
                 return pr.create_pull_requests(repo_name, src, tx);
             }
             _ => {
-                return Err(ServerError::MethodNotAllowed);
+                return Err(ServerError::InvalidPostPathError);
             }
         }
     }
@@ -153,14 +154,14 @@ impl HttpRequest {
     /// 
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn handle_put_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+    fn handle_put_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        let path_segments: Vec<&str> = segment_path(&self.get_path());
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number, "merge"] => {
                 return pr.merge_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                return Err(ServerError::MethodNotAllowed);
+                return Err(ServerError::InvalidPutPathError);
             }
         }
     }
@@ -177,14 +178,14 @@ impl HttpRequest {
     /// 
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn handle_patch_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<String, ServerError> {
-        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+    fn handle_patch_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        let path_segments: Vec<&str> = segment_path(&self.get_path());
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
                 return pr.modify_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                Err(ServerError::MethodNotAllowed)
+                Err(ServerError::InvalidPatchPathError)
             }
         }
     }
@@ -226,8 +227,13 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
         return Err(ServerError::ServerDebug);
     }
 
-    let method = request_line[0].to_string();
+    let method: String = request_line[0].to_string();
     let path = request_line[1].to_string();
+    let http_version = request_line[2].to_string();
+
+    if http_version != HTTP_VERSION {
+        return Err(ServerError::HttpVersionNotSupported);
+    }
 
     // Extraer el cuerpo de la solicitud (si existe)
     let body = if let Some(index) = lines.iter().position(|&line| line.is_empty()) {
@@ -243,6 +249,14 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
     Ok(HttpRequest::new(method, path, body))
 }
 
+pub fn segment_path(path: &str) -> Vec<&str> {
+    // debo eliminar el 1ero si es solo un /
+    let mut path = path;
+    if path.starts_with("/") {
+        path = &path[1..];
+    }
+    path.split('/').collect()
+}
 
 #[cfg(test)]
 mod tests {
