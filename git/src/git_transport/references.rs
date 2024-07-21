@@ -350,31 +350,29 @@ pub fn get_objects_from_hash_to_hash(
     let mut objects = Vec::new();
 
     if is_ancestor(path_local, current_hash, prev_hash)? {
-        println!("get_objects_by_push");
         let mut hash_commit: String = current_hash.to_string();
         while prev_hash != hash_commit {
             let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
             let content_commit = git_cat_file(path_local, &hash_commit, "-p")?;
             object_commit.1 = compressor_object_content(content_commit.clone())?;
             save_object_pack(&mut objects, object_commit);
+            let commit = git_cat_file(path_local, &hash_commit, "-p")?;
+            if let Some(tree_hash) = get_tree_hash(&commit){
+                let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+                let path = format!("{}/{}/objects/{}", path_local, GIT_DIR, &tree_hash[..2]);
+                let file_path = format!("{}/{}", path, &tree_hash[2..]);
+                let mut decompresed = decompression_object(&file_path)?;
+                if let Some(pos) = decompresed.iter().position(|&x| x == b'\0'){
+                    let tree = decompresed.split_off(pos +1);
+                    object_tree.1 = compressor_object_with_bytes_content(tree)?;
+                    save_object_pack(&mut objects, object_tree);
+                }
+                recovery_tree(path_local, tree_hash, &mut objects)?;
+            }
             hash_commit = get_parent_hashes(content_commit.clone());
             if hash_commit == PARENT_INITIAL {
                 hash_commit = prev_hash.to_string();
             }
-        }   //FALTA LEER LOS TREE DE LOS DEMAS COMMITS!!
-
-        let commit = git_cat_file(path_local, current_hash, "-p")?;
-        if let Some(tree_hash) = get_tree_hash(&commit){
-            let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
-            let path = format!("{}/{}/objects/{}", path_local, GIT_DIR, &tree_hash[..2]);
-            let file_path = format!("{}/{}", path, &tree_hash[2..]);
-            let mut decompresed = decompression_object(&file_path)?;
-            if let Some(pos) = decompresed.iter().position(|&x| x == b'\0'){
-                let tree = decompresed.split_off(pos +1);
-                object_tree.1 = compressor_object_with_bytes_content(tree)?;
-                save_object_pack(&mut objects, object_tree);
-            }
-            recovery_tree(path_local, tree_hash, &mut objects)?;
         }
     }
     Ok(objects)
