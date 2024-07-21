@@ -7,9 +7,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-const RESPONSE: &str = "\n_______________________________________________________________________________________________________________\n";
+const RESPONSE: &str = "\n======================================================================================================\n";
 
-const HELP: &str = "text-help-here";
+const HELP: &str = "En el archivo de configuración del cliente se debe indicar en el src la ruta donde se creará el repositorio Git \n\n 
+                    RustTeam <3";
 
 #[derive(Clone)]
 pub struct View {
@@ -305,13 +306,42 @@ impl View {
             });
         }
     }
+    fn destroy_dialogs(&self) {
+        let window = self.window_dialog_push.clone();
+        self.window_dialog_push.connect_delete_event(move |_, _| {
+            window.hide_on_delete()
+        });
+        let window = self.window_dialog_pull.clone();
+        self.window_dialog_pull.connect_delete_event(move |_, _| {
+            window.hide_on_delete()
+        });
+        let window = self.window_dialog_fetch.clone();
+        self.window_dialog_fetch.connect_delete_event(move |_, _| {
+            window.hide_on_delete()
+        });
+        let window = self.window_dialog_clone.clone();
+        self.window_dialog_clone.connect_delete_event(move |_, _| {
+            window.hide_on_delete()
+        });
+        let window = self.window_dialog_cat_file.clone();
+        self.window_dialog_cat_file.connect_delete_event(move |_, _| {
+            window.hide_on_delete()
+        });
+        let window = self.window_dialog_hash_object.clone();
+        self.window_dialog_hash_object.connect_delete_event(move |_, _| {
+            window.hide_on_delete()
+        });
+    }
+    
     fn connect_buttons(&mut self) {
         self.connect_button_with_entry(ENTRY_CHECKOUT, BUTTON_CHECKOUT, "git checkout".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_ADD, "git add".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_RM, "git rm".to_string());
         self.connect_button_with_entry(ENTRY_COMMIT, BUTTON_COMMIT, "git commit -m".to_string());
         self.connect_button_with_entry(ENTRY_MERGE, BUTTON_MERGE, "git merge".to_string());
-        self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH, "git branch".to_string());
+        self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH, "git branch -l".to_string());
+        self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH_CREATE, "git branch".to_string());
+        self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH_REMOVE, "git branch -d".to_string());
         self.connect_button_with_entry(ENTRY_REMOTE, BUTTON_REMOTE, "git remote".to_string());
         self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_FILES, "git ls-files".to_string());
         self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_TREE, "git ls-tree".to_string());
@@ -406,6 +436,7 @@ impl View {
             gtk::main_quit();
         });
         
+        self.destroy_dialogs();
         self.clicked_buttons();
         self.set_label_user();
         self.set_label_mail();

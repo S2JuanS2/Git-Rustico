@@ -21,6 +21,12 @@ pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
 /// ###Parametros:
 /// 'directory': dirección donde se inicializará el repositorio.
 pub fn git_init(directory: &str) -> Result<String, CommandsError> {
+
+    let result;
+    let mut exist = 0;
+    if Path::new(directory).is_dir(){
+        exist = 1;
+    }
     create_directory(Path::new(directory))?;
 
     let git_dir = format!("{}/{}", directory, GIT_DIR);
@@ -46,10 +52,17 @@ pub fn git_init(directory: &str) -> Result<String, CommandsError> {
     create_file(&index_file, CONTENT_EMPTY)?;
     create_file(&config_file, CONTENT_EMPTY)?;
 
-    let result = format!(
-        "Initialized empty Git repository in {}/.git/",
-        directory
-    );
+    if exist == 0{
+        result = format!(
+            "Initialized empty Git repository in {}/.git/",
+            directory
+        );
+    } else{
+        result = format!(
+            "Reinitialized existing Git repository in {}/.git/",
+            directory
+        );
+    }
 
     Ok(result)
 }
