@@ -418,10 +418,7 @@ pub fn get_objects_fetch_with_hash_valid(
         }
         println!("{:?}", send_hashes);
         let branches = get_branch(directory)?;
-        for branch in branches {
-            let branch_current_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REF_HEADS, branch);
-            let file_current_branch = open_file(&branch_current_path)?;
-            let hash_commit_current_branch = read_file_string(file_current_branch)?;
+        for _branch in branches {
             for hash in send_hashes.clone() {
                 let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
                 object_commit.1 = get_content(directory, &hash)?;

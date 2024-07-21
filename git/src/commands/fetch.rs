@@ -1,7 +1,7 @@
 use crate::commands::branch::get_branch_current_hash;
 use crate::commands::config::GitConfig;
 use crate::commands::fetch_head::FetchHead;
-use crate::consts::{DIRECTORY, FILE, GIT_DIR, CAPABILITIES_FETCH, DIR_OBJECTS};
+use crate::consts::{GIT_DIR, CAPABILITIES_FETCH};
 use crate::git_server::GitServer;
 use crate::git_transport::negotiation::packfile_negotiation_partial;
 use crate::git_transport::references::{reference_discovery, Reference};
@@ -392,8 +392,6 @@ pub fn save_references(references: &Vec<Reference>, repo_path: &str, name_remote
 pub fn save_objects(content: Vec<(ObjectEntry, Vec<u8>)>, git_dir: &str) -> Result<(), CommandsError> {
     // Cantidad de objetos recibidos
     let count_objects = content.len();
-
-    let path_dir_cloned = Path::new(git_dir);
     let git_dir = format!("{}/{}", git_dir, GIT_DIR);
 
     let mut i = 0;
