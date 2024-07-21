@@ -167,23 +167,65 @@ pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str
     log_message(tx, &message)
 }
 
+/// Registra un mensaje de error de desconexión del cliente.
+///
+/// Esta función formatea y envía un mensaje de registro indicando que la conexión 
+/// con el cliente se terminó debido a un error.
+///
+/// # Parámetros
+///
+/// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// - `signature`: Una cadena que contiene la firma del mensaje.
+/// 
 pub fn log_client_disconnection_error(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada por error", signature);
     log_message(tx, &message)
 }
 
+/// Registra un mensaje de desconexión exitosa del cliente.
+///
+/// Esta función formatea y envía un mensaje de registro indicando que la conexión 
+/// con el cliente se terminó exitosamente.
+///
+/// # Parámetros
+///
+/// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// - `signature`: Una cadena que contiene la firma del mensaje.
+/// 
 pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada", signature);
     log_message(tx, &message)
 }
 
-pub fn log_http_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<String>>>) {
-    let message = format!("{}Error en la solicitud HTTP.", signature);
+/// Registra un mensaje de error en una firma especifica
+///
+/// Esta función formatea y envía un mensaje de registro indicando que hubo un error 
+/// en la solicitud de la firma, seguido del mensaje de error específico.
+///
+/// # Parámetros
+///
+/// - `error`: Una cadena que contiene el mensaje de error.
+/// - `signature`: Una cadena que contiene la firma del mensaje.
+/// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// 
+pub fn log_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<String>>>) {
+    let message = format!("{}Error en la solicitud.", signature);
     log_message(&tx, &message);
     let message = format!("{}Error: {}", signature, error);
     log_message(&tx, &message);
 }
 
+/// Registra un mensaje con una firma especificada.
+///
+/// Esta función formatea y envía un mensaje de registro precedido por una firma 
+/// específica.
+///
+/// # Parámetros
+///
+/// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// - `signature`: Una cadena que contiene la firma del mensaje.
+/// - `message`: Una cadena que contiene el mensaje a registrar.
+/// 
 pub fn log_message_with_signature(tx: &Arc<Mutex<Sender<String>>>, signature: &str, message: &str) {
     let message = format!("{} {}", signature, message);
     log_message(&tx, &message);
