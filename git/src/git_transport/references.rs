@@ -350,7 +350,7 @@ pub fn get_objects_from_hash_to_hash(
     let mut objects = Vec::new();
 
     if is_ancestor(path_local, current_hash, prev_hash)? {
-    
+        println!("get_objects_by_push");
         let mut hash_commit: String = current_hash.to_string();
         while prev_hash != hash_commit {
             let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
@@ -361,7 +361,7 @@ pub fn get_objects_from_hash_to_hash(
             if hash_commit == PARENT_INITIAL {
                 hash_commit = prev_hash.to_string();
             }
-        }
+        }   //FALTA LEER LOS TREE DE LOS DEMAS COMMITS!!
 
         let commit = git_cat_file(path_local, current_hash, "-p")?;
         if let Some(tree_hash) = get_tree_hash(&commit){
@@ -428,10 +428,8 @@ pub fn get_objects_fetch_with_hash_valid(
                 let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
                 object_commit.1 = get_content(directory, &hash)?;
                 save_object_pack(&mut objects, object_commit);
-                let commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
-                    
+                let commit = git_cat_file(directory, &hash, "-p")?;
                 if let Some(tree_hash) = get_tree_hash(&commit){
-                    println!("tree enviado: {}", tree_hash);
                 let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
                 object_tree.1 = get_content(directory, tree_hash)?;
                 save_object_pack(&mut objects, object_tree);
