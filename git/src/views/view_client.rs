@@ -137,18 +137,19 @@ impl View {
         self.label_path.set_text(text_format);
     }
 
-    fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>) {
+    fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>, cmd: &str) {
         if let Some(buffer) = response.buffer() {
             let mut end_iter = buffer.end_iter();
             match result {
                 Ok(response) => {
-                    let response_format = format!("{}\n{}", RESPONSE, response);
+                    let response_format = format!("{}\n$ {} \n{}", RESPONSE, cmd, response);
                     buffer.insert(&mut end_iter, &response_format);
                 }
                 Err(e) => {
                     let error_message = format!(
-                        "{}\nError al enviar el comando.\n[Error] {}\n",
+                        "{}\n$ {} \nError al enviar el comando.\n[Error] {}\n",
                         RESPONSE,
+                        cmd,
                         e.message()
                     );
                     buffer.insert(&mut end_iter, &error_message);
@@ -174,7 +175,7 @@ impl View {
                     let entry_format = format!("{} {}", git_cmd, entry_clone.text());
                     entry_clone.set_text("");
                     let result = controller.borrow_mut().send_command(&entry_format);
-                    Self::response_write_buffer(result, Rc::clone(&response));
+                    Self::response_write_buffer(result, Rc::clone(&response), &entry_format);
                 });
             }
         };
@@ -243,7 +244,7 @@ impl View {
                     let command = entry_send.text().to_string();
                     entry_send.set_text("");
                     let result = controller.borrow_mut().send_command(&command);
-                    Self::response_write_buffer(result, Rc::clone(&response));
+                    Self::response_write_buffer(result, Rc::clone(&response), &command);
                 });
             }
         };
@@ -290,7 +291,7 @@ impl View {
                     let entry_format = format!("{} {}", git_cmd, entry_branch.text());
                     entry_branch.set_text("");
                     let result = controller.borrow_mut().send_command(&entry_format);
-                    Self::response_write_buffer(result, Rc::clone(&response));
+                    Self::response_write_buffer(result, Rc::clone(&response), &entry_format);
                 });
             }
         };
@@ -302,7 +303,7 @@ impl View {
         if let Some(button) = self.buttons.get(button_cmd) {
             button.connect_clicked(move |_| {
                 let result = controller.borrow_mut().send_command(&git_cmd);
-                Self::response_write_buffer(result, Rc::clone(&response));
+                Self::response_write_buffer(result, Rc::clone(&response), &git_cmd);
             });
         }
     }
