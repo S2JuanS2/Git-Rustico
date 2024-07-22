@@ -12,14 +12,12 @@ use crate::servers::errors::ServerError;
 /// - `Json(JsonValue)`: Contiene un valor JSON.
 /// - `Xml(JsonValue)`: Contiene un valor XML representado como `JsonValue`.
 /// - `Yaml(YamlValue)`: Contiene un valor YAML.
-/// - `PlainText(String)`: Contiene un texto plano.
 /// 
 #[derive(Debug, PartialEq)]
 pub enum HttpBody {
     Json(JsonValue),
     Xml(JsonValue),
     Yaml(YamlValue),
-    PlainText(String),
 }
 
 
@@ -31,7 +29,6 @@ pub enum HttpBody {
 /// - Para `Json`: Formatea el contenido JSON usando la representación predeterminada.
 /// - Para `Xml`: Usa `{:?}` para mostrar la representación de depuración del XML.
 /// - Para `Yaml`: Usa `{:?}` para mostrar la representación de depuración del YAML.
-/// - Para `PlainText`: Muestra el texto plano directamente.
 /// 
 impl fmt::Display for HttpBody {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -39,7 +36,6 @@ impl fmt::Display for HttpBody {
             HttpBody::Json(json) => write!(f, "{}", json),
             HttpBody::Xml(xml) => write!(f, "{:?}", xml),
             HttpBody::Yaml(yaml) => write!(f, "{:?}", yaml),
-            HttpBody::PlainText(plain_text) => write!(f, "{}", plain_text),
         }
     }
 }
@@ -70,13 +66,8 @@ impl HttpBody {
                 serde_yaml::from_str(body).map(HttpBody::Yaml).map_err(|_| ServerError::HttpParseYamlBody)
             }
             "application/xml" | "text/xml" => {
-                match serde_xml_rs::from_str::<JsonValue>(body)
-                {
-                    Ok(xml) => Ok(HttpBody::Xml(xml)),
-                    Err(_) => return Err(ServerError::HttpParseXmlBody),
-                }
+                serde_xml_rs::from_str(body).map(HttpBody::Xml).map_err(|_| ServerError::HttpParseXmlBody)
             }
-            "text/plain" => Ok(HttpBody::PlainText(body.to_string())),
             _ => Err(ServerError::UnsupportedMediaType),
         }
     }
@@ -115,7 +106,6 @@ impl HttpBody {
             HttpBody::Yaml(yaml) => yaml[field].as_str()
                 .ok_or_else(|| ServerError::HttpFieldNotFound(field.to_string()))
                 .map(|s| s.to_string()),
-            HttpBody::PlainText(_) => Err(ServerError::UnsupportedMediaType),
         }
     }
 }
