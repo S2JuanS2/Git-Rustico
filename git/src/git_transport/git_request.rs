@@ -463,16 +463,12 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<St
 /// - Si no puede asegurar que el directorio de referencias esté limpio o no puede escribir en los archivos,
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
-fn save_references_with_name_head(name: &str, repo_path: &str) -> Result<(), UtilError> {
+fn save_references_with_name_head(repo_path: &str) -> Result<(), UtilError> {
 
     let log_dir = format!("{}/.git/logs/refs/heads", repo_path);
-    create_directory(Path::new(&log_dir))?;
+    create_directory(Path::new(&log_dir))?; 
 
-    let path_log = "logs/refs/heads".to_string();
-    
-    let path_branch = "refs/heads".to_string();
-
-    save_log(repo_path, name, &path_log, &path_branch)?;    
+    //save_log(repo_path, name, &path_log, &path_branch)?;    
 
     Ok(())
 }
@@ -559,7 +555,7 @@ pub fn process_request_update(
                 new = 1;
             }
             create_file(branch_path.as_str(), hash_reference_new.as_str())?;
-            save_references_with_name_head(current_branch, path_repo)?;
+            save_references_with_name_head(path_repo)?;
             branch_path = format!("{}/{}/{}/{}", path_repo, GIT_DIR, "refs/remotes", current_branch);
             create_file_replace(branch_path.as_str(), hash_reference_new.as_str())?;
             save_references_with_name_remote(current_branch, path_repo)?;
