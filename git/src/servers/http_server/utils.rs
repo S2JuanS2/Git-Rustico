@@ -1,5 +1,7 @@
-use std::io::Read;
-use crate::{consts::PR_FOLDER, servers::errors::ServerError, util::files::create_directory};
+use std::io::{Read, Write};
+use crate::{consts::{CRLF, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::files::create_directory};
+
+use super::status_code::StatusCode;
 
 /// Reads an HTTP request from a reader, returning it as a String.
 ///
@@ -56,6 +58,14 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
     {
         Ok(_) => Ok(()),
         Err(_) => Err(ServerError::CreatePrFolderError),
+    }
+}
+pub fn send_response_http(writer: &mut dyn Write, status_code: StatusCode) -> Result<(), ServerError>{
+    let response = format!("{} {}{}", HTTP_VERSION, status_code.to_string(), CRLF);
+    match writer.write(response.as_bytes())
+    {
+        Ok(_) => Ok(()),
+        Err(_) => Err(ServerError::SendResponse(response)),
     }
 }
 
