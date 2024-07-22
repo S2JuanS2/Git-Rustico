@@ -1,4 +1,4 @@
-use std::sync::{mpsc::Sender, Arc, Mutex};
+use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
 use serde_json::Value;
 use crate::{consts::HTTP_VERSION, servers::errors::ServerError};
 use super::{pr::PullRequest, status_code::StatusCode, utils::read_request};
@@ -218,37 +218,125 @@ impl HttpRequest {
 fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
     let lines: Vec<&str> = request.lines().collect();
     if lines.len() < 1 {
-        return Err(ServerError::ServerDebug);
+        return Err(ServerError::MissingRequestLine);
     }
 
     // Parsear la línea de solicitud (GET /path HTTP/1.1)
-    let request_line: Vec<&str> = lines[0].split_whitespace().collect();
-    if request_line.len() < 3 {
-        return Err(ServerError::ServerDebug);
-    }
-
-    let method: String = request_line[0].to_string();
-    let path = request_line[1].to_string();
-    let http_version = request_line[2].to_string();
-
+    let (method, path, http_version) = parse_request_line(lines[0])?;
     if http_version != HTTP_VERSION {
         return Err(ServerError::HttpVersionNotSupported);
     }
 
     // Extraer el cuerpo de la solicitud (si existe)
-    let body = if let Some(index) = lines.iter().position(|&line| line.is_empty()) {
-        lines[(index + 1)..].join("\n")
+    let header_end_index = lines.iter().position(|&line| line.is_empty()).unwrap_or(lines.len());
+    let headers = parse_headers(&lines[1..header_end_index]);
+
+    let body = if header_end_index < lines.len() {
+        lines[(header_end_index + 1)..].join("\n")
     } else {
         String::new()
     };
-    let body: Value = match serde_json::from_str(&body) {
-        Ok(body) => body,
-        Err(_) => return Err(ServerError::HttpParseBody),
-    };
 
+    let binding = "application/json".to_string();
+    let content_type = headers.get("Content-Type").unwrap_or(&binding);
+    let body = parse_body(content_type, &body)?;
+
+    println!("{:?}", body);
+    println!("{:?}", headers);
     Ok(HttpRequest::new(method, path, body))
 }
 
+// fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
+//     let lines: Vec<&str> = request.lines().collect();
+//     if lines.len() < 1 {
+//         return Err(ServerError::ServerDebug);
+//     }
+
+//     // Parsear la línea de solicitud (GET /path HTTP/1.1)
+//     let request_line: Vec<&str> = lines[0].split_whitespace().collect();
+//     if request_line.len() < 3 {
+//         return Err(ServerError::ServerDebug);
+//     }
+
+//     let method: String = request_line[0].to_string();
+//     let path = request_line[1].to_string();
+//     let http_version = request_line[2].to_string();
+
+//     if http_version != HTTP_VERSION {
+//         return Err(ServerError::HttpVersionNotSupported);
+//     }
+
+//     // Extraer el cuerpo de la solicitud (si existe)
+//     let body = if let Some(index) = lines.iter().position(|&line| line.is_empty()) {
+//         lines[(index + 1)..].join("\n")
+//     } else {
+//         String::new()
+//     };
+//     let body: Value = match serde_json::from_str(&body) {
+//         Ok(body) => body,
+//         Err(_) => return Err(ServerError::HttpParseBody),
+//     };
+
+//     Ok(HttpRequest::new(method, path, body))
+// }
+
+/// Analiza la línea de solicitud de una solicitud HTTP.
+///
+/// La línea de solicitud es la primera línea en una solicitud HTTP, típicamente en el formato:
+/// `MÉTODO /ruta HTTP/versión`.
+///
+/// # Argumentos
+///
+/// * `line` - Una porción de cadena que contiene la línea de solicitud.
+///
+/// # Retornos
+///
+/// Si la línea de solicitud está correctamente formateada, devuelve una tupla que contiene el método, la ruta y la versión HTTP como cadenas.
+/// De lo contrario, devuelve un error `ServerError::IncompleteRequestLine`.
+///
+/// # Errores
+///
+/// Devuelve `ServerError::IncompleteRequestLine` si la línea de solicitud no contiene al menos tres partes.
+/// 
+fn parse_request_line(line: &str) -> Result<(String, String, String), ServerError> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() < 3 {
+        return Err(ServerError::IncompleteRequestLine);
+    }
+    Ok((parts[0].to_string(), parts[1].to_string(), parts[2].to_string()))
+}
+
+/// Analiza los encabezados de una solicitud HTTP.
+///
+/// # Argumentos
+///
+/// * `lines` - Un vector de porciones de cadena que contiene las líneas de los encabezados.
+///
+/// # Retornos
+///
+/// Un `HashMap` que mapea los nombres de los encabezados a sus valores.
+/// 
+fn parse_headers(lines: &[&str]) -> HashMap<String, String> {
+    let mut headers = HashMap::new();
+    for line in lines {
+        if let Some(colon_pos) = line.find(':') {
+            let key = line[..colon_pos].trim().to_string();
+            let value = line[(colon_pos + 1)..].trim().to_string();
+            headers.insert(key, value);
+        }
+    }
+    headers
+}
+/// Segmenta una ruta en partes separadas.
+///
+/// # Argumentos
+///
+/// * `path` - Una cadena que contiene la ruta a segmentar.
+///
+/// # Retornos
+///
+/// Un vector de porciones de cadena que representan las partes segmentadas de la ruta.
+/// 
 pub fn segment_path(path: &str) -> Vec<&str> {
     // debo eliminar el 1ero si es solo un /
     let mut path = path;
@@ -256,6 +344,31 @@ pub fn segment_path(path: &str) -> Vec<&str> {
         path = &path[1..];
     }
     path.split('/').collect()
+}
+
+/// Analiza el cuerpo de una solicitud HTTP según el tipo de contenido.
+///
+/// # Argumentos
+///
+/// * `content_type` - Una cadena que indica el tipo de contenido del cuerpo.
+/// * `body` - Una cadena que contiene el cuerpo de la solicitud.
+///
+/// # Retornos
+///
+/// Un valor de `serde_json::Value` si el cuerpo se puede analizar correctamente.
+/// De lo contrario, devuelve un error `ServerError`.
+///
+/// # Errores
+///
+/// Devuelve `ServerError::HttpParseBody` si el cuerpo no se puede analizar como JSON.
+/// Devuelve `ServerError::UnsupportedMediaType` si el tipo de contenido no es compatible.
+/// 
+fn parse_body(content_type: &str, body: &str) -> Result<Value, ServerError> {
+    match content_type {
+        "application/json" => serde_json::from_str(body).map_err(|_| ServerError::HttpParseBody),
+        "text/plain" => Ok(Value::String(body.to_string())),
+        _ => Err(ServerError::UnsupportedMediaType),
+    }
 }
 
 #[cfg(test)]

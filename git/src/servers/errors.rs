@@ -19,7 +19,10 @@ pub enum ServerError {
     InvalidPostPathError,
     InvalidPutPathError,
     InvalidPatchPathError,
-    HttpVersionNotSupported
+    HttpVersionNotSupported,
+    UnsupportedMediaType,
+    MissingRequestLine,
+    IncompleteRequestLine
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -40,6 +43,9 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::InvalidPutPathError => write!(f, "Ruta PUT no válida."),
         ServerError::InvalidPatchPathError => write!(f, "Ruta PATCH no válida."),
         ServerError::HttpVersionNotSupported => write!(f, "Versión HTTP no soportada. Solo se soporta HTTP/1.1."),
+        ServerError::UnsupportedMediaType => write!(f, "Tipo de medio no soportado."),
+        ServerError::MissingRequestLine => write!(f, "Línea de solicitud HTTP faltante."),
+        ServerError::IncompleteRequestLine => write!(f, "Línea de solicitud HTTP incompleta."),
     }
 }
 
