@@ -1,3 +1,4 @@
+/// Enumera los posibles códigos de estado HTTP que pueden ser retornados por el servidor.
 pub enum StatusCode {
     Created,
     Forbidden,
@@ -15,6 +16,19 @@ pub enum StatusCode {
 }
 
 impl StatusCode {
+    /// Convierte el código de estado en su representación de cadena.
+    ///
+    /// # Returns
+    ///
+    /// Retorna una cadena que representa el código de estado HTTP.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use git::servers::http_server::status_code::StatusCode;
+    /// let status = StatusCode::Ok;
+    /// assert_eq!(status.to_string(), "200 OK");
+    /// ```
     pub fn to_string(&self) -> String {
         match self {
             StatusCode::Created => "201 Created".to_string(),

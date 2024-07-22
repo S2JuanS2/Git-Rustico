@@ -60,6 +60,37 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
         Err(_) => Err(ServerError::CreatePrFolderError),
     }
 }
+/// Envía una respuesta HTTP al cliente.
+///
+/// Esta función construye una respuesta HTTP con la versión y el código de estado proporcionados,
+/// y la envía utilizando el escritor proporcionado.
+///
+/// # Argumentos
+///
+/// * `writer` - Un escritor que implementa el trait `Write` para enviar la respuesta.
+/// * `status_code` - El código de estado HTTP que se debe incluir en la respuesta.
+///
+/// # Retornos
+///
+/// Retorna `Ok(())` si la respuesta se envía correctamente, o un `ServerError` si ocurre un error al enviar la respuesta.
+///
+/// # Errores
+///
+/// Retorna `ServerError::SendResponse` si falla al escribir la respuesta en el escritor.
+///
+/// # Ejemplos
+///
+/// ```
+/// use std::io::Cursor;
+/// use git::servers::http_server::utils::send_response_http;
+/// let mut buffer = Cursor::new(Vec::new());
+/// let status_code = StatusCode::Ok;
+/// let result = send_response_http(&mut buffer, status_code);
+/// use git::servers::http_server::status_code::StatusCode;
+///
+/// assert!(result.is_ok());
+/// ```
+/// 
 pub fn send_response_http(writer: &mut dyn Write, status_code: StatusCode) -> Result<(), ServerError>{
     let response = format!("{} {}{}", HTTP_VERSION, status_code.to_string(), CRLF);
     match writer.write(response.as_bytes())
