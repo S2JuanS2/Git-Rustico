@@ -13,6 +13,7 @@ pub struct HttpRequest {
     method: String,
     path: String,
     body: Value,
+    headers: HashMap<String, String>,
 }
 
 impl HttpRequest {
@@ -28,8 +29,8 @@ impl HttpRequest {
     ///
     /// Retorna una nueva instancia de `HttpRequest`.
     /// 
-    pub fn new(method: String, path: String, body: Value) -> Self {
-        HttpRequest { method, path, body }
+    pub fn new(method: String, path: String, body: Value, headers: HashMap<String, String>) -> Self {
+        HttpRequest { method, path, body , headers}
     }
 
     /// Crea una nueva instancia de `HttpRequest` a partir de un lector.
@@ -131,7 +132,6 @@ impl HttpRequest {
     /// 
     fn handle_post_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(&self.get_path());
-        println!("{:?}", path_segments);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
                 return pr.create_pull_requests(repo_name, src, tx);
@@ -227,58 +227,25 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
         return Err(ServerError::HttpVersionNotSupported);
     }
 
-    // Extraer el cuerpo de la solicitud (si existe)
+    // Parsear los encabezados
     let header_end_index = lines.iter().position(|&line| line.is_empty()).unwrap_or(lines.len());
     let headers = parse_headers(&lines[1..header_end_index]);
 
+    // Obtener el cuerpo de la solicitud
     let body = if header_end_index < lines.len() {
         lines[(header_end_index + 1)..].join("\n")
     } else {
         String::new()
     };
 
+    // Parsear el cuerpo de la solicitud
     let binding = "application/json".to_string();
     let content_type = headers.get("Content-Type").unwrap_or(&binding);
     let body = parse_body(content_type, &body)?;
 
-    println!("{:?}", body);
-    println!("{:?}", headers);
-    Ok(HttpRequest::new(method, path, body))
+    Ok(HttpRequest::new(method, path, body, headers))
 }
 
-// fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
-//     let lines: Vec<&str> = request.lines().collect();
-//     if lines.len() < 1 {
-//         return Err(ServerError::ServerDebug);
-//     }
-
-//     // Parsear la línea de solicitud (GET /path HTTP/1.1)
-//     let request_line: Vec<&str> = lines[0].split_whitespace().collect();
-//     if request_line.len() < 3 {
-//         return Err(ServerError::ServerDebug);
-//     }
-
-//     let method: String = request_line[0].to_string();
-//     let path = request_line[1].to_string();
-//     let http_version = request_line[2].to_string();
-
-//     if http_version != HTTP_VERSION {
-//         return Err(ServerError::HttpVersionNotSupported);
-//     }
-
-//     // Extraer el cuerpo de la solicitud (si existe)
-//     let body = if let Some(index) = lines.iter().position(|&line| line.is_empty()) {
-//         lines[(index + 1)..].join("\n")
-//     } else {
-//         String::new()
-//     };
-//     let body: Value = match serde_json::from_str(&body) {
-//         Ok(body) => body,
-//         Err(_) => return Err(ServerError::HttpParseBody),
-//     };
-
-//     Ok(HttpRequest::new(method, path, body))
-// }
 
 /// Analiza la línea de solicitud de una solicitud HTTP.
 ///
@@ -367,6 +334,8 @@ fn parse_body(content_type: &str, body: &str) -> Result<Value, ServerError> {
     match content_type {
         "application/json" => serde_json::from_str(body).map_err(|_| ServerError::HttpParseBody),
         "text/plain" => Ok(Value::String(body.to_string())),
+        // "application/xml" => from_xml_str(body).map_err(|_| ServerError::XmlParseError),
+        // "application/x-yaml" | "text/yaml" => serde_yaml::from_str(body).map_err(|_| ServerError::YamlParseError),
         _ => Err(ServerError::UnsupportedMediaType),
     }
 }
@@ -383,6 +352,7 @@ mod tests {
             method: "POST".to_string(),
             path: "/path".to_string(),
             body: json!({"key": "value"}),
+            headers: [("Content-Length", "18")].iter().cloned().map(|(a, b)| (a.to_string(), b.to_string())).collect(),
         };
         assert_eq!(parse_http_request(request_str).unwrap(), expected_request);
     }
