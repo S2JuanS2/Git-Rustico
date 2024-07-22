@@ -13,7 +13,20 @@ pub enum ServerError {
     MethodNotAllowed,
     CreatePrFolderError,
     HttpNoOwnerFound,
-    HttpNoRepoFound
+    HttpNoRepoFound,
+    SendResponse(String),
+    InvalidGetPathError,
+    InvalidPostPathError,
+    InvalidPutPathError,
+    InvalidPatchPathError,
+    HttpVersionNotSupported,
+    UnsupportedMediaType,
+    MissingRequestLine,
+    IncompleteRequestLine,
+    HttpParseXmlBody,
+    HttpParseYamlBody,
+    HttpParseJsonBody,
+    HttpFieldNotFound(String),
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -28,6 +41,19 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::CreatePrFolderError => write!(f, "Error al crear la carpeta de PR."),
         ServerError::HttpNoOwnerFound => write!(f, "No se encontró el propietario del repositorio en la solicitud."),
         ServerError::HttpNoRepoFound => write!(f, "No se encontró el repositorio en la solicitud."),
+        ServerError::SendResponse(e) => write!(f, "Error al enviar la respuesta HTTP: {}", e),
+        ServerError::InvalidGetPathError => write!(f, "Ruta GET no válida."),
+        ServerError::InvalidPostPathError => write!(f, "Ruta POST no válida."),
+        ServerError::InvalidPutPathError => write!(f, "Ruta PUT no válida."),
+        ServerError::InvalidPatchPathError => write!(f, "Ruta PATCH no válida."),
+        ServerError::HttpVersionNotSupported => write!(f, "Versión HTTP no soportada. Solo se soporta HTTP/1.1."),
+        ServerError::UnsupportedMediaType => write!(f, "Tipo de medio no soportado."),
+        ServerError::MissingRequestLine => write!(f, "Línea de solicitud HTTP faltante."),
+        ServerError::IncompleteRequestLine => write!(f, "Línea de solicitud HTTP incompleta."),
+        ServerError::HttpParseXmlBody => write!(f, "Error al parsear el cuerpo XML de la solicitud HTTP."),
+        ServerError::HttpParseYamlBody => write!(f, "Error al parsear el cuerpo YAML de la solicitud HTTP."),
+        ServerError::HttpParseJsonBody => write!(f, "Error al parsear el cuerpo JSON de la solicitud HTTP."),
+        ServerError::HttpFieldNotFound(e) => write!(f, "Campo no encontrado en el cuerpo de la solicitud HTTP: {}", e),
     }
 }
 

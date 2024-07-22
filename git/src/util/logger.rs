@@ -167,20 +167,67 @@ pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str
     log_message(tx, &message)
 }
 
+/// Registra un mensaje de error de desconexión del cliente.
+///
+/// Esta función formatea y envía un mensaje de registro indicando que la conexión 
+/// con el cliente se terminó debido a un error.
+///
+/// # Parámetros
+///
+/// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// - `signature`: Una cadena que contiene la firma del mensaje.
+/// 
 pub fn log_client_disconnection_error(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada por error", signature);
     log_message(tx, &message)
 }
 
+/// Registra un mensaje de desconexión exitosa del cliente.
+///
+/// Esta función formatea y envía un mensaje de registro indicando que la conexión 
+/// con el cliente se terminó exitosamente.
+///
+/// # Parámetros
+///
+/// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// - `signature`: Una cadena que contiene la firma del mensaje.
+/// 
 pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada", signature);
     log_message(tx, &message)
 }
 
-pub fn log_http_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<String>>>) {
-    let message = format!("{}Error en la solicitud HTTP.", signature);
+/// Registra un mensaje de error en una firma especifica
+///
+/// Esta función formatea y envía un mensaje de registro indicando que hubo un error 
+/// en la solicitud de la firma, seguido del mensaje de error específico.
+///
+/// # Parámetros
+///
+/// - `error`: Una cadena que contiene el mensaje de error.
+/// - `signature`: Una cadena que contiene la firma del mensaje.
+/// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// 
+pub fn log_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<String>>>) {
+    let message = format!("{}Error en la solicitud.", signature);
     log_message(&tx, &message);
     let message = format!("{}Error: {}", signature, error);
+    log_message(&tx, &message);
+}
+
+/// Registra un mensaje con una firma especificada.
+///
+/// Esta función formatea y envía un mensaje de registro precedido por una firma 
+/// específica.
+///
+/// # Parámetros
+///
+/// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
+/// - `signature`: Una cadena que contiene la firma del mensaje.
+/// - `message`: Una cadena que contiene el mensaje a registrar.
+/// 
+pub fn log_message_with_signature(tx: &Arc<Mutex<Sender<String>>>, signature: &str, message: &str) {
+    let message = format!("{} {}", signature, message);
     log_message(&tx, &message);
 }
 
@@ -189,14 +236,52 @@ mod tests {
     use super::*;
     use std::sync::mpsc;
 
+    fn setup() -> (Arc<Mutex<mpsc::Sender<String>>>, mpsc::Receiver<String>) {
+        let (tx, rx) = mpsc::channel();
+        (Arc::new(Mutex::new(tx)), rx)
+    }
+
     #[test]
     fn test_log_client_disconnection() {
-        let (tx, rx) = mpsc::channel();
-        let arc = Arc::new(Mutex::new(tx));
-
-        log_client_disconnection(&arc, "Test: ");
+        let (tx, rx) = setup();
+        log_client_disconnection(&tx, "Test: ");
 
         let received_message = rx.recv().unwrap();
         assert_eq!(received_message, "Test: Conexión terminada");
+    }
+
+    #[test]
+    fn test_log_client_disconnection_error() {
+        let (tx, rx) = setup();
+        let signature = "Client [127.0.0.1:8080] => ";
+        log_client_disconnection_error(&tx, signature);
+        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Conexión terminada por error");
+    }
+
+    #[test]
+    fn test_log_client_disconnection_success() {
+        let (tx, rx) = setup();
+        let signature = "Client [127.0.0.1:8080] => ";
+        log_client_disconnection_success(&tx, signature);
+        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Conexión terminada");
+    }
+
+    #[test]
+    fn test_log_request_error() {
+        let (tx, rx) = setup();
+        let signature = "Client [127.0.0.1:8080] => ";
+        let error = "404 Not Found".to_string();
+        log_request_error(&error, signature, &tx);
+        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Error en la solicitud.");
+        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Error: 404 Not Found");
+    }
+
+    #[test]
+    fn test_log_message_with_signature() {
+        let (tx, rx) = setup();
+        let signature = "Client [127.0.0.1:8080] =>";
+        let message = "Solicitud recibida";
+        log_message_with_signature(&tx, signature, message);
+        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Solicitud recibida");
     }
 }
