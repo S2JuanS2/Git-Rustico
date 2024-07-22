@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
-use serde_json::Value;
 use crate::{consts::HTTP_VERSION, servers::errors::ServerError};
-use super::{pr::PullRequest, status_code::StatusCode, utils::read_request};
+use super::{http_body::HttpBody, pr::PullRequest, status_code::StatusCode, utils::read_request};
 
 /// Representa una solicitud HTTP.
 ///
@@ -12,7 +11,7 @@ use super::{pr::PullRequest, status_code::StatusCode, utils::read_request};
 pub struct HttpRequest {
     method: String,
     path: String,
-    body: Value,
+    body: HttpBody,
     headers: HashMap<String, String>,
 }
 
@@ -29,7 +28,7 @@ impl HttpRequest {
     ///
     /// Retorna una nueva instancia de `HttpRequest`.
     /// 
-    pub fn new(method: String, path: String, body: Value, headers: HashMap<String, String>) -> Self {
+    pub fn new(method: String, path: String, body: HttpBody, headers: HashMap<String, String>) -> Self {
         HttpRequest { method, path, body , headers}
     }
 
@@ -69,7 +68,8 @@ impl HttpRequest {
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
     pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<StatusCode, ServerError> {
         // Manejar la solicitud HTTP
-        let pr = PullRequest::from_json(&self.body)?;
+        let pr = PullRequest::from_http_body(&self.body)?;
+        println!("Pull Request: {:?}", pr);
         match self.method.as_str() {
             "GET" => self.handle_get_request(&pr, source, tx),
             "POST" => self.handle_post_request(&pr, source, tx),
@@ -241,7 +241,7 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
     // Parsear el cuerpo de la solicitud
     let binding = "application/json".to_string();
     let content_type = headers.get("Content-Type").unwrap_or(&binding);
-    let body = parse_body(content_type, &body)?;
+    let body = HttpBody::parse(content_type, &body)?;
 
     Ok(HttpRequest::new(method, path, body, headers))
 }
@@ -330,15 +330,15 @@ pub fn segment_path(path: &str) -> Vec<&str> {
 /// Devuelve `ServerError::HttpParseBody` si el cuerpo no se puede analizar como JSON.
 /// Devuelve `ServerError::UnsupportedMediaType` si el tipo de contenido no es compatible.
 /// 
-fn parse_body(content_type: &str, body: &str) -> Result<Value, ServerError> {
-    match content_type {
-        "application/json" => serde_json::from_str(body).map_err(|_| ServerError::HttpParseBody),
-        "text/plain" => Ok(Value::String(body.to_string())),
-        // "application/xml" => from_xml_str(body).map_err(|_| ServerError::XmlParseError),
-        // "application/x-yaml" | "text/yaml" => serde_yaml::from_str(body).map_err(|_| ServerError::YamlParseError),
-        _ => Err(ServerError::UnsupportedMediaType),
-    }
-}
+// fn parse_body(content_type: &str, body: &str) -> Result<Value, ServerError> {
+//     match content_type {
+//         "application/json" => serde_json::from_str(body).map_err(|_| ServerError::HttpJsonParseBody),
+//         "text/plain" => Ok(Value::String(body.to_string())),
+//         "application/xml" => serde_xml_rs::from_str(body).map_err(|_| ServerError::HttpXmlParseBody),
+//         "application/x-yaml" | "text/yaml" => serde_yaml::from_str(body).map_err(|_| ServerError::HttpYamlParseBody),
+//         _ => Err(ServerError::UnsupportedMediaType),
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -351,7 +351,7 @@ mod tests {
         let expected_request = HttpRequest {
             method: "POST".to_string(),
             path: "/path".to_string(),
-            body: json!({"key": "value"}),
+            body: HttpBody::Json(json!({"key": "value"})),
             headers: [("Content-Length", "18")].iter().cloned().map(|(a, b)| (a.to_string(), b.to_string())).collect(),
         };
         assert_eq!(parse_http_request(request_str).unwrap(), expected_request);

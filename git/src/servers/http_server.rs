@@ -12,3 +12,5 @@ pub mod http_connection;
 pub mod pr;
 
 pub mod status_code;
+
+pub mod http_body;

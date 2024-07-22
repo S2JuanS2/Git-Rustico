@@ -1,12 +1,11 @@
-use serde_json::Value;
 use crate::consts::HTPP_SIGNATURE;
 use crate::servers::errors::ServerError;
 use crate::util::logger::log_message_with_signature;
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
-use super::status_code::StatusCode;
+use super::{http_body::HttpBody, status_code::StatusCode};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PullRequest {
     pub owner: String,
     pub repo: String,
@@ -17,22 +16,30 @@ pub struct PullRequest {
 }
 
 impl PullRequest {
-    pub fn from_json(json: &Value) -> Result<Self, ServerError> {
-        let owner = json["owner"].as_str()
-            .ok_or(ServerError::HttpNoOwnerFound)?
-            .to_string();
-
-        let repo = json["repo"].as_str()
-            .ok_or(ServerError::HttpNoRepoFound)?
-            .to_string();
-
+    /// Crea una nueva instancia de `PullRequest` a partir de un objeto `HttpBody`.
+    ///
+    /// # Argumentos
+    ///
+    /// * `body` - Un `HttpBody` que contiene los datos del Pull Request.
+    ///
+    /// # Errores
+    ///
+    /// Retorna un `ServerError::HttpFieldNotFound` si no se encuentran los campos requeridos.
+    pub fn from_http_body(body: &HttpBody) -> Result<Self, ServerError> {
+        let owner = body.get_field("owner")?;
+        let repo = body.get_field("repo")?;
+        let title = body.get_field("title").ok();
+        let head = body.get_field("head").ok();
+        let base = body.get_field("base").ok();
+        let body = body.get_field("body").ok();
+        
         Ok(PullRequest {
             owner,
             repo,
-            title: json["title"].as_str().map(ToString::to_string),
-            body: json["body"].as_str().map(ToString::to_string),
-            head: json["head"].as_str().map(ToString::to_string),
-            base: json["base"].as_str().map(ToString::to_string),
+            title,
+            body,
+            head,
+            base,
         })
     }
 

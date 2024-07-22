@@ -22,7 +22,11 @@ pub enum ServerError {
     HttpVersionNotSupported,
     UnsupportedMediaType,
     MissingRequestLine,
-    IncompleteRequestLine
+    IncompleteRequestLine,
+    HttpParseXmlBody,
+    HttpParseYamlBody,
+    HttpParseJsonBody,
+    HttpFieldNotFound(String),
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -46,6 +50,10 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::UnsupportedMediaType => write!(f, "Tipo de medio no soportado."),
         ServerError::MissingRequestLine => write!(f, "Línea de solicitud HTTP faltante."),
         ServerError::IncompleteRequestLine => write!(f, "Línea de solicitud HTTP incompleta."),
+        ServerError::HttpParseXmlBody => write!(f, "Error al parsear el cuerpo XML de la solicitud HTTP."),
+        ServerError::HttpParseYamlBody => write!(f, "Error al parsear el cuerpo YAML de la solicitud HTTP."),
+        ServerError::HttpParseJsonBody => write!(f, "Error al parsear el cuerpo JSON de la solicitud HTTP."),
+        ServerError::HttpFieldNotFound(e) => write!(f, "Campo no encontrado en el cuerpo de la solicitud HTTP: {}", e),
     }
 }
 
