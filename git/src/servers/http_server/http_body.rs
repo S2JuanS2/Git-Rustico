@@ -4,6 +4,16 @@ use serde_json::Value as JsonValue;
 use serde_yaml::Value as YamlValue;
 use crate::servers::errors::ServerError;
 
+/// Enum `HttpBody` que representa los diferentes tipos de cuerpos de solicitudes HTTP.
+///
+/// Este enum puede contener un valor JSON, XML, YAML o texto plano.
+///
+/// # Variantes
+/// - `Json(JsonValue)`: Contiene un valor JSON.
+/// - `Xml(JsonValue)`: Contiene un valor XML representado como `JsonValue`.
+/// - `Yaml(YamlValue)`: Contiene un valor YAML.
+/// - `PlainText(String)`: Contiene un texto plano.
+/// 
 #[derive(Debug, PartialEq)]
 pub enum HttpBody {
     Json(JsonValue),
@@ -13,7 +23,16 @@ pub enum HttpBody {
 }
 
 
-
+/// Implementa el trait `fmt::Display` para `HttpBody`.
+///
+/// Permite que el tipo `HttpBody` sea formateado como una cadena, dependiendo de su variante.
+///
+/// # Formateo
+/// - Para `Json`: Formatea el contenido JSON usando la representación predeterminada.
+/// - Para `Xml`: Usa `{:?}` para mostrar la representación de depuración del XML.
+/// - Para `Yaml`: Usa `{:?}` para mostrar la representación de depuración del YAML.
+/// - Para `PlainText`: Muestra el texto plano directamente.
+/// 
 impl fmt::Display for HttpBody {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -26,6 +45,22 @@ impl fmt::Display for HttpBody {
 }
 
 impl HttpBody {
+    /// Analiza el cuerpo de la solicitud HTTP según el tipo de contenido especificado.
+    ///
+    /// # Parámetros
+    /// - `content_type`: El tipo de contenido de la solicitud, como `application/json`, `application/xml`, etc.
+    /// - `body`: El cuerpo de la solicitud como una cadena.
+    ///
+    /// # Retorno
+    /// Retorna un `Result` que contiene el `HttpBody` adecuado en caso de éxito,
+    /// o un `ServerError` en caso de error.
+    ///
+    /// # Errores
+    /// - `ServerError::HttpParseJsonBody` si ocurre un error al analizar JSON.
+    /// - `ServerError::HttpParseYamlBody` si ocurre un error al analizar YAML.
+    /// - `ServerError::HttpParseXmlBody` si ocurre un error al analizar XML.
+    /// - `ServerError::UnsupportedMediaType` si el tipo de contenido no es soportado.
+    /// 
     pub fn parse(content_type: &str, body: &str) -> Result<Self, ServerError> {
         match content_type {
             "application/json" => {
@@ -46,6 +81,19 @@ impl HttpBody {
         }
     }
 
+    /// Obtiene el valor de un campo específico dentro del cuerpo de la solicitud.
+    ///
+    /// # Parámetros
+    /// - `field`: El nombre del campo cuyo valor se desea obtener.
+    ///
+    /// # Retorno
+    /// Retorna un `Result` que contiene el valor del campo como una cadena en caso de éxito,
+    /// o un `ServerError` en caso de error.
+    ///
+    /// # Errores
+    /// - `ServerError::HttpFieldNotFound` si el campo no se encuentra en el cuerpo de la solicitud.
+    /// - `ServerError::UnsupportedMediaType` si el tipo de cuerpo no es soportado para esta operación.
+    /// 
     pub fn get_field(&self, field: &str) -> Result<String, ServerError> {
         match self {
             HttpBody::Json(json) => json[field].as_str()
