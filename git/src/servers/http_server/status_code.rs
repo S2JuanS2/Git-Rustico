@@ -16,6 +16,7 @@ pub enum StatusCode {
     MergeWasSuccessful,
     MethodNotAllowed,
     Conflict,
+    BadRequest,
 }
 
 impl StatusCode {
@@ -47,6 +48,7 @@ impl StatusCode {
             StatusCode::MergeWasSuccessful => "200 OK if merge was successful".to_string(),
             StatusCode::MethodNotAllowed => "405 Method Not Allowed if merge cannot be performed".to_string(),
             StatusCode::Conflict => "409 Conflict if sha was provided and pull request head did not match".to_string(),
+            StatusCode::BadRequest => "400 Bad Request".to_string(),
         }
     }
 }

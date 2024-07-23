@@ -112,7 +112,7 @@ impl HttpRequest {
                 return pr.list_commits(repo_name, pull_number, src, tx);
             },
             _ => {
-                return Err(ServerError::InvalidGetPathError);
+                Ok(StatusCode::BadRequest)
             }
         }
     }
@@ -136,7 +136,7 @@ impl HttpRequest {
                 return pr.create_pull_requests(repo_name, src, tx);
             }
             _ => {
-                return Err(ServerError::InvalidPostPathError);
+                Ok(StatusCode::BadRequest)
             }
         }
     }
@@ -160,7 +160,7 @@ impl HttpRequest {
                 return pr.merge_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                return Err(ServerError::InvalidPutPathError);
+                Ok(StatusCode::BadRequest)
             }
         }
     }
@@ -184,7 +184,7 @@ impl HttpRequest {
                 return pr.modify_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                Err(ServerError::InvalidPatchPathError)
+                Ok(StatusCode::BadRequest)
             }
         }
     }

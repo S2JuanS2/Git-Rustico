@@ -70,7 +70,7 @@ impl PullRequest {
     }
 
     pub fn get_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let file_path = format!("{}/{}/{}/{}", src, PR_FOLDER, repo_name, pull_number);
+        let file_path = get_pull_request_file_path(repo_name, pull_number, src);
         if !file_exists(&file_path)
         {
             return Ok(StatusCode::ResourceNotFound);
@@ -82,24 +82,46 @@ impl PullRequest {
         Ok(StatusCode::Forbidden)
     }
 
-    pub fn list_commits(&self,repo_name: &str, pull_number: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    pub fn list_commits(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        let file_path = get_pull_request_file_path(repo_name, pull_number, src);
+        if !file_exists(&file_path)
+        {
+            return Ok(StatusCode::ResourceNotFound);
+        }
+        
         let message = format!("GET request to path: /repos/{}/pulls/{}/commits", repo_name, pull_number);
         println!("{}", message);
         log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
         Ok(StatusCode::Forbidden)
     }
 
-    pub fn merge_pull_request(&self,repo_name: &str, pull_number: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    pub fn merge_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        let file_path = get_pull_request_file_path(repo_name, pull_number, src);
+        if !file_exists(&file_path)
+        {
+            return Ok(StatusCode::ResourceNotFound);
+        }
+
         let message = format!("PUT request to path: /repos/{}/pulls/{}/merge", repo_name, pull_number);
         println!("{}", message);
         log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
         Ok(StatusCode::Forbidden)
     }
 
-    pub fn modify_pull_request(&self,repo_name: &str, pull_number: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    pub fn modify_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        let file_path = get_pull_request_file_path(repo_name, pull_number, src);
+        if !file_exists(&file_path)
+        {
+            return Ok(StatusCode::ResourceNotFound);
+        }
+
         let message = format!("PATCH request to path: /repos/{}/pulls/{}", repo_name, pull_number);
         println!("{}", message);
         log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
         Ok(StatusCode::Forbidden)
     }
+}
+
+fn get_pull_request_file_path(repo_name: &str, pull_number: &str, src: &String) -> String {
+    format!("{}/{}/{}/{}", src, PR_FOLDER, repo_name, pull_number)
 }
