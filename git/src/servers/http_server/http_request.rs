@@ -231,20 +231,23 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
     let headers = parse_headers(&lines[1..header_end_index]);
 
     // Obtener el cuerpo de la solicitud
-    let body = if header_end_index < lines.len() {
-        lines[(header_end_index + 1)..].join("\n")
-    } else {
-        String::new()
-    };
-
-    // Parsear el cuerpo de la solicitud
-    let binding = "application/json".to_string();
-    let content_type = headers.get("Content-Type").unwrap_or(&binding);
-    let body = HttpBody::parse(content_type, &body)?;
+    let body = parse_body(request, &headers)?;
 
     Ok(HttpRequest::new(method, path, body, headers))
 }
 
+
+fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBody, ServerError> {
+    // Obtener el cuerpo de la solicitud
+    let finish = headers.get("Content-Length").map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
+    let body = &request[request.len() - finish..];
+
+    // Parsear el cuerpo de la solicitud
+    let binding = "application/json".to_string();
+    let content_type = headers.get("Content-Type").unwrap_or(&binding);
+    HttpBody::parse(content_type, &body)
+
+}
 
 /// Analiza la línea de solicitud de una solicitud HTTP.
 ///
