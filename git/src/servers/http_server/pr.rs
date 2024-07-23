@@ -1,5 +1,6 @@
-use crate::consts::HTPP_SIGNATURE;
+use crate::consts::{HTPP_SIGNATURE, PR_FOLDER};
 use crate::servers::errors::ServerError;
+use crate::util::files::file_exists;
 use crate::util::logger::log_message_with_signature;
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
@@ -43,6 +44,17 @@ impl PullRequest {
         })
     }
 
+    pub fn default() -> Self {
+        PullRequest {
+            owner: None,
+            repo: None,
+            title: None,
+            body: None,
+            head: None,
+            base: None,
+        }
+    }
+
     pub fn create_pull_requests(&self,repo_name: &str, _src: &String,tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let message = format!("POST request to path: /repos/{}/pulls", repo_name);
         println!("{}", message);
@@ -57,7 +69,13 @@ impl PullRequest {
         Ok(StatusCode::Forbidden)
     }
 
-    pub fn get_pull_request(&self,repo_name: &str, pull_number: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    pub fn get_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        let file_path = format!("{}/{}/{}/{}", src, PR_FOLDER, repo_name, pull_number);
+        if !file_exists(&file_path)
+        {
+            return Ok(StatusCode::ResourceNotFound);
+        }
+
         let message = format!("GET request to path: /repos/{}/pulls/{}", repo_name, pull_number);
         println!("{}", message);
         log_message_with_signature(&tx, HTPP_SIGNATURE, &message);

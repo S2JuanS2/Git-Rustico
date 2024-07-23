@@ -69,7 +69,6 @@ impl HttpRequest {
     pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<StatusCode, ServerError> {
         // Manejar la solicitud HTTP
         let pr = PullRequest::from_http_body(&self.body)?;
-        println!("Pull Request: {:?}", pr);
         match self.method.as_str() {
             "GET" => self.handle_get_request(&pr, source, tx),
             "POST" => self.handle_post_request(&pr, source, tx),
