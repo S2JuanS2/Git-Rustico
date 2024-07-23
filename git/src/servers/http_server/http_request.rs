@@ -312,32 +312,6 @@ pub fn segment_path(path: &str) -> Vec<&str> {
     path.split('/').collect()
 }
 
-/// Analiza el cuerpo de una solicitud HTTP según el tipo de contenido.
-///
-/// # Argumentos
-///
-/// * `content_type` - Una cadena que indica el tipo de contenido del cuerpo.
-/// * `body` - Una cadena que contiene el cuerpo de la solicitud.
-///
-/// # Retornos
-///
-/// Un valor de `serde_json::Value` si el cuerpo se puede analizar correctamente.
-/// De lo contrario, devuelve un error `ServerError`.
-///
-/// # Errores
-///
-/// Devuelve `ServerError::HttpParseBody` si el cuerpo no se puede analizar como JSON.
-/// Devuelve `ServerError::UnsupportedMediaType` si el tipo de contenido no es compatible.
-/// 
-// fn parse_body(content_type: &str, body: &str) -> Result<Value, ServerError> {
-//     match content_type {
-//         "application/json" => serde_json::from_str(body).map_err(|_| ServerError::HttpJsonParseBody),
-//         "text/plain" => Ok(Value::String(body.to_string())),
-//         "application/xml" => serde_xml_rs::from_str(body).map_err(|_| ServerError::HttpXmlParseBody),
-//         "application/x-yaml" | "text/yaml" => serde_yaml::from_str(body).map_err(|_| ServerError::HttpYamlParseBody),
-//         _ => Err(ServerError::UnsupportedMediaType),
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
