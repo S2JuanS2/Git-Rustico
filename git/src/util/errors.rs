@@ -96,6 +96,7 @@ pub enum UtilError {
     ConnectionIsTerminated,
     SendStatusUpdateRequest,
     CloseConnection,
+    NotDirectory,
 }
 
 fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -191,7 +192,9 @@ fn format_error(error: &UtilError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         UtilError::InvalidReferencePath => write!(f, "InvalidReferencePath: Ruta de referencia inválida."),
         UtilError::ConnectionIsTerminated => write!(f, "ConnectionIsTerminated: La conexión fue terminada."),
         UtilError::SendStatusUpdateRequest => write!(f, "SendStatusUpdateRequest: Error al enviar la solicitud de actualización de estado."),
-        UtilError::CloseConnection => write!(f, "CloseConnection: Error al cerrar la conexión.")
+        UtilError::CloseConnection => write!(f, "CloseConnection: Error al cerrar la conexión."),
+        UtilError::NotDirectory => write!(f, "NotDirectory: No es un directorio."),
+
     }
 }
 

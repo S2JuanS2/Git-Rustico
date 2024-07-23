@@ -7,8 +7,8 @@ use super::{http_body::HttpBody, status_code::StatusCode};
 
 #[derive(Debug, PartialEq)]
 pub struct PullRequest {
-    pub owner: String,
-    pub repo: String,
+    pub owner: Option<String>,
+    pub repo: Option<String>,
     pub title: Option<String>,
     pub body: Option<String>,
     pub head: Option<String>,
@@ -26,8 +26,8 @@ impl PullRequest {
     ///
     /// Retorna un `ServerError::HttpFieldNotFound` si no se encuentran los campos requeridos.
     pub fn from_http_body(body: &HttpBody) -> Result<Self, ServerError> {
-        let owner = body.get_field("owner")?;
-        let repo = body.get_field("repo")?;
+        let owner = body.get_field("owner").ok();
+        let repo = body.get_field("repo").ok();
         let title = body.get_field("title").ok();
         let head = body.get_field("head").ok();
         let base = body.get_field("base").ok();
