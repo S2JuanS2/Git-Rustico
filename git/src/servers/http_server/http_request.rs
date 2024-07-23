@@ -236,7 +236,29 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
     Ok(HttpRequest::new(method, path, body, headers))
 }
 
-
+/// Parsea el cuerpo de una solicitud HTTP basado en el tipo de contenido especificado en los encabezados.
+///
+/// Esta función toma una solicitud HTTP en forma de string y un `HashMap` de encabezados,
+/// y devuelve un `Result` que contiene un `HttpBody` en caso de éxito, o un `ServerError`
+/// en caso de error.
+///
+/// # Argumentos
+///
+/// * `request` - Una referencia a un string slice que contiene la solicitud HTTP completa.
+/// * `headers` - Un `HashMap` que contiene los encabezados de la solicitud HTTP.
+///
+/// # Retornos
+///
+/// Esta función devuelve un `Result<HttpBody, ServerError>`. Si el cuerpo de la solicitud
+/// se parsea correctamente, devuelve un `HttpBody` correspondiente al tipo de contenido.
+/// Si ocurre un error durante el parseo, devuelve un `ServerError`.
+///
+/// # Errores
+///
+/// Esta función puede devolver un `ServerError` si:
+/// - El tipo de contenido especificado no es soportado.
+/// - Ocurre un error durante el parseo del cuerpo de la solicitud.
+///
 fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBody, ServerError> {
     // Obtener el cuerpo de la solicitud
     let finish = headers.get("Content-Length").map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
