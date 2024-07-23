@@ -1,3 +1,6 @@
+use std::fmt;
+
+
 /// Enumera los posibles códigos de estado HTTP que pueden ser retornados por el servidor.
 pub enum StatusCode {
     Created,
@@ -48,3 +51,8 @@ impl StatusCode {
     }
 }
 
+impl fmt::Display for StatusCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}

@@ -100,7 +100,7 @@ impl HttpRequest {
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
     fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        let path_segments: Vec<&str> = segment_path(&self.get_path());
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
                 return pr.list_pull_request(repo_name, src, tx);
