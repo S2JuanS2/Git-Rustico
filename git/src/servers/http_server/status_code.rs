@@ -1,3 +1,6 @@
+use std::fmt;
+
+
 /// Enumera los posibles códigos de estado HTTP que pueden ser retornados por el servidor.
 pub enum StatusCode {
     Created,
@@ -13,6 +16,7 @@ pub enum StatusCode {
     MergeWasSuccessful,
     MethodNotAllowed,
     Conflict,
+    BadRequest,
 }
 
 impl StatusCode {
@@ -44,7 +48,13 @@ impl StatusCode {
             StatusCode::MergeWasSuccessful => "200 OK if merge was successful".to_string(),
             StatusCode::MethodNotAllowed => "405 Method Not Allowed if merge cannot be performed".to_string(),
             StatusCode::Conflict => "409 Conflict if sha was provided and pull request head did not match".to_string(),
+            StatusCode::BadRequest => "400 Bad Request".to_string(),
         }
     }
 }
 
+impl fmt::Display for StatusCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}

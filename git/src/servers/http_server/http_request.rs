@@ -69,7 +69,6 @@ impl HttpRequest {
     pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<StatusCode, ServerError> {
         // Manejar la solicitud HTTP
         let pr = PullRequest::from_http_body(&self.body)?;
-        println!("Pull Request: {:?}", pr);
         match self.method.as_str() {
             "GET" => self.handle_get_request(&pr, source, tx),
             "POST" => self.handle_post_request(&pr, source, tx),
@@ -101,7 +100,7 @@ impl HttpRequest {
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
     fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let path_segments: Vec<&str> = self.get_path().split('/').collect();
+        let path_segments: Vec<&str> = segment_path(&self.get_path());
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
                 return pr.list_pull_request(repo_name, src, tx);
@@ -113,7 +112,7 @@ impl HttpRequest {
                 return pr.list_commits(repo_name, pull_number, src, tx);
             },
             _ => {
-                return Err(ServerError::InvalidGetPathError);
+                Ok(StatusCode::BadRequest)
             }
         }
     }
@@ -137,7 +136,7 @@ impl HttpRequest {
                 return pr.create_pull_requests(repo_name, src, tx);
             }
             _ => {
-                return Err(ServerError::InvalidPostPathError);
+                Ok(StatusCode::BadRequest)
             }
         }
     }
@@ -161,7 +160,7 @@ impl HttpRequest {
                 return pr.merge_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                return Err(ServerError::InvalidPutPathError);
+                Ok(StatusCode::BadRequest)
             }
         }
     }
@@ -185,7 +184,7 @@ impl HttpRequest {
                 return pr.modify_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                Err(ServerError::InvalidPatchPathError)
+                Ok(StatusCode::BadRequest)
             }
         }
     }
@@ -232,20 +231,45 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
     let headers = parse_headers(&lines[1..header_end_index]);
 
     // Obtener el cuerpo de la solicitud
-    let body = if header_end_index < lines.len() {
-        lines[(header_end_index + 1)..].join("\n")
-    } else {
-        String::new()
-    };
-
-    // Parsear el cuerpo de la solicitud
-    let binding = "application/json".to_string();
-    let content_type = headers.get("Content-Type").unwrap_or(&binding);
-    let body = HttpBody::parse(content_type, &body)?;
+    let body = parse_body(request, &headers)?;
 
     Ok(HttpRequest::new(method, path, body, headers))
 }
 
+/// Parsea el cuerpo de una solicitud HTTP basado en el tipo de contenido especificado en los encabezados.
+///
+/// Esta función toma una solicitud HTTP en forma de string y un `HashMap` de encabezados,
+/// y devuelve un `Result` que contiene un `HttpBody` en caso de éxito, o un `ServerError`
+/// en caso de error.
+///
+/// # Argumentos
+///
+/// * `request` - Una referencia a un string slice que contiene la solicitud HTTP completa.
+/// * `headers` - Un `HashMap` que contiene los encabezados de la solicitud HTTP.
+///
+/// # Retornos
+///
+/// Esta función devuelve un `Result<HttpBody, ServerError>`. Si el cuerpo de la solicitud
+/// se parsea correctamente, devuelve un `HttpBody` correspondiente al tipo de contenido.
+/// Si ocurre un error durante el parseo, devuelve un `ServerError`.
+///
+/// # Errores
+///
+/// Esta función puede devolver un `ServerError` si:
+/// - El tipo de contenido especificado no es soportado.
+/// - Ocurre un error durante el parseo del cuerpo de la solicitud.
+///
+fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBody, ServerError> {
+    // Obtener el cuerpo de la solicitud
+    let finish = headers.get("Content-Length").map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
+    let body = &request[request.len() - finish..];
+
+    // Parsear el cuerpo de la solicitud
+    let binding = "application/json".to_string();
+    let content_type = headers.get("Content-Type").unwrap_or(&binding);
+    HttpBody::parse(content_type, &body)
+
+}
 
 /// Analiza la línea de solicitud de una solicitud HTTP.
 ///
@@ -313,32 +337,6 @@ pub fn segment_path(path: &str) -> Vec<&str> {
     path.split('/').collect()
 }
 
-/// Analiza el cuerpo de una solicitud HTTP según el tipo de contenido.
-///
-/// # Argumentos
-///
-/// * `content_type` - Una cadena que indica el tipo de contenido del cuerpo.
-/// * `body` - Una cadena que contiene el cuerpo de la solicitud.
-///
-/// # Retornos
-///
-/// Un valor de `serde_json::Value` si el cuerpo se puede analizar correctamente.
-/// De lo contrario, devuelve un error `ServerError`.
-///
-/// # Errores
-///
-/// Devuelve `ServerError::HttpParseBody` si el cuerpo no se puede analizar como JSON.
-/// Devuelve `ServerError::UnsupportedMediaType` si el tipo de contenido no es compatible.
-/// 
-// fn parse_body(content_type: &str, body: &str) -> Result<Value, ServerError> {
-//     match content_type {
-//         "application/json" => serde_json::from_str(body).map_err(|_| ServerError::HttpJsonParseBody),
-//         "text/plain" => Ok(Value::String(body.to_string())),
-//         "application/xml" => serde_xml_rs::from_str(body).map_err(|_| ServerError::HttpXmlParseBody),
-//         "application/x-yaml" | "text/yaml" => serde_yaml::from_str(body).map_err(|_| ServerError::HttpYamlParseBody),
-//         _ => Err(ServerError::UnsupportedMediaType),
-//     }
-// }
 
 #[cfg(test)]
 mod tests {

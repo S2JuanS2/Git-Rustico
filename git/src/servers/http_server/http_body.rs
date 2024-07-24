@@ -18,6 +18,7 @@ pub enum HttpBody {
     Json(JsonValue),
     Xml(JsonValue),
     Yaml(YamlValue),
+    Empty,
 }
 
 
@@ -36,6 +37,7 @@ impl fmt::Display for HttpBody {
             HttpBody::Json(json) => write!(f, "{}", json),
             HttpBody::Xml(xml) => write!(f, "{:?}", xml),
             HttpBody::Yaml(yaml) => write!(f, "{:?}", yaml),
+            HttpBody::Empty => write!(f, ""),
         }
     }
 }
@@ -58,6 +60,9 @@ impl HttpBody {
     /// - `ServerError::UnsupportedMediaType` si el tipo de contenido no es soportado.
     /// 
     pub fn parse(content_type: &str, body: &str) -> Result<Self, ServerError> {
+        if body.is_empty() {
+            return Ok(HttpBody::Empty);
+        }
         match content_type {
             "application/json" => {
                 serde_json::from_str(body).map(HttpBody::Json).map_err(|_| ServerError::HttpParseJsonBody)
@@ -106,6 +111,7 @@ impl HttpBody {
             HttpBody::Yaml(yaml) => yaml[field].as_str()
                 .ok_or_else(|| ServerError::HttpFieldNotFound(field.to_string()))
                 .map(|s| s.to_string()),
+            HttpBody::Empty => Err(ServerError::HttpFieldNotFound(field.to_string())),
         }
     }
 }

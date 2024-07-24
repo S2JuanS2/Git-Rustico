@@ -181,3 +181,110 @@ fn _ensure_directory_clean(directory: &str) -> io::Result<()> {
     }
     Ok(())
 }
+
+/// Verifica si una carpeta existe dado un path.
+///
+/// # Argumentos
+///
+/// * `folder_path` - El path de la carpeta que se desea verificar.
+///
+/// # Retorna
+///
+/// `true` si la carpeta existe, `false` en caso contrario.
+///
+pub fn folder_exists(folder_path: &str) -> bool {
+    let path = Path::new(folder_path);
+    path.is_dir()
+}
+
+
+/// Verifica si un archivo existe dado un path.
+///
+/// # Argumentos
+///
+/// * `file_path` - El path del archivo que se desea verificar.
+///
+/// # Retorna
+///
+/// `true` si el archivo existe, `false` en caso contrario.
+///
+pub fn file_exists(file_path: &str) -> bool {
+    let path = Path::new(file_path);
+    path.is_file()
+}
+
+/// Lista todos los archivos y carpetas en un directorio especificado.
+///
+/// Esta función toma la ruta de un directorio como parámetro y devuelve un `Vec<String>`
+/// con los nombres de todos los archivos y carpetas contenidos en ese directorio.
+///
+/// # Argumentos
+///
+/// * `path` - Una referencia a un string slice que contiene la ruta del directorio a listar.
+///
+/// # Retornos
+///
+/// Esta función devuelve un `io::Result<Vec<String>>`. Si el directorio se lista correctamente,
+/// devuelve un vector de strings con los nombres de los archivos y carpetas. Si ocurre un error,
+/// devuelve un `io::Error`.
+///
+/// # Errores
+///
+/// Esta función retornará un `io::Error` si:
+/// - La ruta especificada no es un directorio.
+/// - Ocurre algún error al leer el contenido del directorio.
+/// 
+pub fn list_directory_contents(path: &str) -> Result<Vec<String>, UtilError> {
+    let mut entries = Vec::new();
+    let path = Path::new(path);
+
+    if path.is_dir() {
+        let dir_enty = match fs::read_dir(path)
+        {
+            Ok(dir_enty) => dir_enty,
+            Err(_) => return Err(UtilError::ReadDirError),
+        };
+        for entry in dir_enty {
+            let entry = match entry
+            {
+                Ok(entry) => entry,
+                Err(_) => return Err(UtilError::ReadDirError),
+            };
+            let entry_path = entry.path();
+            if let Some(entry_name) = entry_path.file_name() {
+                if let Some(name_str) = entry_name.to_str() {
+                    entries.push(name_str.to_string());
+                }
+            }
+        }
+    } else {
+        return Err(UtilError::NotDirectory);
+    }
+
+    Ok(entries)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_folder_exists() {
+        assert_eq!(folder_exists("./bin"), true);
+    }
+
+    #[test]
+    fn test_folder_not_exists() {
+        assert_eq!(folder_exists("/nonexistent_folder"), false);
+    }
+
+    #[test]
+    fn test_file_exists() {
+        assert_eq!(file_exists("./Cargo.toml"), true); 
+    }
+
+    #[test]
+    fn test_file_not_exists() {
+        assert_eq!(file_exists("/nonexistent_file"), false);
+    }
+}
