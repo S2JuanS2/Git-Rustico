@@ -105,6 +105,22 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: StatusCode) -> Re
     }
 }
 
+/// Envía el cuerpo de una respuesta HTTP a través de un escritor.
+///
+/// Esta función toma un escritor y un cuerpo HTTP, obtiene el tipo de contenido y el cuerpo en forma de cadena,
+/// y luego envía el cuerpo junto con los encabezados necesarios para una respuesta HTTP.
+/// 
+/// # Argumentos
+///
+/// * `writer` - Un escritor mutable que implementa el trait `Write`. Este escritor será utilizado para enviar la respuesta.
+/// * `body` - Una referencia a un `HttpBody` que contiene el cuerpo de la respuesta a enviar.
+///
+/// # Errores
+///
+/// Esta función retornará un `ServerError` si ocurre un error al enviar el cuerpo de la respuesta.
+/// Los errores pueden ser causados por problemas al obtener el tipo de contenido y el cuerpo,
+/// o por fallos al escribir en el escritor proporcionado.
+///
 fn send_body(writer: &mut dyn Write, body: &HttpBody) -> Result<(), ServerError> {
     let (content_type, body_str) = body.get_content_type_and_body()?;
     

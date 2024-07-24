@@ -9,6 +9,22 @@ use super::status_code::StatusCode;
 use super::utils::send_response_http;
 
 
+/// Maneja las conexiones HTTP de los clientes.
+///
+/// Esta función se encarga de manejar una conexión HTTP entrante de un cliente, procesar la solicitud,
+/// y enviar la respuesta adecuada. También se encarga de loggear los eventos de conexión, desconexión,
+/// y posibles errores que ocurran durante el proceso.
+///
+/// # Argumentos
+///
+/// * `stream` - Un mutable referencia a un `TcpStream` que representa la conexión con el cliente.
+/// * `tx` - Un `Arc<Mutex<Sender<String>>>` que se utiliza para enviar mensajes de log.
+/// * `root_directory` - Un `String` que representa el directorio raíz del servidor.
+///
+/// # Retornos
+///
+/// Retorna un `Result<(), GitError>` indicando si la operación fue exitosa o si ocurrió un error.
+///
 pub fn handle_client_http(
     stream: &mut TcpStream,
     tx: Arc<Mutex<Sender<String>>>,
@@ -36,7 +52,22 @@ pub fn handle_client_http(
     }
 }
 
-
+/// Maneja las solicitudes HTTP internas del cliente.
+///
+/// Esta función auxiliar se encarga de crear la solicitud HTTP a partir del flujo de entrada,
+/// y manejar la solicitud procesándola y retornando el código de estado apropiado.
+///
+/// # Argumentos
+///
+/// * `stream` - Un mutable referencia a un `TcpStream` que representa la conexión con el cliente.
+/// * `root_directory` - Un `String` que representa el directorio raíz del servidor.
+/// * `tx` - Una referencia a un `Arc<Mutex<Sender<String>>>` que se utiliza para enviar mensajes de log.
+/// * `signature` - Una referencia a un `String` que contiene la firma del cliente.
+///
+/// # Retornos
+///
+/// Retorna un `Result<StatusCode, GitError>` indicando si la operación fue exitosa o si ocurrió un error.
+///
 pub fn _handle_client_http(
     stream: &mut TcpStream,
     root_directory: String,
