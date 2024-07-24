@@ -1,7 +1,6 @@
-use crate::consts::{HTPP_SIGNATURE, PR_FOLDER};
+use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER};
 use crate::servers::errors::ServerError;
 use crate::util::files::file_exists;
-use crate::util::logger::log_message_with_signature;
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
 use super::{http_body::HttpBody, status_code::StatusCode};
@@ -60,92 +59,58 @@ impl PullRequest {
     }
 
     pub fn create_from_file(file_path: &str) -> Result<Self, ServerError> {
-        let content = match std::fs::read_to_string(file_path)
-        {
-            Ok(content) => content,
-            Err(_) => return Err(ServerError::ResourceNotFound(file_path.to_string())),
-        };
-        let body = match HttpBody::create_json(&content)
-        {
-            Ok(body) => body,
-            Err(e) => return Err(e),
-        };
+        let body = HttpBody::create_from_file(APPLICATION_SERVER, file_path)?;
         PullRequest::from_http_body(&body)
     }
 
-    pub fn create_pull_requests(&self,repo_name: &str, _src: &String,tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let message = format!("POST request to path: /repos/{}/pulls", repo_name);
-        println!("{}", message);
-        log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
+    pub fn create_pull_requests(&self,_repo_name: &str, _src: &String,_tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         Ok(StatusCode::Forbidden)
     }
 
-    pub fn list_pull_request(&self,repo_name: &str, _src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let message = format!("GET request to path: /repos/{}/pulls", repo_name);
-        println!("{}", message);
-        log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
+    pub fn list_pull_request(&self,_repo_name: &str, _src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         Ok(StatusCode::Forbidden)
     }
 
-    pub fn get_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    pub fn get_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let file_path: String = get_pull_request_file_path(repo_name, pull_number, src);
         println!("{}", file_path);
         if !file_exists(&file_path)
         {
             return Ok(StatusCode::ResourceNotFound);
         }
-        // let  
-        let pr = PullRequest::create_from_file(&file_path);
-        println!("{:?}", pr);
-        let message = format!("GET request to path: /repos/{}/pulls/{}", repo_name, pull_number);
-        println!("{}", message);
-        log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
-        match pr {
-            Ok(_) => Ok(StatusCode::Ok),
-            Err(e) => Err(e),
-        }
+        let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
+        println!("{:?}", body);
+        Ok(StatusCode::Ok(Option::None))
     }
 
-    pub fn list_commits(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    pub fn list_commits(&self,repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let file_path = get_pull_request_file_path(repo_name, pull_number, src);
         if !file_exists(&file_path)
         {
             return Ok(StatusCode::ResourceNotFound);
         }
-        
-        let message = format!("GET request to path: /repos/{}/pulls/{}/commits", repo_name, pull_number);
-        println!("{}", message);
-        log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
         Ok(StatusCode::Forbidden)
     }
 
-    pub fn merge_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    pub fn merge_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let file_path = get_pull_request_file_path(repo_name, pull_number, src);
         if !file_exists(&file_path)
         {
             return Ok(StatusCode::ResourceNotFound);
         }
-
-        let message = format!("PUT request to path: /repos/{}/pulls/{}/merge", repo_name, pull_number);
-        println!("{}", message);
-        log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
         Ok(StatusCode::Forbidden)
     }
 
-    pub fn modify_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    pub fn modify_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let file_path = get_pull_request_file_path(repo_name, pull_number, src);
         if !file_exists(&file_path)
         {
             return Ok(StatusCode::ResourceNotFound);
         }
-
-        let message = format!("PATCH request to path: /repos/{}/pulls/{}", repo_name, pull_number);
-        println!("{}", message);
-        log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
         Ok(StatusCode::Forbidden)
     }
 }
 
 fn get_pull_request_file_path(repo_name: &str, pull_number: &str, src: &String) -> String {
-    format!("{}/{}/{}/{}.json", src, PR_FOLDER, repo_name, pull_number)
+    format!("{}/{}/{}/{}{}", src, PR_FOLDER, repo_name, pull_number, PR_FILE_EXTENSION)
 }

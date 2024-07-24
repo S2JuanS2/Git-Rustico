@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde_json::Value as JsonValue;
 use serde_yaml::Value as YamlValue;
-use crate::servers::errors::ServerError;
+use crate::{consts::{APPLICATION_JSON, APPLICATION_XML, APPLICATION_YAML, TEXT_XML, TEXT_YAML}, servers::errors::ServerError};
 
 /// Enum `HttpBody` que representa los diferentes tipos de cuerpos de solicitudes HTTP.
 ///
@@ -64,13 +64,13 @@ impl HttpBody {
             return Ok(HttpBody::Empty);
         }
         match content_type {
-            "application/json" => {
+            APPLICATION_JSON => {
                 serde_json::from_str(body).map(HttpBody::Json).map_err(|_| ServerError::HttpParseJsonBody)
             }
-            "application/yaml" | "text/yaml" => {
+            APPLICATION_YAML | TEXT_YAML => {
                 serde_yaml::from_str(body).map(HttpBody::Yaml).map_err(|_| ServerError::HttpParseYamlBody)
             }
-            "application/xml" | "text/xml" => {
+            APPLICATION_XML | TEXT_XML => {
                 serde_xml_rs::from_str(body).map(HttpBody::Xml).map_err(|_| ServerError::HttpParseXmlBody)
             }
             _ => Err(ServerError::UnsupportedMediaType),
@@ -112,16 +112,6 @@ impl HttpBody {
                 .ok_or_else(|| ServerError::HttpFieldNotFound(field.to_string()))
                 .map(|s| s.to_string()),
             HttpBody::Empty => Err(ServerError::HttpFieldNotFound(field.to_string())),
-        }
-    }
-
-    pub fn create_json(body: &str) -> Result<HttpBody, ServerError> {
-        println!("Body: {}", body);
-        let pr: Result<JsonValue, serde_json::Error> = serde_json::from_str(body);
-        println!("PR: {:?}", pr);
-        match serde_json::from_str(body) {
-            Ok(json) => Ok(HttpBody::Json(json)),
-            Err(_) => Err(ServerError::StoredFileParse),
         }
     }
 

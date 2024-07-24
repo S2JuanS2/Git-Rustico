@@ -174,3 +174,17 @@ pub const DAEMON_SIGNATURE: &str = "Daemon |";
 pub const HTTP_VERSION: &str = "HTTP/1.1";
 
 pub const CRLF: &str = "\r\n\r\n";
+
+pub const APPLICATION_JSON: &str = "application/json";
+
+pub const APPLICATION_YAML: &str = "application/yaml";
+
+pub const APPLICATION_XML: &str = "application/xml";
+
+pub const APPLICATION_SERVER: &str = APPLICATION_JSON;
+
+pub const TEXT_YAML: &str = "text/yaml";
+
+pub const TEXT_XML: &str = "text/xml";
+
+pub const PR_FILE_EXTENSION: &str = ".json";
