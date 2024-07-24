@@ -219,7 +219,6 @@ impl HttpRequest {
 /// en caso de error.
 ///
 fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
-    println!("Request: {}", request);
     let lines: Vec<&str> = request.lines().collect();
     if lines.len() < 1 {
         return Err(ServerError::MissingRequestLine);
