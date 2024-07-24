@@ -71,16 +71,32 @@ impl PullRequest {
         Ok(StatusCode::Forbidden)
     }
 
+    /// Obtiene una solicitud de extracción desde el archivo correspondiente.
+    ///
+    /// Esta función construye la ruta al archivo del pull request usando el nombre del repositorio
+    /// y el número del pull request. Luego, intenta leer y parsear el archivo. Si el archivo no existe,
+    /// devuelve un código de estado `ResourceNotFound`. Si el archivo se lee y parsea correctamente,
+    /// devuelve un código de estado `Ok`.
+    ///
+    /// # Parámetros
+    /// - `repo_name`: El nombre del repositorio al que pertenece el pull request.
+    /// - `pull_number`: El número del pull request que se desea obtener.
+    /// - `src`: La ruta base donde se encuentran los archivos del pull request.
+    /// - `_tx`: Un canal de transmisión (`Sender<String>`) usado para comunicación con el archivo de log.
+    ///
+    /// # Retornos
+    /// - `Ok(StatusCode::Ok)`: Si el archivo se encuentra y se parsea correctamente.
+    /// - `Ok(StatusCode::ResourceNotFound)`: Si el archivo no existe en el sistema.
+    /// - `Err(ServerError)`: Si ocurre un error al crear el cuerpo HTTP desde el archivo.
+    ///
     pub fn get_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let file_path: String = get_pull_request_file_path(repo_name, pull_number, src);
-        println!("{}", file_path);
         if !file_exists(&file_path)
         {
             return Ok(StatusCode::ResourceNotFound);
         }
         let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
-        println!("{:?}", body);
-        Ok(StatusCode::Ok(Option::None))
+        Ok(StatusCode::Ok(Option::Some(body)))
     }
 
     pub fn list_commits(&self,repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {

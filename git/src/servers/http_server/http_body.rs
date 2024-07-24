@@ -115,6 +115,19 @@ impl HttpBody {
         }
     }
 
+    /// Crea un cuerpo de solicitud HTTP (`HttpBody`) a partir de un archivo.
+    ///
+    /// Esta función lee el contenido de un archivo especificado y lo parsea en
+    /// función del tipo de contenido proporcionado.
+    ///
+    /// # Parámetros
+    /// - `content_type`: El tipo de contenido del archivo (por ejemplo, "application/json").
+    /// - `file_path`: La ruta al archivo que se va a leer.
+    ///
+    /// # Retornos
+    /// - `Ok(HttpBody)`: Si el archivo se lee y parsea correctamente.
+    /// - `Err(ServerError)`: Si ocurre un error al leer el archivo o al parsearlo.
+    ///
     pub fn create_from_file(content_type: &str, file_path: &str) -> Result<Self, ServerError> {
         let content = match std::fs::read_to_string(file_path)
         {

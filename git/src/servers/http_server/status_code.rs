@@ -32,7 +32,7 @@ impl StatusCode {
     ///
     /// ```
     /// use git::servers::http_server::status_code::StatusCode;
-    /// let status = StatusCode::Ok;
+    /// let status = StatusCode::Ok(None);
     /// assert_eq!(status.to_string(), "200 OK");
     /// ```
     pub fn to_string(&self) -> String {

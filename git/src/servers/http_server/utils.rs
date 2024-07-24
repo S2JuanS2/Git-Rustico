@@ -1,5 +1,5 @@
 use std::io::{Read, Write};
-use crate::{consts::{CRLF, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::files::create_directory};
+use crate::{consts::{CRLF, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::create_directory}};
 
 use super::status_code::StatusCode;
 
@@ -93,10 +93,22 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
 /// 
 pub fn send_response_http(writer: &mut dyn Write, status_code: StatusCode) -> Result<(), ServerError>{
     let response = format!("{} {}{}", HTTP_VERSION, status_code.to_string(), CRLF);
-    match writer.write(response.as_bytes())
+    let error = UtilError::UtilFromServer("Error sending response".to_string());
+    match send_message(writer, &response, error)
     {
-        Ok(_) => Ok(()),
-        Err(_) => Err(ServerError::SendResponse(response)),
+        Ok(_) => {},
+        Err(_) => return Err(ServerError::SendResponse(response)),
+    };
+    match status_code {
+        StatusCode::Ok(Some(body)) => {
+            let error = UtilError::UtilFromServer("Error sending response body".to_string());
+            match send_message(writer, &body.to_string(), error)
+            {
+                Ok(_) => Ok(()),
+                Err(_) => return Err(ServerError::SendResponse(response)),
+            }
+        }
+        _ => Ok(())
     }
 }
 
