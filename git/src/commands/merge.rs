@@ -42,6 +42,8 @@ pub fn git_merge(directory: &str, current_branch: &str, branch_name: &str, clien
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la rama a mergear
 pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, client: &Client, merge_type: &str) -> Result<String, CommandsError> {
+    
+    let is_head = current_branch == get_current_branch(directory)?;
     let path_current_branch = get_refs_path(directory, current_branch);
     let path_branch_to_merge = get_refs_path(directory, branch_name);
 
@@ -63,15 +65,14 @@ pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, c
         let root_parent_merge_branch = git_cat_file(directory, &first_commit_merge_branch, "-p")?;
         let (hash_parent_current, hash_parent_merge) = get_parent_hashes(root_parent_current_branch, root_parent_merge_branch);
 
-        let strategy = merge_depending_on_strategy(&hash_parent_current, &hash_parent_merge, &branch_to_merge_hash, directory, branch_name)?;
+        let strategy = merge_depending_on_strategy(is_head, &hash_parent_current, &hash_parent_merge, &branch_to_merge_hash, directory, branch_name)?;
         if merge_type == "merge" {
             update_refs(directory, &strategy, &path_current_branch, &branch_to_merge_hash, &path_branch_to_merge, client.clone())?;
             update_logs_refs(directory, &strategy, current_branch, branch_name, &current_branch_hash, &branch_to_merge_hash)?;
         }
         get_result_depending_on_strategy(strategy, &mut formatted_result, current_branch_hash.clone(), branch_to_merge_hash.clone(), path_current_branch)?;
     }
-    if current_branch == get_current_branch(directory)?{
-        println!("es master");
+    if is_head{
         update_work_directory(directory, &branch_to_merge_hash, &mut formatted_result)?;
     }
     
@@ -504,12 +505,14 @@ pub fn check_if_current_is_up_to_date(
 
 /// Recorre los tree en la merge branch y hace el merge dependiendo de la estrategia a utilizar.
 /// ###Parametros:
+/// 'is_head': booleano que determina si se hacen los cambios en el work directory
 /// 'hash_parent_current': hash del padre del commit de la rama actual
 /// 'hash_parent_merge': hash del padre del commit de la rama a mergear
 /// 'log_merge_branch': hash del tree
 /// 'directory': directorio del repositorio local
 /// 'branch_to_merge': nombre de la rama a mergear
 fn recovery_tree_merge(
+    is_head: bool,
     directory: &str,
     hash_parent_current: &str,
     hash_parent_merge: &str,
@@ -545,16 +548,19 @@ fn recovery_tree_merge(
                         }
                     }
                 } else {
-                    add_to_index(git_dir, path_file_format_clean_str, hash_object)?;
-                    create_file_replace(&path_file_format, &content_file)?;
+                    if is_head {
+                        add_to_index(git_dir, path_file_format_clean_str, hash_object)?;
+                        create_file_replace(&path_file_format, &content_file)?;
+                    }
                     strategy.0 = "recursive".to_string();
                     strategy.1 = "ok".to_string();
                 };
             } else {
                 // FAST-FORWARD STRATEGY
-                create_file_replace(&path_file_format, &content_file)?;
-                add_to_index(git_dir, path_file_format_clean_str, hash_object)?;
-                
+                if is_head {
+                    create_file_replace(&path_file_format, &content_file)?;
+                    add_to_index(git_dir, path_file_format_clean_str, hash_object)?;
+                }
                 strategy.0 = "fast-forward".to_string();
                 strategy.1 = "ok".to_string();
             }
@@ -562,8 +568,10 @@ fn recovery_tree_merge(
             create_directory(Path::new(&path_file_format))?;
             let path = format!("{}{}/", path, file);
             let content_tree = git_cat_file(directory, &hash_object, "-p")?;
-            recovery_tree_merge(directory,
-                hash_parent_current, hash_parent_merge,
+            recovery_tree_merge(is_head, 
+                directory,
+                hash_parent_current, 
+                hash_parent_merge,
                 branch_to_merge,
                 content_tree,
                 &path
@@ -575,12 +583,14 @@ fn recovery_tree_merge(
 
 /// Recorre los commits en la merge branch y hace el merge dependiendo de la estrategia a utilizar.
 /// ###Parametros:
+/// 'is_head': booleano que determina si se hacen los cambios en el work directory
 /// 'hash_parent_current': hash del padre del commit de la rama actual
 /// 'hash_parent_merge': hash del padre del commit de la rama a mergear
 /// 'log_merge_branch': hash del ultimo commit
 /// 'directory': directorio del repositorio local
 /// 'branch_to_merge': nombre de la rama a mergear
 pub fn merge_depending_on_strategy(
+    is_head: bool,
     hash_parent_current: &str,
     hash_parent_merge: &str,
     branch_to_merge_hash: &str,
@@ -590,6 +600,7 @@ pub fn merge_depending_on_strategy(
     let content_commit = git_cat_file(directory, branch_to_merge_hash, "-p")?;
     let content_tree = get_tree_of_commit(content_commit, directory)?;
     let strategy = recovery_tree_merge(
+        is_head,
         directory,
         hash_parent_current,
         hash_parent_merge,

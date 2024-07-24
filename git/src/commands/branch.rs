@@ -15,7 +15,7 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, Commands
     let directory = client.get_directory_path();
     if args.len() >= 1 && args[0] == "-l" {
         git_branch_list(directory)
-    } else if args.len() == 1 {
+    } else if args.len() == 1 && args[0] != "-d" {
         git_branch_create(directory, args[0])
     } else if (args.len() == 2 && args[0] == "-d") || (args.len() == 2 && args[0] == "-D") {
         git_branch_delete(directory, args[1])
