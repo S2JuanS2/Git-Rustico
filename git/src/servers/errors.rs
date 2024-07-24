@@ -27,6 +27,8 @@ pub enum ServerError {
     HttpParseYamlBody,
     HttpParseJsonBody,
     HttpFieldNotFound(String),
+    ResourceNotFound(String),
+    StoredFileParse,
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -54,6 +56,8 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::HttpParseYamlBody => write!(f, "Error al parsear el cuerpo YAML de la solicitud HTTP."),
         ServerError::HttpParseJsonBody => write!(f, "Error al parsear el cuerpo JSON de la solicitud HTTP."),
         ServerError::HttpFieldNotFound(e) => write!(f, "Campo no encontrado en el cuerpo de la solicitud HTTP: {}", e),
+        ServerError::ResourceNotFound(e) => write!(f, "Recurso no encontrado: {}", e),
+        ServerError::StoredFileParse => write!(f, "Error al parsear el archivo almacenado."),
     }
 }
 

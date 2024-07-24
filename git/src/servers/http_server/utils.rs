@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
-use crate::{consts::{CRLF, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::files::create_directory};
+use crate::{consts::{CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::create_directory}};
 
-use super::status_code::StatusCode;
+use super::{http_body::HttpBody, status_code::StatusCode};
 
 /// Reads an HTTP request from a reader, returning it as a String.
 ///
@@ -93,10 +93,47 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
 /// 
 pub fn send_response_http(writer: &mut dyn Write, status_code: StatusCode) -> Result<(), ServerError>{
     let response = format!("{} {}{}", HTTP_VERSION, status_code.to_string(), CRLF);
-    match writer.write(response.as_bytes())
+    let error = UtilError::UtilFromServer("Error sending response".to_string());
+    match send_message(writer, &response, error)
+    {
+        Ok(_) => {},
+        Err(_) => return Err(ServerError::SendResponse(response)),
+    };
+    match status_code {
+        StatusCode::Ok(Some(body)) => send_body(writer, &body),
+        _ => Ok(())
+    }
+}
+
+/// Envía el cuerpo de una respuesta HTTP a través de un escritor.
+///
+/// Esta función toma un escritor y un cuerpo HTTP, obtiene el tipo de contenido y el cuerpo en forma de cadena,
+/// y luego envía el cuerpo junto con los encabezados necesarios para una respuesta HTTP.
+/// 
+/// # Argumentos
+///
+/// * `writer` - Un escritor mutable que implementa el trait `Write`. Este escritor será utilizado para enviar la respuesta.
+/// * `body` - Una referencia a un `HttpBody` que contiene el cuerpo de la respuesta a enviar.
+///
+/// # Errores
+///
+/// Esta función retornará un `ServerError` si ocurre un error al enviar el cuerpo de la respuesta.
+/// Los errores pueden ser causados por problemas al obtener el tipo de contenido y el cuerpo,
+/// o por fallos al escribir en el escritor proporcionado.
+///
+fn send_body(writer: &mut dyn Write, body: &HttpBody) -> Result<(), ServerError> {
+    let (content_type, body_str) = body.get_content_type_and_body()?;
+    
+    let message = match body_str.len()
+    {
+        0 => format!("{}", CRLF),
+        _ => format!("Content-Type: {}{}Content-Length: {}{}{}", content_type, CRLF,body_str.len(), CRLF_DOUBLE, body_str),
+    };
+    let error = UtilError::UtilFromServer("Error sending response body".to_string());
+    match send_message(writer, &message, error)
     {
         Ok(_) => Ok(()),
-        Err(_) => Err(ServerError::SendResponse(response)),
+        Err(_) => Err(ServerError::SendResponse(body.to_string())),
     }
 }
 

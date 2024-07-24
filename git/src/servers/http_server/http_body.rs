@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde_json::Value as JsonValue;
 use serde_yaml::Value as YamlValue;
-use crate::servers::errors::ServerError;
+use crate::{consts::{APPLICATION_JSON, APPLICATION_XML, APPLICATION_YAML, TEXT_XML, TEXT_YAML}, servers::errors::ServerError};
 
 /// Enum `HttpBody` que representa los diferentes tipos de cuerpos de solicitudes HTTP.
 ///
@@ -64,13 +64,13 @@ impl HttpBody {
             return Ok(HttpBody::Empty);
         }
         match content_type {
-            "application/json" => {
+            APPLICATION_JSON => {
                 serde_json::from_str(body).map(HttpBody::Json).map_err(|_| ServerError::HttpParseJsonBody)
             }
-            "application/yaml" | "text/yaml" => {
+            APPLICATION_YAML | TEXT_YAML => {
                 serde_yaml::from_str(body).map(HttpBody::Yaml).map_err(|_| ServerError::HttpParseYamlBody)
             }
-            "application/xml" | "text/xml" => {
+            APPLICATION_XML | TEXT_XML => {
                 serde_xml_rs::from_str(body).map(HttpBody::Xml).map_err(|_| ServerError::HttpParseXmlBody)
             }
             _ => Err(ServerError::UnsupportedMediaType),
@@ -113,5 +113,49 @@ impl HttpBody {
                 .map(|s| s.to_string()),
             HttpBody::Empty => Err(ServerError::HttpFieldNotFound(field.to_string())),
         }
+    }
+
+    /// Crea un cuerpo de solicitud HTTP (`HttpBody`) a partir de un archivo.
+    ///
+    /// Esta función lee el contenido de un archivo especificado y lo parsea en
+    /// función del tipo de contenido proporcionado.
+    ///
+    /// # Parámetros
+    /// - `content_type`: El tipo de contenido del archivo (por ejemplo, "application/json").
+    /// - `file_path`: La ruta al archivo que se va a leer.
+    ///
+    /// # Retornos
+    /// - `Ok(HttpBody)`: Si el archivo se lee y parsea correctamente.
+    /// - `Err(ServerError)`: Si ocurre un error al leer el archivo o al parsearlo.
+    ///
+    pub fn create_from_file(content_type: &str, file_path: &str) -> Result<Self, ServerError> {
+        let content = match std::fs::read_to_string(file_path)
+        {
+            Ok(content) => content,
+            Err(_) => return Err(ServerError::ResourceNotFound(file_path.to_string())),
+        };
+        HttpBody::parse(content_type, &content)
+    }
+
+    /// Obtiene el tipo de contenido y el cuerpo como una cadena de texto.
+    ///
+    /// # Returns
+    ///
+    /// Retorna una tupla con el tipo de contenido (Content-Type) y el cuerpo como cadena de texto.
+    ///
+    /// # Errors
+    ///
+    /// Retorna `ServerError` si hay algún problema al convertir el cuerpo a una cadena de texto.
+    pub fn get_content_type_and_body(&self) -> Result<(String, String), ServerError> {
+        let content_type_and_body = match self {
+            HttpBody::Json(json) => (APPLICATION_JSON.to_string(), json.to_string()),
+            HttpBody::Xml(xml) => (APPLICATION_XML.to_string(), xml.to_string()),
+            HttpBody::Yaml(yaml) => {
+                let yaml_str = serde_yaml::to_string(yaml).unwrap();
+                (APPLICATION_YAML.to_string(), yaml_str)
+            }
+            HttpBody::Empty => ("".to_string(), "".to_string())
+        };
+        return Ok(content_type_and_body)
     }
 }

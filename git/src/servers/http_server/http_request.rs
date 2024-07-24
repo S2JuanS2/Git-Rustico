@@ -1,5 +1,5 @@
 use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
-use crate::{consts::HTTP_VERSION, servers::errors::ServerError};
+use crate::{consts::{APPLICATION_JSON, CONTENT_LENGTH, CONTENT_TYPE, HTPP_SIGNATURE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
 use super::{http_body::HttpBody, pr::PullRequest, status_code::StatusCode, utils::read_request};
 
 /// Representa una solicitud HTTP.
@@ -69,6 +69,10 @@ impl HttpRequest {
     pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<StatusCode, ServerError> {
         // Manejar la solicitud HTTP
         let pr = PullRequest::from_http_body(&self.body)?;
+        
+        let message = format!("{} request to path: {}", self.method, self.path);
+        log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
+
         match self.method.as_str() {
             "GET" => self.handle_get_request(&pr, source, tx),
             "POST" => self.handle_post_request(&pr, source, tx),
@@ -261,12 +265,12 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
 ///
 fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBody, ServerError> {
     // Obtener el cuerpo de la solicitud
-    let finish = headers.get("Content-Length").map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
+    let finish = headers.get(CONTENT_LENGTH).map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
     let body = &request[request.len() - finish..];
 
     // Parsear el cuerpo de la solicitud
-    let binding = "application/json".to_string();
-    let content_type = headers.get("Content-Type").unwrap_or(&binding);
+    let binding = APPLICATION_JSON.to_string();
+    let content_type = headers.get(CONTENT_TYPE).unwrap_or(&binding);
     HttpBody::parse(content_type, &body)
 
 }

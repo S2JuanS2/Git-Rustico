@@ -1,12 +1,14 @@
 use std::fmt;
 
+use super::http_body::HttpBody;
+
 
 /// Enumera los posibles códigos de estado HTTP que pueden ser retornados por el servidor.
 pub enum StatusCode {
     Created,
     Forbidden,
     ValidationFailed,
-    Ok,
+    Ok(Option<HttpBody>),
     NotModified,
     PassTheAppropriateMediaType,
     ResourceNotFound,
@@ -30,7 +32,7 @@ impl StatusCode {
     ///
     /// ```
     /// use git::servers::http_server::status_code::StatusCode;
-    /// let status = StatusCode::Ok;
+    /// let status = StatusCode::Ok(None);
     /// assert_eq!(status.to_string(), "200 OK");
     /// ```
     pub fn to_string(&self) -> String {
@@ -38,7 +40,7 @@ impl StatusCode {
             StatusCode::Created => "201 Created".to_string(),
             StatusCode::Forbidden => "403 Forbidden".to_string(),
             StatusCode::ValidationFailed => "422 Validation failed, or the endpoint has been spammed.".to_string(),
-            StatusCode::Ok => "200 OK".to_string(),
+            StatusCode::Ok(_) => "200 OK".to_string(),
             StatusCode::NotModified => "304 Not modified".to_string(),
             StatusCode::PassTheAppropriateMediaType => "200 Pass the appropriate media type to fetch diff and patch formats.".to_string(),
             StatusCode::ResourceNotFound => "404 Resource not found".to_string(),
