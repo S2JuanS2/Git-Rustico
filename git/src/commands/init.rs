@@ -24,12 +24,12 @@ pub fn git_init(directory: &str) -> Result<String, CommandsError> {
 
     let result;
     let mut exist = 0;
-    if Path::new(directory).is_dir(){
+    let git_dir = format!("{}/{}", directory, GIT_DIR);
+    if Path::new(&git_dir).is_dir(){
         exist = 1;
     }
     create_directory(Path::new(directory))?;
 
-    let git_dir = format!("{}/{}", directory, GIT_DIR);
     let objects_dir = format!("{}/{}", &git_dir, DIR_OBJECTS);
     let heads_dir = format!("{}/{}", &git_dir, REF_HEADS);
     let remotes_dir = format!("{}/{}", &git_dir, REFS_REMOTES);
