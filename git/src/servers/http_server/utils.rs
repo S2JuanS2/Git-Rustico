@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
-use crate::{consts::{CRLF, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::create_directory}};
+use crate::{consts::{CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::create_directory}};
 
-use super::status_code::StatusCode;
+use super::{http_body::HttpBody, status_code::StatusCode};
 
 /// Reads an HTTP request from a reader, returning it as a String.
 ///
@@ -100,15 +100,24 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: StatusCode) -> Re
         Err(_) => return Err(ServerError::SendResponse(response)),
     };
     match status_code {
-        StatusCode::Ok(Some(body)) => {
-            let error = UtilError::UtilFromServer("Error sending response body".to_string());
-            match send_message(writer, &body.to_string(), error)
-            {
-                Ok(_) => Ok(()),
-                Err(_) => return Err(ServerError::SendResponse(response)),
-            }
-        }
+        StatusCode::Ok(Some(body)) => send_body(writer, &body),
         _ => Ok(())
+    }
+}
+
+fn send_body(writer: &mut dyn Write, body: &HttpBody) -> Result<(), ServerError> {
+    let (content_type, body_str) = body.get_content_type_and_body()?;
+    
+    let message = match body_str.len()
+    {
+        0 => format!("{}", CRLF),
+        _ => format!("Content-Type: {}{}Content-Length: {}{}{}", content_type, CRLF,body_str.len(), CRLF_DOUBLE, body_str),
+    };
+    let error = UtilError::UtilFromServer("Error sending response body".to_string());
+    match send_message(writer, &message, error)
+    {
+        Ok(_) => Ok(()),
+        Err(_) => Err(ServerError::SendResponse(body.to_string())),
     }
 }
 

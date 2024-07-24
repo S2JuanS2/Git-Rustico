@@ -136,4 +136,26 @@ impl HttpBody {
         };
         HttpBody::parse(content_type, &content)
     }
+
+    /// Obtiene el tipo de contenido y el cuerpo como una cadena de texto.
+    ///
+    /// # Returns
+    ///
+    /// Retorna una tupla con el tipo de contenido (Content-Type) y el cuerpo como cadena de texto.
+    ///
+    /// # Errors
+    ///
+    /// Retorna `ServerError` si hay algún problema al convertir el cuerpo a una cadena de texto.
+    pub fn get_content_type_and_body(&self) -> Result<(String, String), ServerError> {
+        let content_type_and_body = match self {
+            HttpBody::Json(json) => (APPLICATION_JSON.to_string(), json.to_string()),
+            HttpBody::Xml(xml) => (APPLICATION_XML.to_string(), xml.to_string()),
+            HttpBody::Yaml(yaml) => {
+                let yaml_str = serde_yaml::to_string(yaml).unwrap();
+                (APPLICATION_YAML.to_string(), yaml_str)
+            }
+            HttpBody::Empty => ("".to_string(), "".to_string())
+        };
+        return Ok(content_type_and_body)
+    }
 }

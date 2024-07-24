@@ -1,5 +1,5 @@
 use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
-use crate::{consts::{HTPP_SIGNATURE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
+use crate::{consts::{APPLICATION_JSON, CONTENT_LENGTH, CONTENT_TYPE, HTPP_SIGNATURE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
 use super::{http_body::HttpBody, pr::PullRequest, status_code::StatusCode, utils::read_request};
 
 /// Representa una solicitud HTTP.
@@ -219,6 +219,7 @@ impl HttpRequest {
 /// en caso de error.
 ///
 fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
+    println!("Request: {}", request);
     let lines: Vec<&str> = request.lines().collect();
     if lines.len() < 1 {
         return Err(ServerError::MissingRequestLine);
@@ -265,12 +266,12 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
 ///
 fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBody, ServerError> {
     // Obtener el cuerpo de la solicitud
-    let finish = headers.get("Content-Length").map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
+    let finish = headers.get(CONTENT_LENGTH).map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
     let body = &request[request.len() - finish..];
 
     // Parsear el cuerpo de la solicitud
-    let binding = "application/json".to_string();
-    let content_type = headers.get("Content-Type").unwrap_or(&binding);
+    let binding = APPLICATION_JSON.to_string();
+    let content_type = headers.get(CONTENT_TYPE).unwrap_or(&binding);
     HttpBody::parse(content_type, &body)
 
 }
