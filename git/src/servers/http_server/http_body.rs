@@ -114,4 +114,23 @@ impl HttpBody {
             HttpBody::Empty => Err(ServerError::HttpFieldNotFound(field.to_string())),
         }
     }
+
+    pub fn create_json(body: &str) -> Result<HttpBody, ServerError> {
+        println!("Body: {}", body);
+        let pr: Result<JsonValue, serde_json::Error> = serde_json::from_str(body);
+        println!("PR: {:?}", pr);
+        match serde_json::from_str(body) {
+            Ok(json) => Ok(HttpBody::Json(json)),
+            Err(_) => Err(ServerError::StoredFileParse),
+        }
+    }
+
+    pub fn create_from_file(content_type: &str, file_path: &str) -> Result<Self, ServerError> {
+        let content = match std::fs::read_to_string(file_path)
+        {
+            Ok(content) => content,
+            Err(_) => return Err(ServerError::ResourceNotFound(file_path.to_string())),
+        };
+        HttpBody::parse(content_type, &content)
+    }
 }

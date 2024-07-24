@@ -27,6 +27,8 @@ pub fn handle_client_http(
             Ok(())
         },
         Err(e) => {
+            let status_code = StatusCode::InternalError;
+            send_response_http(stream, status_code)?;
             log_request_error(&e.to_string(), &signature, &tx);
             log_client_disconnection_error(&tx, &signature);
             Err(e)
