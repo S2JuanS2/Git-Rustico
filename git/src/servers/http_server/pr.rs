@@ -64,10 +64,12 @@ impl PullRequest {
     }
 
     pub fn create_pull_requests(&self,_repo_name: &str, _src: &String,_tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        // LOGICA PARA CREAR UNA SOLICITUD DE EXTRACCION
         Ok(StatusCode::Forbidden)
     }
 
     pub fn list_pull_request(&self,_repo_name: &str, _src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        // LOGICA PARA LISTAR LAS SOLICITUDES DE EXTRACCION
         Ok(StatusCode::Forbidden)
     }
 
@@ -96,6 +98,7 @@ impl PullRequest {
             return Ok(StatusCode::ResourceNotFound);
         }
         let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
+        // let mergeable = logica para obtener el estado de fusion
         Ok(StatusCode::Ok(Option::Some(body)))
     }
 
@@ -105,6 +108,9 @@ impl PullRequest {
         {
             return Ok(StatusCode::ResourceNotFound);
         }
+        // Logicar para listar los commits
+        // let _get_commits(src, repo_name, self.head, self.base); //
+        // LOGICA PARA LISTAR LOS COMMITS DE UNA SOLICITUD DE EXTRACCION
         Ok(StatusCode::Forbidden)
     }
 
@@ -114,6 +120,7 @@ impl PullRequest {
         {
             return Ok(StatusCode::ResourceNotFound);
         }
+        // LOGICA PARA FUSIONAR UNA SOLICITUD DE EXTRACCION
         Ok(StatusCode::Forbidden)
     }
 
@@ -123,6 +130,7 @@ impl PullRequest {
         {
             return Ok(StatusCode::ResourceNotFound);
         }
+        // LOGICA PARA MODIFICAR UNA SOLICITUD DE EXTRACCION
         Ok(StatusCode::Forbidden)
     }
 }

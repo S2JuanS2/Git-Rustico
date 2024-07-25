@@ -76,6 +76,8 @@ pub fn _handle_client_http(
 ) -> Result<StatusCode, GitError> {
     // Creo la solicitud HTTP
     let request = HttpRequest::new_from_reader(stream)?;
+    // println!("Request: {:?}", request);
+    // println!("Request: {:?}", request);
     // Manejar la solicitud HTTP
     Ok(request.handle_http_request(&root_directory, tx, &signature)?)
 }

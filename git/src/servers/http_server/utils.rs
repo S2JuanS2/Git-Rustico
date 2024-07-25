@@ -101,7 +101,7 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: StatusCode) -> Re
     };
     match status_code {
         StatusCode::Ok(Some(body)) => send_body(writer, &body),
-        _ => Ok(())
+        _ => Ok(()) // Deberia enviar un CRLF
     }
 }
 
