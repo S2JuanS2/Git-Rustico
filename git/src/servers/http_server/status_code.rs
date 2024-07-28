@@ -4,6 +4,7 @@ use super::http_body::HttpBody;
 
 
 /// Enumera los posibles códigos de estado HTTP que pueden ser retornados por el servidor.
+#[derive(Debug, PartialEq)]
 pub enum StatusCode {
     Created,
     Forbidden,
@@ -13,12 +14,14 @@ pub enum StatusCode {
     PassTheAppropriateMediaType,
     ResourceNotFound,
     Unacceptable,
-    InternalError,
+    InternalError(String),
     ServiceUnavailable,
     MergeWasSuccessful,
     MethodNotAllowed,
     Conflict,
-    BadRequest,
+    BadRequest(String),
+    UnsupportedMediaType,
+    HttpVersionNotSupported,
 }
 
 impl StatusCode {
@@ -45,12 +48,14 @@ impl StatusCode {
             StatusCode::PassTheAppropriateMediaType => "200 Pass the appropriate media type to fetch diff and patch formats.".to_string(),
             StatusCode::ResourceNotFound => "404 Resource not found".to_string(),
             StatusCode::Unacceptable => "406 Unacceptable".to_string(),
-            StatusCode::InternalError => "500 Internal Error".to_string(),
+            StatusCode::InternalError(_) => "500 Internal Error".to_string(),
             StatusCode::ServiceUnavailable => "503 Service unavailable".to_string(),
             StatusCode::MergeWasSuccessful => "200 OK if merge was successful".to_string(),
-            StatusCode::MethodNotAllowed => "405 Method Not Allowed if merge cannot be performed".to_string(),
+            StatusCode::MethodNotAllowed => "405 Method Not Allowed".to_string(),
             StatusCode::Conflict => "409 Conflict if sha was provided and pull request head did not match".to_string(),
-            StatusCode::BadRequest => "400 Bad Request".to_string(),
+            StatusCode::BadRequest(_) => "400 Bad Request".to_string(),
+            StatusCode::UnsupportedMediaType => "415 Unsupported Media Type".to_string(),
+            StatusCode::HttpVersionNotSupported => "505 HTTP Version Not Supported".to_string(),
         }
     }
 }

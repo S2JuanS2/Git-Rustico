@@ -44,6 +44,7 @@ pub enum GitError {
     ReadDirError,
     DirEntryError,
     NotAGitRepository,
+    RequestFailed(String),
 }
 
 impl GitError {
@@ -95,6 +96,7 @@ impl GitError {
             GitError::ReadDirError => "Falló al leer el directorio",
             GitError::DirEntryError => "Falló al obtener la entrada del directorio",
             GitError::NotAGitRepository => "not a git repository",
+            GitError::RequestFailed(msg) => msg,
         }
     }
 }

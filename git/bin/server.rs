@@ -7,6 +7,8 @@ use git::servers::server::{create_listener, initialize_config,
     start_logging, start_server_thread, 
     wait_for_threads};
 
+use git::consts::DAEMON_SIGNATURE;
+use git::consts::HTPP_SIGNATURE;
     
 /// Punto de entrada del servidor Git y servidor HTTP.
 ///
@@ -26,10 +28,10 @@ fn main() -> Result<(), GitError> {
 
     let (shared_tx, log_handle) = start_logging(config.path_log)?;
 
-    let clients_daemon_handle = start_server_thread(listener_daemon, Arc::clone(&shared_tx), config.src.clone(), handle_client_daemon)?;
+    let clients_daemon_handle = start_server_thread(listener_daemon, DAEMON_SIGNATURE.to_string(),  Arc::clone(&shared_tx), config.src.clone(), handle_client_daemon)?;
     
     create_pr_folder(&config.src)?;
-    let clients_http_handle = start_server_thread(listener_http, shared_tx, config.src.clone(), handle_client_http)?;
+    let clients_http_handle = start_server_thread(listener_http, HTPP_SIGNATURE.to_string(),  shared_tx, config.src.clone(), handle_client_http)?;
 
     wait_for_threads(log_handle, clients_daemon_handle, clients_http_handle);
 

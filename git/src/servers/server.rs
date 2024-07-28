@@ -3,7 +3,7 @@ use std::net::{TcpListener, TcpStream};
 use crate::config::Config;
 use crate::errors::GitError;
 use crate::git_transport::git_request::GitRequest;
-use crate::util::logger::{handle_log_file, log_client_disconnection_error, log_message};
+use crate::util::logger::{get_client_signature, handle_log_file, log_client_connect, log_client_disconnection_error, log_client_disconnection_success, log_message};
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{self, Sender};
 use std::thread::JoinHandle;
@@ -115,9 +115,10 @@ pub fn process_request(
 /// 
 pub fn receive_client(
     listener: &TcpListener,
+    name_server: String,
     shared_tx: Arc<Mutex<Sender<String>>>,
     src: &str,
-    handler: fn(&mut TcpStream, Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>,
+    handler: fn(&mut TcpStream, String, &Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>
 ) -> Result<Vec<JoinHandle<()>>, GitError> {
     // let shared_tx = Arc::new(Mutex::new(tx));
     let mut handles: Vec<JoinHandle<()>> = vec![];
@@ -127,8 +128,12 @@ pub fn receive_client(
                 let tx = Arc::clone(&shared_tx);
                 println!("Nueva conexión: {:?}", stream.local_addr());
                 let root_directory = src.to_string().clone();
+                let server = name_server.clone();
+                let signature = get_client_signature(&stream, &server);
+                log_client_connect(&stream, &tx, &server);
                 handles.push(std::thread::spawn(move || {
-                    let _ = handler(&mut stream, tx, root_directory);
+                    let result = handler(&mut stream, signature, &tx, root_directory);
+                    log_request_result(&stream, &server, &tx, result);
                 }));
             }
             Err(e) => {
@@ -139,6 +144,19 @@ pub fn receive_client(
         }
     }
     Ok(handles)
+}
+
+pub fn log_request_result(stream: &TcpStream, name_server: &String, tx: &Arc<Mutex<Sender<String>>>, result: Result<(), GitError>) {
+    let signature = get_client_signature(stream, &name_server);
+    match result {
+        Ok(_) =>log_client_disconnection_success(tx, &signature),
+        Err(GitError::RequestFailed(_)) => log_client_disconnection_error(tx, &signature),
+        Err(e) => {
+            let message = format!("Error al procesar la petición: {}", e);
+            log_message(tx, &message);
+            log_client_disconnection_error(tx, &signature);
+        }
+    }
 }
 
 
@@ -225,12 +243,13 @@ pub fn start_logging(path_log: String) -> Result<(Arc<Mutex<Sender<String>>>, Jo
 ///
 pub fn start_server_thread(
     listener: TcpListener,
+    name_server: String,
     shared_tx: Arc<Mutex<Sender<String>>>,
     src: String,
-    handler: fn(&mut TcpStream, Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>,
+    handler: fn(&mut TcpStream, String, &Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>
 ) -> Result<JoinHandle<()>, GitError> {
     let handle = thread::spawn(move || {
-        let _ = receive_client(&listener, shared_tx, &src, handler);
+        let _ = receive_client(&listener, name_server, shared_tx, &src, handler);
     });
     Ok(handle)
 }
