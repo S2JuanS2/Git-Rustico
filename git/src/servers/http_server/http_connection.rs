@@ -1,9 +1,8 @@
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
-use crate::consts::HTPP_SIGNATURE;
 use crate::errors::GitError;
-use crate::util::logger::{get_client_signature, log_client_connect, log_client_disconnection_error, log_client_disconnection_success, log_message_with_signature};
+use crate::util::logger::log_message_with_signature;
 use super::http_request::HttpRequest;
 use super::status_code::StatusCode;
 use super::utils::send_response_http;
@@ -27,28 +26,19 @@ use super::utils::send_response_http;
 ///
 pub fn handle_client_http(
     stream: &mut TcpStream,
-    tx: Arc<Mutex<Sender<String>>>,
-    root_directory: String,
+    signature: String,
+    tx: &Arc<Mutex<Sender<String>>>,
+    root_directory: String
 ) -> Result<(), GitError> {
-    // Loggear la conexión del cliente
-    log_client_connect(stream, &tx, &HTPP_SIGNATURE.to_string());
-    let signature = get_client_signature(stream, &HTPP_SIGNATURE.to_string())?;
-
     let status_code = _handle_client_http(stream, root_directory, &tx, &signature);
     let message = format!("Response sent to client with status code: {}", status_code.to_string());
-    log_message_with_signature(&tx, &HTPP_SIGNATURE.to_string(), &message);
+    log_message_with_signature(&tx, &signature, &message);
 
     send_response_http(stream, &status_code)?;
 
     match status_code {
-        StatusCode::Ok(_) => {
-            log_client_disconnection_success(&tx, &signature);
-            Ok(())
-        },
-        _ => {
-            log_client_disconnection_error(&tx, &signature);
-            Err(GitError::RequestFailed)
-        }
+        StatusCode::Ok(_) => Ok(()),
+        _ => Err(GitError::RequestFailed(status_code.to_string()))
     }
 }
 

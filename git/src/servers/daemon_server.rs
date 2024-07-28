@@ -1,9 +1,7 @@
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
-use crate::consts::DAEMON_SIGNATURE;
 use crate::errors::GitError;
-use crate::util::logger::{get_client_signature, log_client_connect, log_client_disconnection_success};
 use super::server::{process_request, receive_request};
 
 
@@ -22,16 +20,23 @@ use super::server::{process_request, receive_request};
 /// 
 pub fn handle_client_daemon(
     stream: &mut TcpStream,
-    tx: Arc<Mutex<Sender<String>>>,
-    root_directory: String,
+    signature: String,
+    tx: &Arc<Mutex<Sender<String>>>,
+    root_directory: String
 ) -> Result<(), GitError> {
-    log_client_connect(stream, &tx, &DAEMON_SIGNATURE.to_string());
-    let signature = get_client_signature(stream, &DAEMON_SIGNATURE.to_string())?;
+    match _handle_client_daemon(stream, root_directory, tx, &signature) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(GitError::RequestFailed(e.to_string())),
+    }
+}
 
+pub fn _handle_client_daemon(
+    stream: &mut TcpStream,
+    root_directory: String,
+    tx: &Arc<Mutex<Sender<String>>>,
+    signature: &String,
+) -> Result<(), GitError> 
+{
     let request = receive_request(stream, signature.clone(), tx.clone())?;
-
-    process_request(stream, &tx, &signature, &request, &root_directory)?;
-
-    log_client_disconnection_success(&tx, &signature);
-    Ok(())
+    process_request(stream, &tx, &signature, &request, &root_directory)
 }
