@@ -91,7 +91,7 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
 /// assert!(result.is_ok());
 /// ```
 /// 
-pub fn send_response_http(writer: &mut dyn Write, status_code: StatusCode) -> Result<(), ServerError>{
+pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode) -> Result<(), ServerError>{
     let response = format!("{} {}{}", HTTP_VERSION, status_code.to_string(), CRLF);
     let error = UtilError::UtilFromServer("Error sending response".to_string());
     match send_message(writer, &response, error)

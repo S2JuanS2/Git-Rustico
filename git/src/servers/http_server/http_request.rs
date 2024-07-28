@@ -40,14 +40,17 @@ impl HttpRequest {
     ///
     /// # Errores
     ///
-    /// Retorna un `ServerError` si ocurre un error al leer o parsear la solicitud.
+    /// Retorna un `StatusCode` si ocurre un error al leer la solicitud, informando el error.
     ///
     /// # Retorna
     ///
     /// Retorna una nueva instancia de `HttpRequest`.
     /// 
-    pub fn new_from_reader(reader: &mut dyn std::io::Read) -> Result<Self, ServerError> {
-        let request = read_request(reader)?;
+    pub fn new_from_reader(reader: &mut dyn std::io::Read) -> Result<Self, StatusCode> {
+        let request = match read_request(reader){
+            Ok(request) => request,
+            Err(_) => return Err(StatusCode::BadRequest(ServerError::ReadRequest.to_string())),
+        };
         parse_http_request(&request)
     }
 
@@ -78,7 +81,7 @@ impl HttpRequest {
             "POST" => self.handle_post_request(&pr, source, tx),
             "PUT" => self.handle_put_request(&pr, source, tx),
             "PATCH" => self.handle_patch_request(&pr, source, tx),
-            _ => Err(ServerError::MethodNotAllowed),
+            _ => Ok(StatusCode::MethodNotAllowed),
         }
     }
 
@@ -101,7 +104,7 @@ impl HttpRequest {
     ///
     /// # Retornos
     /// 
-    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
+    /// Devuelve un `Result` que contiene el status en caso de éxito o un `ServerError` en caso de fallo.
     /// 
     fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(&self.get_path());
@@ -116,7 +119,7 @@ impl HttpRequest {
                 return pr.list_commits(repo_name, pull_number, src, tx);
             },
             _ => {
-                Ok(StatusCode::BadRequest)
+                Ok(StatusCode::ResourceNotFound)
             }
         }
     }
@@ -140,7 +143,7 @@ impl HttpRequest {
                 return pr.create_pull_requests(repo_name, src, tx);
             }
             _ => {
-                Ok(StatusCode::BadRequest)
+                Ok(StatusCode::ResourceNotFound)
             }
         }
     }
@@ -164,7 +167,7 @@ impl HttpRequest {
                 return pr.merge_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                Ok(StatusCode::BadRequest)
+                Ok(StatusCode::ResourceNotFound)
             }
         }
     }
@@ -188,7 +191,7 @@ impl HttpRequest {
                 return pr.modify_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                Ok(StatusCode::BadRequest)
+                Ok(StatusCode::ResourceNotFound)
             }
         }
     }
@@ -215,19 +218,19 @@ impl HttpRequest {
 ///
 /// # Retorna
 ///
-/// Retorna un `Result` que contiene una instancia de `HttpRequest` en caso de éxito, o un `ServerError`
+/// Retorna un `Result` que contiene una instancia de `HttpRequest` en caso de éxito, o un `StatusCode`
 /// en caso de error.
 ///
-fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
+fn parse_http_request(request: &str) -> Result<HttpRequest, StatusCode> {
     let lines: Vec<&str> = request.lines().collect();
     if lines.len() < 1 {
-        return Err(ServerError::MissingRequestLine);
+        return Err(StatusCode::BadRequest(ServerError::MissingRequestLine.to_string()));
     }
 
     // Parsear la línea de solicitud (GET /path HTTP/1.1)
     let (method, path, http_version) = parse_request_line(lines[0])?;
     if http_version != HTTP_VERSION {
-        return Err(ServerError::HttpVersionNotSupported);
+        return Err(StatusCode::HttpVersionNotSupported);
     }
 
     // Parsear los encabezados
@@ -263,7 +266,7 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, ServerError> {
 /// - El tipo de contenido especificado no es soportado.
 /// - Ocurre un error durante el parseo del cuerpo de la solicitud.
 ///
-fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBody, ServerError> {
+fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBody, StatusCode> {
     // Obtener el cuerpo de la solicitud
     let finish = headers.get(CONTENT_LENGTH).map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
     let body = &request[request.len() - finish..];
@@ -271,7 +274,10 @@ fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBo
     // Parsear el cuerpo de la solicitud
     let binding = APPLICATION_JSON.to_string();
     let content_type = headers.get(CONTENT_TYPE).unwrap_or(&binding);
-    HttpBody::parse(content_type, &body)
+    match HttpBody::parse(content_type, &body){
+        Ok(body) => Ok(body),
+        Err(_) => Err(StatusCode::UnsupportedMediaType),
+    }
 
 }
 
@@ -293,10 +299,10 @@ fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBo
 ///
 /// Devuelve `ServerError::IncompleteRequestLine` si la línea de solicitud no contiene al menos tres partes.
 /// 
-fn parse_request_line(line: &str) -> Result<(String, String, String), ServerError> {
+fn parse_request_line(line: &str) -> Result<(String, String, String), StatusCode> {
     let parts: Vec<&str> = line.split_whitespace().collect();
     if parts.len() < 3 {
-        return Err(ServerError::IncompleteRequestLine);
+        return Err(StatusCode::BadRequest(ServerError::IncompleteRequestLine.to_string()));
     }
     Ok((parts[0].to_string(), parts[1].to_string(), parts[2].to_string()))
 }
