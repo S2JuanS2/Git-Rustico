@@ -24,19 +24,6 @@ pub fn handle_client_daemon(
     tx: &Arc<Mutex<Sender<String>>>,
     root_directory: String
 ) -> Result<(), GitError> {
-    match _handle_client_daemon(stream, root_directory, tx, &signature) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(GitError::RequestFailed(e.to_string())),
-    }
-}
-
-pub fn _handle_client_daemon(
-    stream: &mut TcpStream,
-    root_directory: String,
-    tx: &Arc<Mutex<Sender<String>>>,
-    signature: &String,
-) -> Result<(), GitError> 
-{
     let request = receive_request(stream, signature.clone(), tx.clone())?;
     process_request(stream, &tx, &signature, &request, &root_directory)
 }
