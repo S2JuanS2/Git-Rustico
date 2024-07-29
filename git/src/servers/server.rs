@@ -196,6 +196,7 @@ pub fn create_listener(ip: &str, port: &String) -> Result<TcpListener, GitError>
     Ok(start_server(&address)?)
 }
 
+
 /// Inicia el logging en un hilo separado, escribiendo en el archivo de log especificado por `path_log`.
 ///
 /// # Arguments

@@ -13,7 +13,14 @@ pub struct PullRequest {
     pub body: Option<String>,
     pub head: Option<String>,
     pub base: Option<String>,
+    pub state: Option<String>,
+
+    // Campos opcionales, estos no deben estar guardados en el archivo
+    // del propio pr, solo se los completa por si se necesitan en algun
+    // momento.
     pub mergeable: Option<String>,
+    pub changed_files: Option<Vec<String>>,
+    pub commits: Option<Vec<usize>>,
 }
 
 impl PullRequest {
@@ -32,7 +39,7 @@ impl PullRequest {
         let title = body.get_field("title").ok();
         let head = body.get_field("head").ok();
         let base = body.get_field("base").ok();
-        let mergeable = body.get_field("mergeable").ok();
+        let state = body.get_field("state").ok();
         let body = body.get_field("body").ok();
         
         Ok(PullRequest {
@@ -42,7 +49,10 @@ impl PullRequest {
             body,
             head,
             base,
-            mergeable,
+            state,
+            mergeable: None,
+            changed_files: None,
+            commits: None,
         })
     }
 
@@ -55,6 +65,9 @@ impl PullRequest {
             head: None,
             base: None,
             mergeable: None,
+            state: None,
+            changed_files: None,
+            commits: None,
         }
     }
 
@@ -97,8 +110,11 @@ impl PullRequest {
         {
             return Ok(StatusCode::ResourceNotFound);
         }
+        // TODO| let _mergeable = logica para obtener el estado de fusion
+        // TODO| let _changed_files = logica para obtener los archivos modificados
+        // TODO| let _commits = logica para obtener los commits
+        // actualizar el pr con los campos obtenidos
         let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
-        // let mergeable = logica para obtener el estado de fusion
         Ok(StatusCode::Ok(Option::Some(body)))
     }
 
