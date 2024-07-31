@@ -4,7 +4,7 @@ use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists, list_directory_contents};
 use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER};
 use super::pr::{CommitsPr, PullRequest};
-use super::{http_body::HttpBody, status_code::{Class, StatusCode}};
+use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
@@ -72,7 +72,7 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
         }
     }
     println!("{}", result); //<- enviar esto en un struct serializable
-    Ok(StatusCode::Ok(Class::Multiple(pr_map)))
+    Ok(StatusCode::Forbidden)
 }
 
 /// Obtiene una solicitud de extracción desde el archivo correspondiente.
@@ -104,7 +104,7 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     // TODO| let _commits = logica para obtener los commits <- get_commits_pr
     // actualizar el pr con los campos obtenidos
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
-    Ok(StatusCode::Ok(Class::Single(Some(body))))
+    Ok(StatusCode::Ok(Some(body)))
 }
 
 pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
@@ -119,7 +119,7 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     let json_str = serde_json::to_string(&commits).unwrap();
     let commit_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
     
-    Ok(StatusCode::Ok(Class::Single(Some(commit_body))))
+    Ok(StatusCode::Ok(Some(commit_body)))
 }
 
 pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
