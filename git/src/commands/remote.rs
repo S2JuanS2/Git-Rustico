@@ -51,7 +51,7 @@ pub fn git_remote(
         }
     }
     if action == "add" {
-        add_remote(
+        formatted_result = add_remote(
             config_path.as_str(),
             &config_content,
             remote_name,
@@ -59,7 +59,7 @@ pub fn git_remote(
         )?;
     }
     if action == "rm" {
-        remove_remote(config_path.as_str(), &config_content, remote_name)?;
+        formatted_result = remove_remote(config_path.as_str(), &config_content, remote_name)?;
     }
 
     Ok(formatted_result)
@@ -94,7 +94,7 @@ fn add_remote(
     config_content: &String,
     remote_name: &str,
     remote_url: &str,
-) -> Result<(), CommandsError> {
+) -> Result<String, CommandsError> {
     let remote_exists = check_if_remote_exists(config_content.as_str(), remote_name);
     if remote_exists {
         return Err(CommandsError::RemoteAlreadyExistsError);
@@ -106,7 +106,7 @@ fn add_remote(
     let new_config_content = format!("{}\n{}", config_content, remote);
     create_file_replace(config_path, new_config_content.as_str())?;
 
-    Ok(())
+    Ok("Se agregó un repositorio remoto".to_string())
 }
 
 /// Chequea si un repositorio remoto existe en el archivo de configuración.
@@ -138,7 +138,7 @@ fn remove_remote(
     config_path: &str,
     config_content: &str,
     remote_name: &str,
-) -> Result<(), CommandsError> {
+) -> Result<String, CommandsError> {
     let remote_exists = check_if_remote_exists(config_content, remote_name);
     if !remote_exists {
         return Err(CommandsError::RemoteDoesNotExistError);
@@ -171,7 +171,7 @@ fn remove_remote(
     }
     create_file_replace(config_path, new_config_content.as_str())?;
 
-    Ok(())
+    Ok("Se eliminó un repositorio remoto".to_string())
 }
 
 #[cfg(test)]
