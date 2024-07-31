@@ -118,14 +118,15 @@ pub fn git_pull(
         return Ok(status.join("\n"));
     }
     
-
     // Actualizo el fetch_head si todo salio bien
     fetch_head.branch_already_merged(current_rfs.get_name())?;
     fetch_head.write(repo_local)?;
 
-    status.push("Baby pull :)".to_string());
-    Ok(status.join("\n"))
+    if merge_result.contains("Already up to date."){
+        Ok(merge_result)
+    }else{
+        status.push(merge_result);
+        status.push("End Pull".to_string());
+        Ok(status.join("\n"))
+    }
 }
-
-
-// Err(_) => return Err(CommandsError::PullCurrentBranchNotFound),
