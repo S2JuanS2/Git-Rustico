@@ -3,14 +3,14 @@ use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists, list_directory_contents};
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::collections::HashMap;
-
+use serde::{Serialize,Deserialize};
 use super::{http_body::HttpBody, status_code::StatusCode, status_code::Class};
 use crate::commands::branch::get_branch_current_hash;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
 use crate::commands::push::is_update;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct CommitsPr {
     sha_1: String,
     tree_hash: String,
@@ -210,9 +210,10 @@ impl PullRequest {
         let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
 
         let commits = get_commits_pr(body, src, repo_name)?;
-        println!("{:?}", commits); // <-- Serializar y enviar el cuerpo --
+        let json_str = serde_json::to_string(&commits).unwrap();
+        let commit_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
         
-        Ok(StatusCode::Forbidden)
+        Ok(StatusCode::Ok(Class::Single(Some(commit_body))))
     }
 
     pub fn merge_pull_request(&self,repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
