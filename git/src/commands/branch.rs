@@ -41,13 +41,26 @@ pub fn get_parent_hashes(
     hash_parent.to_string()
 }
 
+/// Devuelve el hash de la branch remota recibida por parametro.
+/// ###Parámetros:
+/// 'directory': directorio del repositorio local.
+/// 'branch': nombre de la branch a obtener el hash.
+pub fn get_branch_remote_current_hash(directory: &str, branch: String) -> Result<String, CommandsError>{
+
+    let dir_branch = format!("{}/{}/{}/remotes/{}/{}", directory, GIT_DIR, REFS, branch, branch);
+    let file = open_file(&dir_branch)?;
+    let hash = read_file_string(file)?;
+
+    Ok(hash)
+}
+
 /// Devuelve el hash de la branch recibida por parametro.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch': nombre de la branch a obtener el hash.
 pub fn get_branch_current_hash(directory: &str, branch: String) -> Result<String, CommandsError>{
 
-    let dir_branch = format!("{}/{}/{}/remotes/{}/{}", directory, GIT_DIR, REFS, branch, branch);
+    let dir_branch = format!("{}/{}/{}/heads/{}", directory, GIT_DIR, REFS, branch);
     let file = open_file(&dir_branch)?;
     let hash = read_file_string(file)?;
 

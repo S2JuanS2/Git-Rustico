@@ -1,7 +1,14 @@
 use std::fmt;
+use std::collections::HashMap;
 
 use super::http_body::HttpBody;
 
+/// Selección de un pull request o múltiples pull request
+#[derive(Debug, PartialEq)]
+pub enum Class {
+    Single(Option<HttpBody>),
+    Multiple(HashMap<u32, HttpBody>),
+}
 
 /// Enumera los posibles códigos de estado HTTP que pueden ser retornados por el servidor.
 #[derive(Debug, PartialEq)]
@@ -9,7 +16,7 @@ pub enum StatusCode {
     Created,
     Forbidden,
     ValidationFailed,
-    Ok(Option<HttpBody>),
+    Ok(Class),
     NotModified,
     PassTheAppropriateMediaType,
     ResourceNotFound,
@@ -43,7 +50,13 @@ impl StatusCode {
             StatusCode::Created => "201 Created".to_string(),
             StatusCode::Forbidden => "403 Forbidden".to_string(),
             StatusCode::ValidationFailed => "422 Validation failed, or the endpoint has been spammed.".to_string(),
-            StatusCode::Ok(_) => "200 OK".to_string(),
+            StatusCode::Ok(class) => {
+                let status = "200 OK";
+                match class {
+                    Class::Single(_) => status.to_string(),
+                    Class::Multiple(_) => status.to_string(),
+                }
+            }
             StatusCode::NotModified => "304 Not modified".to_string(),
             StatusCode::PassTheAppropriateMediaType => "200 Pass the appropriate media type to fetch diff and patch formats.".to_string(),
             StatusCode::ResourceNotFound => "404 Resource not found".to_string(),

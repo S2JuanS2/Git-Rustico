@@ -249,6 +249,28 @@ fn is_necessary_to_update(push: &mut PushBranch, hash_current: &str, hash_prev: 
     Ok(true)
 }
 
+pub fn is_update(directory: &str, hash_current: &str, hash_prev: &str, count_commits: &mut usize) -> Result<bool, CommandsError>
+{
+    if hash_prev == ZERO_ID
+    {
+        return Ok(true);
+    }
+
+    if hash_current == hash_prev
+    {
+        return Ok(true)
+    }
+
+    *count_commits += 1;
+
+    let commit = git_cat_file(directory, hash_current, "-p")?;
+    if let Some(parent_hash) = extract_parent_hash(&commit){
+        if hash_prev == parent_hash || is_update(directory, parent_hash, hash_prev, count_commits)?{
+            return Ok(true)
+        }
+    };
+    Ok(false)
+}
 
 pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Result<bool, CommandsError>
 {
@@ -268,11 +290,6 @@ pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Resu
             return Ok(true)
         }
     };
-
-    // [TODO #5]
-    // Si el commit local no es ancestro del commit remoto, no se puede hacer push
-    // Se debe hacer pull
-    // Implementar la logica de ancestro
     Ok(false)
 }
 
