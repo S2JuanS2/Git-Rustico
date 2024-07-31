@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
 use crate::{consts::{APPLICATION_JSON, CONTENT_LENGTH, CONTENT_TYPE, HTPP_SIGNATURE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
-use super::{http_body::HttpBody, pr::PullRequest, status_code::StatusCode, utils::read_request};
+use super::{features_pr::{create_pull_requests, get_pull_request, list_commits, list_pull_request, merge_pull_request, modify_pull_request}, http_body::HttpBody, status_code::StatusCode, utils::read_request};
 
 /// Representa una solicitud HTTP.
 ///
@@ -70,17 +70,15 @@ impl HttpRequest {
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
     pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<StatusCode, ServerError> {
-        // Manejar la solicitud HTTP
-        let pr = PullRequest::from_http_body(&self.body)?;
-        
+        // Manejar la solicitud HTTP        
         let message = format!("{} request to path: {}", self.method, self.path);
         log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
 
         match self.method.as_str() {
-            "GET" => self.handle_get_request(&pr, source, tx),
-            "POST" => self.handle_post_request(&pr, source, tx),
-            "PUT" => self.handle_put_request(&pr, source, tx),
-            "PATCH" => self.handle_patch_request(&pr, source, tx),
+            "GET" => self.handle_get_request(source, tx),
+            "POST" => self.handle_post_request(&self.body, source, tx),
+            "PUT" => self.handle_put_request( source, tx),
+            "PATCH" => self.handle_patch_request(&self.body, source, tx),
             _ => Ok(StatusCode::MethodNotAllowed),
         }
     }
@@ -106,17 +104,17 @@ impl HttpRequest {
     /// 
     /// Devuelve un `Result` que contiene el status en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn handle_get_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    fn handle_get_request(&self,src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(&self.get_path());
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
-                return pr.list_pull_request(repo_name, src, tx);
+                return list_pull_request(repo_name, src, tx);
             },
             ["repos", repo_name, "pulls", pull_number] => {
-                return pr.get_pull_request(repo_name, pull_number, src, tx);
+                return get_pull_request(repo_name, pull_number, src, tx);
             },
             ["repos", repo_name, "pulls", pull_number, "commits"] => {
-                return pr.list_commits(repo_name, pull_number, src, tx);
+                return list_commits(repo_name, pull_number, src, tx);
             },
             _ => {
                 Ok(StatusCode::ResourceNotFound)
@@ -136,11 +134,11 @@ impl HttpRequest {
     /// 
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn handle_post_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    fn handle_post_request(&self, http_body: &HttpBody, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(&self.get_path());
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
-                return pr.create_pull_requests(repo_name, src, tx);
+                return create_pull_requests(http_body, repo_name, src, tx);
             }
             _ => {
                 Ok(StatusCode::ResourceNotFound)
@@ -160,11 +158,11 @@ impl HttpRequest {
     /// 
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn handle_put_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    fn handle_put_request(&self, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(&self.get_path());
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number, "merge"] => {
-                return pr.merge_pull_request(repo_name, pull_number, src, tx);
+                return merge_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
                 Ok(StatusCode::ResourceNotFound)
@@ -184,11 +182,11 @@ impl HttpRequest {
     /// 
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
     /// 
-    fn handle_patch_request(&self, pr: &PullRequest, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    fn handle_patch_request(&self, http_body: &HttpBody, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(&self.get_path());
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
-                return pr.modify_pull_request(repo_name, pull_number, src, tx);
+                return modify_pull_request(http_body, repo_name, pull_number, src, tx);
             },
             _ => {
                 Ok(StatusCode::ResourceNotFound)
