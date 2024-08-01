@@ -25,12 +25,9 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
     if create_directory(&directory).is_err() {
         return Ok(StatusCode::InternalError("Error creating the PR folder.".to_string()));
     }
-    println!("Creating PR folder: {}", path);
     let _next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
-    println!("Creating PR: {}", _next_pr);
     PullRequest::check_pull_request_validity(repo_name, src, body)?;
     let pr_file_path = format!("{}/{}{}", path, _next_pr, PR_FILE_EXTENSION);
-    println!("Creating PR file: {}", pr_file_path);
     body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
     Ok(StatusCode::Forbidden)
 }
