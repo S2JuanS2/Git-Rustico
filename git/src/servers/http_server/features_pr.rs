@@ -55,24 +55,25 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
         let num = pr.split('.').next().unwrap_or("").parse::<u32>().unwrap_or(0);
         pr_map.insert(num, body);
     }
-    let mut result = String::new();
+    let mut pr_list = vec!();
     let mut keys: Vec<&u32> = pr_map.keys().collect();
     keys.sort();
     for &key in &keys{
+        let mut pr = PullRequest::default();
         if let Some(body) = pr_map.get(key){
-            let format_list_pr = format!("#{} {} {}:{} -> {} [{}]\n", 
-            key, 
-            body.get_field("title")?,
-            body.get_field("owner")?,
-            body.get_field("head")?,
-            body.get_field("base")?,
-            body.get_field("mergeable")?
-            );
-            result = result + format_list_pr.as_str(); 
+            //pr.key
+            pr.repo = Some(repo_name.to_string());
+            pr.title = Some(body.get_field("title")?); 
+            pr.owner = Some(body.get_field("owner")?);
+            pr.head = Some(body.get_field("head")?);
+            pr.base = Some(body.get_field("base")?);
+            //pr.mergeable = Some(body.get_field("mergeable")?);
         }
+        pr_list.push(pr);
     }
-    println!("{}", result); //<- enviar esto en un struct serializable
-    Ok(StatusCode::Forbidden)
+    let json_str = serde_json::to_string(&pr_list).unwrap();
+    let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
+    Ok(StatusCode::Ok(Some(pr_list_body)))
 }
 
 /// Obtiene una solicitud de extracción desde el archivo correspondiente.
@@ -107,6 +108,23 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     Ok(StatusCode::Ok(Some(body)))
 }
 
+/// Obtiene los commits de un pull request recibido por parámetro
+///
+/// Esta función lista los commits de un pull request en dónde dado las branches involucradas
+/// base <- head se leeran los hashes de los commits de cada una y se compararán 
+/// para enviar los commits correspondientes en un vector.
+///
+/// # Parámetros
+/// - `repo_name`: El nombre del repositorio al que pertenece el pull request.
+/// - `pull_number`: El número del pull request que se desea obtener.
+/// - `src`: La ruta base donde se encuentran los archivos del pull request.
+/// - `_tx`: Un canal de transmisión (`Sender<String>`) usado para comunicación con el archivo de log.
+///
+/// # Retornos
+/// - `Ok(StatusCode::Ok)`: Si el archivo se encuentra y se parsea correctamente.
+/// - `Ok(StatusCode::ResourceNotFound)`: Si el archivo no existe en el sistema.
+/// - `Err(ServerError)`: Si ocurre un error al crear el cuerpo HTTP desde el archivo.
+///
 pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     let file_path = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
