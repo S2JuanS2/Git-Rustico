@@ -255,6 +255,7 @@ pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, hea
     return Ok(true)
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
