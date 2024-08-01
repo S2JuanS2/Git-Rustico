@@ -23,7 +23,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
     match PullRequest::check_pull_request_validity(repo_name, src, body)
     {
         Ok(changes) => {
-            if changes {
+            if !changes {
                 return Ok(StatusCode::ValidationFailed("The pull request does not contain any changes.".to_string()));
             }
         }
