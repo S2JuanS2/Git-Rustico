@@ -38,6 +38,7 @@ pub enum ServerError {
     InvalidFormat(String),
     EmptyBody,
     SavePr,
+    ParseNumberPR(String),
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -76,6 +77,7 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::InvalidFormat(e) => write!(f, "Formato inválido: {}", e),
         ServerError::EmptyBody => write!(f, "Se intento gaurdar un body vacío."),
         ServerError::SavePr => write!(f, "Error al guardar el PR."),
+        ServerError::ParseNumberPR(e) => write!(f, "Error al parsear el número de PR: {}", e),
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{fs::OpenOptions, io::{Read, Write}};
+use std::{fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, num::ParseIntError};
 use crate::{consts::{CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
 use crate::commands::branch::get_branch_current_hash;
 use super::{http_body::HttpBody, status_code::StatusCode};
@@ -184,22 +184,42 @@ pub fn valid_repository(repo_name: &str, base_path: &String) -> Result<(), Serve
 /// Retorna `ServerError::WriteNextPrFile` si hay un problema al escribir en el archivo.
 /// 
 pub fn get_next_pr_number(file_path: &str) -> Result<u64, ServerError> {
-    let mut file = match OpenOptions::new().read(true).write(true).create(true).open(file_path){
-        Ok(file) => file,
-        Err(_) => return Err(ServerError::CreateNextPrFile),
-    };
+    // Abre el archivo para lectura y escritura, crea si no existe
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(file_path)
+        .map_err(|_| ServerError::CreateNextPrFile)?;
+
     let mut content = String::new();
-    if file.read_to_string(&mut content).is_err(){
-        return Err(ServerError::ReadNextPrFile);
+
+    // Lee el contenido del archivo
+    file.read_to_string(&mut content).map_err(|_| ServerError::ReadNextPrFile)?;
+
+    // Determina el número del próximo PR
+    let next_pr_number = if content.trim().is_empty() {
+        1 // Si el archivo está vacío, comienza con 1
+    } else {
+        parse_next_pr_number(&content)?
     };
-    let next_pr_number: u64 = content.trim().parse().unwrap_or(1);
-    if file.set_len(0).is_err(){
-        return Err(ServerError::WriteNextPrFile);
-    };
-    if file.write_all((next_pr_number + 1).to_string().as_bytes()).is_err(){
-        return Err(ServerError::WriteNextPrFile);
-    };
+
+    // Vacía el archivo y coloca el cursor al principio
+    file.set_len(0).map_err(|_| ServerError::WriteNextPrFile)?;
+    file.seek(SeekFrom::Start(0)).map_err(|_| ServerError::WriteNextPrFile)?;
+
+    // Escribe el siguiente número en el archivo
+    file.write_all((next_pr_number + 1).to_string().as_bytes())
+        .map_err(|_| ServerError::WriteNextPrFile)?;
+
     Ok(next_pr_number)
+}
+
+fn parse_next_pr_number(content: &str) -> Result<u64, ServerError> {
+    content.trim().parse::<u64>().map_err(|err: ParseIntError| {
+        println!("Failed to parse number from content: {}. Error: {:?}", content, err);
+        ServerError::ParseNumberPR("Failed to parse PR number".to_string())
+    })
 }
 
 /// Valida si hay cambios entre las ramas `head` y `base`.

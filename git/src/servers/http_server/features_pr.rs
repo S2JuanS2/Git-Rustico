@@ -15,7 +15,6 @@ use std::path::Path;
 
 
 pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-    println!("Creating PR");
     if valid_repository(repo_name, src).is_err() {
         return Ok(StatusCode::ResourceNotFound);
     }
@@ -29,7 +28,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
     PullRequest::check_pull_request_validity(repo_name, src, body)?;
     let pr_file_path = format!("{}/{}{}", path, _next_pr, PR_FILE_EXTENSION);
     body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
-    Ok(StatusCode::Forbidden)
+    Ok(StatusCode::Created)
 }
 
 /// Obtiene una solicitud de extracción desde el repositorio correspondiente.
