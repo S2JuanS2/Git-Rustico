@@ -1,7 +1,7 @@
 use std::{fs::OpenOptions, io::{Read, Write}};
 use crate::{consts::{CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
 
-use super::{http_body::HttpBody, status_code::StatusCode, status_code::Class};
+use super::{http_body::HttpBody, status_code::StatusCode};
 
 /// Reads an HTTP request from a reader, returning it as a String.
 ///
@@ -103,7 +103,7 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode) -> R
         Err(_) => return Err(ServerError::SendResponse(response)),
     };
     match status_code {
-        StatusCode::Ok(Class::Single(Some(body))) => send_body(writer, &body),
+        StatusCode::Ok(Some(body)) => send_body(writer, &body),
         _ => Ok(()) // Deberia enviar un CRLF
     }
 }

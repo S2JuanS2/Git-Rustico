@@ -32,7 +32,7 @@ impl CommitsPr{
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct PullRequest {
     pub owner: Option<String>,
     pub repo: Option<String>,
