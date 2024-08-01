@@ -10,10 +10,11 @@ pub fn save_pr_map(pr_map_path: &str, pr_map: &HashMap<String, u64>) -> Result<(
     Ok(())
 }
 
-pub fn generate_head_base_hash(head: &str, base: &str) -> u64 {
+pub fn generate_head_base_hash(head: &str, base: &str) -> String {
     let mut hasher = DefaultHasher::new();
     format!("{}:{}", head, base).hash(&mut hasher);
-    hasher.finish()
+    let hash = hasher.finish();
+    format!("{:x}", hash)
 }
 
 pub fn read_pr_map(pr_map_path: &str) -> Result<HashMap<String, u64>, ServerError> {
