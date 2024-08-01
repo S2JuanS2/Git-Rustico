@@ -58,12 +58,18 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
     }
     let prs = list_directory_contents(&pr_repo_folder_path)?;
 
+    if prs.len() <= 1 {
+        return Ok(StatusCode::ResourceNotFound);
+    }
+
     let mut pr_map: HashMap<u32, HttpBody> = HashMap::new();
     for pr in prs {
-        let pr_path = format!("{}/{}", pr_repo_folder_path, pr);
-        let body = HttpBody::create_from_file(APPLICATION_SERVER, &pr_path)?;
-        let num = pr.split('.').next().unwrap_or("").parse::<u32>().unwrap_or(0);
-        pr_map.insert(num, body);
+        if pr != ".next_pr" {
+            let pr_path = format!("{}/{}", pr_repo_folder_path, pr);
+            let body = HttpBody::create_from_file(APPLICATION_SERVER, &pr_path)?;
+            let num = pr.split('.').next().unwrap_or("").parse::<u32>().unwrap_or(0);
+            pr_map.insert(num, body);
+        }
     }
     let mut pr_list = vec!();
     let mut keys: Vec<&u32> = pr_map.keys().collect();
@@ -148,6 +154,9 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
 
     let commits = get_commits_pr(body, src, repo_name)?;
+    if commits.len() == 0{
+        return Ok(StatusCode::ResourceNotFound);
+    }
     let json_str = serde_json::to_string(&commits).unwrap();
     let commit_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
     
@@ -221,42 +230,43 @@ fn get_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec<Comm
     let base = body.get_field("base")?;
     let directory = format!("{}/{}", src, repo_name);
     let hash_head = get_branch_current_hash(&directory, head.clone())?.to_string();
-    let hash_base = get_branch_current_hash(&directory, base)?.to_string();
+    let hash_base = get_branch_current_hash(&directory, base.clone())?.to_string();
+    let mut result = vec!();
 
     let mut count_commits: usize = 0;
     if is_update(&directory, &hash_base, &hash_head, &mut count_commits)?{
-        println!("No commits\n");
+        return Ok(result);
     }
-    let mut result = vec!();
-    let commits = get_commits(&directory, &head)?;
-    let mut index = 0;
-    while index < count_commits {
-        let mut commits_pr = CommitsPr::new();
-        let commit_content = git_cat_file(&directory, &commits[index], "-p")?;
-        commits_pr.sha_1 = commits[index].clone();
-        let mut lines_commit = commit_content.lines();
-        for line in lines_commit.by_ref() {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 4 {
-                if line.starts_with("author") {
-                    commits_pr.author_name = parts[1].to_string();
-                    commits_pr.author_email = parts[2].to_string();
-                    let timestamp: i64 = parts[3].parse().unwrap_or(0);
-                    commits_pr.date = chrono::DateTime::from_timestamp(timestamp, 0).unwrap().to_string();
-                }else if line.starts_with("committer") {
-                    commits_pr.committer_name = parts[1].to_string();
-                    commits_pr.committer_email = parts[2].to_string();
-            }else if parts.len() == 2{
-                }if line.starts_with("tree"){
-                    commits_pr.tree_hash = parts[1].to_string();
-                }else if line.starts_with("parent"){
-                    commits_pr.parent = parts[1].to_string();
+    let commits_head = get_commits(&directory, &head)?;
+    let commits_base = get_commits(&directory, &base)?;
+    for commit in commits_head {
+        if !commits_base.contains(&commit){
+            let mut commits_pr = CommitsPr::new();
+            let commit_content = git_cat_file(&directory, &commit, "-p")?;
+            commits_pr.sha_1 = commit.clone();
+            let mut lines_commit = commit_content.lines();
+            for line in lines_commit.by_ref() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 4 {
+                    if line.starts_with("author") {
+                        commits_pr.author_name = parts[1].to_string();
+                        commits_pr.author_email = parts[2].to_string();
+                        let timestamp: i64 = parts[3].parse().unwrap_or(0);
+                        commits_pr.date = chrono::DateTime::from_timestamp(timestamp, 0).unwrap().to_string();
+                    }else if line.starts_with("committer") {
+                        commits_pr.committer_name = parts[1].to_string();
+                        commits_pr.committer_email = parts[2].to_string();
+                }else if parts.len() == 2{
+                    }if line.starts_with("tree"){
+                        commits_pr.tree_hash = parts[1].to_string();
+                    }else if line.starts_with("parent"){
+                        commits_pr.parent = parts[1].to_string();
+                    }
                 }
+                commits_pr.message = line.to_string();
             }
-            commits_pr.message = line.to_string();
+            result.push(commits_pr);
         }
-        result.push(commits_pr);
-        index += 1;
     }
     Ok(result)
 }
