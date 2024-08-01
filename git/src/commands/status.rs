@@ -461,8 +461,9 @@ pub fn check_for_deleted_staged_files(
         let mut files_in_tree = Vec::new();
         for line in current_commit_lines {
             if line.starts_with("tree") {
+                let mut file_path = String::new();
                 let tree_parts: Vec<&str> = line.split_whitespace().collect();
-                get_files_in_tree(directory, tree_parts[1], &mut files_in_tree)?;
+                get_files_in_tree(directory, tree_parts[1], &mut file_path, &mut files_in_tree)?;
             }
         }
         for file in files_in_tree {
@@ -489,17 +490,25 @@ pub fn check_for_deleted_staged_files(
 fn get_files_in_tree(
     directory: &str,
     tree_hash: &str,
+    file_path: &mut String,
     files_in_tree: &mut Vec<String>,
 ) -> Result<(), CommandsError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     let tree_lines = tree_content.split('\n');
     for tree_line in tree_lines {
-        if !tree_line.is_empty(){
+        if !tree_line.is_empty() {
             let tree_parts: Vec<&str> = tree_line.split_whitespace().collect();
+            let current_path = if file_path.is_empty() {
+                tree_parts[1].to_string()
+            } else {
+                format!("{}/{}", file_path, tree_parts[1])
+            };
+
             if git_cat_file(directory, tree_parts[2], "-t")? == "tree" {
-                get_files_in_tree(directory, tree_parts[2], files_in_tree)?;
+                get_files_in_tree(directory, tree_parts[2], &mut current_path.clone(), files_in_tree)?;
+            } else {
+                files_in_tree.push(current_path);
             }
-            files_in_tree.push(tree_parts[1].to_string());
         }
     }
     Ok(())

@@ -2,6 +2,7 @@ use crate::commands::cat_file::git_cat_file;
 use crate::consts::*;
 use super::errors::CommandsError;
 use super::log::insert_line_between_lines;
+use super::merge::get_log_from_branch;
 use crate::models::client::Client;
 use crate::util::files::*;
 use crate::util::index::{open_index, recovery_index};
@@ -233,6 +234,29 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
     }
 }
 
+fn merge_commit_content_format(merge_commit: &Commit, tree_hash: &str, parent1_hash: &str, parent2_hash: &str) -> String {
+    
+    let date: DateTime<Utc> = Utc::now();
+    let timestamp = date.timestamp();
+    let offset = FixedOffset::west_opt(3 * 3600).unwrap().to_string();
+    let offset_format: String = offset.chars().filter(|&c| c != ':').collect();  
+    format!(
+        "tree {}\nparent {}\nparent {}\nauthor {} <{}> {} {}\ncommitter {} <{}> {} {}\n\n{}\n",
+        tree_hash,
+        parent1_hash,
+        parent2_hash,
+        merge_commit.get_author_name(),
+        merge_commit.get_author_email(),
+        timestamp,
+        offset_format,
+        merge_commit.get_committer_name(),
+        merge_commit.get_committer_email(),
+        timestamp,
+        offset_format,
+        merge_commit.get_message()
+    )
+}
+
 /// Esta función genera y crea el objeto commit
 /// ###Parametros:
 /// 'directory': Directorio del git
@@ -270,6 +294,60 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
     if commit_content.lines().count() == 5{
         commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
     }
+    builder_commit_log(directory, &commit_content, &hash_commit, &current_branch, "logs/refs/heads")?;
+    builder_commit_msg_edit(directory, commit.get_message())?;
+
+    create_or_replace_commit_into_branch(current_branch.clone(), branch_current_path, hash_commit.clone())?;
+
+    let response = format!("[{} {}] {}", current_branch, &hash_commit.as_str()[..7], commit.get_message());
+
+    Ok(response)
+}
+
+/// Esta función genera y crea el objeto merge commit. Es un tipo de commit especifico que tiene dos parents.
+/// ###Parametros:
+/// 'directory': Directorio del git
+/// 'commit': Estructura que contiene la información del commit
+/// 'parent1_hash': Hash del primer parent
+/// 'parent2_hash': Hash del segundo parent
+pub fn merge_commit(directory: &str, commit: Commit, parent1_hash: &str, parent2_hash: &str) -> Result<String, CommandsError> {
+    let git_dir = format!("{}/{}", directory, GIT_DIR);
+    check_index_content(&git_dir)?;
+
+    let current_branch = get_current_branch(directory)?;
+    let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
+
+    let index_content = open_index(&git_dir)?;
+    let tree_hash = recovery_index(&index_content, &git_dir)?;
+    let commit_content = merge_commit_content_format(&commit, &tree_hash, parent1_hash, parent2_hash);
+    let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
+    builder_commit_log(directory, &commit_content, &hash_commit, &current_branch, "logs/refs/heads")?;
+    builder_commit_msg_edit(directory, commit.get_message())?;
+
+    create_or_replace_commit_into_branch(current_branch.clone(), branch_current_path, hash_commit.clone())?;
+
+    let response = format!("[{} {}] {}", current_branch, &hash_commit.as_str()[..7], commit.get_message());
+
+    Ok(response)
+}
+
+/// Esta función genera y crea el objeto rebase commit con el parent pasado por parametro.
+/// ###Parametros:
+/// 'directory': Directorio del git
+/// 'commit': Estructura que contiene la información del commit
+/// 'parent_hash': Hash del parent
+pub fn rebase_commit(directory: &str, commit: Commit, parent_hash: &str) -> Result<String, CommandsError> {
+    let git_dir = format!("{}/{}", directory, GIT_DIR);
+    check_index_content(&git_dir)?;
+
+    let current_branch = get_current_branch(directory)?;
+    let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, current_branch);
+
+    let index_content = open_index(&git_dir)?;
+    let tree_hash = recovery_index(&index_content, &git_dir)?;
+
+    let commit_content = commit_content_format(&commit, &tree_hash, parent_hash);
+    let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
     builder_commit_log(directory, &commit_content, &hash_commit, &current_branch, "logs/refs/heads")?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
