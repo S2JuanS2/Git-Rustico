@@ -1,8 +1,9 @@
-use std::fmt;
+use std::{fmt, fs::File, io::Write};
 
 use serde_json::Value as JsonValue;
 use serde_yaml::Value as YamlValue;
 use crate::{consts::{APPLICATION_JSON, APPLICATION_XML, APPLICATION_YAML, TEXT_XML, TEXT_YAML}, servers::errors::ServerError};
+use serde_xml_rs::to_string as xml_to_string;
 
 /// Enum `HttpBody` que representa los diferentes tipos de cuerpos de solicitudes HTTP.
 ///
@@ -157,5 +158,89 @@ impl HttpBody {
             HttpBody::Empty => ("".to_string(), "".to_string())
         };
         return Ok(content_type_and_body)
+    }
+
+    /// Guarda el cuerpo HTTP en un archivo en el formato especificado.
+    ///
+    /// # Parámetros
+    ///
+    /// * `file_path` - La ruta del archivo donde se guardará el cuerpo serializado.
+    /// * `application` - El formato en el que se debe guardar el cuerpo: `application/json`, `application/xml`, o `application/yaml`.
+    ///
+    /// # Retornos
+    ///
+    /// Retorna `Ok(())` si el cuerpo se guarda correctamente en el archivo.
+    /// Retorna un `ServerError` si ocurre algún error durante el proceso de creación del archivo o serialización.
+    ///
+    /// # Errores
+    ///
+    /// * `ServerError::SavePr` - Si ocurre un error al crear el archivo o al escribir en él.
+    /// * `ServerError::Serialization` - Si ocurre un error al serializar el cuerpo en el formato especificado.
+    /// * `ServerError::EmptyBody` - Si el cuerpo está vacío y no se puede guardar.
+    /// * `ServerError::InvalidFormat` - Si el formato especificado no es compatible.
+    ///
+    pub fn save_body_to_file(&self, file_path: &str, application: &str) -> Result<(), ServerError> {
+        let mut file = match File::create(file_path){
+            Ok(file) => file,
+            Err(_) => return Err(ServerError::SavePr),
+        };
+
+        // Convertimos el cuerpo actual al formato especificado por `application`
+        let serialized = match application {
+            APPLICATION_JSON => match self {
+                HttpBody::Json(json) => serde_json::to_string_pretty(json)
+                    .map_err(|e| ServerError::Serialization(e.to_string()))?,
+                HttpBody::Xml(xml) => {
+                    // Convertir XML a JSON antes de serializar
+                    let xml_string = xml_to_string(xml)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    serde_json::to_string_pretty(&serde_json::from_str(&xml_string)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?
+                }
+                HttpBody::Yaml(yaml) => serde_json::to_string_pretty(yaml)
+                    .map_err(|e| ServerError::Serialization(e.to_string()))?,
+                HttpBody::Empty => return Err(ServerError::EmptyBody),
+            },
+            APPLICATION_XML => match self {
+                HttpBody::Json(json) => {
+                    // Convertir JSON a XML antes de serializar
+                    xml_to_string(json).map_err(|e| ServerError::Serialization(e.to_string()))?
+                }
+                HttpBody::Xml(xml) => xml_to_string(xml)
+                    .map_err(|e| ServerError::Serialization(e.to_string()))?,
+                HttpBody::Yaml(yaml) => {
+                    // Convertir YAML a JSON primero, luego a XML
+                    let json_value = serde_json::from_str(&serde_json::to_string(yaml)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    xml_to_string(&json_value)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?
+                }
+                HttpBody::Empty => return Err(ServerError::EmptyBody),
+            },
+            APPLICATION_YAML => match self {
+                HttpBody::Json(json) => serde_yaml::to_string(json)
+                    .map_err(|e| ServerError::Serialization(e.to_string()))?,
+                HttpBody::Xml(xml) => {
+                    // Convertir XML a JSON primero, luego a YAML
+                    let json_value = serde_json::from_str(&xml_to_string(xml)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    serde_yaml::to_string(&json_value)
+                        .map_err(|e| ServerError::Serialization(e.to_string()))?
+                }
+                HttpBody::Yaml(yaml) => serde_yaml::to_string(yaml)
+                    .map_err(|e| ServerError::Serialization(e.to_string()))?,
+                HttpBody::Empty => return Err(ServerError::EmptyBody),
+            },
+            _ => return Err(ServerError::InvalidFormat("Unsupported application format".to_string())),
+        };
+
+        // Guardamos el contenido serializado en el archivo
+        if file.write_all(serialized.as_bytes()).is_err() {
+            return Err(ServerError::SavePr);
+        }
+        Ok(())
     }
 }

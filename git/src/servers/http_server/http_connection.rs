@@ -31,6 +31,14 @@ pub fn handle_client_http(
     root_directory: String
 ) -> Result<(), GitError> {
     let status_code = _handle_client_http(stream, root_directory, &tx, &signature);
+    println!("Response sent to client with status code: {}", status_code.to_string());
+    match &status_code{
+        StatusCode::InternalError(e) => {
+            let message = format!("Internal error: {}", e);
+            println!("{}", message);
+        },  
+        _ => {}
+    };
     let message = format!("Response sent to client with status code: {}", status_code.to_string());
     log_message_with_signature(&tx, &signature, &message);
 

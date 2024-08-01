@@ -25,13 +25,10 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
         return Ok(StatusCode::InternalError("Error creating the PR folder.".to_string()));
     }
     let _next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
-    let _pr = match PullRequest::create_validated_pull_request(repo_name, src, body)
-    {
-        Ok(pr) => pr,
-        Err(e) => return Ok(StatusCode::ValidationFailed(e.to_string())),
-    };
-    // let pr_file_path = format!("{}/{}{}", path, _pr.get_field("number")?, PR_FILE_EXTENSION);
-    Ok(StatusCode::Forbidden)
+    PullRequest::check_pull_request_validity(repo_name, src, body)?;
+    let pr_file_path = format!("{}/{}{}", path, _next_pr, PR_FILE_EXTENSION);
+    body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
+    Ok(StatusCode::Created)
 }
 
 /// Obtiene una solicitud de extracción desde el repositorio correspondiente.

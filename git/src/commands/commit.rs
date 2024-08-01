@@ -2,7 +2,6 @@ use crate::commands::cat_file::git_cat_file;
 use crate::consts::*;
 use super::errors::CommandsError;
 use super::log::insert_line_between_lines;
-use super::merge::get_log_from_branch;
 use crate::models::client::Client;
 use crate::util::files::*;
 use crate::util::index::{open_index, recovery_index};
