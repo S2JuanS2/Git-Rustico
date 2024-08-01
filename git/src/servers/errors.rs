@@ -30,6 +30,9 @@ pub enum ServerError {
     ResourceNotFound(String),
     StoredFileParse,
     ReadRequest,
+    CreateNextPrFile,
+    ReadNextPrFile,
+    WriteNextPrFile,
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -60,6 +63,9 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::ResourceNotFound(e) => write!(f, "Recurso no encontrado: {}", e),
         ServerError::StoredFileParse => write!(f, "Error al parsear el archivo almacenado."),
         ServerError::ReadRequest => write!(f, "Error al leer la solicitud HTTP."),
+        ServerError::CreateNextPrFile => write!(f, "Error al crear el archivo donde se guarda el número del próximo PR."),
+        ServerError::ReadNextPrFile => write!(f, "Error al leer el archivo donde se guarda el número del próximo PR."),
+        ServerError::WriteNextPrFile => write!(f, "Error al escribir el archivo donde se guarda el número del próximo PR."),
     }
 }
 
