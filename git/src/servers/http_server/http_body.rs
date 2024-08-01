@@ -243,4 +243,26 @@ impl HttpBody {
         }
         Ok(())
     }
+
+    pub fn from_string(application: &str, message: &str, key: &str) -> Result<Self, ServerError> {
+        match application {
+            APPLICATION_JSON => {
+                let body_str = format!("{{\"{}\": \"{}\"}}", key, message);
+                println!("{}", body_str);
+                let json = serde_json::from_str(&body_str).map_err(|_| ServerError::HttpParseJsonBody)?;
+                Ok(HttpBody::Json(json))
+            }
+            APPLICATION_YAML | TEXT_YAML => {
+                let body_str = format!("{}: {}", key, message);
+                let yaml = serde_yaml::from_str(&body_str).map_err(|_| ServerError::HttpParseYamlBody)?;
+                Ok(HttpBody::Yaml(yaml))
+            }
+            APPLICATION_XML | TEXT_XML => {
+                let body_str = format!("<{}>{}</{}>", key, message, key);
+                let xml = serde_xml_rs::from_str(&body_str).map_err(|_| ServerError::HttpParseXmlBody)?;
+                Ok(HttpBody::Xml(xml))
+            }
+            _ => Err(ServerError::UnsupportedMediaType),
+        }
+    }
 }

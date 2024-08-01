@@ -35,6 +35,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
     if create_directory(&directory).is_err() {
         return Ok(StatusCode::InternalError("Error creating the PR folder.".to_string()));
     }
+    
     let head = body.get_field("head")?;
     let base = body.get_field("base")?;
     let hash_key = generate_head_base_hash(&head, &base);
@@ -210,6 +211,7 @@ pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, 
     // LOGICA PARA MODIFICAR UNA SOLICITUD DE EXTRACCION
     Ok(StatusCode::Forbidden)
 }
+
 
 /// Construye la ruta del archivo para una solicitud de extracción específica en el repositorio.
 ///

@@ -1,5 +1,5 @@
 use std::{fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, num::ParseIntError};
-use crate::{consts::{CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
+use crate::{consts::{APPLICATION_JSON, CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
 use crate::commands::branch::get_branch_current_hash;
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::push::is_update;
@@ -104,6 +104,12 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode) -> R
     };
     match status_code {
         StatusCode::Ok(Some(body)) => send_body(writer, &body),
+        StatusCode::ValidationFailed(message)
+        | StatusCode::InternalError(message)
+        | StatusCode::BadRequest(message) => {
+            let body = HttpBody::from_string(&APPLICATION_JSON, &message, "Informacion")?;
+            send_body(writer, &body)
+        },
         _ => Ok(()) // Deberia enviar un CRLF
     }
 }
