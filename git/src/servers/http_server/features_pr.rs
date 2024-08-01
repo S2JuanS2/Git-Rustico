@@ -15,13 +15,6 @@ use std::path::Path;
 
 
 pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-    // LOGICA PARA CREAR UNA SOLICITUD DE EXTRACCION
-    let _pr = match PullRequest::from_http_body(body)
-    {
-        Ok(pr) => pr,
-        Err(_) => return Ok(StatusCode::BadRequest("The request body does not contain a valid Pull Request.".to_string())),
-    };
-
     if valid_repository(repo_name, src).is_err() {
         return Ok(StatusCode::ResourceNotFound);
     }
@@ -32,6 +25,11 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
         return Ok(StatusCode::InternalError("Error creating the PR folder.".to_string()));
     }
     let _next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
+    let _pr = match PullRequest::create_validated_pull_request(repo_name, src, body)
+    {
+        Ok(pr) => pr,
+        Err(_) => return Ok(StatusCode::BadRequest("The request body does not contain a valid Pull Request.".to_string())),
+    };
     // let pr_file_path = format!("{}/{}{}", path, _pr.get_field("number")?, PR_FILE_EXTENSION);
     Ok(StatusCode::Forbidden)
 }

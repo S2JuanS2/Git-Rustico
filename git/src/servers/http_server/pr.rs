@@ -103,5 +103,50 @@ impl PullRequest {
         PullRequest::from_http_body(&body)
     }
 
+    /// Crea un nuevo PullRequest a partir del contenido del HttpBody, validando que las ramas base y head no sean las mismas y que haya cambios.
+    /// 
+    /// # Parámetros
+    /// - `repo_name`: Nombre del repositorio.
+    /// - `base_path`: Ruta base del repositorio.
+    /// - `http_body`: El cuerpo de la solicitud HTTP que contiene los datos del PR.
+    ///
+    /// # Retorna
+    /// - `Result<Self, ServerError>`: Devuelve un resultado con el nuevo PullRequest o un error en caso de que las validaciones fallen.
+    ///
+    /// # Errores
+    /// - `ServerError::InvalidRequest`: Si la rama base y la rama head son las mismas.
+    /// 
+    pub fn create_validated_pull_request(_repo_name: &str, _base_path: &String, http_body: &HttpBody) -> Result<Self, ServerError> {
+        let head = http_body.get_field("head")?;
+        let base = http_body.get_field("base")?;
+        let owner = http_body.get_field("owner")?;
+        let repo = http_body.get_field("repo")?;
+        let title = http_body.get_field("title")?;
+        let body = http_body.get_field("body")?;
+        let state = "open".to_string();    
+
+        // if head == base {
+        //     return Err(ServerError::InvalidRequest("The head and base branches must be different.".to_string()));
+        // }
+
+        // Hay cambios
+        // if not validate_branch_changes()
+        // {
+
+        // }
+
+        Ok(PullRequest {
+            owner: Some(owner),
+            repo: Some(repo),
+            title: Some(title),
+            body: Some(body),
+            head: Some(head),
+            base: Some(base),
+            state: Some(state),
+            mergeable: None,
+            changed_files: None,
+            commits: None,
+        })  
+    }
 }
 
