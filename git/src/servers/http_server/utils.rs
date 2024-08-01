@@ -1,8 +1,8 @@
 use std::{fs::OpenOptions, io::{Read, Write}};
 use crate::{consts::{CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
-
+use crate::commands::branch::get_branch_current_hash;
 use super::{http_body::HttpBody, status_code::StatusCode};
-
+use crate::commands::push::is_update;
 /// Reads an HTTP request from a reader, returning it as a String.
 ///
 /// # Arguments
@@ -217,9 +217,16 @@ pub fn get_next_pr_number(file_path: &str) -> Result<u64, ServerError> {
 /// * `Ok(false)` - Si no hay cambios entre `head` y `base`.
 /// * `Err(ServerError)` - Si ocurre un error durante la validación.
 /// 
-pub fn validate_branch_changes(_repo_name: &str, _base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
-    // TODO
-    return Ok(base != head)
+pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
+    let directory = format!("{}/{}", base_path, repo_name);
+    let hash_head = get_branch_current_hash(&directory, head.to_string())?.to_string();
+    let hash_base = get_branch_current_hash(&directory, base.to_string())?.to_string();
+
+    let mut count_commits: usize = 0;
+    if is_update(&directory, &hash_base, &hash_head, &mut count_commits)?{
+        return Ok(false)
+    }
+    return Ok(true)
 }
 
 #[cfg(test)]
