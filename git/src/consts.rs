@@ -194,3 +194,5 @@ pub const PR_FILE_EXTENSION: &str = ".json";
 pub const CONTENT_LENGTH: &str = "Content-Length";
 
 pub const CONTENT_TYPE: &str = "Content-Type";
+
+pub const PR_MAP_FILE: &str = "pr_map.json";

@@ -2,8 +2,9 @@ use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::collections::HashMap;
 use crate::servers::errors::ServerError;
 use crate::util::files::{create_directory, file_exists, folder_exists, list_directory_contents};
-use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER};
+use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
+use super::pr_registry::{generate_head_base_hash, read_pr_map, save_pr_map};
 use super::utils::{get_next_pr_number, valid_repository};
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
@@ -19,15 +20,37 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
         return Ok(StatusCode::ResourceNotFound);
     }
     
+    match PullRequest::check_pull_request_validity(repo_name, src, body)
+    {
+        Ok(changes) => {
+            if changes {
+                return Ok(StatusCode::ValidationFailed("The pull request does not contain any changes.".to_string()));
+            }
+        }
+        Err(e) => return Err(e),
+    }
+    
     let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
     let directory = Path::new(&path);
     if create_directory(&directory).is_err() {
         return Ok(StatusCode::InternalError("Error creating the PR folder.".to_string()));
     }
-    let _next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
-    PullRequest::check_pull_request_validity(repo_name, src, body)?;
-    let pr_file_path = format!("{}/{}{}", path, _next_pr, PR_FILE_EXTENSION);
+    let head = body.get_field("head")?;
+    let base = body.get_field("base")?;
+    let hash_key = generate_head_base_hash(&head, &base);
+    let pr_map_path = format!("{}/{}", path, PR_MAP_FILE);
+    let mut pr_map = read_pr_map(&pr_map_path)?;
+    if let Some(&_existing_pr_number) = pr_map.get(&hash_key.to_string()) {
+        return Ok(StatusCode::ValidationFailed("Pull request already exists.".to_string()));
+    }
+
+    let next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
+    let pr_file_path = format!("{}/{}{}", path, next_pr, PR_FILE_EXTENSION);
     body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
+    
+    pr_map.insert(hash_key.to_string(), next_pr);
+    save_pr_map(&pr_map_path, &pr_map)?;
+
     Ok(StatusCode::Created)
 }
 
