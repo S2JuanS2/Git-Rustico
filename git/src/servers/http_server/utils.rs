@@ -239,7 +239,6 @@ fn parse_next_pr_number(content: &str) -> Result<u64, ServerError> {
 /// 
 pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
     let directory = format!("{}/{}", base_path, repo_name);
-    println!("Directory: {}", directory);
     let hash_head = match get_branch_current_hash(&directory, head.to_string()) {
         Ok(hash) => hash.to_string(),
         Err(_) => return Err(ServerError::InvalidRequestNoChange("The head branch does not exist.".to_string())),

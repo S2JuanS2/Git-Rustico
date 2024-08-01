@@ -141,7 +141,6 @@ impl PullRequest {
         let _state = "open".to_string();
     
         let has_changes = validate_branch_changes(repo_name, base_path, &base, &head)?;
-        println!("Pull request is valid.");
 
         if let Ok(repo) = http_body.get_field("repo") {
             if repo != repo_name {
