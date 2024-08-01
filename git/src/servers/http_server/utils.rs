@@ -219,8 +219,15 @@ pub fn get_next_pr_number(file_path: &str) -> Result<u64, ServerError> {
 /// 
 pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
     let directory = format!("{}/{}", base_path, repo_name);
-    let hash_head = get_branch_current_hash(&directory, head.to_string())?.to_string();
-    let hash_base = get_branch_current_hash(&directory, base.to_string())?.to_string();
+    println!("Directory: {}", directory);
+    let hash_head = match get_branch_current_hash(&directory, head.to_string()) {
+        Ok(hash) => hash.to_string(),
+        Err(_) => return Err(ServerError::InvalidRequestNoChange("The head branch does not exist.".to_string())),
+    };
+    let hash_base = match get_branch_current_hash(&directory, base.to_string()){
+        Ok(hash) => hash.to_string(),
+        Err(_) => return Err(ServerError::InvalidRequestNoChange("The base branch does not exist.".to_string())),
+    };
 
     let mut count_commits: usize = 0;
     if is_update(&directory, &hash_base, &hash_head, &mut count_commits)?{

@@ -3,6 +3,7 @@ use crate::servers::errors::ServerError;
 use serde::{Serialize,Deserialize};
 use super::{http_body::HttpBody, utils::validate_branch_changes};
 
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CommitsPr {
     pub sha_1: String,
@@ -103,59 +104,54 @@ impl PullRequest {
         PullRequest::from_http_body(&body)
     }
 
-    /// Crea un nuevo PullRequest a partir del contenido del HttpBody, validando que las ramas base y head no sean las mismas y que haya cambios.
-    /// 
-    /// # Parámetros
-    /// - `repo_name`: Nombre del repositorio.
-    /// - `base_path`: Ruta base del repositorio.
-    /// - `http_body`: El cuerpo de la solicitud HTTP que contiene los datos del PR.
+    /// Valida un pull request verificando el cuerpo de la solicitud y los cambios en las ramas.
+    ///
+    /// Esta función extrae los campos necesarios del cuerpo de la solicitud HTTP para un pull request
+    /// y realiza verificaciones para asegurar que:
+    /// - Las ramas `head` y `base` sean válidas.
+    /// - Existan cambios entre las ramas `head` y `base`.
+    /// - El nombre del repositorio en el cuerpo de la solicitud coincida con el nombre del repositorio en la URL.
+    ///
+    /// # Argumentos
+    ///
+    /// * `repo_name` - El nombre del repositorio según se especifica en la URL.
+    /// * `base_path` - La ruta base del directorio donde se almacenan los repositorios.
+    /// * `http_body` - El cuerpo de la solicitud HTTP que contiene los detalles del pull request.
     ///
     /// # Retorna
-    /// - `Result<Self, ServerError>`: Devuelve un resultado con el nuevo PullRequest o un error en caso de que las validaciones fallen.
+    ///
+    /// * `Result<bool, ServerError>` - Retorna `Ok(true)` si el pull request es válido y existen cambios,
+    ///   de lo contrario, retorna un `ServerError` indicando el tipo de fallo de validación.
     ///
     /// # Errores
-    /// - `ServerError::InvalidRequest`: Si la rama base y la rama head son las mismas.
-    /// 
-    pub fn create_validated_pull_request(repo_name: &str, base_path: &String, http_body: &HttpBody) -> Result<Self, ServerError> {
+    ///
+    /// * `ServerError::HttpFieldNotFound` - Si faltan campos requeridos como `head`, `base`, `owner`, `title` o `body` en la solicitud.
+    /// * `ServerError::InvalidRequestNoChange` - Si el nombre del repositorio en el cuerpo no coincide con el de la URL o si no se encuentran cambios entre las ramas.
+    ///
+    pub fn check_pull_request_validity(
+        repo_name: &str,
+        base_path: &str,
+        http_body: &HttpBody,
+    ) -> Result<bool, ServerError> {
         let head = http_body.get_field("head")?;
         let base = http_body.get_field("base")?;
-        let owner = http_body.get_field("owner")?;
-        let title = http_body.get_field("title")?;
-        let body = http_body.get_field("body")?;
-        let state = "open".to_string();    
-        
-        match validate_branch_changes(repo_name, base_path, &base, &head)
-        {
-            Ok(result) => {
-                if !result {
-                    return Err(ServerError::InvalidRequestNoChange("There are no changes in the branch.".to_string()));
-                }
-            },
-            Err(e) => return Err(e),
-        }
-        
-        let repo = match http_body.get_field("repo"){
-            Ok(repo) => {
-                if repo != repo_name{
-                    return Err(ServerError::InvalidRequestNoChange("The repository name does not match the repository name in the URL.".to_string()));
-                }
-                repo
-            }
-            Err(_) => repo_name.to_string(),
-        };
+        let _owner = http_body.get_field("owner")?;
+        let _title = http_body.get_field("title")?;
+        let _body = http_body.get_field("body")?;
+        let _state = "open".to_string();
+    
+        let has_changes = validate_branch_changes(repo_name, base_path, &base, &head)?;
+        println!("Pull request is valid.");
 
-        Ok(PullRequest {
-            owner: Some(owner),
-            repo: Some(repo),
-            title: Some(title),
-            body: Some(body),
-            head: Some(head),
-            base: Some(base),
-            state: Some(state),
-            mergeable: None,
-            changed_files: None,
-            commits: None,
-        })  
+        if let Ok(repo) = http_body.get_field("repo") {
+            if repo != repo_name {
+                return Err(ServerError::InvalidRequestNoChange(
+                    "The repository name does not match the repository name in the URL.".to_string(),
+                ));
+            }
+        }
+    
+        Ok(has_changes)
     }
 }
 
