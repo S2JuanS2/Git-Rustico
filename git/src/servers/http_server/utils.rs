@@ -217,7 +217,8 @@ pub fn get_next_pr_number(file_path: &str) -> Result<u64, ServerError> {
 /// * `Ok(false)` - Si no hay cambios entre `head` y `base`.
 /// * `Err(ServerError)` - Si ocurre un error durante la validación.
 /// 
-pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
+pub fn validate_branch_changes(_repo_name: &str, _base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
+    // TODO
     return Ok(base != head)
 }
 
