@@ -1,5 +1,5 @@
-use std::io::{Read, Write};
-use crate::{consts::{CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::create_directory}};
+use std::{fs::OpenOptions, io::{Read, Write}};
+use crate::{consts::{CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
 
 use super::{http_body::HttpBody, status_code::StatusCode};
 
@@ -60,6 +60,9 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
         Err(_) => Err(ServerError::CreatePrFolderError),
     }
 }
+
+
+
 /// Envía una respuesta HTTP al cliente.
 ///
 /// Esta función construye una respuesta HTTP con la versión y el código de estado proporcionados,
@@ -135,6 +138,88 @@ fn send_body(writer: &mut dyn Write, body: &HttpBody) -> Result<(), ServerError>
         Ok(_) => Ok(()),
         Err(_) => Err(ServerError::SendResponse(body.to_string())),
     }
+}
+
+/// Valida si un repositorio existe en el directorio especificado.
+///
+/// # Argumentos
+///
+/// * `repo_name` - El nombre del repositorio a validar.
+/// * `base_path` - La ruta base donde se encuentran los repositorios.
+///
+/// # Retorna
+///
+/// * `Ok(())` si el repositorio existe.
+/// * `Err(ServerError::ResourceNotFound)` si el repositorio o su carpeta `.git` no existen.
+///
+/// # Errores
+///
+/// Esta función retornará `ServerError::ResourceNotFound` si el repositorio o su carpeta `.git` no existen.
+pub fn valid_repository(repo_name: &str, base_path: &String) -> Result<(), ServerError> {
+    let repo_directory = format!("{}/{}", base_path, repo_name);
+    if !folder_exists(&repo_directory)
+    {
+        return Err(ServerError::ResourceNotFound("The repository does not exist.".to_string()));
+    }
+    let git = format!("{}/.git", repo_directory);
+    if !folder_exists(&git)
+    {
+        return Err(ServerError::ResourceNotFound("The repository does not exist.".to_string()));
+    }
+    Ok(())
+}
+
+/// Obtiene el número del próximo pull request a partir de un archivo.
+///
+/// Si el archivo no existe, se crea y se inicializa en 1.
+///
+/// # Argumentos
+///
+/// * `file_path` - La ruta al archivo que almacena el número del próximo pull request.
+///
+/// # Errores
+///
+/// Retorna `ServerError::CreateNextPrFile` si hay un problema al crear el archivo.
+/// Retorna `ServerError::ReadNextPrFile` si hay un problema al leer el archivo.
+/// Retorna `ServerError::WriteNextPrFile` si hay un problema al escribir en el archivo.
+/// 
+pub fn get_next_pr_number(file_path: &str) -> Result<u64, ServerError> {
+    let mut file = match OpenOptions::new().read(true).write(true).create(true).open(file_path){
+        Ok(file) => file,
+        Err(_) => return Err(ServerError::CreateNextPrFile),
+    };
+    let mut content = String::new();
+    if file.read_to_string(&mut content).is_err(){
+        return Err(ServerError::ReadNextPrFile);
+    };
+    let next_pr_number: u64 = content.trim().parse().unwrap_or(1);
+    if file.set_len(0).is_err(){
+        return Err(ServerError::WriteNextPrFile);
+    };
+    if file.write_all((next_pr_number + 1).to_string().as_bytes()).is_err(){
+        return Err(ServerError::WriteNextPrFile);
+    };
+    Ok(next_pr_number)
+}
+
+/// Valida si hay cambios entre las ramas `head` y `base`.
+///
+/// # Argumentos
+///
+/// * `repo_name` - El nombre del repositorio.
+/// * `base_path` - La ruta base donde se encuentran los repositorios.
+/// * `head` - La rama de origen.
+/// * `base` - La rama de destino.
+///
+/// # Retornos
+///
+/// * `Ok(true)` - Si hay cambios entre `head` y `base`.
+/// * `Ok(false)` - Si no hay cambios entre `head` y `base`.
+/// * `Err(ServerError)` - Si ocurre un error durante la validación.
+/// 
+pub fn validate_branch_changes(_repo_name: &str, _base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
+    // TODO
+    return Ok(base != head)
 }
 
 #[cfg(test)]

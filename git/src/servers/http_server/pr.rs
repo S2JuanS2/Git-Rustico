@@ -1,7 +1,7 @@
 use crate::consts::APPLICATION_SERVER;
 use crate::servers::errors::ServerError;
 use serde::{Serialize,Deserialize};
-use super::http_body::HttpBody;
+use super::{http_body::HttpBody, utils::validate_branch_changes};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CommitsPr {
@@ -103,5 +103,59 @@ impl PullRequest {
         PullRequest::from_http_body(&body)
     }
 
+    /// Crea un nuevo PullRequest a partir del contenido del HttpBody, validando que las ramas base y head no sean las mismas y que haya cambios.
+    /// 
+    /// # Parámetros
+    /// - `repo_name`: Nombre del repositorio.
+    /// - `base_path`: Ruta base del repositorio.
+    /// - `http_body`: El cuerpo de la solicitud HTTP que contiene los datos del PR.
+    ///
+    /// # Retorna
+    /// - `Result<Self, ServerError>`: Devuelve un resultado con el nuevo PullRequest o un error en caso de que las validaciones fallen.
+    ///
+    /// # Errores
+    /// - `ServerError::InvalidRequest`: Si la rama base y la rama head son las mismas.
+    /// 
+    pub fn create_validated_pull_request(repo_name: &str, base_path: &String, http_body: &HttpBody) -> Result<Self, ServerError> {
+        let head = http_body.get_field("head")?;
+        let base = http_body.get_field("base")?;
+        let owner = http_body.get_field("owner")?;
+        let title = http_body.get_field("title")?;
+        let body = http_body.get_field("body")?;
+        let state = "open".to_string();    
+        
+        match validate_branch_changes(repo_name, base_path, &base, &head)
+        {
+            Ok(result) => {
+                if !result {
+                    return Err(ServerError::InvalidRequestNoChange("There are no changes in the branch.".to_string()));
+                }
+            },
+            Err(e) => return Err(e),
+        }
+        
+        let repo = match http_body.get_field("repo"){
+            Ok(repo) => {
+                if repo != repo_name{
+                    return Err(ServerError::InvalidRequestNoChange("The repository name does not match the repository name in the URL.".to_string()));
+                }
+                repo
+            }
+            Err(_) => repo_name.to_string(),
+        };
+
+        Ok(PullRequest {
+            owner: Some(owner),
+            repo: Some(repo),
+            title: Some(title),
+            body: Some(body),
+            head: Some(head),
+            base: Some(base),
+            state: Some(state),
+            mergeable: None,
+            changed_files: None,
+            commits: None,
+        })  
+    }
 }
 

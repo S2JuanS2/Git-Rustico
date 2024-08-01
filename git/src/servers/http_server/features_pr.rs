@@ -1,23 +1,36 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::collections::HashMap;
 use crate::servers::errors::ServerError;
-use crate::util::files::{file_exists, folder_exists, list_directory_contents};
+use crate::util::files::{create_directory, file_exists, folder_exists, list_directory_contents};
 use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER};
 use super::pr::{CommitsPr, PullRequest};
+use super::utils::{get_next_pr_number, valid_repository};
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
 use crate::commands::push::is_update;
+use std::path::Path;
 
 
-pub fn create_pull_requests(body: &HttpBody, _repo_name: &str, _src: &String,_tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-    // LOGICA PARA CREAR UNA SOLICITUD DE EXTRACCION
-    let _pr = match PullRequest::from_http_body(body)
+
+pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    if valid_repository(repo_name, src).is_err() {
+        return Ok(StatusCode::ResourceNotFound);
+    }
+    
+    let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
+    let directory = Path::new(&path);
+    if create_directory(&directory).is_err() {
+        return Ok(StatusCode::InternalError("Error creating the PR folder.".to_string()));
+    }
+    let _next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
+    let _pr = match PullRequest::create_validated_pull_request(repo_name, src, body)
     {
         Ok(pr) => pr,
-        Err(_) => return Ok(StatusCode::BadRequest("The request body does not contain a valid Pull Request.".to_string())),
+        Err(e) => return Ok(StatusCode::ValidationFailed(e.to_string())),
     };
+    // let pr_file_path = format!("{}/{}{}", path, _pr.get_field("number")?, PR_FILE_EXTENSION);
     Ok(StatusCode::Forbidden)
 }
 
@@ -95,6 +108,10 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
 /// - `Err(ServerError)`: Si ocurre un error al crear el cuerpo HTTP desde el archivo.
 ///
 pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    if valid_repository(repo_name, src).is_err() {
+        return Ok(StatusCode::ResourceNotFound);
+    }
+    
     let file_path: String = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
     {
@@ -165,7 +182,29 @@ pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, 
     Ok(StatusCode::Forbidden)
 }
 
-
+/// Construye la ruta del archivo para una solicitud de extracción específica en el repositorio.
+///
+/// Esta función genera una cadena de ruta de archivo para una solicitud de extracción dada 
+/// basada en el nombre del repositorio, el número de la solicitud de extracción y el directorio de origen.
+/// La ruta construida sigue el formato: `src/PR_FOLDER/repo_name/pull_number/PR_FILE_EXTENSION`.
+///
+/// # Parámetros
+///
+/// * `repo_name`: Un slice de cadena que contiene el nombre del repositorio.
+/// * `pull_number`: Un slice de cadena que contiene el número de la solicitud de extracción.
+/// * `src`: Una referencia a una cadena que contiene la ruta del directorio de origen.
+///
+/// # Retorna
+///
+/// Una `String` que contiene la ruta completa al archivo de la solicitud de extracción.
+///
+/// # Ejemplos
+///
+/// ```
+/// let path = get_pull_request_file_path("repo-name", "42", &"/home/user/repos".to_string());
+/// assert_eq!(path, "/home/user/repos/pr_folder/repo-name/42.pr");
+/// ```
+/// 
 fn get_pull_request_file_path(repo_name: &str, pull_number: &str, src: &String) -> String {
     format!("{}/{}/{}/{}{}", src, PR_FOLDER, repo_name, pull_number, PR_FILE_EXTENSION)
 }
