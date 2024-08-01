@@ -56,12 +56,11 @@ pub fn git_log(directory: &str) -> Result<String, CommandsError> {
 pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
        
-    let mut count_line = 0;
     for line in lines {
-        if count_line == 1 {
+        if line.len() == 40 {
             let parts: Vec<&str> = line.split_whitespace().collect();
             formatted_result.push_str(&format!("Commit: {}\n", parts[0]));
-        } else if count_line == 3 {
+        } else if line.starts_with("author") {
             let parts: Vec<&str> = line.split_whitespace().collect();
             formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
             let timestamp = match parts[3].parse::<i64>(){
@@ -70,14 +69,9 @@ pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
             };
             let date_time = chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
             formatted_result.push_str(&format!("Date: {}\n", date_time));
-        } else if count_line == 6 {
             formatted_result.push('\n');
-            formatted_result.push_str(&format!("\t{}\n", line));
-        }
-        count_line += 1;
-        if count_line == 7  {
-            count_line = 1;
-            formatted_result.push('\n');
+        } else if !line.is_empty() && line.len() != 40 && !line.starts_with("parent") && !line.starts_with("author") && !line.starts_with("committer") {
+            formatted_result.push_str(&format!("\t{}\n\n", line));
         }
     }
     Ok(formatted_result)

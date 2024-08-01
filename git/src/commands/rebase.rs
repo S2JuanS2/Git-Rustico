@@ -1,7 +1,8 @@
+use crate::commands::commit::rebase_commit;
 use crate::models::client::Client;
 use crate::util::files::{create_file_replace, open_file, read_file_string};
 use super::branch::get_current_branch;
-use super::commit::{Commit, git_commit};
+use super::commit::Commit;
 use super::errors::CommandsError;
 use super::merge::{get_log_from_branch, try_for_merge, logs_just_in_one_branch, get_branches_hashes, get_refs_path};
 use super::cat_file::git_cat_file;
@@ -28,10 +29,10 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
     let mut formatted_result = String::new();
     let current_branch = get_current_branch(directory)?;
     let path_current_branch = get_refs_path(directory, &current_branch);
-    let path_branch_to_merge = get_refs_path(directory, branch_name);
-    let (current_branch_hash, branch_to_merge_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_merge)?;
+    let path_branch_to_rebase = get_refs_path(directory, branch_name);
+    let (current_branch_hash, branch_to_rebase_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_rebase)?;
     let log_current_branch = get_log_from_branch(directory, &current_branch_hash)?;
-    let log_rebase_branch = get_log_from_branch(directory, &branch_to_merge_hash)?;
+    let log_rebase_branch = get_log_from_branch(directory, &branch_to_rebase_hash)?;
 
     formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
     let result_merge = try_for_merge(directory, &current_branch, branch_name, &client, "rebase")?;
@@ -41,93 +42,10 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
 
         let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch, log_rebase_branch);
 
-        create_new_commits(directory, client, logs_just_in_current_branch, &current_branch, branch_name, &mut formatted_result)?;
-        update_first_commit(directory, current_branch, branch_name)?;
+        create_new_commits(directory, client, logs_just_in_current_branch, &current_branch, branch_name, &branch_to_rebase_hash, &mut formatted_result)?;
     }
 
     Ok(formatted_result)
-}
-
-/// Actualiza el primer commit de la branch actual para actualizar el parent con el último commit
-/// de la branch sobre la que se hizo el rebase.
-/// ###Parametros:
-/// 'directory': directorio del repositorio local
-/// 'current_branch': nombre de la branch actual
-/// 'rebase_branch': nombre de la branch sobre la cual se hizo el rebase
-fn update_first_commit(directory: &str, current_branch: String, rebase_branch: &str) -> Result<(), CommandsError> {
-    let path_current_branch = get_refs_path(directory, &current_branch);
-    let path_branch_to_rebase = get_refs_path(directory, rebase_branch);
-    let (current_branch_hash, branch_to_rebase_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_rebase)?;
-
-    let log_current_branch = get_log_from_branch(directory, &current_branch_hash)?;
-    let log_rebase_branch = get_log_from_branch(directory, &branch_to_rebase_hash)?;
-
-    let log_rebase_branch_cloned = log_rebase_branch.clone();
-    let last_commit_rebase_branch = match log_rebase_branch_cloned.last() {
-        Some(commit) => commit,
-        None => return Err(CommandsError::GenericError),
-    };
-
-    let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch, log_rebase_branch);
-    let mut first_commit_current_branch = String::new();
-    if !logs_just_in_current_branch.is_empty() {
-        first_commit_current_branch = logs_just_in_current_branch[0].clone();
-    }
-
-    let content_commit = git_cat_file(directory, &first_commit_current_branch, "-p")?;
-
-    update_parent(content_commit, last_commit_rebase_branch, &first_commit_current_branch, directory, current_branch)?;
-
-    Ok(())
-}
-
-/// Actualiza el parent del primer commit de la branch actual con el último commit de la branch 
-/// sobre la que se hizo el rebase.
-/// ###Parametros:
-/// 'content_commit': contenido del primer commit de la branch actual
-/// 'last_commit_rebase_branch': último commit de la branch sobre la que se hizo el rebase
-/// 'first_commit_current_branch': primer commit de la branch actual
-/// 'directory': directorio del repositorio local
-/// 'current_branch': nombre de la branch actual
-fn update_parent(content_commit: String, last_commit_rebase_branch: &str, first_commit_current_branch: &String, directory: &str, current_branch: String) -> Result<(), CommandsError> {
-    let new_content = rewrite_commit(&content_commit, last_commit_rebase_branch);
-    let lines_new_content: Vec<&str> = new_content.lines().collect();
-    let new_commit_in_log = format!("{}\n{}\n{}\n{}\n\n{}", first_commit_current_branch, lines_new_content[1], lines_new_content[2], lines_new_content[3], lines_new_content[5]);
-    let path_current_branch = format!("{}/.git/logs/refs/heads/{}", directory, current_branch);
-    let file = open_file(&path_current_branch)?;
-    let mut content = read_file_string(file)?;
-    let lines: Vec<&str> = content.lines().collect();
-    if let Some(index) = lines.iter().position(|&s| s == first_commit_current_branch) {
-        let new_lines: Vec<&str> = new_commit_in_log.lines().collect();
-        content = [
-            &lines[..index],
-            &new_lines,
-            &lines[index + 6..],
-        ]
-        .concat()
-        .join("\n");
-    }
-    create_file_replace(&path_current_branch, &content)?;
-    Ok(())
-}
-
-/// Reescribe el commit con el parent actualizado.
-/// ###Parametros:
-/// 'content_commit': contenido del primer commit de la branch actual
-/// 'last_commit_rebase_branch': último commit de la branch sobre la que se hizo el rebase
-pub fn rewrite_commit(content_commit: &str, last_commit_rebase_branch: &str) -> String {
-    let mut new_content = String::new();
-    for line in content_commit.lines() {
-        if line.starts_with("parent") {
-            let mut new_line = String::new();
-            new_line.push_str(format!("parent {}", last_commit_rebase_branch).as_str());
-            new_content.push_str(&new_line);
-        } else {
-            new_content.push_str(line);
-        }
-        new_content.push('\n');
-    }
-    new_content
 }
 
 /// Crea un nuevo commit por cada commit que está en la branch actual y no en la branch sobre la 
@@ -139,12 +57,15 @@ pub fn rewrite_commit(content_commit: &str, last_commit_rebase_branch: &str) -> 
 /// 'current_branch': nombre de la branch actual
 /// 'branch_name': nombre de la branch sobre la que se hizo el rebase
 /// 'formatted_result': String que contiene el resultado de git rebase formateado
-fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<String>, current_branch: &str, branch_name: &str, formatted_result: &mut String) -> Result<(), CommandsError> {
+fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<String>, current_branch: &str, branch_name: &str, branch_to_rebase_hash: &str, formatted_result: &mut String) -> Result<(), CommandsError> {
     update_log_current_branch(directory, current_branch, branch_name)?;
 
-    for commit in log_current_branch {
+    let log_current_branch_reversed = log_current_branch.iter().rev().cloned().collect::<Vec<String>>();
+    let mut commit_count = 0;
+    for commit in log_current_branch_reversed {
+        commit_count += 1;
         let content_commit = git_cat_file(directory, &commit, "-p")?;
-        let commit_message = get_commit_msg(content_commit);
+        let commit_message = get_commit_msg(content_commit.clone());
         let new_commit = Commit::new(
             commit_message.clone(),
             client.get_name().to_string(),
@@ -153,7 +74,15 @@ fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<S
             client.get_email().to_string(),
         );
         formatted_result.push_str(format!("Applying: {}\n", commit_message).as_str());
-        git_commit(directory, new_commit)?;
+        if commit_count == 1 {
+            rebase_commit(directory, new_commit, branch_to_rebase_hash)?;
+        } else {
+            let current_path = format!("{}/.git/refs/heads/{}", directory, current_branch);
+            let current_file = open_file(&current_path)?;
+            let current_commit = read_file_string(current_file)?;
+            let parent_hash = current_commit.split_whitespace().collect::<Vec<&str>>()[0];
+            rebase_commit(directory, new_commit, parent_hash)?;
+        }
     }
     Ok(())
 }
