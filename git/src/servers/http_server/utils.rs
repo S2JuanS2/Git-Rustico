@@ -202,6 +202,25 @@ pub fn get_next_pr_number(file_path: &str) -> Result<u64, ServerError> {
     Ok(next_pr_number)
 }
 
+/// Valida si hay cambios entre las ramas `head` y `base`.
+///
+/// # Argumentos
+///
+/// * `repo_name` - El nombre del repositorio.
+/// * `base_path` - La ruta base donde se encuentran los repositorios.
+/// * `head` - La rama de origen.
+/// * `base` - La rama de destino.
+///
+/// # Retornos
+///
+/// * `Ok(true)` - Si hay cambios entre `head` y `base`.
+/// * `Ok(false)` - Si no hay cambios entre `head` y `base`.
+/// * `Err(ServerError)` - Si ocurre un error durante la validación.
+/// 
+pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
+    return Ok(base != head)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

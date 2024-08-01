@@ -33,6 +33,7 @@ pub enum ServerError {
     CreateNextPrFile,
     ReadNextPrFile,
     WriteNextPrFile,
+    InvalidRequestNoChange(String),
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -66,6 +67,7 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::CreateNextPrFile => write!(f, "Error al crear el archivo donde se guarda el número del próximo PR."),
         ServerError::ReadNextPrFile => write!(f, "Error al leer el archivo donde se guarda el número del próximo PR."),
         ServerError::WriteNextPrFile => write!(f, "Error al escribir el archivo donde se guarda el número del próximo PR."),
+        ServerError::InvalidRequestNoChange(e) => write!(f, "Solicitud inválida, no hay cambios en las branchs: {}", e),
     }
 }
 

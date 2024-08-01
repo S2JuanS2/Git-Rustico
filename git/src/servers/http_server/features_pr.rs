@@ -28,7 +28,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
     let _pr = match PullRequest::create_validated_pull_request(repo_name, src, body)
     {
         Ok(pr) => pr,
-        Err(_) => return Ok(StatusCode::BadRequest("The request body does not contain a valid Pull Request.".to_string())),
+        Err(e) => return Ok(StatusCode::ValidationFailed(e.to_string())),
     };
     // let pr_file_path = format!("{}/{}{}", path, _pr.get_field("number")?, PR_FILE_EXTENSION);
     Ok(StatusCode::Forbidden)
