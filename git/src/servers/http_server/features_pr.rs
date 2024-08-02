@@ -75,14 +75,12 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
         return Ok(StatusCode::ResourceNotFound);
     }
     let prs = list_directory_contents(&pr_repo_folder_path)?;
-
     if prs.len() <= 1 {
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::InternalError("No pull request was found".to_string()));
     }
-
     let mut pr_map: HashMap<u32, HttpBody> = HashMap::new();
     for pr in prs {
-        if pr != ".next_pr" {
+        if pr != ".next_pr" && pr != "pr_map.json"{
             let pr_path = format!("{}/{}", pr_repo_folder_path, pr);
             let body = HttpBody::create_from_file(APPLICATION_SERVER, &pr_path)?;
             let num = pr.split('.').next().unwrap_or("").parse::<u32>().unwrap_or(0);
@@ -95,14 +93,9 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
     for &key in &keys{
         let mut pr = PullRequest::default();
         if let Some(body) = pr_map.get(key){
-            //pr.key
-            pr.repo = Some(repo_name.to_string());
-            pr.title = Some(body.get_field("title")?); 
-            pr.owner = Some(body.get_field("owner")?);
-            pr.head = Some(body.get_field("head")?);
-            pr.base = Some(body.get_field("base")?);
-            //pr.mergeable = Some(body.get_field("mergeable")?);
+            pr = PullRequest::from_http_body(body)?;
         }
+        //Falta agregar los commits y el campo mergeable
         pr_list.push(pr);
     }
     let json_str = serde_json::to_string(&pr_list).unwrap();
@@ -139,8 +132,11 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
         return Ok(StatusCode::ResourceNotFound);
     }
     // TODO| let _mergeable = logica para obtener el estado de fusion
+
     // TODO| let _changed_files = logica para obtener los archivos modificados
+
     // TODO| let _commits = logica para obtener los commits <- get_commits_pr
+
     // actualizar el pr con los campos obtenidos
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
     Ok(StatusCode::Ok(Some(body)))
@@ -171,9 +167,9 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
 
-    let commits = get_commits_pr(body, src, repo_name)?;
+    let commits = get_body_commits_pr(body, src, repo_name)?;
     if commits.len() == 0{
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::InternalError("The pull request does not contain new commits.".to_string()));
     }
     let json_str = serde_json::to_string(&commits).unwrap();
     let commit_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
@@ -267,7 +263,7 @@ fn get_pull_request_file_path(repo_name: &str, pull_number: &str, src: &String) 
 /// # Retornos
 /// - `Ok(Vec)`: Si se creo correctamente el formato del commit.
 ///
-fn get_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec<CommitsPr>, ServerError> {
+fn get_body_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec<CommitsPr>, ServerError> {
     let head = body.get_field("head")?;
     let base = body.get_field("base")?;
     let directory = format!("{}/{}", src, repo_name);
@@ -279,40 +275,65 @@ fn get_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec<Comm
     if is_update(&directory, &hash_base, &hash_head, &mut count_commits)?{
         return Ok(result);
     }
+    let commits_head = get_commits_pr(&directory, &base, &head)?;
+    for commit in commits_head {
+        let mut commits_pr = CommitsPr::new();
+        let commit_content = git_cat_file(&directory, &commit, "-p")?;
+        commits_pr.sha_1 = commit.clone();
+        let mut lines_commit = commit_content.lines();
+        for line in lines_commit.by_ref() {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 4 {
+                if line.starts_with("author") {
+                    commits_pr.author_name = parts[1].to_string();
+                    commits_pr.author_email = parts[2].to_string();
+                    let timestamp: i64 = parts[3].parse().unwrap_or(0);
+                    commits_pr.date = chrono::DateTime::from_timestamp(timestamp, 0).unwrap().to_string();
+                }else if line.starts_with("committer") {
+                    commits_pr.committer_name = parts[1].to_string();
+                    commits_pr.committer_email = parts[2].to_string();
+                }
+            }
+            if parts.len() >= 2{
+                if line.starts_with("tree"){
+                    commits_pr.tree_hash = parts[1].to_string();
+                }else if line.starts_with("parent"){
+                    commits_pr.parent = parts[1].to_string();
+                }
+            }
+            commits_pr.message = line.to_string();
+        }
+        result.push(commits_pr);
+    }
+    Ok(result)
+}
+
+///
+/// 
+/// 
+/// 
+/// 
+fn get_commits_pr(directory: &str, base: &str, head: &str) -> Result<Vec<String>, ServerError> {
     let commits_head = get_commits(&directory, &head)?;
     let commits_base = get_commits(&directory, &base)?;
+    let mut result = vec!();
     for commit in commits_head {
         if !commits_base.contains(&commit){
-            let mut commits_pr = CommitsPr::new();
-            let commit_content = git_cat_file(&directory, &commit, "-p")?;
-            commits_pr.sha_1 = commit.clone();
-            let mut lines_commit = commit_content.lines();
-            for line in lines_commit.by_ref() {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 4 {
-                    if line.starts_with("author") {
-                        commits_pr.author_name = parts[1].to_string();
-                        commits_pr.author_email = parts[2].to_string();
-                        let timestamp: i64 = parts[3].parse().unwrap_or(0);
-                        commits_pr.date = chrono::DateTime::from_timestamp(timestamp, 0).unwrap().to_string();
-                    }else if line.starts_with("committer") {
-                        commits_pr.committer_name = parts[1].to_string();
-                        commits_pr.committer_email = parts[2].to_string();
-                }else if parts.len() == 2{
-                    }if line.starts_with("tree"){
-                        commits_pr.tree_hash = parts[1].to_string();
-                    }else if line.starts_with("parent"){
-                        commits_pr.parent = parts[1].to_string();
-                    }
-                }
-                commits_pr.message = line.to_string();
-            }
-            result.push(commits_pr);
+            result.push(commit);
         }
     }
     Ok(result)
 }
 
+///
+/// 
+/// 
+/// 
+/// 
+fn _get_changed_files_pr(_directory: &str, _base: &str, _head: &str) -> Result<Vec<String>, ServerError>{
+    let result = vec!();
+    Ok(result)
+}
 
 /// Verifica si un pull request contiene cambios antes de proceder con su creación.
 ///
