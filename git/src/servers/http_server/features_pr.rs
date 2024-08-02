@@ -69,7 +69,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx:
 /// - `Err(ServerError)`: Si ocurre un error al crear el cuerpo HTTP desde el archivo.
 ///
 pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-
+    let directory = format!("{}/{}", src, repo_name);
     let pr_repo_folder_path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
     if !folder_exists(&pr_repo_folder_path)
     {
@@ -95,8 +95,12 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
         let mut pr = PullRequest::default();
         if let Some(body) = pr_map.get(key){
             pr = PullRequest::from_http_body(body)?;
+            let changed_files = get_changed_files_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
+            pr.set_changed_files(changed_files);
+            let commits = get_commits_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
+            pr.set_amount_commits(commits.len());
+            pr.set_commits(commits);
         }
-        //Falta agregar los commits y el campo mergeable
         pr_list.push(pr);
     }
     let json_str = serde_json::to_string(&pr_list).unwrap();
@@ -134,20 +138,19 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
     let directory = format!("{}/{}", src, repo_name);
-    
+    let mut pr = PullRequest::from_http_body(&body)?;
+
     // TODO| let _mergeable = logica para obtener el estado de fusion
 
-    // TODO| let _changed_files = logica para obtener los archivos modificados
     let changed_files = get_changed_files_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
-    println!("{:?}\n", changed_files);
-    
-    // TODO| let _commits = logica para obtener los commits <- get_commits_pr
+    pr.set_changed_files(changed_files);
     let commits = get_commits_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
-    println!("{:?}\n", commits);
-    
-    // actualizar el pr con los campos obtenidos
+    pr.set_amount_commits(commits.len());
+    pr.set_commits(commits);
 
-    Ok(StatusCode::Ok(Some(body)))
+    let json_str = serde_json::to_string(&pr).unwrap();
+    let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
+    Ok(StatusCode::Ok(Some(pr_list_body)))
 }
 
 /// Obtiene los commits de un pull request recibido por parámetro
@@ -193,6 +196,9 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
     
+    if body.get_field("state")? != "open"{
+        return Ok(StatusCode::InternalError("This pull request is closed".to_string()));
+    }
     let directory = format!("{}/{}", src, repo_name);
     let head = body.get_field("head")?;
     let base = body.get_field("base")?;
