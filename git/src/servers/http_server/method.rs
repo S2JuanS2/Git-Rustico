@@ -38,6 +38,17 @@ impl Method {
         }
     }
 
+    /// Crea un método HTTP a partir de su representación en cadena.
+    ///
+    /// # Argumentos
+    ///
+    /// * `method` - Una porción de cadena que representa el método HTTP.
+    ///
+    /// # Retorna
+    ///
+    /// Retorna un `Result` que contiene el `Method` si la conversión es exitosa,
+    /// o un `ServerError::MethodNotAllowed` si el método no es reconocido.
+    /// 
     pub fn create_method(method: &str) -> Result<Self, ServerError> {
         match method {
             "GET" => Ok(Method::Get),
@@ -49,6 +60,20 @@ impl Method {
         }
     }
 
+    /// Maneja una solicitud HTTP basada en el método.
+    ///
+    /// # Argumentos
+    ///
+    /// * `path` - La ruta del recurso solicitado.
+    /// * `http_body` - El cuerpo de la solicitud HTTP.
+    /// * `src` - La dirección de origen de la solicitud.
+    /// * `tx` - Un canal para enviar respuestas.
+    ///
+    /// # Retorna
+    ///
+    /// Retorna un `Result` que contiene el `StatusCode` si la solicitud se maneja con éxito,
+    /// o un `ServerError` si ocurre un error.
+    /// 
     pub fn handle_method(&self, path: &str, http_body: &HttpBody, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
         match self {
             Method::Get => self.handle_get_request(path, src, tx),
@@ -162,6 +187,19 @@ impl Method {
     }
 }
 
+/// Segmenta una ruta en partes separadas.
+///
+/// Esta función toma una ruta de cadena y la divide en segmentos individuales,
+/// eliminando el primer carácter si es una barra diagonal `/`.
+///
+/// # Argumentos
+///
+/// * `path` - Una referencia a una cadena que representa la ruta que se va a segmentar.
+///
+/// # Retorna
+///
+/// Retorna un vector de porciones de cadena (`Vec<&str>`) que representan los segmentos de la ruta.
+///
 pub fn segment_path(path: &str) -> Vec<&str> {
     // debo eliminar el 1ero si es solo un /
     let mut path = path;
