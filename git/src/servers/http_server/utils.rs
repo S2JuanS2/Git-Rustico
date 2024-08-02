@@ -1,5 +1,5 @@
 use std::{fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, num::ParseIntError, path::Path};
-use crate::{consts::{APPLICATION_JSON, APPLICATION_SERVER, CRLF, CRLF_DOUBLE, HTTP_VERSION, MESSAGE, PR_FILE_EXTENSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
+use crate::{consts::{APPLICATION_SERVER, CRLF, CRLF_DOUBLE, HTTP_VERSION, MESSAGE, PR_FILE_EXTENSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
 use crate::commands::branch::get_branch_current_hash;
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::push::is_update;
@@ -94,7 +94,7 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
 /// assert!(result.is_ok());
 /// ```
 /// 
-pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode) -> Result<(), ServerError>{
+pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, content_type: &str) -> Result<(), ServerError>{
     let response = format!("{} {}{}", HTTP_VERSION, status_code.to_string(), CRLF);
     let error = UtilError::UtilFromServer("Error sending response".to_string());
     match send_message(writer, &response, error)
@@ -107,7 +107,7 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode) -> R
         StatusCode::ValidationFailed(message)
         | StatusCode::InternalError(message)
         | StatusCode::BadRequest(message) => {
-            let body = HttpBody::from_string(&APPLICATION_JSON, &message, MESSAGE)?;
+            let body = HttpBody::from_string(content_type, &message, MESSAGE)?;
             send_body(writer, &body)
         },
         _ => Ok(()) // Deberia enviar un CRLF

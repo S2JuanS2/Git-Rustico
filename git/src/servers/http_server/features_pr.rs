@@ -14,7 +14,7 @@ use crate::commands::push::is_update;
 
 
 
-pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     if valid_repository(repo_name, src).is_err() {
         return Ok(StatusCode::ResourceNotFound);
     }

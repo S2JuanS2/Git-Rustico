@@ -41,6 +41,7 @@ pub enum ServerError {
     ParseNumberPR(String),
     ReadMapPrFile,
     SaveMapPrFile,
+    BadRequest(String),
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -82,6 +83,7 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::ParseNumberPR(e) => write!(f, "Error al parsear el número de PR: {}", e),
         ServerError::ReadMapPrFile => write!(f, "Error al leer el archivo donde se guarda el mapa de PRs."),
         ServerError::SaveMapPrFile => write!(f, "Error al guardar el mapa de PRs."),
+        ServerError::BadRequest(e) => write!(f, "Solicitud HTTP incorrecta: {}", e),
     }
 }
 
@@ -102,6 +104,7 @@ impl From<CommandsError> for ServerError {
         ServerError::SeverFromCommands(format!("{}", error))
     }
 }
+
 
 
 impl fmt::Display for ServerError {
