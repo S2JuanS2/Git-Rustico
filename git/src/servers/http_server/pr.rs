@@ -152,5 +152,13 @@ impl PullRequest {
     
         Ok(has_changes)
     }
+
+    pub fn change_state(&mut self, new_state: &str) {
+        self.state = Some(new_state.to_string());
+    }
+
+    pub fn change_mergeable(&mut self, mergeable: &str) {
+        self.mergeable = Some(mergeable.to_string());
+    }
 }
 
