@@ -1,4 +1,5 @@
-use std::{collections::HashMap, hash::{DefaultHasher, Hash, Hasher}};
+use std::{collections::HashMap, hash::{Hash, Hasher}};
+use std::collections::hash_map::DefaultHasher;
 
 use crate::servers::errors::ServerError;
 
