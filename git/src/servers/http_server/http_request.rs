@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
 use crate::{consts::{APPLICATION_JSON, APPLICATION_SERVER, CONTENT_LENGTH, CONTENT_TYPE, HTPP_SIGNATURE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
-use super::{features_pr::{create_pull_requests, get_pull_request, list_commits, list_pull_request, merge_pull_request, modify_pull_request}, http_body::HttpBody, status_code::StatusCode, utils::read_request};
+use super::{http_body::HttpBody, method::Method, status_code::StatusCode, utils::read_request};
 
 /// Representa una solicitud HTTP.
 ///
@@ -74,13 +74,12 @@ impl HttpRequest {
         let message = format!("{} request to path: {}", self.method, self.path);
         log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
 
-        match self.method.as_str() {
-            "GET" => self.handle_get_request(source, tx),
-            "POST" => self.handle_post_request(&self.body, source, tx),
-            "PUT" => self.handle_put_request( source, tx),
-            "PATCH" => self.handle_patch_request(&self.body, source, tx),
-            _ => Ok(StatusCode::MethodNotAllowed),
-        }
+        let method = match Method::create_method(&self.method) {
+            Ok(method) => method,
+            Err(_) => return Ok(StatusCode::MethodNotAllowed),
+        };
+
+        method.handle_method(&self.path, &self.body, source, tx)
     }
 
     /// Obtiene la ruta de la solicitud HTTP.
@@ -90,108 +89,6 @@ impl HttpRequest {
     /// Devuelve una referencia a la ruta de la solicitud.
     pub fn get_path(&self) -> &str {
         &self.path
-    }
-
-     /// Maneja una solicitud HTTP GET.
-    ///
-    /// # Parámetros
-    /// 
-    /// * `pr` - Una referencia a la estructura `PullRequest`.
-    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
-    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
-    ///
-    /// # Retornos
-    /// 
-    /// Devuelve un `Result` que contiene el status en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn handle_get_request(&self,src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let path_segments: Vec<&str> = segment_path(&self.get_path());
-        match path_segments.as_slice() {
-            ["repos", repo_name, "pulls"] => {
-                return list_pull_request(repo_name, src, tx);
-            },
-            ["repos", repo_name, "pulls", pull_number] => {
-                return get_pull_request(repo_name, pull_number, src, tx);
-            },
-            ["repos", repo_name, "pulls", pull_number, "commits"] => {
-                return list_commits(repo_name, pull_number, src, tx);
-            },
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
-            }
-        }
-    }
-    
-    /// Maneja una solicitud HTTP POST.
-    ///
-    /// # Parámetros
-    /// 
-    /// * `pr` - Una referencia a la estructura `PullRequest`.
-    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
-    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
-    ///
-    /// # Retornos
-    /// 
-    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn handle_post_request(&self, http_body: &HttpBody, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let path_segments: Vec<&str> = segment_path(&self.get_path());
-        match path_segments.as_slice() {
-            ["repos", repo_name, "pulls"] => {
-                return create_pull_requests(http_body, repo_name, src, tx);
-            }
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
-            }
-        }
-    }
-    
-     /// Maneja una solicitud HTTP PUT.
-    ///
-    /// # Parámetros
-    /// 
-    /// * `pr` - Una referencia a la estructura `PullRequest`.
-    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
-    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
-    ///
-    /// # Retornos
-    /// 
-    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn handle_put_request(&self, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let path_segments: Vec<&str> = segment_path(&self.get_path());
-        match path_segments.as_slice() {
-            ["repos", repo_name, "pulls", pull_number, "merge"] => {
-                return merge_pull_request(repo_name, pull_number, src, tx);
-            },
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
-            }
-        }
-    }
-    
-    /// Maneja una solicitud HTTP PATCH.
-    ///
-    /// # Parámetros
-    /// 
-    /// * `pr` - Una referencia a la estructura `PullRequest`.
-    /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
-    /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
-    ///
-    /// # Retornos
-    /// 
-    /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn handle_patch_request(&self, http_body: &HttpBody, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-        let path_segments: Vec<&str> = segment_path(&self.get_path());
-        match path_segments.as_slice() {
-            ["repos", repo_name, "pulls", pull_number] => {
-                return modify_pull_request(http_body, repo_name, pull_number, src, tx);
-            },
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
-            }
-        }
     }
 
     pub fn get_content_type(&self) -> String {
@@ -329,24 +226,6 @@ fn parse_headers(lines: &[&str]) -> HashMap<String, String> {
         }
     }
     headers
-}
-/// Segmenta una ruta en partes separadas.
-///
-/// # Argumentos
-///
-/// * `path` - Una cadena que contiene la ruta a segmentar.
-///
-/// # Retornos
-///
-/// Un vector de porciones de cadena que representan las partes segmentadas de la ruta.
-/// 
-pub fn segment_path(path: &str) -> Vec<&str> {
-    // debo eliminar el 1ero si es solo un /
-    let mut path = path;
-    if path.starts_with("/") {
-        path = &path[1..];
-    }
-    path.split('/').collect()
 }
 
 
