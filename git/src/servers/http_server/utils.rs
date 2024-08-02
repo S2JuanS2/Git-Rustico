@@ -1,5 +1,5 @@
-use std::{fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, num::ParseIntError};
-use crate::{consts::{APPLICATION_JSON, CRLF, CRLF_DOUBLE, HTTP_VERSION, MESSAGE, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
+use std::{fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, num::ParseIntError, path::Path};
+use crate::{consts::{APPLICATION_JSON, APPLICATION_SERVER, CRLF, CRLF_DOUBLE, HTTP_VERSION, MESSAGE, PR_FILE_EXTENSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
 use crate::commands::branch::get_branch_current_hash;
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::push::is_update;
@@ -261,6 +261,53 @@ pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, hea
     return Ok(true)
 }
 
+/// Guarda el cuerpo de un pull request en un archivo con un número de PR único.
+///
+/// Esta función guarda el cuerpo del pull request en un archivo con un nombre generado a partir del
+/// número de pull request único, asegurando que el archivo se almacene en el formato adecuado.
+///
+/// # Argumentos
+///
+/// * `body` - El cuerpo de la solicitud HTTP que contiene los datos del pull request.
+/// * `path` - La ruta del directorio donde se guardará el archivo del pull request.
+/// * `pr_number` - El número de pull request que se usará para nombrar el archivo.
+///
+/// # Retornos
+///
+/// Devuelve `Ok(())` si el pull request se guarda correctamente.
+/// Devuelve `Err(ServerError)` si ocurre un error durante el guardado del archivo.
+/// 
+pub fn save_pr_to_file(body: &HttpBody, path: &str, pr_number: u64) -> Result<(), ServerError> {
+    let pr_file_path = format!("{}/{}{}", path, pr_number, PR_FILE_EXTENSION);
+    body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
+    Ok(())
+}
+
+
+/// Configura el directorio para los archivos de pull requests en un repositorio dado.
+///
+/// Esta función crea un directorio dentro del repositorio especificado para almacenar los archivos de
+/// los pull requests. Si el directorio no existe, se crea. La función devuelve la ruta completa del
+/// directorio de pull requests.
+///
+/// # Argumentos
+///
+/// * `repo_name` - El nombre del repositorio para el cual se configura el directorio de pull requests.
+/// * `src` - La ruta base del directorio donde se encuentra el repositorio.
+///
+/// # Retornos
+///
+/// Devuelve `Ok(String)` con la ruta del directorio de pull requests si se crea o existe correctamente.
+/// Devuelve `Err(StatusCode::InternalError)` si ocurre un error al crear el directorio.
+/// 
+pub fn setup_pr_directory(repo_name: &str, src: &String) -> Result<String, StatusCode> {
+    let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
+    let directory = Path::new(&path);
+    if create_directory(&directory).is_err() {
+        return Err(StatusCode::InternalError("Error creating the PR folder.".to_string()));
+    }
+    Ok(path)
+}
 
 #[cfg(test)]
 mod tests {

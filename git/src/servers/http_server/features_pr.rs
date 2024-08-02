@@ -1,17 +1,16 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::collections::HashMap;
 use crate::servers::errors::ServerError;
-use crate::util::files::{create_directory, file_exists, folder_exists, list_directory_contents};
+use crate::util::files::{file_exists, folder_exists, list_directory_contents};
 use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
-use super::pr_registry::{generate_head_base_hash, read_pr_map, save_pr_map};
-use super::utils::{get_next_pr_number, valid_repository};
+use super::pr_registry::{generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
+use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository};
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
 use crate::commands::push::is_update;
-use std::path::Path;
 
 
 
@@ -318,115 +317,4 @@ pub fn check_pull_request_changes(repo_name: &str, src: &String, body: &HttpBody
         Err(e) => return Err(StatusCode::InternalError(e.to_string())),
     }
     Ok(())
-}
-
-/// Genera una clave hash única para un pull request a partir de los campos 'head' y 'base'.
-///
-/// Esta función extrae los campos 'head' y 'base' del cuerpo de la solicitud HTTP y
-/// genera un hash que se utiliza para identificar de forma única el pull request.
-///
-/// # Argumentos
-///
-/// * `body` - El cuerpo de la solicitud HTTP que contiene los datos del pull request.
-///
-/// # Retornos
-///
-/// Devuelve `Ok(String)` que representa la clave hash única.
-/// Devuelve `Err(ServerError)` si hay un error al extraer los campos necesarios.
-/// 
-fn generate_pr_hash_key(body: &HttpBody) -> Result<String, ServerError> {
-    let head = body.get_field("head")?;
-    let base = body.get_field("base")?;
-    Ok(generate_head_base_hash(&head, &base))
-}
-
-/// Verifica si un pull request ya existe en el mapa de pull requests utilizando la clave hash.
-///
-/// Esta función comprueba si la clave hash proporcionada ya está presente en el mapa de pull requests,
-/// lo que indica que el pull request ya ha sido creado previamente.
-///
-/// # Argumentos
-///
-/// * `pr_map` - Un mapa que contiene las claves hash de los pull requests existentes como claves
-///   y el número del pull request como valores.
-/// * `hash_key` - La clave hash que se desea verificar.
-///
-/// # Retornos
-///
-/// Devuelve `true` si el pull request ya existe, `false` en caso contrario.
-/// 
-fn pr_already_exists(pr_map: &HashMap<String, u64>, hash_key: &String) -> bool {
-    pr_map.contains_key(hash_key)
-}
-
-/// Guarda el cuerpo de un pull request en un archivo con un número de PR único.
-///
-/// Esta función guarda el cuerpo del pull request en un archivo con un nombre generado a partir del
-/// número de pull request único, asegurando que el archivo se almacene en el formato adecuado.
-///
-/// # Argumentos
-///
-/// * `body` - El cuerpo de la solicitud HTTP que contiene los datos del pull request.
-/// * `path` - La ruta del directorio donde se guardará el archivo del pull request.
-/// * `pr_number` - El número de pull request que se usará para nombrar el archivo.
-///
-/// # Retornos
-///
-/// Devuelve `Ok(())` si el pull request se guarda correctamente.
-/// Devuelve `Err(ServerError)` si ocurre un error durante el guardado del archivo.
-/// 
-fn save_pr_to_file(body: &HttpBody, path: &str, pr_number: u64) -> Result<(), ServerError> {
-    let pr_file_path = format!("{}/{}{}", path, pr_number, PR_FILE_EXTENSION);
-    body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
-    Ok(())
-}
-
-/// Actualiza y guarda el mapa de pull requests con un nuevo número de PR asignado.
-///
-/// Esta función inserta un nuevo par clave-valor en el mapa de pull requests, donde la clave es
-/// una cadena hash única generada a partir de los datos del pull request, y el valor es el número
-/// del pull request. Luego guarda el mapa actualizado en un archivo especificado.
-///
-/// # Argumentos
-///
-/// * `pr_map` - Un mapa mutable que contiene las claves hash de los pull requests existentes como claves
-///   y el número del pull request como valores.
-/// * `pr_map_path` - La ruta del archivo donde se debe guardar el mapa de pull requests.
-/// * `hash_key` - La clave hash única que identifica el pull request.
-/// * `pr_number` - El número del pull request que se asocia con la clave hash.
-///
-/// # Retornos
-///
-/// Devuelve `Ok(())` si el mapa se actualiza y guarda correctamente.
-/// Devuelve `Err(ServerError)` si ocurre un error durante la actualización o el guardado del mapa.
-/// 
-fn update_pr_map(pr_map: &mut HashMap<String, u64>, pr_map_path: &str, hash_key: String, pr_number: u64) -> Result<(), ServerError> {
-    pr_map.insert(hash_key, pr_number);
-    save_pr_map(pr_map_path, pr_map)?;
-    Ok(())
-}
-
-/// Configura el directorio para los archivos de pull requests en un repositorio dado.
-///
-/// Esta función crea un directorio dentro del repositorio especificado para almacenar los archivos de
-/// los pull requests. Si el directorio no existe, se crea. La función devuelve la ruta completa del
-/// directorio de pull requests.
-///
-/// # Argumentos
-///
-/// * `repo_name` - El nombre del repositorio para el cual se configura el directorio de pull requests.
-/// * `src` - La ruta base del directorio donde se encuentra el repositorio.
-///
-/// # Retornos
-///
-/// Devuelve `Ok(String)` con la ruta del directorio de pull requests si se crea o existe correctamente.
-/// Devuelve `Err(StatusCode::InternalError)` si ocurre un error al crear el directorio.
-/// 
-fn setup_pr_directory(repo_name: &str, src: &String) -> Result<String, StatusCode> {
-    let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
-    let directory = Path::new(&path);
-    if create_directory(&directory).is_err() {
-        return Err(StatusCode::InternalError("Error creating the PR folder.".to_string()));
-    }
-    Ok(path)
 }
