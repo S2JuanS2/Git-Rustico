@@ -292,7 +292,7 @@ fn get_log_path(directory: &str, branch_name: &str) -> String {
 /// 'current_branch': nombre de la rama actual
 /// 'branch_to_merge': nombre de la rama a mergear
 fn update_logs_refs(directory: &str, strategy: &(String, String), current_branch: &str, branch_to_merge: &str, current_branch_hash: &str, branch_to_merge_hash: &str) -> Result<(), CommandsError> {
-    if strategy.1 == "ok" {
+    if strategy.0 == "recursive" && strategy.1 == "ok" {
         let logs_current_branch = get_log_from_branch(directory, current_branch_hash)?;
         let logs_merge_branch = get_log_from_branch(directory, branch_to_merge_hash)?;
         let logs_just_in_merge_branch = logs_just_in_one_branch(logs_merge_branch.to_vec(), logs_current_branch.to_vec());
@@ -313,7 +313,14 @@ fn update_logs_refs(directory: &str, strategy: &(String, String), current_branch
         let mut log_current_content = read_file_string(log_current_file)?;
         log_current_content.push_str(format!("\n{}", new_commits).as_str());
         create_file_replace(&log_current_path, &log_current_content)?;
-    } else {
+    } else if strategy.0 == "fast-forward" {
+        let log_merge_path = get_log_path(directory, branch_to_merge);
+        let log_merge_file = open_file(&log_merge_path)?;
+        let log_merge_content = read_file_string(log_merge_file)?;
+        let log_current_path = get_log_path(directory, current_branch);
+        create_file_replace(&log_current_path, &log_merge_content)?;
+    }
+    else {
         return Ok(())
     }
     Ok(())
