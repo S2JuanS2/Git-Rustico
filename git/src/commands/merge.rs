@@ -60,9 +60,10 @@ pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, c
         }
 
         let (first_commit_current_branch, first_commit_merge_branch) = get_first_commit_of_each_branch(&log_current_branch, &log_merge_branch);
-        let root_parent_current_branch = git_cat_file(directory, &first_commit_current_branch, "-p")?;
-        let root_parent_merge_branch = git_cat_file(directory, &first_commit_merge_branch, "-p")?;
-        let (hash_parent_current, hash_parent_merge) = get_parent_hashes_(root_parent_current_branch, root_parent_merge_branch);
+        let first_commit_current_branch_content = git_cat_file(directory, &first_commit_current_branch, "-p")?;
+        let first_commit_merge_branch_content = git_cat_file(directory, &first_commit_merge_branch, "-p")?;
+        let hash_parent_current = get_parent_hashes(first_commit_current_branch_content.clone());
+        let hash_parent_merge = get_parent_hashes(first_commit_merge_branch_content.clone());
 
         let strategy = merge_depending_on_strategy(is_head, &hash_parent_current, &hash_parent_merge, &branch_to_merge_hash, directory, branch_name)?;
         if merge_type == "merge" {
@@ -84,8 +85,13 @@ pub fn merge_pr(directory: &str, base_branch: &str, head_branch: &str, owner: &s
     let path_head_branch = get_refs_path(directory, head_branch);
 
     let (base_branch_hash, head_branch_hash) = get_branches_hashes(&path_base_branch, &path_head_branch)?;
-    let base_branch_parent = get_parent_hashes(base_branch_hash.clone());
-    let head_branch_parent = get_parent_hashes(head_branch_hash.clone());
+    let log_base_branch = get_log_from_branch(directory, &base_branch_hash)?;
+    let log_head_branch = get_log_from_branch(directory, &head_branch_hash)?;
+    let (first_commit_base_branch, first_commit_head_branch) = get_first_commit_of_each_branch(&log_base_branch, &log_head_branch);
+    let first_commit_base_branch_content = git_cat_file(directory, &first_commit_base_branch, "-p")?;
+    let first_commit_head_branch_content = git_cat_file(directory, &first_commit_head_branch, "-p")?;
+    let base_branch_parent = get_parent_hashes(first_commit_base_branch_content.clone());
+    let head_branch_parent = get_parent_hashes(first_commit_head_branch_content.clone());
 
     let content_commit = git_cat_file(directory, &head_branch_hash, "-p")?;
     let content_tree = get_tree_of_commit(content_commit, directory)?;
@@ -358,10 +364,20 @@ pub fn get_first_commit_of_each_branch(
             Some(commit) => commit,
             None => first_commit_current_branch,
         }
+    } else {
+        first_commit_current_branch = match &log_current_branch.last() {
+            Some(commit) => commit,
+            None => first_commit_current_branch,
+        }
     }
 
     if !logs_just_in_merge_branch.is_empty() {
         first_commit_merge_branch = match &logs_just_in_merge_branch.last() {
+            Some(commit) => commit,
+            None => first_commit_merge_branch,
+        }
+    } else {
+        first_commit_merge_branch = match &log_merge_branch.last() {
             Some(commit) => commit,
             None => first_commit_merge_branch,
         }
