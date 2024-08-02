@@ -103,7 +103,10 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, cont
         Err(_) => return Err(ServerError::SendResponse(response)),
     };
     match status_code {
-        StatusCode::Ok(Some(body)) => send_body(writer, &body),
+        StatusCode::Ok(Some(body)) => {
+            let body = HttpBody::convert_body_to_content_type(body.clone(), content_type)?;
+            send_body(writer, &body)
+        },
         StatusCode::ValidationFailed(message)
         | StatusCode::InternalError(message)
         | StatusCode::BadRequest(message) => {

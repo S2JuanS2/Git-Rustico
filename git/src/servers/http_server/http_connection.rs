@@ -36,6 +36,7 @@ pub fn handle_client_http(
         Some(request) => request.get_content_type(),
         None => APPLICATION_SERVER.to_string(),
     };
+    
     let message = format!("Response sent to client with status code: {}", status_code.to_string());
     log_message_with_signature(&tx, &signature, &message);
 

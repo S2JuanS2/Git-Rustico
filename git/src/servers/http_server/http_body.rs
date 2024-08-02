@@ -14,7 +14,7 @@ use serde_xml_rs::to_string as xml_to_string;
 /// - `Xml(JsonValue)`: Contiene un valor XML representado como `JsonValue`.
 /// - `Yaml(YamlValue)`: Contiene un valor YAML.
 /// 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum HttpBody {
     Json(JsonValue),
     Xml(JsonValue),
@@ -262,6 +262,75 @@ impl HttpBody {
                 Ok(HttpBody::Xml(xml))
             }
             _ => Err(ServerError::UnsupportedMediaType),
+        }
+    }
+
+    /// Convierte el `HttpBody` al formato especificado por `content_type`.
+    ///
+    /// # Argumentos
+    ///
+    /// * `body` - Una referencia al `HttpBody` que se desea convertir.
+    /// * `content_type` - Un string que indica el tipo de contenido deseado (e.g., "application/json", "application/xml", "application/yaml").
+    ///
+    /// # Retorno
+    ///
+    /// Retorna un `Result` que contiene un `HttpBody` convertido o un `ServerError` en caso de error.
+    ///
+    /// # Ejemplos
+    ///
+    /// ```rust
+    /// let json_body = HttpBody::Json(serde_json::json!({"key": "value"}));
+    /// let xml_body = convert_body_to_content_type(&json_body, "application/xml");
+    /// ```
+    pub fn convert_body_to_content_type(body: HttpBody, content_type: &str) -> Result<HttpBody, ServerError> {
+        match content_type {
+            APPLICATION_JSON => match body {
+                HttpBody::Json(_) => Ok(body), // Ya está en formato JSON
+                HttpBody::Xml(xml) => {
+                    let json_str = xml_to_string(&xml).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let json_value: JsonValue = serde_json::from_str(&json_str).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    Ok(HttpBody::Json(json_value))
+                }
+                HttpBody::Yaml(yaml) => {
+                    let json_str = serde_yaml::to_string(&yaml).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let json_value: JsonValue = serde_json::from_str(&json_str).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    Ok(HttpBody::Json(json_value))
+                }
+                HttpBody::Empty => Ok(HttpBody::Empty),
+            },
+            APPLICATION_XML | TEXT_XML => match body {
+                HttpBody::Json(json) => {
+                    let xml_string = serde_xml_rs::to_string(&json).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let xml_value = serde_xml_rs::from_str(&xml_string).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    Ok(HttpBody::Xml(xml_value))
+                }
+                HttpBody::Xml(_) => Ok(body), // Ya está en formato XML
+                HttpBody::Yaml(yaml) => {
+                    let json_str = serde_yaml::to_string(&yaml).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let json_value: JsonValue = serde_json::from_str(&json_str).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let xml_string = serde_xml_rs::to_string(&json_value).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let xml_value = serde_xml_rs::from_str(&xml_string).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    Ok(HttpBody::Xml(xml_value))
+                }
+                HttpBody::Empty => Ok(HttpBody::Empty),
+            },
+            APPLICATION_YAML | TEXT_YAML => match body {
+                HttpBody::Json(json) => {
+                    let yaml_string = serde_yaml::to_string(&json).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let yaml_value: YamlValue = serde_yaml::from_str(&yaml_string).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    Ok(HttpBody::Yaml(yaml_value))
+                }
+                HttpBody::Xml(xml) => {
+                    let json_str = xml_to_string(&xml).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let json_value: JsonValue = serde_json::from_str(&json_str).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let yaml_string = serde_yaml::to_string(&json_value).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let yaml_value: YamlValue = serde_yaml::from_str(&yaml_string).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    Ok(HttpBody::Yaml(yaml_value))
+                }
+                HttpBody::Yaml(_) => Ok(body), // Ya está en formato YAML
+                HttpBody::Empty => Ok(HttpBody::Empty),
+            },
+            _ => Err(ServerError::InvalidFormat("Unsupported content type".to_string())),
         }
     }
 }
