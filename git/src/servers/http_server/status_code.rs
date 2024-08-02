@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::servers::errors::ServerError;
+
 use super::http_body::HttpBody;
 
 /// Enumera los posibles códigos de estado HTTP que pueden ser retornados por el servidor.
@@ -62,5 +64,26 @@ impl StatusCode {
 impl fmt::Display for StatusCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_string())
+    }
+}
+
+impl From<ServerError> for StatusCode {
+    fn from(error: ServerError) -> Self {
+        match error {
+            ServerError::BadRequest(e) => StatusCode::BadRequest(e),
+            ServerError::UnsupportedMediaType => StatusCode::UnsupportedMediaType,
+            ServerError::HttpVersionNotSupported => StatusCode::HttpVersionNotSupported,
+            ServerError::MethodNotAllowed => StatusCode::MethodNotAllowed,
+            ServerError::ResourceNotFound(_) => StatusCode::ResourceNotFound,
+            ServerError::InvalidGetPathError => StatusCode::ResourceNotFound,
+            ServerError::InvalidPostPathError => StatusCode::ResourceNotFound,
+            ServerError::InvalidPutPathError => StatusCode::ResourceNotFound,
+            ServerError::InvalidPatchPathError => StatusCode::ResourceNotFound,
+            ServerError::MissingRequestLine => StatusCode::BadRequest("Missing request line".to_string()),
+            ServerError::IncompleteRequestLine => StatusCode::BadRequest("Incomplete request line".to_string()),
+            ServerError::HttpFieldNotFound(e) => StatusCode::BadRequest(format!("Field not found: {}", e)),
+            ServerError::EmptyBody => StatusCode::BadRequest("Empty body".to_string()),
+            _ => StatusCode::InternalError("Internal server error".to_string()),
+        }
     }
 }

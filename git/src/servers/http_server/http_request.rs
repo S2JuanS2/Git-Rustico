@@ -1,5 +1,5 @@
 use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
-use crate::{consts::{APPLICATION_JSON, CONTENT_LENGTH, CONTENT_TYPE, HTPP_SIGNATURE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
+use crate::{consts::{APPLICATION_JSON, APPLICATION_SERVER, CONTENT_LENGTH, CONTENT_TYPE, HTPP_SIGNATURE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
 use super::{features_pr::{create_pull_requests, get_pull_request, list_commits, list_pull_request, merge_pull_request, modify_pull_request}, http_body::HttpBody, status_code::StatusCode, utils::read_request};
 
 /// Representa una solicitud HTTP.
@@ -192,6 +192,10 @@ impl HttpRequest {
                 Ok(StatusCode::ResourceNotFound)
             }
         }
+    }
+
+    pub fn get_content_type(&self) -> String {
+        self.headers.get(CONTENT_TYPE).unwrap_or(&APPLICATION_SERVER.to_string()).to_string()
     }
 
 }

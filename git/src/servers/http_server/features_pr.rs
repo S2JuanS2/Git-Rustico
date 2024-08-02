@@ -14,7 +14,7 @@ use crate::commands::push::is_update;
 
 
 
-pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     if valid_repository(repo_name, src).is_err() {
         return Ok(StatusCode::ResourceNotFound);
     }
@@ -28,7 +28,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
         Ok(p) => p,
         Err(e) => return Ok(e),
     };
-
+    
     let hash_key = match generate_pr_hash_key(body){
         Ok(h) => h,
         Err(e) => return Ok(StatusCode::InternalError(e.to_string())),
