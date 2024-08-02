@@ -134,3 +134,54 @@ pub fn generate_pr_hash_key(body: &HttpBody) -> Result<String, ServerError> {
 pub fn pr_already_exists(pr_map: &HashMap<String, u64>, hash_key: &String) -> bool {
     pr_map.contains_key(hash_key)
 }
+
+/// Obtiene el número de un pull request a partir del mapa de pull requests utilizando una clave hash.
+///
+/// Esta función busca en el mapa de pull requests (`pr_map`) el número de un pull request asociado con una clave hash
+/// proporcionada. Si la clave hash se encuentra en el mapa, se retorna el número del pull request correspondiente.
+/// De lo contrario, se retorna `None`.
+///
+/// # Argumentos
+///
+/// * `pr_map` - Un mapa (`HashMap`) que asocia claves hash de pull requests con números de pull requests.
+/// * `hash_key` - La clave hash que se utiliza para buscar el número del pull request en el mapa.
+///
+/// # Retornos
+///
+/// Devuelve `Some(u64)` si el número del pull request es encontrado en el mapa asociado con la clave hash.
+/// Devuelve `None` si la clave hash no está presente en el mapa.
+///
+pub fn get_pr_number(pr_map: &HashMap<String, u64>, hash_key: &String) -> Option<u64> {
+    match pr_map.get(hash_key) {
+        Some(pr_number) => Some(*pr_number),
+        None => None,
+    }
+}
+
+/// Elimina un pull request del mapa de pull requests y actualiza el archivo correspondiente.
+///
+/// Esta función elimina una entrada del mapa de pull requests (`pr_map`) utilizando una clave hash proporcionada.
+/// Si la clave hash no se encuentra en el mapa, se retorna un error. Luego de eliminar la entrada, se actualiza el
+/// archivo del mapa de pull requests en el disco con el estado actualizado del mapa.
+///
+/// # Argumentos
+///
+/// * `pr_map` - Un mapa mutable (`HashMap`) que contiene claves hash de pull requests y números asociados.
+/// * `pr_map_path` - La ruta del archivo donde se guarda el mapa de pull requests. Este archivo se actualiza después
+///   de la eliminación.
+/// * `hash_key` - La clave hash que se utilizará para eliminar la entrada correspondiente del mapa.
+///
+/// # Retornos
+///
+/// Devuelve `Ok(())` si la eliminación y actualización del archivo son exitosas.
+/// Devuelve `Err(ServerError::PrNotFoundInMap)` si la clave hash no está presente en el mapa de pull requests.
+/// Devuelve `Err(ServerError)` si ocurre un error durante la actualización del archivo del mapa.
+///
+pub fn delete_pr_in_map(pr_map: &mut HashMap<String, u64>, pr_map_path: &str, hash_key: &String) -> Result<(), ServerError> {
+    if !pr_map.contains_key(hash_key) {
+        return Err(ServerError::PrNotFoundInMap);
+    }
+    pr_map.remove(hash_key);
+    save_pr_map(pr_map_path, pr_map)?;
+    Ok(())
+}

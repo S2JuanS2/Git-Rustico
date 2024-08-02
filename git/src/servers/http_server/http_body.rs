@@ -5,6 +5,8 @@ use serde_yaml::Value as YamlValue;
 use crate::{consts::{APPLICATION_JSON, APPLICATION_XML, APPLICATION_YAML, TEXT_XML, TEXT_YAML}, servers::errors::ServerError};
 use serde_xml_rs::to_string as xml_to_string;
 
+use super::pr::PullRequest;
+
 /// Enum `HttpBody` que representa los diferentes tipos de cuerpos de solicitudes HTTP.
 ///
 /// Este enum puede contener un valor JSON, XML, YAML o texto plano.
@@ -136,6 +138,43 @@ impl HttpBody {
             Err(_) => return Err(ServerError::ResourceNotFound(file_path.to_string())),
         };
         HttpBody::parse(content_type, &content)
+    }
+
+    /// Crea una instancia de `HttpBody` a partir de una solicitud de extracción (`PullRequest`) y un tipo de contenido especificado.
+    ///
+    /// Esta función toma un objeto `PullRequest` y lo convierte en una instancia de `HttpBody` según el tipo de contenido
+    /// indicado. La conversión se realiza en formato JSON, XML o YAML. Si el tipo de contenido no es soportado o si ocurre
+    /// un error durante la serialización, se retorna un error adecuado.
+    ///
+    /// # Argumentos
+    ///
+    /// * `pr` - Una referencia al objeto `PullRequest` que se desea convertir. Este objeto contiene la información de la
+    ///   solicitud de extracción que se debe serializar.
+    /// * `content_type` - Una cadena que indica el tipo de contenido deseado para la conversión. Puede ser uno de los siguientes:
+    ///   - `APPLICATION_JSON`
+    ///   - `APPLICATION_XML`
+    ///   - `APPLICATION_YAML`
+    ///   - Cualquier otro tipo de contenido se considerará no soportado.
+    ///
+    pub fn create_from_pr(pr: &PullRequest, content_type: &str) -> Result<Self, ServerError> {
+        match content_type {
+            APPLICATION_JSON => {
+                let json_value = serde_json::to_value(pr).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                Ok(HttpBody::Json(json_value))
+            }
+            APPLICATION_XML => {
+                let json_str = serde_json::to_string(pr).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                let json_value: JsonValue = serde_json::from_str(&json_str).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                let xml_str = serde_xml_rs::to_string(&json_value).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                let xml_value = serde_xml_rs::from_str(&xml_str).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                Ok(HttpBody::Xml(xml_value))
+            }
+            APPLICATION_YAML => {
+                let yaml_value = serde_yaml::to_value(pr).map_err(|e| ServerError::Serialization(e.to_string()))?;
+                Ok(HttpBody::Yaml(yaml_value))
+            }
+            _ => Err(ServerError::UnsupportedMediaType),
+        }
     }
 
     /// Obtiene el tipo de contenido y el cuerpo como una cadena de texto.

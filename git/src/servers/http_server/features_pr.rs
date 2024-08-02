@@ -6,7 +6,7 @@ use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists, list_directory_contents};
 use crate::consts::{APPLICATION_SERVER, FILE, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
-use super::pr_registry::{generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
+use super::pr_registry::{delete_pr_in_map, generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
 use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository};
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
@@ -234,9 +234,56 @@ pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, 
         Err(_) => return Ok(StatusCode::BadRequest("The request body does not contain a valid Pull Request.".to_string())),
     };
     // LOGICA PARA MODIFICAR UNA SOLICITUD DE EXTRACCION
-    Ok(StatusCode::Forbidden)
+    Ok(StatusCode::Forbidden("Pulcito volvio muajaja.".to_string()))
 }
 
+
+pub fn delete_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    // Verificar si el repositorio es válido
+    if valid_repository(repo_name, src).is_err() {
+        return Ok(StatusCode::ResourceNotFound(
+            "El repositorio no existe.".to_string(),
+        ));
+    };
+
+    // Construir la ruta del archivo de la solicitud de extracción
+    let file_path = get_pull_request_file_path(repo_name, pull_number, src);
+    if !file_exists(&file_path) {
+        return Ok(StatusCode::ResourceNotFound(
+            "La solicitud de extracción no existe.".to_string(),
+        ));
+    };
+
+    let mut pr = PullRequest::create_from_file(&file_path)?;
+
+    // Valido el status de la solicitud de extracción
+    if !pr.is_open() {
+        return Ok(StatusCode::Forbidden(
+            "No se puede eliminar una solicitud de extracción cerrada.".to_string(),
+        ));
+    };
+
+    // Cierro la solicitud de extracción
+    pr.close();
+
+    // Guardo los cambios en el archivo
+    let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
+    
+    let hash_key = match generate_pr_hash_key(&body) {
+        Ok(h) => h,
+        Err(e) => return Ok(StatusCode::InternalError(e.to_string())),
+    };
+    
+    let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
+    let pr_map_path = format!("{}/{}", path, PR_MAP_FILE);
+
+    let mut pr_map = read_pr_map(&pr_map_path)?;
+    
+    delete_pr_in_map(&mut pr_map, &pr_map_path, &hash_key)?;
+    body.save_body_to_file(&file_path, &APPLICATION_SERVER)?;
+
+    Ok(StatusCode::Ok(None))
+}
 
 /// Construye la ruta del archivo para una solicitud de extracción específica en el repositorio.
 ///

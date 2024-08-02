@@ -42,6 +42,7 @@ pub enum ServerError {
     ReadMapPrFile,
     SaveMapPrFile,
     BadRequest(String),
+    PrNotFoundInMap,
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -84,6 +85,7 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::ReadMapPrFile => write!(f, "Error al leer el archivo donde se guarda el mapa de PRs."),
         ServerError::SaveMapPrFile => write!(f, "Error al guardar el mapa de PRs."),
         ServerError::BadRequest(e) => write!(f, "Solicitud HTTP incorrecta: {}", e),
+        ServerError::PrNotFoundInMap => write!(f, "No se encontró el PR en el mapa."),
     }
 }
 

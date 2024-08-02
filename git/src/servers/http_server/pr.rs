@@ -175,5 +175,27 @@ impl PullRequest {
     pub fn set_commits(&mut self, commits: Vec<String>){
         self.commits = Some(commits);
     }
+
+    pub fn is_open(&self) -> bool {
+        self.state.as_deref() == Some("open")
+    }
+
+    pub fn close(&mut self) {
+        self.state = Some("closed".to_string());
+    }
+
+    pub fn get_base(&self) -> Option<&str> {
+        match &self.base {
+            Some(base) => Some(base),
+            None => None,
+        }
+    }
+
+    pub fn get_head(&self) -> Option<&str> {
+        match &self.head {
+            Some(head) => Some(head),
+            None => None,
+        }
+    }
 }
 
