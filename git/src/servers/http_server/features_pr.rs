@@ -1,9 +1,10 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::collections::HashMap;
+use crate::commands::checkout::get_tree_hash;
 use crate::commands::merge::merge_pr;
 use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists, list_directory_contents};
-use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
+use crate::consts::{APPLICATION_SERVER, FILE, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
 use super::pr_registry::{generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
 use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository};
@@ -131,14 +132,21 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     {
         return Ok(StatusCode::ResourceNotFound);
     }
+    let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
+    let directory = format!("{}/{}", src, repo_name);
+    
     // TODO| let _mergeable = logica para obtener el estado de fusion
 
     // TODO| let _changed_files = logica para obtener los archivos modificados
-
+    let changed_files = get_changed_files_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
+    println!("{:?}\n", changed_files);
+    
     // TODO| let _commits = logica para obtener los commits <- get_commits_pr
-
+    let commits = get_commits_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
+    println!("{:?}\n", commits);
+    
     // actualizar el pr con los campos obtenidos
-    let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
+
     Ok(StatusCode::Ok(Some(body)))
 }
 
@@ -308,11 +316,18 @@ fn get_body_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec
     Ok(result)
 }
 
-///
+/// Función que recibe 2 branches, compara sus commits y envía los commits que 
+/// no estan contenidos en la branch target en un vector.
 /// 
+/// # Argumentos
 /// 
+/// * `directory` - Ruta del repositorio del pull request.
+/// * `base` - branch target.
+/// * `head` - branch origen.
 /// 
-/// 
+/// # Retornos
+/// Devuelve `Ok(result)` El vector con los hashes de los commits nuevos.
+/// Devuelve `Err( )`
 fn get_commits_pr(directory: &str, base: &str, head: &str) -> Result<Vec<String>, ServerError> {
     let commits_head = get_commits(&directory, &head)?;
     let commits_base = get_commits(&directory, &base)?;
@@ -325,13 +340,68 @@ fn get_commits_pr(directory: &str, base: &str, head: &str) -> Result<Vec<String>
     Ok(result)
 }
 
-///
+/// Función que recorre los sub-tree y almacena los archivos en un hashMap
 /// 
+/// # Argumentos
 /// 
+/// * `directory` - Ruta del repositorio del pull request.
+/// * `pr_files_map` - hashMap donde se almacenan los archivos del commit.
+/// * `tree_hash_head` - hash del arbol actual.
+/// * `path` - cadena para completar la ruta del archivo.
 /// 
+/// # Retornos
+/// Devuelve `Ok()` Si no hubo errores.
+/// Devuelve `Err( )`
+fn recovery_tree_pr(directory: &str, pr_files_map: &mut HashMap<String, String>, tree_hash_head: &str, path: &str) -> Result<(), ServerError>{
+    let content_tree_head = git_cat_file(directory, &tree_hash_head, "-p")?;
+    for line in content_tree_head.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() == 3{
+            if parts[0] == FILE{
+                let path_complete = format!("{}{}", path, parts[1].to_string());
+                pr_files_map.insert(parts[2].to_string(), path_complete);
+            }else{
+                let path_complete = format!("{}{}/", path, parts[1].to_string());
+                recovery_tree_pr(directory, pr_files_map, parts[2], &path_complete)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Función que recibe 2 branches, compara los archivos que fueron modificados en las 
+/// diferencias entre sus commits y envía los nombres de los mismos en un vector.
 /// 
-fn _get_changed_files_pr(_directory: &str, _base: &str, _head: &str) -> Result<Vec<String>, ServerError>{
-    let result = vec!();
+/// # Argumentos
+/// 
+/// * `directory` - Ruta del repositorio del pull request.
+/// * `base` - branch target.
+/// * `head` - branch origen.
+/// 
+/// # Retornos
+/// Devuelve `Ok(result)` El vector con los nombres de los archivos modificados.
+/// Devuelve `Err( )`
+fn get_changed_files_pr(directory: &str, base: &str, head: &str) -> Result<Vec<String>, ServerError>{
+    let mut result = vec!();
+    let mut pr_files_map_head: HashMap<String, String> = HashMap::new();
+    let mut pr_files_map_base: HashMap<String, String> = HashMap::new();
+    let head_current_commit = get_branch_current_hash(&directory, head.to_string())?;
+    let base_current_commit = get_branch_current_hash(&directory, base.to_string())?;
+    let content_commit_head = git_cat_file(directory, &head_current_commit, "-p")?;
+    if let Some(tree_hash_head) = get_tree_hash(&content_commit_head) {
+        let mut path = "";
+        recovery_tree_pr(directory, &mut pr_files_map_head, tree_hash_head, path)?;
+        let content_commit_base = git_cat_file(directory, &base_current_commit, "-p")?;
+        let tree_hash_base = get_tree_hash(&content_commit_base).unwrap();
+        path = "";
+        recovery_tree_pr(directory, &mut pr_files_map_base, tree_hash_base, path)?;
+    }
+
+    for file in pr_files_map_head.into_iter(){
+        if !pr_files_map_base.contains_key(&file.0) {
+            result.push(file.1);
+        }
+    }
     Ok(result)
 }
 
