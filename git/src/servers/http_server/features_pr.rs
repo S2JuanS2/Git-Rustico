@@ -192,7 +192,7 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     let title = body.get_field("title")?;
     
     let mut pr = PullRequest::from_http_body(&body)?;
-    let result_merge = merge_pr(&directory, &head, &base, &owner, &title, pull_number, repo_name)?;
+    let result_merge = merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
     if result_merge.contains("Conflict") {
         pr.change_mergeable("false");
         let updated_body = serde_json::to_string(&pr).unwrap();
