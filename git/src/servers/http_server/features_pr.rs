@@ -93,13 +93,7 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
     for &key in &keys{
         let mut pr = PullRequest::default();
         if let Some(body) = pr_map.get(key){
-            pr.repo = Some(body.get_field("repo")?);
-            pr.body = Some(body.get_field("body")?);
-            pr.title = Some(body.get_field("title")?); 
-            pr.owner = Some(body.get_field("owner")?);
-            pr.head = Some(body.get_field("head")?);
-            pr.base = Some(body.get_field("base")?);
-            pr.state = Some(body.get_field("state")?);
+            pr = PullRequest::from_http_body(body)?;
         }
         //Falta agregar los commits y el campo mergeable
         pr_list.push(pr);
