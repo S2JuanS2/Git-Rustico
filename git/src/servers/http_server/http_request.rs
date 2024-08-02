@@ -117,7 +117,7 @@ impl HttpRequest {
                 return list_commits(repo_name, pull_number, src, tx);
             },
             _ => {
-                Ok(StatusCode::ResourceNotFound)
+                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
         }
     }
@@ -141,7 +141,7 @@ impl HttpRequest {
                 return create_pull_requests(http_body, repo_name, src, tx);
             }
             _ => {
-                Ok(StatusCode::ResourceNotFound)
+                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
         }
     }
@@ -165,7 +165,7 @@ impl HttpRequest {
                 return merge_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
-                Ok(StatusCode::ResourceNotFound)
+                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
         }
     }
@@ -189,7 +189,7 @@ impl HttpRequest {
                 return modify_pull_request(http_body, repo_name, pull_number, src, tx);
             },
             _ => {
-                Ok(StatusCode::ResourceNotFound)
+                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
         }
     }
