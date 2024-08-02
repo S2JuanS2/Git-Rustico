@@ -35,6 +35,7 @@ impl CommitsPr{
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct PullRequest {
+    pub id: Option<String>,
     pub owner: Option<String>,
     pub repo: Option<String>,
     pub title: Option<String>,
@@ -48,7 +49,8 @@ pub struct PullRequest {
     // momento.
     pub mergeable: Option<String>,
     pub changed_files: Option<Vec<String>>,
-    pub commits: Option<Vec<usize>>,
+    pub commits: Option<Vec<String>>,
+    pub amount_commits: Option<usize>,
 }
 
 impl PullRequest {
@@ -71,6 +73,7 @@ impl PullRequest {
         let body = body.get_field("body").ok();
         
         Ok(PullRequest {
+            id: None,
             owner,
             repo,
             title,
@@ -81,11 +84,13 @@ impl PullRequest {
             mergeable: None,
             changed_files: None,
             commits: None,
+            amount_commits: None,
         })
     }
 
     pub fn default() -> Self {
         PullRequest {
+            id: None,
             owner: None,
             repo: None,
             title: None,
@@ -96,6 +101,7 @@ impl PullRequest {
             state: None,
             changed_files: None,
             commits: None,
+            amount_commits: None,
         }
     }
 
@@ -159,6 +165,15 @@ impl PullRequest {
 
     pub fn change_mergeable(&mut self, mergeable: &str) {
         self.mergeable = Some(mergeable.to_string());
+    }
+    pub fn set_changed_files(&mut self, files: Vec<String>){
+        self.changed_files = Some(files);
+    }
+    pub fn set_amount_commits(&mut self, amount: usize){
+        self.amount_commits = Some(amount);
+    }
+    pub fn set_commits(&mut self, commits: Vec<String>){
+        self.commits = Some(commits);
     }
 }
 
