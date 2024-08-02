@@ -4,13 +4,13 @@ use crate::consts::{CONTENT_EMPTY, DIRECTORY, FILE, GIT_DIR, PARENT_INITIAL};
 use crate::models::client::Client;
 use super::add::add_to_index;
 use super::checkout::extract_parent_hash;
-use super::commit::{merge_commit, Commit};
+use super::commit::{get_commits, merge_commit, Commit};
 use super::errors::CommandsError;
 use crate::util::files::{create_directory, create_file_replace, open_file, read_file_string};
 use std::{fs, io};
 use std::path::Path;
 use std::io::BufRead;
-use super::branch::get_current_branch;
+use super::branch::{get_current_branch, get_parent_hashes};
 use super::cat_file::git_cat_file;
 
 /// Esta función se encarga de llamar al comando merge con los parametros necesarios.
@@ -62,7 +62,7 @@ pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, c
         let (first_commit_current_branch, first_commit_merge_branch) = get_first_commit_of_each_branch(&log_current_branch, &log_merge_branch);
         let root_parent_current_branch = git_cat_file(directory, &first_commit_current_branch, "-p")?;
         let root_parent_merge_branch = git_cat_file(directory, &first_commit_merge_branch, "-p")?;
-        let (hash_parent_current, hash_parent_merge) = get_parent_hashes(root_parent_current_branch, root_parent_merge_branch);
+        let (hash_parent_current, hash_parent_merge) = get_parent_hashes_(root_parent_current_branch, root_parent_merge_branch);
 
         let strategy = merge_depending_on_strategy(is_head, &hash_parent_current, &hash_parent_merge, &branch_to_merge_hash, directory, branch_name)?;
         if merge_type == "merge" {
@@ -76,6 +76,64 @@ pub fn try_for_merge(directory: &str, current_branch: &str, branch_name: &str, c
     }
     
     Ok(formatted_result)
+}
+
+pub fn merge_pr(directory: &str, base_branch: &str, head_branch: &str, owner: &str, title: &str, pr_number: &str, repo_name: &str) -> Result<String, CommandsError> {
+    let is_head = base_branch == get_current_branch(directory)?;
+    let path_base_branch = get_refs_path(directory, base_branch);
+    let path_head_branch = get_refs_path(directory, head_branch);
+
+    let (base_branch_hash, head_branch_hash) = get_branches_hashes(&path_base_branch, &path_head_branch)?;
+    let base_branch_parent = get_parent_hashes(base_branch_hash.clone());
+    let head_branch_parent = get_parent_hashes(head_branch_hash.clone());
+
+    let content_commit = git_cat_file(directory, &head_branch_hash, "-p")?;
+    let content_tree = get_tree_of_commit(content_commit, directory)?;
+
+    let strategy = recovery_tree_merge(is_head, directory, &base_branch_parent, &head_branch_parent, head_branch, content_tree, CONTENT_EMPTY)?;
+    update_logs_refs(directory, &strategy, base_branch, head_branch, &base_branch_hash, &head_branch_hash)?;
+    update_refs_pr(directory, &strategy, &path_base_branch, &base_branch_hash, &head_branch_hash, head_branch, owner, title, pr_number, repo_name)?;
+
+    let mut formatted_result = String::new();
+    get_result_pr(strategy, &mut formatted_result)?;
+
+    if is_head{
+        update_work_directory(directory, &head_branch_hash, &mut formatted_result)?;
+    }
+
+    Ok(formatted_result)
+}
+
+fn get_result_pr(strategy: (String, String), formatted_result: &mut String) -> Result<(), CommandsError> {
+    if strategy.1 == "ok" {
+        formatted_result.push_str("Pull request automatically merged.");
+    } else {
+        formatted_result.push_str("Conflicts found when trying to merge the pull request.");
+        formatted_result.push_str(format!("Conflict in file:{}\n", strategy.1).as_str());
+    }
+    Ok(())
+}
+
+fn update_refs_pr(directory: &str, strategy: &(String, String), path_current_branch: &str, current_branch_hash: &str, branch_to_merge_hash: &str, head_branch: &str, owner: &str, title: &str, pr_number: &str, repo_name: &str) -> Result<(), CommandsError> {
+    if strategy.0 == "recursive" && strategy.1 == "ok" {
+        let message = format!("Merge pull request #{} from {}/{}: {}", pr_number, repo_name, head_branch, title);
+        let owner_email = format!("{}@users.noreply.rusteam.com", owner);
+        let commiter_name = "Rusteam".to_string();
+        let commiter_email = "noreply@rusteam.com".to_string();
+        let commit = Commit::new(
+            message,
+            owner.to_string(),
+            owner_email,
+            commiter_name,
+            commiter_email,
+        );
+        merge_commit(directory, commit, current_branch_hash, branch_to_merge_hash)?;
+    } else if strategy.0 == "fast-forward" {
+        create_file_replace(path_current_branch, branch_to_merge_hash)?;
+    } else {
+        return Ok(())
+    }
+    Ok(())
 }
 
 /// Actualiza el repositorio en caso de recibir un commit con archivos eliminados
@@ -394,7 +452,7 @@ fn get_result_depending_on_strategy(
 /// ###Parametros:
 /// 'root_parent_current_branch': String que contiene el contenido del primer commit de la rama actual
 /// 'root_parent_merge_branch': String que contiene el contenido del primer commit de la rama a mergear
-pub fn get_parent_hashes(
+pub fn get_parent_hashes_(
     root_parent_current_branch: String,
     root_parent_merge_branch: String,
 ) -> (String, String) {
@@ -577,6 +635,20 @@ pub fn get_tree_of_commit(content_commit: String, directory: &str) -> Result<Str
         }
     }
     Ok(content_tree)
+}
+
+pub fn find_commit_common_ancestor(directory: &str, current_branch: &str, branch_to_merge: &str) -> Result<String, CommandsError> {
+    let mut commit_common_ancestor = String::new();
+    let commits_current = get_commits(directory, current_branch)?;
+    let commits_merge = get_commits(directory, branch_to_merge)?;
+    for commit_current in commits_current.iter() {
+        for commit_merge in commits_merge.iter() {
+            if commit_current == commit_merge {
+                commit_common_ancestor = commit_current.to_string();
+            }
+        }
+    }
+    Ok(commit_common_ancestor)
 }
 
 /// Compara el archivo en la rama actual con el de la rama a mergear.

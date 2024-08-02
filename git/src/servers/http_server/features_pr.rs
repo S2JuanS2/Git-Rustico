@@ -1,5 +1,6 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::collections::HashMap;
+use crate::commands::merge::merge_pr;
 use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists, list_directory_contents};
 use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
@@ -186,8 +187,31 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     {
         return Ok(StatusCode::ResourceNotFound);
     }
-    // LOGICA PARA FUSIONAR UNA SOLICITUD DE EXTRACCION
-    Ok(StatusCode::Forbidden)
+    let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
+    
+    let directory = format!("{}/{}", src, repo_name);
+    let head = body.get_field("head")?;
+    let base = body.get_field("base")?;
+    let owner = body.get_field("owner")?;
+    let title = body.get_field("title")?;
+    
+    let mut pr = PullRequest::from_http_body(&body)?;
+    let result_merge = merge_pr(&directory, &head, &base, &owner, &title, pull_number, repo_name)?;
+    if result_merge.contains("Conflict") {
+        pr.change_mergeable("false");
+        let updated_body = serde_json::to_string(&pr).unwrap();
+        let updated_body_http = HttpBody::parse(APPLICATION_SERVER, &updated_body)?;
+        updated_body_http.save_body_to_file(&file_path, &APPLICATION_SERVER.to_string())?;
+        return Ok(StatusCode::Conflict);
+    }
+
+    pr.change_state("closed");
+    pr.change_mergeable("true");
+    let updated_body = serde_json::to_string(&pr).unwrap();
+    let updated_body_http = HttpBody::parse(APPLICATION_SERVER, &updated_body)?;
+    updated_body_http.save_body_to_file(&file_path, &APPLICATION_SERVER.to_string())?;
+
+    Ok(StatusCode::MergeWasSuccessful)
 }
 
 pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
