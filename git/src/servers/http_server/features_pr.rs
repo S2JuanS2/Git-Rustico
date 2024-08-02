@@ -1,16 +1,16 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::collections::HashMap;
 use crate::servers::errors::ServerError;
-use crate::util::files::{create_directory, file_exists, folder_exists, list_directory_contents};
-use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER};
+use crate::util::files::{file_exists, folder_exists, list_directory_contents};
+use crate::consts::{APPLICATION_SERVER, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
-use super::utils::{get_next_pr_number, valid_repository};
+use super::pr_registry::{generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
+use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository};
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
 use crate::commands::push::is_update;
-use std::path::Path;
 
 
 
@@ -19,15 +19,32 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String,_tx: 
         return Ok(StatusCode::ResourceNotFound);
     }
     
-    let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
-    let directory = Path::new(&path);
-    if create_directory(&directory).is_err() {
-        return Ok(StatusCode::InternalError("Error creating the PR folder.".to_string()));
+    match check_pull_request_changes(repo_name, src, body){
+        Ok(_) => {},
+        Err(e) => return Ok(e),
+    };
+
+    let path = match setup_pr_directory(repo_name, src){
+        Ok(p) => p,
+        Err(e) => return Ok(e),
+    };
+
+    let hash_key = match generate_pr_hash_key(body){
+        Ok(h) => h,
+        Err(e) => return Ok(StatusCode::InternalError(e.to_string())),
+    };
+    let pr_map_path = format!("{}/{}", path, PR_MAP_FILE);
+    
+    let mut pr_map = read_pr_map(&pr_map_path)?;
+    if pr_already_exists(&pr_map, &hash_key) {
+        return Ok(StatusCode::ValidationFailed("Pull request already exists.".to_string()));
     }
-    let _next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
-    PullRequest::check_pull_request_validity(repo_name, src, body)?;
-    let pr_file_path = format!("{}/{}{}", path, _next_pr, PR_FILE_EXTENSION);
-    body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
+
+    let next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
+    save_pr_to_file(body, &path, next_pr)?;
+
+    update_pr_map(&mut pr_map, &pr_map_path, hash_key, next_pr)?;
+
     Ok(StatusCode::Created)
 }
 
@@ -188,6 +205,7 @@ pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, 
     Ok(StatusCode::Forbidden)
 }
 
+
 /// Construye la ruta del archivo para una solicitud de extracción específica en el repositorio.
 ///
 /// Esta función genera una cadena de ruta de archivo para una solicitud de extracción dada 
@@ -269,4 +287,34 @@ fn get_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec<Comm
         }
     }
     Ok(result)
+}
+
+
+/// Verifica si un pull request contiene cambios antes de proceder con su creación.
+///
+/// Esta función se asegura de que el pull request sea válido y contenga cambios entre
+/// las ramas especificadas. Si no se detectan cambios, se devuelve un error.
+///
+/// # Argumentos
+///
+/// * `repo_name` - El nombre del repositorio donde se desea crear el pull request.
+/// * `src` - La ruta del directorio del repositorio en el sistema de archivos.
+/// * `body` - El cuerpo de la solicitud HTTP que contiene los datos del pull request.
+///
+/// # Retornos
+///
+/// Devuelve `Ok(())` si el pull request es válido y contiene cambios.
+/// Devuelve `Err(StatusCode::ValidationFailed)` si no se detectan cambios.
+/// Devuelve `Err(StatusCode::InternalError)` si ocurre un error durante la validación.
+/// 
+pub fn check_pull_request_changes(repo_name: &str, src: &String, body: &HttpBody) -> Result<(), StatusCode> {
+    match PullRequest::check_pull_request_validity(repo_name, src, body) {
+        Ok(changes) => {
+            if !changes {
+                return Err(StatusCode::ValidationFailed("The pull request does not contain any changes.".to_string()));
+            }
+        }
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    }
+    Ok(())
 }

@@ -39,6 +39,8 @@ pub enum ServerError {
     EmptyBody,
     SavePr,
     ParseNumberPR(String),
+    ReadMapPrFile,
+    SaveMapPrFile,
 }
 
 fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -78,6 +80,8 @@ fn format_error(error: &ServerError, f: &mut fmt::Formatter<'_>) -> fmt::Result 
         ServerError::EmptyBody => write!(f, "Se intento gaurdar un body vacío."),
         ServerError::SavePr => write!(f, "Error al guardar el PR."),
         ServerError::ParseNumberPR(e) => write!(f, "Error al parsear el número de PR: {}", e),
+        ServerError::ReadMapPrFile => write!(f, "Error al leer el archivo donde se guarda el mapa de PRs."),
+        ServerError::SaveMapPrFile => write!(f, "Error al guardar el mapa de PRs."),
     }
 }
 

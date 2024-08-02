@@ -16,3 +16,5 @@ pub mod status_code;
 pub mod http_body;
 
 pub mod features_pr;
+
+pub mod pr_registry;
