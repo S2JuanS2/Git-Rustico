@@ -121,8 +121,8 @@ fn get_result_pr(strategy: (String, String), formatted_result: &mut String) -> R
 }
 
 fn update_refs_pr(directory: &str, strategy: &(String, String), path_current_branch: &str, current_branch_hash: &str, branch_to_merge_hash: &str, head_branch: &str, owner: &str, title: &str, pr_number: &str, repo_name: &str) -> Result<(), CommandsError> {
-    if strategy.0 == "recursive" && strategy.1 == "ok" {
-        let message = format!("Merge pull request #{} from {}/{}: {}", pr_number, repo_name, head_branch, title);
+    if strategy.1 == "ok" {
+        let message = format!("Merge pull request #{} from {}/{}. Title {}", pr_number, repo_name, head_branch, title);
         let owner_email = format!("{}@users.noreply.rusteam.com", owner);
         let commiter_name = "Rusteam".to_string();
         let commiter_email = "noreply@rusteam.com".to_string();
