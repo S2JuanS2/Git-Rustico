@@ -14,11 +14,9 @@ use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
 use crate::commands::push::is_update;
 
-
-
 pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     if valid_repository(repo_name, src).is_err() {
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
     }
     
     match check_pull_request_changes(repo_name, src, body){
@@ -73,7 +71,7 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
     let pr_repo_folder_path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
     if !folder_exists(&pr_repo_folder_path)
     {
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
     }
     let prs = list_directory_contents(&pr_repo_folder_path)?;
     if prs.len() <= 1 {
@@ -128,13 +126,13 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
 ///
 pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     if valid_repository(repo_name, src).is_err() {
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
     }
     
     let file_path: String = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
     {
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::ResourceNotFound("The pull request does not exist.".to_string()));
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
     let directory = format!("{}/{}", src, repo_name);
@@ -174,7 +172,7 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     let file_path = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
     {
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::ResourceNotFound("The pull request does not exist.".to_string()));
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
 
@@ -192,7 +190,7 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     let file_path = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
     {
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::ResourceNotFound("The pull request does not exist.".to_string()));
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
     
@@ -228,7 +226,7 @@ pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, 
     let file_path = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
     {
-        return Ok(StatusCode::ResourceNotFound);
+        return Ok(StatusCode::ResourceNotFound("The pull request does not exist.".to_string()));
     }
     let _pr = match PullRequest::from_http_body(body)
     {
