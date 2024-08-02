@@ -248,7 +248,6 @@ impl HttpBody {
         match application {
             APPLICATION_JSON => {
                 let body_str = format!("{{\"{}\": \"{}\"}}", key, message);
-                println!("{}", body_str);
                 let json = serde_json::from_str(&body_str).map_err(|_| ServerError::HttpParseJsonBody)?;
                 Ok(HttpBody::Json(json))
             }
