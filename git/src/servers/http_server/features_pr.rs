@@ -1,7 +1,7 @@
 use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::collections::HashMap;
 use crate::commands::checkout::get_tree_hash;
-use crate::commands::merge::merge_pr;
+use crate::commands::merge::{find_commit_common_ancestor, merge_pr};
 use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists, list_directory_contents};
 use crate::consts::{APPLICATION_SERVER, FILE, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
@@ -139,6 +139,8 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     let mut pr = PullRequest::from_http_body(&body)?;
 
     // TODO| let _mergeable = logica para obtener el estado de fusion
+    let mergeable = is_mergeable(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
+    pr.change_mergeable(&mergeable.to_string());
 
     let changed_files = get_changed_files_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
     pr.set_changed_files(changed_files);
@@ -202,19 +204,14 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     let base = body.get_field("base")?;
     let owner = body.get_field("owner")?;
     let title = body.get_field("title")?;
-    
-    let mut pr = PullRequest::from_http_body(&body)?;
-    let result_merge = merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
-    if result_merge.contains("Conflict") {
-        pr.change_mergeable("false");
-        let updated_body = serde_json::to_string(&pr).unwrap();
-        let updated_body_http = HttpBody::parse(APPLICATION_SERVER, &updated_body)?;
-        updated_body_http.save_body_to_file(&file_path, &APPLICATION_SERVER.to_string())?;
+    if !is_mergeable(&directory, &base, &head)? {
         return Ok(StatusCode::Conflict);
     }
+    
+    let mut pr = PullRequest::from_http_body(&body)?;
+    merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
 
     pr.change_state("closed");
-    pr.change_mergeable("true");
     let updated_body = serde_json::to_string(&pr).unwrap();
     let updated_body_http = HttpBody::parse(APPLICATION_SERVER, &updated_body)?;
     updated_body_http.save_body_to_file(&file_path, &APPLICATION_SERVER.to_string())?;
@@ -436,4 +433,40 @@ pub fn check_pull_request_changes(repo_name: &str, src: &String, body: &HttpBody
         Err(e) => return Err(StatusCode::InternalError(e.to_string())),
     }
     Ok(())
+}
+
+pub fn is_mergeable(directory: &str, base: &str, head: &str) -> Result<bool, ServerError> {
+    let base_current_commit = get_branch_current_hash(&directory, base.to_string())?;
+    let head_current_commit = get_branch_current_hash(&directory, head.to_string())?;
+    let common_ancestor = find_commit_common_ancestor(directory, &base, &head)?;
+    if common_ancestor == base_current_commit {
+        return Ok(true);
+    }
+    let mut pr_files_map_head: HashMap<String, String> = HashMap::new();
+    let mut pr_files_map_base: HashMap<String, String> = HashMap::new();
+    let content_commit_head = git_cat_file(directory, &head_current_commit, "-p")?;
+    if let Some(tree_hash_head) = get_tree_hash(&content_commit_head) {
+        let mut path = "";
+        recovery_tree_pr(directory, &mut pr_files_map_head, tree_hash_head, path)?;
+        let content_commit_base = git_cat_file(directory, &base_current_commit, "-p")?;
+        let tree_hash_base = get_tree_hash(&content_commit_base).unwrap();
+        path = "";
+        recovery_tree_pr(directory, &mut pr_files_map_base, tree_hash_base, path)?;
+    }
+    for file in pr_files_map_head.into_iter(){
+        if !pr_files_map_base.contains_key(&file.0) {
+            let file_head = file.1.as_str();
+            for (key, value) in &pr_files_map_base {
+                if value == file_head {
+                    let content_head = git_cat_file(directory, file.0.as_str(), "-p")?;
+                    let hash_base = key.as_str();
+                    let content_base = git_cat_file(directory, hash_base, "-p")?;
+                    if content_head != content_base {
+                        return Ok(false);
+                    }
+                }
+            }
+        }
+    }
+    Ok(true)
 }
