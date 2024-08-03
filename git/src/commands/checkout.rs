@@ -118,11 +118,9 @@ pub fn extract_parent_hash(commit: &str) -> Option<&str> {
                     return words.get(1).copied();
                 }
             }
-        }else{
-            if line.starts_with("parent") {
-                let words: Vec<&str> = line.split_whitespace().collect();
-                return words.get(1).copied();
-            }
+        }else if line.starts_with("parent") {
+            let words: Vec<&str> = line.split_whitespace().collect();
+            return words.get(1).copied();
         }
     }
     None

@@ -366,7 +366,7 @@ pub fn sent_references_valid_client(
 ///
 pub fn send_acknowledge_last_reference(
     writer: &mut dyn Write,
-    confirmed_hashes: &Vec<String>,
+    confirmed_hashes: &[String],
 ) -> Result<(), UtilError> {
     let message = format!("ACK {}\n", confirmed_hashes[confirmed_hashes.len() - 1]);
     let message = pkt_line::add_length_prefix(&message, message.len());

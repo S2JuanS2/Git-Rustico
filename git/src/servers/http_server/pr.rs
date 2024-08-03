@@ -33,6 +33,12 @@ impl CommitsPr{
     }
 }
 
+impl Default for CommitsPr{
+    fn default() -> Self{
+        Self::new()
+    }
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct PullRequest {
     pub id: Option<usize>,
@@ -87,23 +93,6 @@ impl PullRequest {
             commits: None,
             amount_commits: None,
         })
-    }
-
-    pub fn default() -> Self {
-        PullRequest {
-            id: None,
-            owner: None,
-            repo: None,
-            title: None,
-            body: None,
-            head: None,
-            base: None,
-            mergeable: None,
-            state: None,
-            changed_files: None,
-            commits: None,
-            amount_commits: None,
-        }
     }
 
     pub fn create_from_file(file_path: &str) -> Result<Self, ServerError> {
@@ -204,3 +193,21 @@ impl PullRequest {
     }
 }
 
+impl Default for PullRequest {
+    fn default() -> Self {
+        PullRequest {
+            id: None,
+            owner: None,
+            repo: None,
+            title: None,
+            body: None,
+            head: None,
+            base: None,
+            state: None,
+            mergeable: None,
+            changed_files: None,
+            commits: None,
+            amount_commits: None,
+        }
+    }
+}

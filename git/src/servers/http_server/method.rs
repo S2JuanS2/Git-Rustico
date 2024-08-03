@@ -100,13 +100,13 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
-                return list_pull_request(repo_name, src, tx);
+                list_pull_request(repo_name, src, tx)
             },
             ["repos", repo_name, "pulls", pull_number] => {
-                return get_pull_request(repo_name, pull_number, src, tx);
+                get_pull_request(repo_name, pull_number, src, tx)
             },
             ["repos", repo_name, "pulls", pull_number, "commits"] => {
-                return list_commits(repo_name, pull_number, src, tx);
+                list_commits(repo_name, pull_number, src, tx)
             },
             _ => {
                 Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
@@ -130,7 +130,7 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
-                return create_pull_requests(http_body, repo_name, src, tx);
+                create_pull_requests(http_body, repo_name, src, tx)
             }
             _ => {
                 Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
@@ -154,7 +154,7 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number, "merge"] => {
-                return merge_pull_request(repo_name, pull_number, src, tx);
+                merge_pull_request(repo_name, pull_number, src, tx)
             },
             _ => {
                 Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
@@ -178,7 +178,7 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
-                return modify_pull_request(http_body, repo_name, pull_number, src, tx);
+                modify_pull_request(http_body, repo_name, pull_number, src, tx)
             },
             _ => {
                 Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
@@ -190,7 +190,7 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
-                return delete_pull_request(repo_name, pull_number, src, tx);
+                delete_pull_request(repo_name, pull_number, src, tx)
             },
             _ => {
                 Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
@@ -215,7 +215,7 @@ impl Method {
 pub fn segment_path(path: &str) -> Vec<&str> {
     // debo eliminar el 1ero si es solo un /
     let mut path = path;
-    if path.starts_with("/") {
+    if path.starts_with('/') {
         path = &path[1..];
     }
     path.split('/').collect()

@@ -54,7 +54,7 @@ pub fn read_request(reader: &mut dyn Read) -> Result<String, ServerError> {
 pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
     let pr_folder_path = format!("{}/{}", src, PR_FOLDER);
     let pr_folder_path = std::path::Path::new(&pr_folder_path);
-    match create_directory(&pr_folder_path) 
+    match create_directory(pr_folder_path) 
     {
         Ok(_) => Ok(()),
         Err(_) => Err(ServerError::CreatePrFolderError),
@@ -112,7 +112,7 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, cont
         | StatusCode::ResourceNotFound(message)
         | StatusCode::Forbidden(message)
         | StatusCode::BadRequest(message) => {
-            let body = HttpBody::from_string(content_type, &message, MESSAGE)?;
+            let body = HttpBody::from_string(content_type, message, MESSAGE)?;
             send_body(writer, &body)
         },
         _ => Ok(()) // Deberia enviar un CRLF
@@ -140,7 +140,7 @@ fn send_body(writer: &mut dyn Write, body: &HttpBody) -> Result<(), ServerError>
     
     let message = match body_str.len()
     {
-        0 => format!("{}", CRLF),
+        0 => CRLF.to_string(),
         _ => format!("Content-Type: {}{}Content-Length: {}{}{}", content_type, CRLF,body_str.len(), CRLF_DOUBLE, body_str),
     };
     let error = UtilError::UtilFromServer("Error sending response body".to_string());
@@ -200,6 +200,7 @@ pub fn get_next_pr_number(file_path: &str) -> Result<usize, ServerError> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(file_path)
         .map_err(|_| ServerError::CreateNextPrFile)?;
 
@@ -263,7 +264,7 @@ pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, hea
     if is_update(&directory, &hash_base, &hash_head, &mut count_commits)?{
         return Ok(false)
     }
-    return Ok(true)
+    Ok(true)
 }
 
 /// Guarda el cuerpo de un pull request en un archivo con un número de PR único.
@@ -284,7 +285,7 @@ pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, hea
 /// 
 pub fn save_pr_to_file(body: &HttpBody, path: &str, pr_number: usize) -> Result<(), ServerError> {
     let pr_file_path = format!("{}/{}{}", path, pr_number, PR_FILE_EXTENSION);
-    body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
+    body.save_body_to_file(&pr_file_path, APPLICATION_SERVER)?;
     Ok(())
 }
 
@@ -308,7 +309,7 @@ pub fn save_pr_to_file(body: &HttpBody, path: &str, pr_number: usize) -> Result<
 pub fn setup_pr_directory(repo_name: &str, src: &String) -> Result<String, StatusCode> {
     let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
     let directory = Path::new(&path);
-    if create_directory(&directory).is_err() {
+    if create_directory(directory).is_err() {
         return Err(StatusCode::InternalError("Error creating the PR folder.".to_string()));
     }
     Ok(path)

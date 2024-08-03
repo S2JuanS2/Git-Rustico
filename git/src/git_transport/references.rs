@@ -399,15 +399,15 @@ pub fn get_objects_fetch_with_hash_valid(
     let mut objects: Vec<(ObjectType, Vec<u8>)> = Vec::new();
     println!("{:?}", confirmed_hashes);
 
-    if references.len() > 0 {
+    if !references.is_empty() {
         println!("{:?}", references[0].get_name());
         let commits_in_repo = get_commits(directory, references[0].get_name())?;
     
         let mut available = true;
         let mut send_hashes: Vec<String> = Vec::new();
         for refe in commits_in_repo{
-            for hash in confirmed_hashes.into_iter(){
-                if refe == hash.to_string(){
+            for hash in confirmed_hashes.iter(){
+                if refe == *hash.to_string(){
                     available = false;
                 }
             }

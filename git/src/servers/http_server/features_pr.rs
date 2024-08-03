@@ -41,7 +41,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx:
         Err(e) => return Ok(e),
     };
     
-    if validate_existing_pr(&body, &path){
+    if validate_existing_pr(body, &path){
         return Ok(StatusCode::ValidationFailed("The pull request already exists.".to_string()));
     }
 
@@ -52,7 +52,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx:
 
     let directory = format!("{}/{}", src, repo_name);
     let next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
-    let mut pr = PullRequest::from_http_body(&body)?;
+    let mut pr = PullRequest::from_http_body(body)?;
 
     pr.change_state(OPEN);
     add_attributes(&directory, body.clone(), &mut pr, next_pr)?;
@@ -98,12 +98,12 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
     let pr_map_path = format!("{}/{}", pr_repo_folder_path, PR_MAP_FILE);
     let pr_map = read_pr_map(&pr_map_path)?;
 
-    if pr_map.len() == 0 {
+    if pr_map.is_empty() {
         return Ok(StatusCode::InternalError("No pull request was found".to_string()));
     }
     let mut pr_list = vec!();
 
-    for (_key, value) in &pr_map{
+    for value in pr_map.values() {
         let pr_path = format!("{}/{}.json",pr_repo_folder_path, value);
         let body = HttpBody::create_from_file(APPLICATION_SERVER, &pr_path)?;
         let mut pr;
@@ -197,7 +197,7 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
 
     let commits = get_body_commits_pr(body, src, repo_name)?;
-    if commits.len() == 0{
+    if commits.is_empty() {
         return Ok(StatusCode::InternalError("The pull request does not contain new commits.".to_string()));
     }
     let json_str = match serde_json::to_string(&commits) {
@@ -262,7 +262,7 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
         }
     };
     let updated_body_http = HttpBody::parse(APPLICATION_SERVER, &updated_body)?;
-    updated_body_http.save_body_to_file(&file_path, &APPLICATION_SERVER.to_string())?;
+    updated_body_http.save_body_to_file(&file_path, APPLICATION_SERVER)?;
 
     if let Err(e) = delete_pr_in_map(&updated_body_http, &format!("{}/{}/{}", src, PR_FOLDER, repo_name)) {
         return Ok(e);
@@ -346,7 +346,7 @@ pub fn delete_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx
         Err(e) => return Ok(e),
     };
     let file_path = get_pull_request_file_path(repo_name, pull_number, src);
-    body.save_body_to_file(&file_path, &APPLICATION_SERVER)?;
+    body.save_body_to_file(&file_path, APPLICATION_SERVER)?;
 
     Ok(StatusCode::Ok(None))
 }
@@ -402,7 +402,7 @@ fn add_pr_in_map(body: &HttpBody, path: &str, next_pr: usize) -> Result<(), Stat
         return Err(StatusCode::ValidationFailed("El pr ya existe.".to_string()));
     }
     
-    match save_pr_to_file(body, &path, next_pr){
+    match save_pr_to_file(body, path, next_pr){
         Ok(_) => {},
         Err(e) => return Err(StatusCode::InternalError(e.to_string())),
     };
@@ -450,7 +450,7 @@ fn validate_existing_pr(body: &HttpBody, path: &str) -> bool {
 /// - `Err(StatusCode::ValidationFailed)`: Si la solicitud de extracción no existe en el mapa.
 /// 
 fn delete_pr_in_map(body: &HttpBody, path: &str) -> Result<(), StatusCode> {
-    let hash_key = match generate_pr_hash_key(&body) {
+    let hash_key = match generate_pr_hash_key(body) {
         Ok(h) => h,
         Err(e) => return Err(StatusCode::InternalError(e.to_string())),
     };
@@ -464,7 +464,7 @@ fn delete_pr_in_map(body: &HttpBody, path: &str) -> Result<(), StatusCode> {
     
     match delete_pr_map(&mut pr_map, &pr_map_path, &hash_key){
         Ok(_) => Ok(()),
-        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+        Err(e) => Err(StatusCode::InternalError(e.to_string())),
     }
 }
 
@@ -566,7 +566,7 @@ fn get_body_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec
     for commit in commits_head {
         let mut commits_pr = CommitsPr::new();
         let commit_content = git_cat_file(&directory, &commit, "-p")?;
-        commits_pr.sha_1 = commit.clone();
+        commits_pr.sha_1.clone_from(&commit);
         let mut lines_commit = commit_content.lines();
         for line in lines_commit.by_ref() {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -608,8 +608,8 @@ fn get_body_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec
 /// Devuelve `Ok(result)` El vector con los hashes de los commits nuevos.
 /// Devuelve `Err( )`
 fn get_commits_pr(directory: &str, base: &str, head: &str) -> Result<Vec<String>, ServerError> {
-    let commits_head = get_commits(&directory, &head)?;
-    let commits_base = get_commits(&directory, &base)?;
+    let commits_head = get_commits(directory, head)?;
+    let commits_base = get_commits(directory, base)?;
     let mut result = vec!();
     for commit in commits_head {
         if !commits_base.contains(&commit){
@@ -632,15 +632,15 @@ fn get_commits_pr(directory: &str, base: &str, head: &str) -> Result<Vec<String>
 /// Devuelve `Ok()` Si no hubo errores.
 /// Devuelve `Err( )`
 fn recovery_tree_pr(directory: &str, pr_files_map: &mut HashMap<String, String>, tree_hash_head: &str, path: &str) -> Result<(), ServerError>{
-    let content_tree_head = git_cat_file(directory, &tree_hash_head, "-p")?;
+    let content_tree_head = git_cat_file(directory, tree_hash_head, "-p")?;
     for line in content_tree_head.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() == 3{
             if parts[0] == FILE{
-                let path_complete = format!("{}{}", path, parts[1].to_string());
+                let path_complete = format!("{}{}", path, parts[1]);
                 pr_files_map.insert(parts[2].to_string(), path_complete);
             }else{
-                let path_complete = format!("{}{}/", path, parts[1].to_string());
+                let path_complete = format!("{}{}/", path, parts[1]);
                 recovery_tree_pr(directory, pr_files_map, parts[2], &path_complete)?;
             }
         }
@@ -664,8 +664,8 @@ fn get_changed_files_pr(directory: &str, base: &str, head: &str) -> Result<Vec<S
     let mut result = vec!();
     let mut pr_files_map_head: HashMap<String, String> = HashMap::new();
     let mut pr_files_map_base: HashMap<String, String> = HashMap::new();
-    let head_current_commit = get_branch_current_hash(&directory, head.to_string())?;
-    let base_current_commit = get_branch_current_hash(&directory, base.to_string())?;
+    let head_current_commit = get_branch_current_hash(directory, head.to_string())?;
+    let base_current_commit = get_branch_current_hash(directory, base.to_string())?;
     let content_commit_head = git_cat_file(directory, &head_current_commit, "-p")?;
     if let Some(tree_hash_head) = get_tree_hash(&content_commit_head) {
         let mut path = "";
@@ -702,7 +702,7 @@ fn get_changed_files_pr(directory: &str, base: &str, head: &str) -> Result<Vec<S
 /// Devuelve `Err(StatusCode::ValidationFailed)` si no se detectan cambios.
 /// Devuelve `Err(StatusCode::InternalError)` si ocurre un error durante la validación.
 /// 
-pub fn check_pull_request_changes(repo_name: &str, src: &String, body: &HttpBody) -> Result<(), StatusCode> {
+pub fn check_pull_request_changes(repo_name: &str, src: &str, body: &HttpBody) -> Result<(), StatusCode> {
     match PullRequest::check_pull_request_validity(repo_name, src, body) {
         Ok(changes) => {
             if !changes {
@@ -725,9 +725,9 @@ pub fn check_pull_request_changes(repo_name: &str, src: &String, body: &HttpBody
 /// - `base`: Nombre de la rama base.
 /// - `head`: Nombre de la rama head.
 pub fn is_mergeable(directory: &str, base: &str, head: &str) -> Result<bool, ServerError> {
-    let base_current_commit = get_branch_current_hash(&directory, base.to_string())?;
-    let head_current_commit = get_branch_current_hash(&directory, head.to_string())?;
-    let common_ancestor = find_commit_common_ancestor(directory, &base, &head)?;
+    let base_current_commit = get_branch_current_hash(directory, base.to_string())?;
+    let head_current_commit = get_branch_current_hash(directory, head.to_string())?;
+    let common_ancestor = find_commit_common_ancestor(directory, base, head)?;
     if common_ancestor == base_current_commit {
         return Ok(true);
     }

@@ -25,5 +25,5 @@ pub fn handle_client_daemon(
     root_directory: String
 ) -> Result<(), GitError> {
     let request = receive_request(stream, signature.clone(), tx.clone())?;
-    process_request(stream, &tx, &signature, &request, &root_directory)
+    process_request(stream, tx, &signature, &request, &root_directory)
 }

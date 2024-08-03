@@ -196,7 +196,7 @@ impl HttpBody {
             }
             HttpBody::Empty => ("".to_string(), "".to_string())
         };
-        return Ok(content_type_and_body)
+        Ok(content_type_and_body)
     }
 
     /// Guarda el cuerpo HTTP en un archivo en el formato especificado.

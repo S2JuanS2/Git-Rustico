@@ -51,7 +51,6 @@ pub fn write_client_log(directory: &str, content: String, path_log: &str) -> Res
 
         let file = OpenOptions::new()
             .create(true)
-            .write(true)
             .append(true)
             .open(log_path);
 
@@ -206,9 +205,9 @@ pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signatu
 /// 
 pub fn log_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<String>>>) {
     let message = format!("{}Error en la solicitud.", signature);
-    log_message(&tx, &message);
+    log_message(tx, &message);
     let message = format!("{}Error: {}", signature, error);
-    log_message(&tx, &message);
+    log_message(tx, &message);
 }
 
 /// Registra un mensaje con una firma especificada.
@@ -224,7 +223,7 @@ pub fn log_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<S
 /// 
 pub fn log_message_with_signature(tx: &Arc<Mutex<Sender<String>>>, signature: &str, message: &str) {
     let message = format!("{} {}", signature, message);
-    log_message(&tx, &message);
+    log_message(tx, &message);
 }
 
 #[cfg(test)]

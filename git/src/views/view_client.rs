@@ -144,8 +144,8 @@ impl View {
                 Ok(response) => {
                     let response_format = format!("{}\n$ {} \n{}", RESPONSE, cmd, response);
                     buffer.insert(&mut end_iter, &response_format);
-                    if response.len() == 0{
-                        let response_format = format!("- No se encontró información -\n", );
+                    if response.is_empty() {
+                        let response_format = "- No se encontró información -\n".to_string();
                         buffer.insert(&mut end_iter, &response_format);
                     }
                 }

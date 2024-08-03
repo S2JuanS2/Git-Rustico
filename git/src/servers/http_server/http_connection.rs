@@ -31,14 +31,14 @@ pub fn handle_client_http(
     tx: &Arc<Mutex<Sender<String>>>,
     root_directory: String
 ) -> Result<(), GitError> {
-    let (request, status_code) = _handle_client_http(stream, root_directory, &tx, &signature);
+    let (request, status_code) = _handle_client_http(stream, root_directory, tx, &signature);
     let content_type = match request {
         Some(request) => request.get_content_type(),
         None => APPLICATION_SERVER.to_string(),
     };
     
     let message = format!("Response sent to client with status code: {}", status_code.to_string());
-    log_message_with_signature(&tx, &signature, &message);
+    log_message_with_signature(tx, &signature, &message);
 
     send_response_http(stream, &status_code, &content_type)?;
 
@@ -76,7 +76,7 @@ pub fn _handle_client_http(
         Err(e) => return (None, e),
     };
     // Manejar la solicitud HTTP
-    match request.handle_http_request(&root_directory, tx, &signature)
+    match request.handle_http_request(&root_directory, tx, signature)
     {
         Ok(status_code) => (Some(request), status_code),
         Err(e) => (Some(request), StatusCode::InternalError(e.to_string())),

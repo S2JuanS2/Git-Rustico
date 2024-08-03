@@ -171,7 +171,7 @@ fn create_repository(
 fn recovery_blob(
     hash: &str,
     path_dir_cloned: &Path,
-    content: &Vec<(crate::util::objects::ObjectEntry, Vec<u8>)>,
+    content: &[(crate::util::objects::ObjectEntry, Vec<u8>)],
     mut i: usize,
     repo: &str,
     repo_count: usize,
