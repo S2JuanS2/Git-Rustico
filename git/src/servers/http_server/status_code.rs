@@ -8,7 +8,7 @@ use super::http_body::HttpBody;
 #[derive(Debug, PartialEq)]
 pub enum StatusCode {
     Created,
-    Forbidden,
+    Forbidden(String),
     ValidationFailed(String),
     Ok(Option<HttpBody>),
     NotModified,
@@ -42,7 +42,7 @@ impl StatusCode {
     pub fn to_string(&self) -> String {
         match self {
             StatusCode::Created => "201 Created".to_string(),
-            StatusCode::Forbidden => "403 Forbidden".to_string(),
+            StatusCode::Forbidden(_) => "403 Forbidden".to_string(),
             StatusCode::ValidationFailed(_) => "422 Validation failed, or the endpoint has been spammed.".to_string(),
             StatusCode::Ok(_) => "200 OK".to_string(),
             StatusCode::NotModified => "304 Not modified".to_string(),

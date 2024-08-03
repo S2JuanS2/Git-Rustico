@@ -6,7 +6,7 @@ use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists, list_directory_contents};
 use crate::consts::{APPLICATION_SERVER, FILE, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
-use super::pr_registry::{generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
+use super::pr_registry::{delete_pr_map, generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
 use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository};
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
@@ -29,23 +29,14 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx:
         Err(e) => return Ok(e),
     };
     
-    let hash_key = match generate_pr_hash_key(body){
-        Ok(h) => h,
-        Err(e) => return Ok(StatusCode::InternalError(e.to_string())),
-    };
-    let pr_map_path = format!("{}/{}", path, PR_MAP_FILE);
-    
-    let mut pr_map = read_pr_map(&pr_map_path)?;
-    if pr_already_exists(&pr_map, &hash_key) {
-        return Ok(StatusCode::ValidationFailed("Pull request already exists.".to_string()));
-    }
-
     let next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
     save_pr_to_file(body, &path, next_pr)?;
 
-    update_pr_map(&mut pr_map, &pr_map_path, hash_key, next_pr)?;
-
-    Ok(StatusCode::Created)
+    match add_pr_in_map(body, &path, next_pr)
+    {
+        Ok(_) => Ok(StatusCode::Created),
+        Err(e) => return Ok(e),
+    }
 }
 
 /// Obtiene una solicitud de extracción desde el repositorio correspondiente.
@@ -234,9 +225,162 @@ pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, 
         Err(_) => return Ok(StatusCode::BadRequest("The request body does not contain a valid Pull Request.".to_string())),
     };
     // LOGICA PARA MODIFICAR UNA SOLICITUD DE EXTRACCION
-    Ok(StatusCode::Forbidden)
+    Ok(StatusCode::Forbidden("Pulcito volvio muajaja.".to_string()))
 }
 
+/// Elimina una solicitud de extracción del repositorio.
+///
+/// Esta función elimina una solicitud de extracción, cerrándola si está abierta y
+/// actualizando el archivo de mapa de solicitudes de extracción para reflejar el cambio.
+///
+/// # Parámetros
+/// - `repo_name`: El nombre del repositorio al que pertenece la solicitud de extracción.
+/// - `pull_number`: El número de la solicitud de extracción que se desea eliminar.
+/// - `src`: La ruta base donde se encuentran los archivos del pull request.
+/// - `_tx`: Un canal de transmisión (`Sender<String>`) usado para comunicación con el archivo de log.
+///
+/// # Retornos
+/// - `Ok(StatusCode::Ok(None))`: Si la solicitud de extracción se elimina correctamente.
+/// - `Ok(StatusCode::ResourceNotFound)`: Si el repositorio o la solicitud de extracción no existen.
+/// - `Err(ServerError)`: Si ocurre un error al leer el archivo de la solicitud de extracción o al actualizar el mapa de solicitudes.
+/// 
+pub fn delete_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    let mut pr = match read_and_validate_pull_request(repo_name, pull_number, src) {
+        Ok(pr) => pr,
+        Err(e) => return Ok(e),
+    };
+    
+    pr.close();
+
+    let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
+    
+    let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
+    match delete_pr_in_map(&body, &path) {
+        Ok(_) => {},
+        Err(e) => return Ok(e),
+    };
+    let file_path = get_pull_request_file_path(repo_name, pull_number, src);
+    body.save_body_to_file(&file_path, &APPLICATION_SERVER)?;
+
+    Ok(StatusCode::Ok(None))
+}
+
+/// Agrega una solicitud de extracción al mapa de solicitudes.
+///
+/// Esta función genera una clave hash para el cuerpo del pull request y la usa para
+/// verificar si ya existe en el mapa. Si no existe, guarda la solicitud y actualiza el mapa.
+///
+/// # Parámetros
+/// - `body`: El cuerpo HTTP que contiene la información de la solicitud de extracción.
+/// - `path`: La ruta base donde se guardan los archivos del pull request.
+/// - `next_pr`: El próximo número de solicitud de extracción a asignar.
+///
+/// # Retornos
+/// - `Ok(())`: Si la solicitud de extracción se guarda y se actualiza el mapa correctamente.
+/// - `Err(StatusCode::InternalError)`: Si ocurre un error al generar la clave hash o al guardar los archivos.
+/// - `Err(StatusCode::ValidationFailed)`: Si la solicitud de extracción ya existe en el mapa.
+/// 
+fn add_pr_in_map(body: &HttpBody, path: &str, next_pr: u64) -> Result<(), StatusCode> {
+    let hash_key = match generate_pr_hash_key(body){
+        Ok(h) => h,
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    };
+    let pr_map_path = format!("{}/{}", path, PR_MAP_FILE);
+    
+    let mut pr_map = read_pr_map(&pr_map_path)?;
+    if pr_already_exists(&pr_map, &hash_key) {
+        return Err(StatusCode::ValidationFailed("El pr ya existe.".to_string()));
+    }
+    
+    match save_pr_to_file(body, &path, next_pr){
+        Ok(_) => {},
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    };
+
+    match update_pr_map(&mut pr_map, &pr_map_path, hash_key, next_pr){
+        Ok(_) => {},
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    };
+    Ok(())
+}
+
+/// Elimina una solicitud de extracción del mapa de solicitudes.
+///
+/// Esta función genera una clave hash para el cuerpo del pull request y la usa para
+/// verificar si existe en el mapa. Si existe, elimina la entrada correspondiente.
+///
+/// # Parámetros
+/// - `body`: El cuerpo HTTP que contiene la información de la solicitud de extracción.
+/// - `path`: La ruta base donde se encuentra el archivo del mapa de solicitudes.
+///
+/// # Retornos
+/// - `Ok(())`: Si la solicitud de extracción se elimina del mapa correctamente.
+/// - `Err(StatusCode::InternalError)`: Si ocurre un error al generar la clave hash o al eliminar la solicitud del mapa.
+/// - `Err(StatusCode::ValidationFailed)`: Si la solicitud de extracción no existe en el mapa.
+/// 
+fn delete_pr_in_map(body: &HttpBody, path: &str) -> Result<(), StatusCode> {
+    let hash_key = match generate_pr_hash_key(&body) {
+        Ok(h) => h,
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    };
+    
+    let pr_map_path = format!("{}/{}", path, PR_MAP_FILE);
+    
+    let mut pr_map = read_pr_map(&pr_map_path)?;
+    if !pr_already_exists(&pr_map, &hash_key) {
+        return Err(StatusCode::ValidationFailed("El pr no existe.".to_string()));
+    }
+    
+    match delete_pr_map(&mut pr_map, &pr_map_path, &hash_key){
+        Ok(_) => Ok(()),
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    }
+}
+
+/// Lee y valida una solicitud de extracción.
+///
+/// Esta función verifica la existencia del repositorio y del archivo de solicitud de extracción.
+/// También valida que la solicitud esté abierta.
+///
+/// # Parámetros
+/// - `repo_name`: El nombre del repositorio al que pertenece la solicitud de extracción.
+/// - `pull_number`: El número de la solicitud de extracción que se desea leer.
+/// - `src`: La ruta base donde se encuentran los archivos del pull request.
+///
+/// # Retornos
+/// - `Ok(PullRequest)`: Si la solicitud de extracción se lee y valida correctamente.
+/// - `Err(StatusCode::ResourceNotFound)`: Si el repositorio o el archivo de la solicitud no existen.
+/// - `Err(StatusCode::InternalError)`: Si ocurre un error al leer el archivo de la solicitud.
+/// - `Err(StatusCode::Forbidden)`: Si la solicitud de extracción está cerrada y no puede ser eliminada.
+/// 
+pub fn read_and_validate_pull_request(repo_name: &str, pull_number: &str, src: &String) -> Result<PullRequest, StatusCode> {
+    if valid_repository(repo_name, src).is_err() {
+        return Err(StatusCode::ResourceNotFound(
+            "El repositorio no existe.".to_string(),
+        ));
+    };
+
+    // Construir la ruta del archivo de la solicitud de extracción
+    let file_path = get_pull_request_file_path(repo_name, pull_number, src);
+    if !file_exists(&file_path) {
+        return Err(StatusCode::ResourceNotFound(
+            "La solicitud de extracción no existe.".to_string(),
+        ));
+    };
+
+    let pr =  match PullRequest::create_from_file(&file_path){
+        Ok(pr) => pr,
+        Err(_) => return Err(StatusCode::InternalError("Error al leer la solicitud de extracción en la base de datos".to_string())),
+    };
+
+    // Valido el status de la solicitud de extracción
+    if !pr.is_open() {
+        return Err(StatusCode::Forbidden(
+            "No se puede eliminar una solicitud de extracción cerrada.".to_string(),
+        ));
+    };
+    Ok(pr)
+}
 
 /// Construye la ruta del archivo para una solicitud de extracción específica en el repositorio.
 ///

@@ -1,7 +1,7 @@
 use crate::servers::errors::ServerError;
 use std::sync::{mpsc::Sender, Arc, Mutex};
 
-use super::{features_pr::{create_pull_requests, get_pull_request, list_commits, list_pull_request, merge_pull_request, modify_pull_request}, http_body::HttpBody, status_code::StatusCode};
+use super::{features_pr::{create_pull_requests, delete_pull_request, get_pull_request, list_commits, list_pull_request, merge_pull_request, modify_pull_request}, http_body::HttpBody, status_code::StatusCode};
 
 
 /// Enumera los posibles métodos HTTP que pueden ser utilizados en una solicitud.
@@ -80,7 +80,7 @@ impl Method {
             Method::Post => self.handle_post_request(path, http_body, src, tx),
             Method::Put => self.handle_put_request(path, src, tx),
             Method::Patch => self.handle_patch_request(path, http_body, src, tx),
-            _ => Ok(StatusCode::MethodNotAllowed)
+            Method::Delete => self.handle_delete_request(path, src, tx),
         }
     }
 
@@ -179,6 +179,18 @@ impl Method {
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
                 return modify_pull_request(http_body, repo_name, pull_number, src, tx);
+            },
+            _ => {
+                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
+            }
+        }
+    }
+
+    fn handle_delete_request(&self, path: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+        let path_segments: Vec<&str> = segment_path(path);
+        match path_segments.as_slice() {
+            ["repos", repo_name, "pulls", pull_number] => {
+                return delete_pull_request(repo_name, pull_number, src, tx);
             },
             _ => {
                 Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
