@@ -1,4 +1,4 @@
-use crate::consts::APPLICATION_SERVER;
+use crate::consts::{APPLICATION_SERVER, OPEN};
 use crate::servers::errors::ServerError;
 use serde::{Serialize,Deserialize};
 use super::{http_body::HttpBody, utils::validate_branch_changes};
@@ -35,7 +35,7 @@ impl CommitsPr{
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct PullRequest {
-    pub id: Option<String>,
+    pub id: Option<usize>,
     pub owner: Option<String>,
     pub repo: Option<String>,
     pub title: Option<String>,
@@ -144,7 +144,7 @@ impl PullRequest {
         let _owner = http_body.get_field("owner")?;
         let _title = http_body.get_field("title")?;
         let _body = http_body.get_field("body")?;
-        let _state = "open".to_string();
+        let _state = OPEN.to_string();
     
         let has_changes = validate_branch_changes(repo_name, base_path, &base, &head)?;
 
@@ -177,7 +177,7 @@ impl PullRequest {
     }
 
     pub fn is_open(&self) -> bool {
-        self.state.as_deref() == Some("open")
+        self.state.as_deref() == Some(OPEN)
     }
 
     pub fn close(&mut self) {
@@ -196,6 +196,10 @@ impl PullRequest {
             Some(head) => Some(head),
             None => None,
         }
+    }
+
+    pub fn set_number(&mut self, number: usize) {
+        self.id = Some(number);
     }
 }
 
