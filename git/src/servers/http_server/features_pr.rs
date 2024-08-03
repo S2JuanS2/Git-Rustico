@@ -4,7 +4,7 @@ use crate::commands::checkout::get_tree_hash;
 use crate::commands::merge::merge_pr;
 use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists, list_directory_contents};
-use crate::consts::{APPLICATION_SERVER, FILE, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
+use crate::consts::{APPLICATION_SERVER, FILE, OPEN, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
 use super::pr_registry::{delete_pr_map, generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
 use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository};
@@ -17,26 +17,36 @@ use crate::commands::push::is_update;
 pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     if valid_repository(repo_name, src).is_err() {
         return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
-    }
+    }  
     
-    match check_pull_request_changes(repo_name, src, body){
-        Ok(_) => {},
-        Err(e) => return Ok(e),
-    };
-
     let path = match setup_pr_directory(repo_name, src){
         Ok(p) => p,
         Err(e) => return Ok(e),
     };
     
-    let next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
-    save_pr_to_file(body, &path, next_pr)?;
-
-    match add_pr_in_map(body, &path, next_pr)
-    {
-        Ok(_) => Ok(StatusCode::Created),
-        Err(e) => return Ok(e),
+    if validate_existing_pr(&body, &path){
+        return Ok(StatusCode::ValidationFailed("The pull request already exists.".to_string()));
     }
+
+    match check_pull_request_changes(repo_name, src, body){
+        Ok(_) => {},
+        Err(e) => return Ok(e),
+    };
+    
+    let next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
+    let mut pr = PullRequest::from_http_body(&body)?;
+    pr.set_number(next_pr);
+    pr.change_state(OPEN);
+    let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
+    
+    match add_pr_in_map(&body, &path, next_pr){
+        Ok(_) => {},
+        Err(e) => return Ok(e),
+        
+    };
+    save_pr_to_file(&body, &path, next_pr)?;
+
+    Ok(StatusCode::Created)
 }
 
 /// Obtiene una solicitud de extracción desde el repositorio correspondiente.
@@ -185,7 +195,7 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
     
-    if body.get_field("state")? != "open"{
+    if body.get_field("state")? != OPEN{
         return Ok(StatusCode::InternalError("This pull request is closed".to_string()));
     }
     let directory = format!("{}/{}", src, repo_name);
@@ -280,7 +290,7 @@ pub fn delete_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx
 /// - `Err(StatusCode::InternalError)`: Si ocurre un error al generar la clave hash o al guardar los archivos.
 /// - `Err(StatusCode::ValidationFailed)`: Si la solicitud de extracción ya existe en el mapa.
 /// 
-fn add_pr_in_map(body: &HttpBody, path: &str, next_pr: u64) -> Result<(), StatusCode> {
+fn add_pr_in_map(body: &HttpBody, path: &str, next_pr: usize) -> Result<(), StatusCode> {
     let hash_key = match generate_pr_hash_key(body){
         Ok(h) => h,
         Err(e) => return Err(StatusCode::InternalError(e.to_string())),
@@ -302,6 +312,19 @@ fn add_pr_in_map(body: &HttpBody, path: &str, next_pr: u64) -> Result<(), Status
         Err(e) => return Err(StatusCode::InternalError(e.to_string())),
     };
     Ok(())
+}
+
+fn validate_existing_pr(body: &HttpBody, path: &str) -> bool {
+    let hash_key = match generate_pr_hash_key(body){
+        Ok(h) => h,
+        Err(_) => return false,
+    };
+    let pr_map_path = format!("{}/{}", path, PR_MAP_FILE);
+    let pr_map = match read_pr_map(&pr_map_path){
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+    pr_already_exists(&pr_map, &hash_key)
 }
 
 /// Elimina una solicitud de extracción del mapa de solicitudes.

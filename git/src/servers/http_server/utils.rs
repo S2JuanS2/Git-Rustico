@@ -194,7 +194,7 @@ pub fn valid_repository(repo_name: &str, base_path: &String) -> Result<(), Serve
 /// Retorna `ServerError::ReadNextPrFile` si hay un problema al leer el archivo.
 /// Retorna `ServerError::WriteNextPrFile` si hay un problema al escribir en el archivo.
 /// 
-pub fn get_next_pr_number(file_path: &str) -> Result<u64, ServerError> {
+pub fn get_next_pr_number(file_path: &str) -> Result<usize, ServerError> {
     // Abre el archivo para lectura y escritura, crea si no existe
     let mut file = OpenOptions::new()
         .read(true)
@@ -226,8 +226,8 @@ pub fn get_next_pr_number(file_path: &str) -> Result<u64, ServerError> {
     Ok(next_pr_number)
 }
 
-fn parse_next_pr_number(content: &str) -> Result<u64, ServerError> {
-    content.trim().parse::<u64>().map_err(|err: ParseIntError| {
+fn parse_next_pr_number(content: &str) -> Result<usize, ServerError> {
+    content.trim().parse::<usize>().map_err(|err: ParseIntError| {
         println!("Failed to parse number from content: {}. Error: {:?}", content, err);
         ServerError::ParseNumberPR("Failed to parse PR number".to_string())
     })
@@ -282,7 +282,7 @@ pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, hea
 /// Devuelve `Ok(())` si el pull request se guarda correctamente.
 /// Devuelve `Err(ServerError)` si ocurre un error durante el guardado del archivo.
 /// 
-pub fn save_pr_to_file(body: &HttpBody, path: &str, pr_number: u64) -> Result<(), ServerError> {
+pub fn save_pr_to_file(body: &HttpBody, path: &str, pr_number: usize) -> Result<(), ServerError> {
     let pr_file_path = format!("{}/{}{}", path, pr_number, PR_FILE_EXTENSION);
     body.save_body_to_file(&pr_file_path, &APPLICATION_SERVER.to_string())?;
     Ok(())

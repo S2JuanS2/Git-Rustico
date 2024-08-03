@@ -23,7 +23,7 @@ use super::http_body::HttpBody;
 /// Devuelve `Ok(())` si el mapa se guarda correctamente.
 /// Devuelve `Err(ServerError::SaveMapPrFile)` si ocurre un error durante la serialización o escritura del archivo.
 /// 
-pub fn save_pr_map(pr_map_path: &str, pr_map: &HashMap<String, u64>) -> Result<(), ServerError> {
+pub fn save_pr_map(pr_map_path: &str, pr_map: &HashMap<String, usize>) -> Result<(), ServerError> {
     let file_content = serde_json::to_string_pretty(pr_map).map_err(|_| ServerError::SaveMapPrFile)?;
     std::fs::write(pr_map_path, file_content).map_err(|_| ServerError::SaveMapPrFile)?;
     Ok(())
@@ -62,10 +62,10 @@ pub fn generate_head_base_hash(head: &str, base: &str) -> String {
 ///
 /// # Retornos
 ///
-/// Devuelve `Ok(HashMap<String, u64>)` con el mapa de pull requests si la lectura y deserialización son exitosas.
+/// Devuelve `Ok(HashMap<String, usize>)` con el mapa de pull requests si la lectura y deserialización son exitosas.
 /// Devuelve `Err(ServerError::ReadMapPrFile)` si ocurre un error durante la lectura o deserialización del archivo.
 /// 
-pub fn read_pr_map(pr_map_path: &str) -> Result<HashMap<String, u64>, ServerError> {
+pub fn read_pr_map(pr_map_path: &str) -> Result<HashMap<String, usize>, ServerError> {
     let file_content = std::fs::read_to_string(pr_map_path).unwrap_or_else(|_| "{}".to_string());
     serde_json::from_str(&file_content).map_err(|_| ServerError::ReadMapPrFile)
 }
@@ -90,7 +90,7 @@ pub fn read_pr_map(pr_map_path: &str) -> Result<HashMap<String, u64>, ServerErro
 /// Devuelve `Ok(())` si el mapa se actualiza y guarda correctamente.
 /// Devuelve `Err(ServerError)` si ocurre un error durante la actualización o el guardado del mapa.
 /// 
-pub fn update_pr_map(pr_map: &mut HashMap<String, u64>, pr_map_path: &str, hash_key: String, pr_number: u64) -> Result<(), ServerError> {
+pub fn update_pr_map(pr_map: &mut HashMap<String, usize>, pr_map_path: &str, hash_key: String, pr_number: usize) -> Result<(), ServerError> {
     pr_map.insert(hash_key, pr_number);
     save_pr_map(pr_map_path, pr_map)?;
     Ok(())
@@ -131,7 +131,7 @@ pub fn generate_pr_hash_key(body: &HttpBody) -> Result<String, ServerError> {
 ///
 /// Devuelve `true` si el pull request ya existe, `false` en caso contrario.
 /// 
-pub fn pr_already_exists(pr_map: &HashMap<String, u64>, hash_key: &String) -> bool {
+pub fn pr_already_exists(pr_map: &HashMap<String, usize>, hash_key: &String) -> bool {
     pr_map.contains_key(hash_key)
 }
 
@@ -148,10 +148,10 @@ pub fn pr_already_exists(pr_map: &HashMap<String, u64>, hash_key: &String) -> bo
 ///
 /// # Retornos
 ///
-/// Devuelve `Some(u64)` si el número del pull request es encontrado en el mapa asociado con la clave hash.
+/// Devuelve `Some(usize)` si el número del pull request es encontrado en el mapa asociado con la clave hash.
 /// Devuelve `None` si la clave hash no está presente en el mapa.
 ///
-pub fn get_pr_number(pr_map: &HashMap<String, u64>, hash_key: &String) -> Option<u64> {
+pub fn get_pr_number(pr_map: &HashMap<String, usize>, hash_key: &String) -> Option<usize> {
     match pr_map.get(hash_key) {
         Some(pr_number) => Some(*pr_number),
         None => None,
@@ -177,7 +177,7 @@ pub fn get_pr_number(pr_map: &HashMap<String, u64>, hash_key: &String) -> Option
 /// Devuelve `Err(ServerError::PrNotFoundInMap)` si la clave hash no está presente en el mapa de pull requests.
 /// Devuelve `Err(ServerError)` si ocurre un error durante la actualización del archivo del mapa.
 ///
-pub fn delete_pr_map(pr_map: &mut HashMap<String, u64>, pr_map_path: &str, hash_key: &String) -> Result<(), ServerError> {
+pub fn delete_pr_map(pr_map: &mut HashMap<String, usize>, pr_map_path: &str, hash_key: &String) -> Result<(), ServerError> {
     if !pr_map.contains_key(hash_key) {
         return Err(ServerError::PrNotFoundInMap);
     }
