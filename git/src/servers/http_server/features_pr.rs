@@ -14,12 +14,23 @@ use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
 use crate::commands::push::is_update;
 
-///
+/// Crea una solicitud de extracción en el repositorio correspondiente.
 /// 
+/// Esta función verifica la existencia del repositorio y la validez de la solicitud de extracción.
+/// Si la solicitud de extracción es válida y contiene cambios, se procede a crear la solicitud y se actualiza el
+/// archivo de mapa de solicitudes de extracción.
 /// 
+/// # Parámetros
+/// - `body`: El cuerpo HTTP que contiene la información de la solicitud de extracción.
+/// - `repo_name`: El nombre del repositorio al que pertenece la solicitud de extracción.
+/// - `src`: La ruta base donde se encuentran los archivos del pull request.
+/// - `_tx`: Un canal de transmisión (`Sender<String>`) usado para comunicación con el archivo de log.
 /// 
-/// 
-/// 
+/// # Retornos
+/// - `Ok(StatusCode::Created)`: Si la solicitud de extracción se crea correctamente.
+/// - `Ok(StatusCode::ResourceNotFound)`: Si el repositorio no existe.
+/// - `Ok(StatusCode::ValidationFailed)`: Si la solicitud de extracción ya existe en el mapa o si no contiene cambios.
+/// - `Ok(StatusCode::InternalError)`: Si ocurre un error al crear el cuerpo HTTP desde el archivo.
 pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     if valid_repository(repo_name, src).is_err() {
         return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
@@ -200,6 +211,23 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     Ok(StatusCode::Ok(Some(commit_body)))
 }
 
+/// Realiza el auto-merge de un pull request en caso de ser posible.
+/// 
+/// Esta función verifica si el pull request es mergeable, es decir, si puede ser fusionado sin conflictos.
+/// Si el pull request es mergeable, se realiza el merge y se actualiza el estado de la solicitud a "closed".
+/// Finalmente, se actualiza el archivo de la solicitud de extracción y se elimina la entrada del mapa de solicitudes.
+/// 
+/// # Parámetros
+/// - `repo_name`: El nombre del repositorio al que pertenece el pull request.
+/// - `pull_number`: El número del pull request que se desea fusionar.
+/// - `src`: La ruta base donde se encuentran los archivos del pull request.
+/// - `_tx`: Un canal de transmisión (`Sender<String>`) usado para comunicación con el archivo de log.
+/// 
+/// # Retornos
+/// - `Ok(StatusCode::MergeWasSuccessful)`: Si el merge se realiza correctamente.
+/// - `Ok(StatusCode::ResourceNotFound)`: Si el repositorio o la solicitud de extracción no existen.
+/// - `Ok(StatusCode::InternalError)`: Si ocurre un error al leer el archivo de la solicitud de extracción o al actualizar el mapa de solicitudes.
+/// - `Ok(StatusCode::Conflict)`: Si el pull request no es mergeable.
 pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     let file_path = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
@@ -243,6 +271,10 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     Ok(StatusCode::MergeWasSuccessful)
 }
 
+/// Extrae los campos "head", "base", "owner" y "title" del cuerpo de la solicitud de extracción.
+/// 
+/// # Parámetros
+/// - `body`: Cuerpo de la solicitud de extracción.
 fn extract_pr_fields(body: &HttpBody) -> Result<(String, String, String, String), StatusCode> {
     let head = body.get_field("head").map_err(|_| StatusCode::InternalError("Missing head field".to_string()))?;
     let base = body.get_field("base").map_err(|_| StatusCode::InternalError("Missing base field".to_string()))?;
@@ -251,6 +283,13 @@ fn extract_pr_fields(body: &HttpBody) -> Result<(String, String, String, String)
     Ok((head, base, owner, title))
 }
 
+/// Actualiza los atributos "mergeable", "changed_files" y "commits" de una solicitud de extracción.
+/// 
+/// # Parámetros
+/// - `directory`: Ruta del repositorio.
+/// - `body`: Cuerpo de la solicitud de extracción.
+/// - `pr`: Solicitud de extracción a actualizar.
+/// - `pull_number`: Número de la solicitud de extracción.
 fn update_pr_attributes(directory: &str, body: HttpBody, pr: &mut PullRequest, pull_number: &str) -> Result<(), StatusCode> {
     match pull_number.parse::<usize>() {
         Ok(value) => {
@@ -375,6 +414,14 @@ fn add_pr_in_map(body: &HttpBody, path: &str, next_pr: usize) -> Result<(), Stat
     Ok(())
 }
 
+/// Valida si una solicitud de extracción ya existe en el mapa de solicitudes.
+/// 
+/// Esta función genera una clave hash para el cuerpo del pull request y la usa para
+/// verificar si ya existe en el mapa.
+/// 
+/// # Parámetros
+/// - `body`: El cuerpo HTTP que contiene la información de la solicitud de extracción.
+/// - `path`: La ruta base donde se encuentra el archivo del mapa de solicitudes.
 fn validate_existing_pr(body: &HttpBody, path: &str) -> bool {
     let hash_key = match generate_pr_hash_key(body){
         Ok(h) => h,
@@ -667,6 +714,16 @@ pub fn check_pull_request_changes(repo_name: &str, src: &String, body: &HttpBody
     Ok(())
 }
 
+/// Verifica si un pull request es mergeable.
+/// 
+/// Esta función verifica si un pull request puede ser fusionado sin conflictos.
+/// Para ello, se comparan los commits de las ramas base y head, y se verifican los archivos
+/// que fueron modificados en las diferencias entre los commits.
+/// 
+/// # Parámetros
+/// - `directory`: Ruta del repositorio del pull request.
+/// - `base`: Nombre de la rama base.
+/// - `head`: Nombre de la rama head.
 pub fn is_mergeable(directory: &str, base: &str, head: &str) -> Result<bool, ServerError> {
     let base_current_commit = get_branch_current_hash(&directory, base.to_string())?;
     let head_current_commit = get_branch_current_hash(&directory, head.to_string())?;
