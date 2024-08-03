@@ -152,10 +152,7 @@ pub fn pr_already_exists(pr_map: &HashMap<String, usize>, hash_key: &String) -> 
 /// Devuelve `None` si la clave hash no está presente en el mapa.
 ///
 pub fn get_pr_number(pr_map: &HashMap<String, usize>, hash_key: &String) -> Option<usize> {
-    match pr_map.get(hash_key) {
-        Some(pr_number) => Some(*pr_number),
-        None => None,
-    }
+    pr_map.get(hash_key).map(|pr_number| *pr_number)
 }
 
 /// Elimina un pull request del mapa de pull requests y actualiza el archivo correspondiente.

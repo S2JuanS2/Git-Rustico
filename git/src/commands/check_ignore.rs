@@ -33,7 +33,7 @@ pub fn git_check_ignore(directory: &str, paths: Vec<&str>) -> Result<String, Com
     if paths.len() == 1 && paths[0] == "--stdin" {
         let stdin = std::io::stdin();
         let lines = stdin.lock().lines();
-        lines.flatten().for_each(|line| {
+        lines.map_while(Result::ok).for_each(|line| {
             check_gitignore(&line, &mut ignored_files, &gitignore_content).unwrap();
         });
         for ignored_file in ignored_files {

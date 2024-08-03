@@ -2,6 +2,7 @@ use crate::consts::*;
 use crate::errors::GitError;
 use crate::util::files::create_directory;
 use crate::util::formats::{compressor_object, hash_generate};
+use std::fmt::Write;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -489,8 +490,10 @@ pub fn read_tree(decompressed_data: &[u8]) -> Result<String, UtilError> {
         index -= 1;
         let hex_string = hash
             .iter()
-            .map(|byte| format!("{:02x}", byte))
-            .collect::<String>();
+            .fold(String::new(), |mut acc, byte| {
+                write!(&mut acc, "{:02x}", byte).expect("Unable to write");
+                acc
+            });
         let object_format = format!(
             "{} {} {}\n",
             String::from_utf8_lossy(&type_object),

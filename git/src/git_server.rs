@@ -61,7 +61,7 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    fn from_classified(classified: Vec<AdvertisedRefLine>, src_repo: &str, my_capabilities: &Vec<String>) -> Result<GitServer, UtilError> {
+    fn from_classified(classified: Vec<AdvertisedRefLine>, src_repo: &str, my_capabilities: &[String]) -> Result<GitServer, UtilError> {
         let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
@@ -312,7 +312,7 @@ impl GitServer {
     /// exitosamente, o un error de utilidad (`Err(UtilError::ServerCapabilitiesNotSupported)`) si
     /// las capacidades del servidor no son compatibles con las del cliente.
     ///
-    fn filter_capabilities(capabilities: &mut Vec<String>, my_capabilities: &Vec<String>) -> Result<(), UtilError>{
+    fn filter_capabilities(capabilities: &mut Vec<String>, my_capabilities: &[String]) -> Result<(), UtilError>{
         retain_common_values(capabilities, my_capabilities);
         if capabilities.len() == my_capabilities.len() {
             Ok(())
@@ -403,7 +403,7 @@ impl GitServer {
         }
     }
 
-    pub fn filter_capabilities_user(&mut self, my_capabilities: &Vec<String>) -> Result<(), UtilError> {
+    pub fn filter_capabilities_user(&mut self, my_capabilities: &[String]) -> Result<(), UtilError> {
         GitServer::filter_capabilities(&mut self.capabilities, my_capabilities)
     }
 }

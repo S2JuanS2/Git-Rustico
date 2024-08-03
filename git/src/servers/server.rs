@@ -147,7 +147,7 @@ pub fn receive_client(
 }
 
 pub fn log_request_result(stream: &TcpStream, name_server: &String, tx: &Arc<Mutex<Sender<String>>>, result: Result<(), GitError>) {
-    let signature = get_client_signature(stream, &name_server);
+    let signature = get_client_signature(stream, name_server);
     match result {
         Ok(_) =>log_client_disconnection_success(tx, &signature),
         Err(GitError::RequestFailed(_)) => log_client_disconnection_error(tx, &signature),

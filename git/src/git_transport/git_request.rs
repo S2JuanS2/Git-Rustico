@@ -276,7 +276,7 @@ pub fn search_available_references(
         }
     }
     if confirmed_commits.is_empty(){
-        if let Some(current_hash) = local_hash.get(0) {
+        if let Some(current_hash) = local_hash.first() {
             confirmed_commits.push(current_hash.to_string())
         }
     }
@@ -469,7 +469,7 @@ fn save_references_with_name_head(repo_path: &str, name: &str) -> Result<(), Uti
     let log_dir = format!("{}/.git/logs/refs/heads", repo_path);
     let log_full_dir = format!("{}/{}", log_dir, name);
     create_directory(Path::new(&log_dir))?; 
-    if !fs::metadata(log_full_dir).is_ok(){
+    if fs::metadata(log_full_dir).is_err() {
         let path_log = "logs/refs/heads".to_string();
         let path_branch = "refs/heads".to_string();
         save_log(repo_path, name, &path_log, &path_branch)?;    
@@ -539,7 +539,7 @@ pub fn process_request_update(
     let mut result_vec: Vec<(String, bool)> = Vec::new();
     let mut result: (String, bool) = ("".to_string(), false);
 
-    if let Some(branch_hash) = requests.get(0){
+    if let Some(branch_hash) = requests.first() {
         let path_reference = branch_hash.get_path_refs();
         let hash_reference_new = branch_hash.get_new();
         let hash_reference_old = branch_hash.get_old();

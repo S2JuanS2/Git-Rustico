@@ -179,10 +179,8 @@ impl HandleReferences {
                     let local_commit = reference.get_local_commit().map(|commit| commit.to_string());
                     new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), local_commit));
                 }
-            }else{
-                if let Some(reference) = self.references.get(&path) {
-                    new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), Some(PARENT_INITIAL.to_string())));
-                }
+            }else if let Some(reference) = self.references.get(&path) {
+                new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), Some(PARENT_INITIAL.to_string())));
             }
         }
         self.references = new_refences;

@@ -147,12 +147,12 @@ fn update_refs_pr(directory: &str, strategy: &(String, String), path_current_bra
 /// #Parametros:
 /// 'directory': path del repositorio
 /// 'branch_to_merge': nombre de la branch a mergear
-fn update_work_directory(directory: &str, branch_to_merge_hash: &str, formatted_result: &mut String) -> Result<(), CommandsError>{
-    let content_commit = git_cat_file(directory, &branch_to_merge_hash, "-p")?;
+fn update_work_directory(directory: &str, branch_to_merge_hash: &str, formatted_result: &mut str) -> Result<(), CommandsError>{
+    let content_commit = git_cat_file(directory, branch_to_merge_hash, "-p")?;
     let tree_hash = get_tree_hash(&content_commit).unwrap_or(PARENT_INITIAL);
 
     let parent_hash = extract_parent_hash(&content_commit).unwrap_or(PARENT_INITIAL);
-    let parent_content = git_cat_file(directory, &parent_hash, "-p")?;
+    let parent_content = git_cat_file(directory, parent_hash, "-p")?;
     let parent_tree_hash = get_tree_hash(&parent_content).unwrap_or(PARENT_INITIAL);
 
     let mut vec_objects_parent_hash: Vec<String> = Vec::new();
@@ -161,40 +161,36 @@ fn update_work_directory(directory: &str, branch_to_merge_hash: &str, formatted_
     let mut vec_objects_hash: Vec<String> = Vec::new();
     save_hash_objects(directory, &mut vec_objects_hash, tree_hash.to_string())?;
     let index_path = format!("{}/.git/index", directory);
-    let index_file = open_file(&index_path.as_str())?;
+    let index_file = open_file(index_path.as_str())?;
     let reader_index = io::BufReader::new(index_file);
 
-    for line in reader_index.lines(){
-        if let Ok(line) = line{
-            let parts: Vec<&str> = line.split_whitespace().collect();
+    for line in reader_index.lines().map_while(Result::ok) {
+        let parts: Vec<&str> = line.split_whitespace().collect();
 
-            if parts.len() == 3{
-                let path = parts[0];
-                let hash = parts[2];
-                if vec_objects_hash.contains(&hash.to_string()){
-                    //println!("Persiste");
-                }else{
-                    let lines_result_conflict: Vec<&str> = formatted_result.lines().collect();
-                    if lines_result_conflict.len() >= 4{
-                        let fourth_line = lines_result_conflict[3];
-                        let mut chars = fourth_line.char_indices().filter(|&(_, c)| c == '/');
-                        if let (Some(_first_pos), Some(second_pos)) = (chars.next(), chars.next()){
-                            let result = &fourth_line[(&second_pos.0 + '/'.len_utf8())..];
-                            if path == result{
-                                //println!("Persiste, conflicto");
-                            }else{
-                                //println!("No persiste");
-                                remove_from_index(directory, path, hash)?;
-                            }
-                        }
-                    }else{
-                        if !vec_objects_parent_hash.contains(&hash.to_string()) {
-                            //println!("Persiste");
-                        } else {
+        if parts.len() == 3{
+            let path = parts[0];
+            let hash = parts[2];
+            if vec_objects_hash.contains(&hash.to_string()){
+                //println!("Persiste");
+            }else{
+                let lines_result_conflict: Vec<&str> = formatted_result.lines().collect();
+                if lines_result_conflict.len() >= 4{
+                    let fourth_line = lines_result_conflict[3];
+                    let mut chars = fourth_line.char_indices().filter(|&(_, c)| c == '/');
+                    if let (Some(_first_pos), Some(second_pos)) = (chars.next(), chars.next()){
+                        let result = &fourth_line[(second_pos.0 + '/'.len_utf8())..];
+                        if path == result{
+                            //println!("Persiste, conflicto");
+                        }else{
                             //println!("No persiste");
-                            remove_from_index(directory, path, hash)?; 
+                            remove_from_index(directory, path, hash)?;
                         }
                     }
+                } else if !vec_objects_parent_hash.contains(&hash.to_string()) {
+                    //println!("Persiste");
+                } else {
+                    //println!("No persiste");
+                    remove_from_index(directory, path, hash)?; 
                 }
             }
         }
@@ -213,12 +209,11 @@ fn save_hash_objects(directory: &str, vec: &mut Vec<String>, tree_hash: String) 
     let tree = git_cat_file(directory, &tree_hash, "-p")?;
     for line in tree.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        let file_mode;
-        if parts[0] == FILE || parts[0] == DIRECTORY {
-            file_mode = parts[0];
+        let file_mode = if parts[0] == FILE || parts[0] == DIRECTORY {
+            parts[0]
         }else{
-            file_mode = parts[1];
-        }
+            parts[1]
+        };
         let hash = parts[2];
         if file_mode == FILE {
             vec.push(hash.to_string());
@@ -262,7 +257,7 @@ pub fn get_refs_path(directory: &str, branch_name: &str) -> String {
     let mut path_branch_to_merge = format!("{}/.git/refs/heads/{}", directory, branch_name);
     if branch_name.contains("remotes") {
         path_branch_to_merge = format!("{}/.git/{}", directory, branch_name);
-    }else if branch_name.contains("/") && !branch_name.contains("remotes"){
+    }else if branch_name.contains('/') && !branch_name.contains("remotes"){
         path_branch_to_merge = format!("{}/.git/refs/remotes/{}", directory, branch_name);
     }
     path_branch_to_merge

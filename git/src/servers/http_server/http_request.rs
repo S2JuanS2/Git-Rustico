@@ -69,10 +69,10 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &String) -> Result<StatusCode, ServerError> {
+    pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &str) -> Result<StatusCode, ServerError> {
         // Manejar la solicitud HTTP        
         let message = format!("{} request to path: {}", self.method, self.path);
-        log_message_with_signature(&tx, HTPP_SIGNATURE, &message);
+        log_message_with_signature(tx, HTPP_SIGNATURE, &message);
 
         let method = match Method::create_method(&self.method) {
             Ok(method) => method,
@@ -122,7 +122,7 @@ impl HttpRequest {
 ///
 fn parse_http_request(request: &str) -> Result<HttpRequest, StatusCode> {
     let lines: Vec<&str> = request.lines().collect();
-    if lines.len() < 1 {
+    if lines.is_empty() {
         return Err(StatusCode::BadRequest(ServerError::MissingRequestLine.to_string()));
     }
 
@@ -173,7 +173,7 @@ fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBo
     // Parsear el cuerpo de la solicitud
     let binding = APPLICATION_JSON.to_string();
     let content_type = headers.get(CONTENT_TYPE).unwrap_or(&binding);
-    match HttpBody::parse(content_type, &body){
+    match HttpBody::parse(content_type, body){
         Ok(body) => Ok(body),
         Err(_) => Err(StatusCode::UnsupportedMediaType),
     }

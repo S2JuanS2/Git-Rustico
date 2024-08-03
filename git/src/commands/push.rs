@@ -307,7 +307,7 @@ pub fn is_ancestor(directory: &str, hash_current: &str, hash_prev: &str) -> Resu
 /// Un `Result<(), CommandsError>` que indica si la operación de actualización de referencia fue exitosa o si ocurrió un error.
 /// En caso de error, se proporciona un detalle específico en el tipo `CommandsError`.
 ///
-fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str, capabilities: &Vec<String>) -> Result<(), CommandsError>
+fn reference_update(socket: &mut TcpStream, hash_prev: &str, hash_update: &str, path_ref: &str, capabilities: &[String]) -> Result<(), CommandsError>
 {   
     let mut message = format!("{} {} {}", hash_prev, hash_update, path_ref);
     if capabilities.is_empty()

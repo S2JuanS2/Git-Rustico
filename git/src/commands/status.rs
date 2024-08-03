@@ -265,7 +265,7 @@ pub fn is_files_to_commit(directory: &str) -> Result<bool, CommandsError> {
 fn branch_with_untracked_changes(
     formatted_result: &mut String,
     updated_files_list: &Vec<(String, String)>,
-    untracked_files_list: &Vec<(String, String)>,
+    untracked_files_list: &[(String, String)],
     deleted_files_list: &Vec<String>,
     directory: &str,
 ) {
@@ -301,7 +301,7 @@ fn branch_with_untracked_changes(
 fn branch_with_untracked_files(
     formatted_result: &mut String,
     untracked_files_list: &Vec<(String, String)>,
-    files_not_commited_list: &Vec<String>,
+    files_not_commited_list: &[String],
     directory: &str,
 ) {
     formatted_result.push_str("\nUntracked files:\n");
