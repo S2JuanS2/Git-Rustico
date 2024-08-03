@@ -289,7 +289,7 @@ fn add_pr_in_map(body: &HttpBody, path: &str, next_pr: u64) -> Result<(), Status
     
     let mut pr_map = read_pr_map(&pr_map_path)?;
     if pr_already_exists(&pr_map, &hash_key) {
-        return Err(StatusCode::ValidationFailed("Pull request already exists.".to_string()));
+        return Err(StatusCode::ValidationFailed("El pr ya existe.".to_string()));
     }
     
     match save_pr_to_file(body, &path, next_pr){
@@ -327,8 +327,8 @@ fn delete_pr_in_map(body: &HttpBody, path: &str) -> Result<(), StatusCode> {
     let pr_map_path = format!("{}/{}", path, PR_MAP_FILE);
     
     let mut pr_map = read_pr_map(&pr_map_path)?;
-    if pr_already_exists(&pr_map, &hash_key) {
-        return Err(StatusCode::ValidationFailed("Pull request already exists.".to_string()));
+    if !pr_already_exists(&pr_map, &hash_key) {
+        return Err(StatusCode::ValidationFailed("El pr no existe.".to_string()));
     }
     
     match delete_pr_map(&mut pr_map, &pr_map_path, &hash_key){
