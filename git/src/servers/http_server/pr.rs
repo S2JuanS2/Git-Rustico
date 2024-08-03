@@ -64,6 +64,7 @@ impl PullRequest {
     ///
     /// Retorna un `ServerError::HttpFieldNotFound` si no se encuentran los campos requeridos.
     pub fn from_http_body(body: &HttpBody) -> Result<Self, ServerError> {
+        let id = body.get_field("id").ok().and_then(|s| s.parse::<usize>().ok());
         let owner = body.get_field("owner").ok();
         let repo = body.get_field("repo").ok();
         let title = body.get_field("title").ok();
@@ -73,7 +74,7 @@ impl PullRequest {
         let body = body.get_field("body").ok();
         
         Ok(PullRequest {
-            id: None,
+            id,
             owner,
             repo,
             title,

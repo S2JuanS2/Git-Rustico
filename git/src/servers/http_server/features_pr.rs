@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::commands::checkout::get_tree_hash;
 use crate::commands::merge::{find_commit_common_ancestor, merge_pr};
 use crate::servers::errors::ServerError;
-use crate::util::files::{file_exists, folder_exists, list_directory_contents};
+use crate::util::files::{file_exists, folder_exists};
 use crate::consts::{APPLICATION_SERVER, FILE, OPEN, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
 use super::pr_registry::{delete_pr_map, generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
@@ -14,6 +14,12 @@ use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
 use crate::commands::push::is_update;
 
+///
+/// 
+/// 
+/// 
+/// 
+/// 
 pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     if valid_repository(repo_name, src).is_err() {
         return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
@@ -32,11 +38,14 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx:
         Ok(_) => {},
         Err(e) => return Ok(e),
     };
-    
+
+    let directory = format!("{}/{}", src, repo_name);
     let next_pr = get_next_pr_number(&format!("{}/.next_pr", path))?;
     let mut pr = PullRequest::from_http_body(&body)?;
-    pr.set_number(next_pr);
+
     pr.change_state(OPEN);
+    add_attributes(&directory, body.clone(), &mut pr, next_pr)?;
+
     let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
     
     match add_pr_in_map(&body, &path, next_pr){
@@ -74,35 +83,31 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
     {
         return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
     }
-    let prs = list_directory_contents(&pr_repo_folder_path)?;
-    if prs.len() <= 1 {
+
+    let pr_map_path = format!("{}/{}", pr_repo_folder_path, PR_MAP_FILE);
+    let pr_map = read_pr_map(&pr_map_path)?;
+
+    if pr_map.len() == 0 {
         return Ok(StatusCode::InternalError("No pull request was found".to_string()));
     }
-    let mut pr_map: HashMap<u32, HttpBody> = HashMap::new();
-    for pr in prs {
-        if pr != ".next_pr" && pr != "pr_map.json"{
-            let pr_path = format!("{}/{}", pr_repo_folder_path, pr);
-            let body = HttpBody::create_from_file(APPLICATION_SERVER, &pr_path)?;
-            let num = pr.split('.').next().unwrap_or("").parse::<u32>().unwrap_or(0);
-            pr_map.insert(num, body);
-        }
-    }
     let mut pr_list = vec!();
-    let mut keys: Vec<&u32> = pr_map.keys().collect();
-    keys.sort();
-    for &key in &keys{
-        let mut pr = PullRequest::default();
-        if let Some(body) = pr_map.get(key){
-            pr = PullRequest::from_http_body(body)?;
-            let changed_files = get_changed_files_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
-            pr.set_changed_files(changed_files);
-            let commits = get_commits_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
-            pr.set_amount_commits(commits.len());
-            pr.set_commits(commits);
+
+    for (_key, value) in &pr_map{
+        let pr_path = format!("{}/{}.json",pr_repo_folder_path, value);
+        let body = HttpBody::create_from_file(APPLICATION_SERVER, &pr_path)?;
+        let mut pr;
+        pr = PullRequest::from_http_body(&body)?;
+        add_attributes(&directory, body.clone(), &mut pr, *value)?;
+        if body.get_field("state")? == OPEN {
+            pr_list.push(pr);
         }
-        pr_list.push(pr);
     }
-    let json_str = serde_json::to_string(&pr_list).unwrap();
+    let json_str = match serde_json::to_string(&pr_list) {
+        Ok(s) => s,
+        Err(_) => {
+            return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
+        }
+    };
     let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
     Ok(StatusCode::Ok(Some(pr_list_body)))
 }
@@ -137,19 +142,20 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
     let directory = format!("{}/{}", src, repo_name);
+
     let mut pr = PullRequest::from_http_body(&body)?;
-
-    // TODO| let _mergeable = logica para obtener el estado de fusion
-    let mergeable = is_mergeable(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
-    pr.change_mergeable(&mergeable.to_string());
-
-    let changed_files = get_changed_files_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
-    pr.set_changed_files(changed_files);
-    let commits = get_commits_pr(&directory, &body.get_field("base")?, &body.get_field("head")?)?;
-    pr.set_amount_commits(commits.len());
-    pr.set_commits(commits);
-
-    let json_str = serde_json::to_string(&pr).unwrap();
+    match pull_number.parse::<usize>(){
+        Ok(value) => {
+            add_attributes(&directory, body, &mut pr, value)?;
+        }
+        Err(_) => return Ok(StatusCode::InternalError("swap fail".to_string())),
+    }
+    let json_str = match serde_json::to_string(&pr) {
+        Ok(s) => s,
+        Err(_) => {
+            return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
+        }
+    };
     let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
     Ok(StatusCode::Ok(Some(pr_list_body)))
 }
@@ -183,7 +189,12 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     if commits.len() == 0{
         return Ok(StatusCode::InternalError("The pull request does not contain new commits.".to_string()));
     }
-    let json_str = serde_json::to_string(&commits).unwrap();
+    let json_str = match serde_json::to_string(&commits) {
+        Ok(s) => s,
+        Err(_) => {
+            return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
+        }
+    };
     let commit_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
     
     Ok(StatusCode::Ok(Some(commit_body)))
@@ -213,7 +224,18 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
 
     pr.change_state("closed");
-    let updated_body = serde_json::to_string(&pr).unwrap();
+    match pull_number.parse::<usize>(){
+        Ok(value) => {
+            add_attributes(&directory, body, &mut pr, value)?;
+        }
+        Err(_) => return Ok(StatusCode::InternalError("swap fail".to_string())),
+    }
+    let updated_body = match serde_json::to_string(&pr) {
+        Ok(s) => s,
+        Err(_) => {
+            return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
+        }
+    };
     let updated_body_http = HttpBody::parse(APPLICATION_SERVER, &updated_body)?;
     updated_body_http.save_body_to_file(&file_path, &APPLICATION_SERVER.to_string())?;
 
@@ -271,6 +293,30 @@ pub fn delete_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx
 
     Ok(StatusCode::Ok(None))
 }
+
+/// Agrego los atributos "mergeable", "changed_files" "commits" al cuerpo del PullRequest
+/// 
+/// # Parámetros
+/// - `directory`: ruta del repositorio.
+/// - `body`: cuerpo del rp.
+/// - `pr`: Pull Request a agregar los atributos.
+/// 
+/// # Retornos
+/// - `Err(ServerError)`: Si ocurre un error al leer el archivo de la solicitud de extracción o al actualizar el mapa de solicitudes.
+fn add_attributes(directory: &str, body: HttpBody, pr: &mut PullRequest, pull_number: usize) -> Result<(), ServerError>{
+
+    let mergeable = is_mergeable(directory, &body.get_field("base")?, &body.get_field("head")?)?;
+    pr.change_mergeable(&mergeable.to_string());
+    let changed_files = get_changed_files_pr(directory, &body.get_field("base")?, &body.get_field("head")?)?;
+    pr.set_changed_files(changed_files);
+    let commits = get_commits_pr(directory, &body.get_field("base")?, &body.get_field("head")?)?;
+    pr.set_amount_commits(commits.len());
+    pr.set_commits(commits);
+
+    pr.set_number(pull_number);
+
+    Ok(())
+} 
 
 /// Agrega una solicitud de extracción al mapa de solicitudes.
 ///
@@ -560,9 +606,10 @@ fn get_changed_files_pr(directory: &str, base: &str, head: &str) -> Result<Vec<S
         let mut path = "";
         recovery_tree_pr(directory, &mut pr_files_map_head, tree_hash_head, path)?;
         let content_commit_base = git_cat_file(directory, &base_current_commit, "-p")?;
-        let tree_hash_base = get_tree_hash(&content_commit_base).unwrap();
-        path = "";
-        recovery_tree_pr(directory, &mut pr_files_map_base, tree_hash_base, path)?;
+        if let Some (tree_hash_base) = get_tree_hash(&content_commit_base){
+            path = "";
+            recovery_tree_pr(directory, &mut pr_files_map_base, tree_hash_base, path)?;
+        }
     }
 
     for file in pr_files_map_head.into_iter(){
@@ -616,9 +663,10 @@ pub fn is_mergeable(directory: &str, base: &str, head: &str) -> Result<bool, Ser
         let mut path = "";
         recovery_tree_pr(directory, &mut pr_files_map_head, tree_hash_head, path)?;
         let content_commit_base = git_cat_file(directory, &base_current_commit, "-p")?;
-        let tree_hash_base = get_tree_hash(&content_commit_base).unwrap();
-        path = "";
-        recovery_tree_pr(directory, &mut pr_files_map_base, tree_hash_base, path)?;
+        if let Some(tree_hash_base) = get_tree_hash(&content_commit_base){
+            path = "";
+            recovery_tree_pr(directory, &mut pr_files_map_base, tree_hash_base, path)?;
+        }
     }
     for file in pr_files_map_head.into_iter(){
         if !pr_files_map_base.contains_key(&file.0) {
