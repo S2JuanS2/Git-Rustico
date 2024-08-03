@@ -212,10 +212,10 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
         return Ok(StatusCode::InternalError("This pull request is closed".to_string()));
     }
     let directory = format!("{}/{}", src, repo_name);
-    let head = body.get_field("head")?;
-    let base = body.get_field("base")?;
-    let owner = body.get_field("owner")?;
-    let title = body.get_field("title")?;
+    let (head, base, owner, title) = match extract_pr_fields(&body) {
+        Ok(fields) => fields,
+        Err(e) => return Ok(e),
+    };
     if !is_mergeable(&directory, &base, &head)? {
         return Ok(StatusCode::Conflict);
     }
@@ -224,11 +224,8 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
 
     pr.change_state("closed");
-    match pull_number.parse::<usize>(){
-        Ok(value) => {
-            add_attributes(&directory, body, &mut pr, value)?;
-        }
-        Err(_) => return Ok(StatusCode::InternalError("swap fail".to_string())),
+    if let Err(e) = update_pr_attributes(&directory, body, &mut pr, pull_number) {
+        return Ok(e);
     }
     let updated_body = match serde_json::to_string(&pr) {
         Ok(s) => s,
@@ -239,7 +236,28 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     let updated_body_http = HttpBody::parse(APPLICATION_SERVER, &updated_body)?;
     updated_body_http.save_body_to_file(&file_path, &APPLICATION_SERVER.to_string())?;
 
+    if let Err(e) = delete_pr_in_map(&updated_body_http, &format!("{}/{}/{}", src, PR_FOLDER, repo_name)) {
+        return Ok(e);
+    };
+
     Ok(StatusCode::MergeWasSuccessful)
+}
+
+fn extract_pr_fields(body: &HttpBody) -> Result<(String, String, String, String), StatusCode> {
+    let head = body.get_field("head").map_err(|_| StatusCode::InternalError("Missing head field".to_string()))?;
+    let base = body.get_field("base").map_err(|_| StatusCode::InternalError("Missing base field".to_string()))?;
+    let owner = body.get_field("owner").map_err(|_| StatusCode::InternalError("Missing owner field".to_string()))?;
+    let title = body.get_field("title").map_err(|_| StatusCode::InternalError("Missing title field".to_string()))?;
+    Ok((head, base, owner, title))
+}
+
+fn update_pr_attributes(directory: &str, body: HttpBody, pr: &mut PullRequest, pull_number: &str) -> Result<(), StatusCode> {
+    match pull_number.parse::<usize>() {
+        Ok(value) => {
+            add_attributes(directory, body, pr, value).map_err(|_| StatusCode::InternalError("Failed to add attributes".to_string()))
+        }
+        Err(_) => Err(StatusCode::InternalError("Invalid pull request number".to_string())),
+    }
 }
 
 pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
