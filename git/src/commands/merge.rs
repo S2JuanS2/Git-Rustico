@@ -471,36 +471,6 @@ fn get_result_depending_on_strategy(
     Ok(())
 }
 
-/// Obtiene los hashes de los padres de los commits de las ramas a mergear.
-/// ###Parametros:
-/// 'root_parent_current_branch': String que contiene el contenido del primer commit de la rama actual
-/// 'root_parent_merge_branch': String que contiene el contenido del primer commit de la rama a mergear
-pub fn get_parent_hashes_(
-    root_parent_current_branch: String,
-    root_parent_merge_branch: String,
-) -> (String, String) {
-    let mut hash_parent_current = PARENT_INITIAL;
-    let mut hash_parent_merge = PARENT_INITIAL;
-    for line in root_parent_current_branch.lines() {
-        if line.starts_with("parent ") {
-            if let Some(hash) = line.strip_prefix("parent ") {
-                hash_parent_current = hash;
-            }
-        }
-    }
-    for line in root_parent_merge_branch.lines() {
-        if line.starts_with("parent ") {
-            if let Some(hash) = line.strip_prefix("parent ") {
-                hash_parent_merge = hash;
-            }
-        }
-    }
-    (
-        hash_parent_current.to_string(),
-        hash_parent_merge.to_string(),
-    )
-}
-
 /// Obtiene el path del archivo en conflicto.
 /// ###Parametros:
 /// 'conflict_msg': String que contiene el mensaje de conflicto
@@ -664,8 +634,8 @@ pub fn find_commit_common_ancestor(directory: &str, current_branch: &str, branch
     let mut commit_common_ancestor = String::new();
     let commits_current = get_commits(directory, current_branch)?;
     let commits_merge = get_commits(directory, branch_to_merge)?;
-    for commit_current in commits_current.iter() {
-        for commit_merge in commits_merge.iter() {
+    for commit_current in commits_current.iter().rev() {
+        for commit_merge in commits_merge.iter().rev() {
             if commit_current == commit_merge {
                 commit_common_ancestor = commit_current.to_string();
             }
