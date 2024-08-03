@@ -1,4 +1,5 @@
 use crate::commands::cat_file::git_cat_file;
+use crate::commands::branch::get_doble_parent_hashes;
 use crate::consts::*;
 use super::errors::CommandsError;
 use super::log::insert_line_between_lines;
@@ -108,7 +109,6 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, Commands
 pub fn get_commits(directory: &str, branch: &str) -> Result<Vec<String>, CommandsError> {
 
     let mut commits: Vec<String> = Vec::new();
-
     let git_dir = format!("{}/{}", directory, GIT_DIR);
     let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, branch);
 
@@ -118,20 +118,46 @@ pub fn get_commits(directory: &str, branch: &str) -> Result<Vec<String>, Command
         current_commit = read_file_string(file)?;
     }
     commits.push(current_commit.clone());
+    recovery_commits(&mut commits, directory, current_commit)?;
 
-    loop {
-        let content_commit = git_cat_file(directory, &current_commit, "-p")?;
-        let parent_hash = get_parent_hashes(content_commit);
+    return Ok(commits)
 
-            if parent_hash != PARENT_INITIAL {
-                commits.push(parent_hash.to_string());
-                current_commit = parent_hash.to_string();
-            }else{
-                break;
+}
+
+/// Lee los parent commits y los guarda en un vector recibido por parámetro
+/// 
+/// # Parametros
+/// 
+/// - 'commits': Vector a llenar
+/// - 'directory': Directorio del git
+/// - 'current_commit': ultimo hash commit
+fn recovery_commits(commits: &mut Vec<String>, directory: &str, current_commit: String) -> Result<(), CommandsError>{
+    let content_commit = git_cat_file(directory, &current_commit, "-p")?;
+    if content_commit.lines().count() == 7{
+        let mut parent_hash = get_doble_parent_hashes(content_commit.clone());
+        if parent_hash != PARENT_INITIAL{
+            if !commits.contains(&parent_hash){
+                commits.push(parent_hash.clone());
             }
+            recovery_commits(commits, directory, parent_hash)?;
+        }
+        parent_hash = get_parent_hashes(content_commit);
+        if parent_hash != PARENT_INITIAL{
+            if !commits.contains(&parent_hash){
+                commits.push(parent_hash.clone());
+            }
+            recovery_commits(commits, directory, parent_hash)?;
+        }
+    }else{
+        let parent_hash = get_parent_hashes(content_commit);
+        if parent_hash != PARENT_INITIAL{
+            if !commits.contains(&parent_hash){
+                commits.push(parent_hash.clone());
+            }
+            recovery_commits(commits, directory, parent_hash)?;
+        }
     }
-    Ok(commits)
-
+    return Ok(())
 }
 
 /// Creará el archivo donde se guarda el mensaje del commit

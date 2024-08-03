@@ -90,16 +90,22 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx:
 pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
     let directory = format!("{}/{}", src, repo_name);
     let pr_repo_folder_path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
+
+    if valid_repository(repo_name, src).is_err() {
+        return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
+    } 
     if !folder_exists(&pr_repo_folder_path)
     {
-        return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
+        let response = format!("No open pull request in {}", repo_name);
+        return Ok(StatusCode::InternalError(response));
     }
 
     let pr_map_path = format!("{}/{}", pr_repo_folder_path, PR_MAP_FILE);
     let pr_map = read_pr_map(&pr_map_path)?;
 
-    if pr_map.is_empty() {
-        return Ok(StatusCode::InternalError("No pull request was found".to_string()));
+    if pr_map.len() == 0 {
+        let response = format!("No open pull request in {}", repo_name);
+        return Ok(StatusCode::InternalError(response));
     }
     let mut pr_list = vec!();
 
@@ -109,7 +115,7 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
         let mut pr;
         pr = PullRequest::from_http_body(&body)?;
         add_attributes(&directory, body.clone(), &mut pr, *value)?;
-        if body.get_field("state")? == OPEN {
+        if pr.is_open() {
             pr_list.push(pr);
         }
     }
@@ -247,14 +253,13 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     if !is_mergeable(&directory, &base, &head)? {
         return Ok(StatusCode::Conflict);
     }
-    
     let mut pr = PullRequest::from_http_body(&body)?;
-    merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
-
-    pr.change_state("closed");
     if let Err(e) = update_pr_attributes(&directory, body, &mut pr, pull_number) {
         return Ok(e);
     }
+    merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
+
+    pr.change_state("closed");
     let updated_body = match serde_json::to_string(&pr) {
         Ok(s) => s,
         Err(_) => {
@@ -607,7 +612,7 @@ fn get_body_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec
 /// # Retornos
 /// Devuelve `Ok(result)` El vector con los hashes de los commits nuevos.
 /// Devuelve `Err( )`
-fn get_commits_pr(directory: &str, base: &str, head: &str) -> Result<Vec<String>, ServerError> {
+pub fn get_commits_pr(directory: &str, base: &str, head: &str) -> Result<Vec<String>, ServerError> {
     let commits_head = get_commits(directory, head)?;
     let commits_base = get_commits(directory, base)?;
     let mut result = vec!();
@@ -676,10 +681,18 @@ fn get_changed_files_pr(directory: &str, base: &str, head: &str) -> Result<Vec<S
             recovery_tree_pr(directory, &mut pr_files_map_base, tree_hash_base, path)?;
         }
     }
-
-    for file in pr_files_map_head.into_iter(){
+    // Archivos nuevos
+    for file in pr_files_map_head.clone().into_iter(){
         if !pr_files_map_base.contains_key(&file.0) {
             result.push(file.1);
+        }
+    }
+    // Archivos modificados
+    for (key, value) in pr_files_map_base {
+        if let Some(other_value) = pr_files_map_head.get(&key) {
+            if other_value.clone() != value {
+                result.push(other_value.clone());
+            }
         }
     }
     Ok(result)

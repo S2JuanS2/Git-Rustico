@@ -1,8 +1,7 @@
 use std::{fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, num::ParseIntError, path::Path};
 use crate::{consts::{APPLICATION_SERVER, CRLF, CRLF_DOUBLE, HTTP_VERSION, MESSAGE, PR_FILE_EXTENSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
-use crate::commands::branch::get_branch_current_hash;
-use super::{http_body::HttpBody, status_code::StatusCode};
-use crate::commands::push::is_update;
+use super::{features_pr::get_commits_pr, http_body::HttpBody, status_code::StatusCode};
+
 /// Reads an HTTP request from a reader, returning it as a String.
 ///
 /// # Arguments
@@ -251,20 +250,9 @@ fn parse_next_pr_number(content: &str) -> Result<usize, ServerError> {
 /// 
 pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, head: &str) -> Result<bool, ServerError> {
     let directory = format!("{}/{}", base_path, repo_name);
-    let hash_head = match get_branch_current_hash(&directory, head.to_string()) {
-        Ok(hash) => hash.to_string(),
-        Err(_) => return Err(ServerError::InvalidRequestNoChange("The head branch does not exist.".to_string())),
-    };
-    let hash_base = match get_branch_current_hash(&directory, base.to_string()){
-        Ok(hash) => hash.to_string(),
-        Err(_) => return Err(ServerError::InvalidRequestNoChange("The base branch does not exist.".to_string())),
-    };
+    let result = get_commits_pr(&directory, base, head)?;
 
-    let mut count_commits: usize = 0;
-    if is_update(&directory, &hash_base, &hash_head, &mut count_commits)?{
-        return Ok(false)
-    }
-    Ok(true)
+    return Ok(!result.is_empty())
 }
 
 /// Guarda el cuerpo de un pull request en un archivo con un número de PR único.

@@ -27,6 +27,27 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, Commands
 /// Obtiene el hash parent del commit
 /// ###Parametros:
 /// 'commit': Commit a buscar el parent
+pub fn get_doble_parent_hashes(
+    commit: String,
+) -> String {
+    let mut hash_parent = PARENT_INITIAL;
+    let mut x = 0;
+    for line in commit.lines() {
+        if line.starts_with("parent ") {
+            x += 1;
+            if x == 1 {
+                if let Some(hash) = line.strip_prefix("parent ") {
+                    hash_parent = hash;
+                }
+            }
+        }
+    }
+    hash_parent.to_string()
+}
+
+/// Obtiene el hash parent del commit
+/// ###Parametros:
+/// 'commit': Commit a buscar el parent
 pub fn get_parent_hashes(
     commit: String,
 ) -> String {
