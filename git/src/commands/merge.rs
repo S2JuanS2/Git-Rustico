@@ -172,7 +172,7 @@ fn update_work_directory(directory: &str, branch_to_merge_hash: &str, formatted_
                 let path = parts[0];
                 let hash = parts[2];
                 if vec_objects_hash.contains(&hash.to_string()){
-                    println!("Persiste");
+                    //println!("Persiste");
                 }else{
                     let lines_result_conflict: Vec<&str> = formatted_result.lines().collect();
                     if lines_result_conflict.len() >= 4{
@@ -181,17 +181,17 @@ fn update_work_directory(directory: &str, branch_to_merge_hash: &str, formatted_
                         if let (Some(_first_pos), Some(second_pos)) = (chars.next(), chars.next()){
                             let result = &fourth_line[(&second_pos.0 + '/'.len_utf8())..];
                             if path == result{
-                                println!("Persiste, conflicto");
+                                //println!("Persiste, conflicto");
                             }else{
-                                println!("No persiste");
+                                //println!("No persiste");
                                 remove_from_index(directory, path, hash)?;
                             }
                         }
                     }else{
                         if !vec_objects_parent_hash.contains(&hash.to_string()) {
-                            println!("Persiste");
+                            //println!("Persiste");
                         } else {
-                            println!("No persiste");
+                            //println!("No persiste");
                             remove_from_index(directory, path, hash)?; 
                         }
                     }

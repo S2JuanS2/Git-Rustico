@@ -108,10 +108,21 @@ fn load_files(
 /// ###Parametros:
 /// 'commit': Contenido de un commit
 pub fn extract_parent_hash(commit: &str) -> Option<&str> {
+    let mut count = 0;
     for line in commit.lines() {
-        if line.starts_with("parent") {
-            let words: Vec<&str> = line.split_whitespace().collect();
-            return words.get(1).copied();
+        if commit.lines().count() == 7{
+            if line.starts_with("parent") {
+                count += 1;
+                if count == 2{
+                    let words: Vec<&str> = line.split_whitespace().collect();
+                    return words.get(1).copied();
+                }
+            }
+        }else{
+            if line.starts_with("parent") {
+                let words: Vec<&str> = line.split_whitespace().collect();
+                return words.get(1).copied();
+            }
         }
     }
     None

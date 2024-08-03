@@ -80,7 +80,7 @@ impl Commit {
 /// 'args': Vector de Strings que contiene los parametros que se le pasaran al comando commit
 /// 'client': Cliente que contiene el directorio del repositorio local
 pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, CommandsError> {
-    if args.len() != 2 {
+    if args.len() == 0 {
         return Err(CommandsError::InvalidArgumentCountCommitError);
     }
     if args[0] != "-m" {
@@ -88,7 +88,7 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, Commands
     }
     let directory = client.get_directory_path();
 
-    let message = args[1];
+    let message = args.iter().skip(1).cloned().collect::<Vec<&str>>().join(" ");
 
     let commit = Commit::new(
         message.to_string(),
