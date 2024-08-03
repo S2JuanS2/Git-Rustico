@@ -177,7 +177,7 @@ pub fn get_pr_number(pr_map: &HashMap<String, u64>, hash_key: &String) -> Option
 /// Devuelve `Err(ServerError::PrNotFoundInMap)` si la clave hash no está presente en el mapa de pull requests.
 /// Devuelve `Err(ServerError)` si ocurre un error durante la actualización del archivo del mapa.
 ///
-pub fn delete_pr_in_map(pr_map: &mut HashMap<String, u64>, pr_map_path: &str, hash_key: &String) -> Result<(), ServerError> {
+pub fn delete_pr_map(pr_map: &mut HashMap<String, u64>, pr_map_path: &str, hash_key: &String) -> Result<(), ServerError> {
     if !pr_map.contains_key(hash_key) {
         return Err(ServerError::PrNotFoundInMap);
     }
