@@ -4,7 +4,7 @@ use serde::{Serialize,Deserialize};
 use super::{http_body::HttpBody, utils::validate_branch_changes};
 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CommitsPr {
     pub sha_1: String,
     pub tree_hash: String,

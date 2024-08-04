@@ -5,6 +5,7 @@ use crate::commands::merge::{find_commit_common_ancestor, merge_pr};
 use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists};
 use crate::consts::{APPLICATION_SERVER, FILE, OPEN, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
+use super::model::Model;
 use super::pr::{CommitsPr, PullRequest};
 use super::pr_registry::{delete_pr_map, generate_head_base_hash, generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
 use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository, validate_branch_changes};
@@ -118,14 +119,14 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
             pr_list.push(pr);
         }
     }
-    let json_str = match serde_json::to_string(&pr_list) {
-        Ok(s) => s,
-        Err(_) => {
-            return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
-        }
-    };
-    let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
-    Ok(StatusCode::Ok(Some(pr_list_body)))
+    // let json_str = match serde_json::to_string(&pr_list) {
+    //     Ok(s) => s,
+    //     Err(_) => {
+    //         return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
+    //     }
+    // };
+    // let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
+    Ok(StatusCode::Ok(Some(Model::ListPullRequest(pr_list))))
 }
 
 /// Obtiene una solicitud de extracción desde el archivo correspondiente.
@@ -169,14 +170,14 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
         pr.set_amount_commits(commits.len());
         pr.set_changed_files(files);
     }
-    let json_str = match serde_json::to_string(&pr) {
-        Ok(s) => s,
-        Err(_) => {
-            return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
-        }
-    };
-    let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
-    Ok(StatusCode::Ok(Some(pr_list_body)))
+    // let json_str = match serde_json::to_string(&pr) {
+    //     Ok(s) => s,
+    //     Err(_) => {
+    //         return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
+    //     }
+    // };
+    // let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
+    Ok(StatusCode::Ok(Some(Model::ListPullRequest(Vec::from([pr])))))
 }
 
 /// Obtiene los commits de un pull request recibido por parámetro
@@ -209,15 +210,15 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     if body.get_field("state")? != OPEN {
         commits = build_commits(&directory, body.get_array_field("commits")?)?;
     }
-    let json_str = match serde_json::to_string(&commits) {
-        Ok(s) => s,
-        Err(_) => {
-            return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
-        }
-    };
-    let commit_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
+    // let json_str = match serde_json::to_string(&commits) {
+    //     Ok(s) => s,
+    //     Err(_) => {
+    //         return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
+    //     }
+    // };
+    // let commit_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
     
-    Ok(StatusCode::Ok(Some(commit_body)))
+    Ok(StatusCode::Ok(Some(Model::ListCommits(commits))))
 }
 
 /// Realiza el auto-merge de un pull request en caso de ser posible.
