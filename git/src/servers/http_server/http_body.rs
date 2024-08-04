@@ -1,4 +1,4 @@
-use std::{fmt, fs::File, io::Write};
+use std::{collections::HashMap, fmt, fs::File, io::Write};
 
 use serde_json::Value as JsonValue;
 use serde_yaml::Value as YamlValue;
@@ -241,7 +241,16 @@ impl HttpBody {
     pub fn get_content_type_and_body(&self) -> Result<(String, String), ServerError> {
         let content_type_and_body = match self {
             HttpBody::Json(json) => (APPLICATION_JSON.to_string(), json.to_string()),
-            HttpBody::Xml(xml) => (APPLICATION_XML.to_string(), xml.to_string()),
+            HttpBody::Xml(xml) => {
+                let map: HashMap<String, JsonValue> = serde_json::from_value(xml.clone()).unwrap();
+                let mut xml_str = String::new();
+                for (key, value) in map {
+                    xml_str.push_str(&format!("<{}>{}</{}>", key, value, key));
+                };
+                (APPLICATION_XML.to_string(), xml_str)
+                // (APPLICATION_XML.to_string(), xml.unwrap())
+            }
+                
             HttpBody::Yaml(yaml) => {
                 let yaml_str = serde_yaml::to_string(yaml).unwrap();
                 (APPLICATION_YAML.to_string(), yaml_str)
@@ -345,7 +354,7 @@ impl HttpBody {
                 Ok(HttpBody::Json(json))
             }
             APPLICATION_YAML | TEXT_YAML => {
-                let body_str = format!("{}: {}", key, message);
+                let body_str = format!("{}: \"{}\"", key, message);
                 let yaml = serde_yaml::from_str(&body_str).map_err(|_| ServerError::HttpParseYamlBody)?;
                 Ok(HttpBody::Yaml(yaml))
             }
@@ -380,9 +389,7 @@ impl HttpBody {
             APPLICATION_JSON => match body {
                 HttpBody::Json(_) => Ok(body), // Ya está en formato JSON
                 HttpBody::Xml(xml) => {
-                    let json_str = xml_to_string(&xml).map_err(|e| ServerError::Serialization(e.to_string()))?;
-                    let json_value: JsonValue = serde_json::from_str(&json_str).map_err(|e| ServerError::Serialization(e.to_string()))?;
-                    Ok(HttpBody::Json(json_value))
+                    Ok(HttpBody::Json(xml))
                 }
                 HttpBody::Yaml(yaml) => {
                     let json_str = serde_yaml::to_string(&yaml).map_err(|e| ServerError::Serialization(e.to_string()))?;
@@ -393,9 +400,7 @@ impl HttpBody {
             },
             APPLICATION_XML | TEXT_XML => match body {
                 HttpBody::Json(json) => {
-                    let xml_string = serde_xml_rs::to_string(&json).map_err(|e| ServerError::Serialization(e.to_string()))?;
-                    let xml_value = serde_xml_rs::from_str(&xml_string).map_err(|e| ServerError::Serialization(e.to_string()))?;
-                    Ok(HttpBody::Xml(xml_value))
+                    Ok(HttpBody::Xml(json))
                 }
                 HttpBody::Xml(_) => Ok(body), // Ya está en formato XML
                 HttpBody::Yaml(yaml) => {
