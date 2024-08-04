@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, num::ParseIntError, path::Path};
-use crate::{consts::{APPLICATION_SERVER, CRLF, CRLF_DOUBLE, HTTP_VERSION, MESSAGE, PR_FILE_EXTENSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
-use super::{features_pr::get_commits_pr, http_body::HttpBody, status_code::StatusCode};
+use crate::{consts::{APPLICATION_SERVER, CRLF, CRLF_DOUBLE, HTTP_VERSION, PR_FILE_EXTENSION, PR_FOLDER}, servers::errors::ServerError, util::{connections::send_message, errors::UtilError, files::{create_directory, folder_exists}}};
+use super::{features_pr::get_commits_pr, http_body::HttpBody, model::Model, status_code::StatusCode};
 
 /// Reads an HTTP request from a reader, returning it as a String.
 ///
@@ -103,18 +103,36 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, cont
     };
     match status_code {
         StatusCode::Ok(Some(body)) => {
-            let body = HttpBody::convert_body_to_content_type(body.clone(), content_type)?;
-            send_body(writer, &body)
+            // let body = HttpBody::convert_body_to_content_type(body.clone(), content_type)?;
+            send_body_model(writer, &body, content_type)
         },
         StatusCode::ValidationFailed(message)
         | StatusCode::InternalError(message)
         | StatusCode::ResourceNotFound(message)
         | StatusCode::Forbidden(message)
         | StatusCode::BadRequest(message) => {
-            let body = HttpBody::from_string(content_type, message, MESSAGE)?;
-            send_body(writer, &body)
+            // let body = HttpBody::from_string(content_type, message, MESSAGE)?;
+            let body = Model::Message(message.to_string());
+            send_body_model(writer, &body, content_type)
         },
         _ => Ok(()) // Deberia enviar un CRLF
+    }
+}
+
+fn send_body_model(writer: &mut dyn Write, model: &Model, content_type: &str) -> Result<(), ServerError> {
+    // let (content_type, body_str) = body.get_content_type_and_body()?;
+    let body_str = model.to_string(content_type);
+
+    let message = match body_str.len()
+    {
+        0 => CRLF.to_string(),
+        _ => format!("Content-Type: {}{}Content-Length: {}{}{}", content_type, CRLF,body_str.len(), CRLF_DOUBLE, body_str),
+    };
+    let error = UtilError::UtilFromServer("Error sending response body".to_string());
+    match send_message(writer, &message, error)
+    {
+        Ok(_) => Ok(()),
+        Err(_) => Err(ServerError::SendResponse(body_str)),
     }
 }
 
@@ -134,21 +152,21 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, cont
 /// Los errores pueden ser causados por problemas al obtener el tipo de contenido y el cuerpo,
 /// o por fallos al escribir en el escritor proporcionado.
 ///
-fn send_body(writer: &mut dyn Write, body: &HttpBody) -> Result<(), ServerError> {
-    let (content_type, body_str) = body.get_content_type_and_body()?;
+// fn send_body(writer: &mut dyn Write, body: &HttpBody) -> Result<(), ServerError> {
+//     let (content_type, body_str) = body.get_content_type_and_body()?;
     
-    let message = match body_str.len()
-    {
-        0 => CRLF.to_string(),
-        _ => format!("Content-Type: {}{}Content-Length: {}{}{}", content_type, CRLF,body_str.len(), CRLF_DOUBLE, body_str),
-    };
-    let error = UtilError::UtilFromServer("Error sending response body".to_string());
-    match send_message(writer, &message, error)
-    {
-        Ok(_) => Ok(()),
-        Err(_) => Err(ServerError::SendResponse(body.to_string())),
-    }
-}
+//     let message = match body_str.len()
+//     {
+//         0 => CRLF.to_string(),
+//         _ => format!("Content-Type: {}{}Content-Length: {}{}{}", content_type, CRLF,body_str.len(), CRLF_DOUBLE, body_str),
+//     };
+//     let error = UtilError::UtilFromServer("Error sending response body".to_string());
+//     match send_message(writer, &message, error)
+//     {
+//         Ok(_) => Ok(()),
+//         Err(_) => Err(ServerError::SendResponse(body.to_string())),
+//     }
+// }
 
 /// Valida si un repositorio existe en el directorio especificado.
 ///

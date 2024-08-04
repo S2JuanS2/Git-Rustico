@@ -20,3 +20,5 @@ pub mod features_pr;
 pub mod pr_registry;
 
 pub mod method;
+
+pub mod model;

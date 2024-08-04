@@ -238,29 +238,31 @@ impl HttpBody {
     /// # Errors
     ///
     /// Retorna `ServerError` si hay algún problema al convertir el cuerpo a una cadena de texto.
-    pub fn get_content_type_and_body(&self) -> Result<(String, String), ServerError> {
-        let content_type_and_body = match self {
-            HttpBody::Json(json) => (APPLICATION_JSON.to_string(), json.to_string()),
-            HttpBody::Xml(xml) => {
-                let map: HashMap<String, JsonValue> = match serde_json::from_value(xml.clone()){
-                    Ok(map) => map,
-                    Err(_) => return Err(ServerError::Serialization("Error converting XML to JSON".to_string())),
-                };
-                let mut xml_str = String::new();
-                for (key, value) in map {
-                    xml_str.push_str(&format!("<{}>{}</{}>", key, value, key));
-                };
-                (APPLICATION_XML.to_string(), xml_str)
-            }
+    // pub fn get_content_type_and_body(&self) -> Result<(String, String), ServerError> {
+    //     let test_body = self.convert_body_pr_in_string()?;
+    //     println!("test_body: \n{}", test_body);
+    //     let content_type_and_body = match self {
+    //         HttpBody::Json(json) => (APPLICATION_JSON.to_string(), self.convert_body_pr_in_string()?),
+    //         HttpBody::Xml(xml) => {
+    //             let map: HashMap<String, JsonValue> = match serde_json::from_value(xml.clone()){
+    //                 Ok(map) => map,
+    //                 Err(_) => return Err(ServerError::Serialization("Error converting XML to JSON".to_string())),
+    //             };
+    //             let mut xml_str = String::new();
+    //             for (key, value) in map {
+    //                 xml_str.push_str(&format!("<{}>{}</{}>", key, value, key));
+    //             };
+    //             (APPLICATION_XML.to_string(), self.convert_body_pr_in_string()?)
+    //         }
                 
-            HttpBody::Yaml(yaml) => {
-                let yaml_str = serde_yaml::to_string(yaml).unwrap();
-                (APPLICATION_YAML.to_string(), yaml_str)
-            }
-            HttpBody::Empty => ("".to_string(), "".to_string())
-        };
-        Ok(content_type_and_body)
-    }
+    //         HttpBody::Yaml(yaml) => {
+    //             let yaml_str = serde_yaml::to_string(yaml).unwrap();
+    //             (APPLICATION_YAML.to_string(), self.convert_body_pr_in_string()?)
+    //         }
+    //         HttpBody::Empty => ("".to_string(), "".to_string())
+    //     };
+    //     Ok(content_type_and_body)
+    // }
 
     /// Guarda el cuerpo HTTP en un archivo en el formato especificado.
     ///
@@ -433,4 +435,61 @@ impl HttpBody {
             _ => Err(ServerError::InvalidFormat("Unsupported content type".to_string())),
         }
     }
+
+    pub fn get_value(&self, key: &str) -> JsonValue {
+        match self {
+            HttpBody::Json(json) => json[key].clone(),
+            HttpBody::Xml(xml) => {
+                let map: HashMap<String, JsonValue> = serde_json::from_value(xml.clone()).unwrap();
+                map[key].clone()
+            }
+            HttpBody::Yaml(yaml) => {
+                let map: HashMap<String, JsonValue> = serde_json::from_value(serde_json::to_value(yaml).unwrap()).unwrap();
+                map[key].clone()
+            }
+            HttpBody::Empty => JsonValue::Null,
+        }
+    }
+
+    // fn convert_body_pr_in_string(&self) -> Result<String, ServerError> {
+    //     let mut result = String::new();
+    //     // let id:u64 = match self.get_value("id"){
+    //     //     JsonValue::Number(id) => id.as_u64().unwrap(),
+    //     //     _ => return Err(ServerError::HttpFieldNotFound("id".to_string())),
+    //     // };
+    //     // match self {
+    //     //     HttpBody::Json(_) => result.push_str(&format!("id: {}", id)),
+    //     //     HttpBody::Xml(_) => result.push_str(&format!("<id>{}</id>", id)),
+    //     //     HttpBody::Yaml(_) => result.push_str(&format!("id: {}", id)),
+    //     //     HttpBody::Empty => return Err(ServerError::HttpFieldNotFound("id".to_string())),
+    //     // };
+    //     println!("self: {:?}", self);
+    //     let id = self.get_value("id");
+    //     let owner = self.get_value("owner");
+    //     let title = self.get_value("title");
+    //     let body = self.get_value("body");
+    //     let state = self.get_value("state");
+    //     let base = self.get_value("base");
+    //     let head = self.get_value("head");
+    //     let repo = self.get_value("repo");
+    //     let mergeable = self.get_value("mergeable");
+    //     let changed_files = self.get_value("changed_files");
+    //     let amount_commits = self.get_value("amount_commits");
+    //     let commits = self.get_value("commits");
+
+    //     match self {
+    //         HttpBody::Json(_) => {
+    //             result.push_str(&format!("{{\tid: {},\n\towner: {},\n\ttitle: {},\n\tbody: {},\n\tstate: {},\n\tbase: {},\n\thead: {},\n\trepo: {},\n\tmergeable: {},\n\tchanged_files: {},\n\tamount_commits: {},\n\tcommits: {}}}", id, owner, title, body, state, base, head, repo, mergeable, changed_files, amount_commits, commits));
+    //         }
+    //         HttpBody::Xml(_) => { 
+    //             result.push_str(&format!("<id>{}</id>\n<owner>{}</owner>\n<title>{}</title>\n<body>{}</body>\n<state>{}</state>\n<base>{}</base>\n<head>{}</head>\n<repo>{}</repo>\n<mergeable>{}</mergeable>\n<changed_files>{}</changed_files>\n<amount_commits>{}</amount_commits>\n<commits>{}</commits>", id, owner, title, body, state, base, head, repo, mergeable, changed_files, amount_commits, commits));
+    //         }
+    //         HttpBody::Yaml(_) => {
+    //             result.push_str(&format!("id: {}\nowner: {}\ntitle: {}\nbody: {}\nstate: {}\nbase: {}\nhead: {}\nrepo: {}\nmergeable: {}\nchanged_files: {}\namount_commits: {}\ncommits: {}", id, owner, title, body, state, base, head, repo, mergeable, changed_files, amount_commits, commits));
+    //         }
+    //         HttpBody::Empty => return Err(ServerError::HttpFieldNotFound("owner".to_string())),
+    //     };
+
+    //     Ok(result)
+    // }
 }

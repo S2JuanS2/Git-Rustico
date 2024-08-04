@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::servers::errors::ServerError;
 
-use super::http_body::HttpBody;
+use super::model::Model;
 
 /// Enumera los posibles códigos de estado HTTP que pueden ser retornados por el servidor.
 #[derive(Debug, PartialEq)]
@@ -10,7 +10,7 @@ pub enum StatusCode {
     Created,
     Forbidden(String),
     ValidationFailed(String),
-    Ok(Option<HttpBody>),
+    Ok(Option<Model>),
     NotModified,
     PassTheAppropriateMediaType,
     ResourceNotFound(String),
