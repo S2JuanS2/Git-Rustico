@@ -207,4 +207,10 @@ impl PullRequest {
     pub fn get_id(&self) -> Option<usize> {
         self.id
     }
+    pub fn get_amount_commits(&self) -> usize {
+        match &self.amount_commits{
+            Some(a_c) => *a_c,
+            None => 0,
+        }
+    }
 }

@@ -12,7 +12,6 @@ use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::commit::get_commits;
-use crate::commands::push::is_update;
 
 /// Crea una solicitud de extracción en el repositorio correspondiente.
 /// 
@@ -151,7 +150,6 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     if valid_repository(repo_name, src).is_err() {
         return Ok(StatusCode::ResourceNotFound("The repository does not exist.".to_string()));
     }
-    
     let file_path: String = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
     {
@@ -159,13 +157,17 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
     let directory = format!("{}/{}", src, repo_name);
-
     let mut pr = PullRequest::from_http_body(&body)?;
-    match pull_number.parse::<usize>(){
-        Ok(value) => {
-            add_attributes(&directory, body, &mut pr, value)?;
-        }
-        Err(_) => return Ok(StatusCode::InternalError("swap fail".to_string())),
+    let commits = body.get_array_field("commits")?;
+    let files = body.get_array_field("changed_files")?;
+    
+    if let Err(e) = update_pr_attributes(&directory, body, &mut pr, pull_number) {
+            return Ok(e);
+    }
+    if !pr.is_open() {
+        pr.set_commits(commits.clone());
+        pr.set_amount_commits(commits.len());
+        pr.set_changed_files(files);
     }
     let json_str = match serde_json::to_string(&pr) {
         Ok(s) => s,
@@ -195,6 +197,7 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
 /// - `Err(ServerError)`: Si ocurre un error al crear el cuerpo HTTP desde el archivo.
 ///
 pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    let directory = format!("{}/{}", src, repo_name);
     let file_path = get_pull_request_file_path(repo_name, pull_number, src);
     if !file_exists(&file_path)
     {
@@ -202,9 +205,9 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     }
     let body = HttpBody::create_from_file(APPLICATION_SERVER, &file_path)?;
 
-    let commits = get_body_commits_pr(body, src, repo_name)?;
-    if commits.is_empty() {
-        return Ok(StatusCode::InternalError("The pull request does not contain new commits.".to_string()));
+    let mut commits = get_body_commits_pr(body.clone(), src, repo_name)?;
+    if body.get_field("state")? != OPEN {
+        commits = build_commits(&directory, body.get_array_field("commits")?)?;
     }
     let json_str = match serde_json::to_string(&commits) {
         Ok(s) => s,
@@ -643,18 +646,25 @@ fn get_body_commits_pr(body: HttpBody, src: &str, repo_name: &str) -> Result<Vec
     let head = body.get_field("head")?;
     let base = body.get_field("base")?;
     let directory = format!("{}/{}", src, repo_name);
-    let hash_head = get_branch_current_hash(&directory, head.clone())?.to_string();
-    let hash_base = get_branch_current_hash(&directory, base.clone())?.to_string();
-    let mut result = vec!();
-
-    let mut count_commits: usize = 0;
-    if is_update(&directory, &hash_base, &hash_head, &mut count_commits)?{
-        return Ok(result);
-    }
     let commits_head = get_commits_pr(&directory, &base, &head)?;
+    let result = build_commits(&directory, commits_head)?;
+    Ok(result)
+}
+
+/// Construye el formato de los commits en la solicitud
+///
+/// # Parámetros
+/// - `directory`: ruta del repositorio
+/// - `commits_head`: commits a construir el formato
+///
+/// # Retornos
+/// - `Ok(Vec<CommitsPr>)`: Si se creo correctamente el formato del commit.
+///
+fn build_commits(directory: &str, commits_head: Vec<String>) -> Result<Vec<CommitsPr>, ServerError>{
+    let mut result = vec!();
     for commit in commits_head {
         let mut commits_pr = CommitsPr::new();
-        let commit_content = git_cat_file(&directory, &commit, "-p")?;
+        let commit_content = git_cat_file(directory, &commit, "-p")?;
         commits_pr.sha_1.clone_from(&commit);
         let mut lines_commit = commit_content.lines();
         for line in lines_commit.by_ref() {

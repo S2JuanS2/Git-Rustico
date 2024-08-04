@@ -80,7 +80,7 @@ impl HttpBody {
         }
     }
 
-    /// Obtiene el valor de un campo específico dentro del cuerpo de la solicitud.
+    /// Obtiene el valor de un campo específico dentro del cuerpo de la solicitud que se espera que sea un String
     ///
     /// # Parámetros
     /// - `field`: El nombre del campo cuyo valor se desea obtener.
@@ -114,6 +114,58 @@ impl HttpBody {
             HttpBody::Yaml(yaml) => yaml[field].as_str()
                 .ok_or_else(|| ServerError::HttpFieldNotFound(field.to_string()))
                 .map(|s| s.to_string()),
+            HttpBody::Empty => Err(ServerError::HttpFieldNotFound(field.to_string())),
+        }
+    }
+
+    /// Obtiene el valor de un campo específico dentro del cuerpo de la solicitud que se espera que sea un array.
+    ///
+    /// # Parámetros
+    /// - `field`: El nombre del campo cuyo valor se desea obtener.
+    ///
+    /// # Retorno
+    /// Retorna un `Result` que contiene el valor del campo como un vector de cadenas en caso de éxito,
+    /// o un `ServerError` en caso de error.
+    ///
+    /// # Errores
+    /// - `ServerError::HttpFieldNotFound` si el campo no se encuentra en el cuerpo de la solicitud.
+    /// - `ServerError::UnsupportedMediaType` si el tipo de cuerpo no es soportado para esta operación.
+    ///
+    pub fn get_array_field(&self, field: &str) -> Result<Vec<String>, ServerError> {
+        match self {
+            HttpBody::Json(json) => {
+                if let Some(value) = json.get(field) {
+                    if let Some(array) = value.as_array() {
+                        Ok(array.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                    } else {
+                        Err(ServerError::HttpFieldNotFound(field.to_string()))
+                    }
+                } else {
+                    Err(ServerError::HttpFieldNotFound(field.to_string()))
+                }
+            }
+            HttpBody::Xml(xml) => {
+                if let Some(owner_value) = xml.get(field) {
+                    if let Some(array) = owner_value.get("$value").and_then(|v| v.as_array()) {
+                        Ok(array.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                    } else {
+                        Err(ServerError::HttpFieldNotFound(field.to_string()))
+                    }
+                } else {
+                    Err(ServerError::HttpFieldNotFound(field.to_string()))
+                }
+            }
+            HttpBody::Yaml(yaml) => {
+                if let Some(value) = yaml.get(field) {
+                    if let Some(array) = value.as_sequence() {
+                        Ok(array.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                    } else {
+                        Err(ServerError::HttpFieldNotFound(field.to_string()))
+                    }
+                } else {
+                    Err(ServerError::HttpFieldNotFound(field.to_string()))
+                }
+            }
             HttpBody::Empty => Err(ServerError::HttpFieldNotFound(field.to_string())),
         }
     }
