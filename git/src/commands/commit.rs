@@ -120,7 +120,7 @@ pub fn get_commits(directory: &str, branch: &str) -> Result<Vec<String>, Command
     commits.push(current_commit.clone());
     recovery_commits(&mut commits, directory, current_commit)?;
 
-    return Ok(commits)
+    Ok(commits)
 
 }
 
@@ -157,7 +157,7 @@ fn recovery_commits(commits: &mut Vec<String>, directory: &str, current_commit: 
             recovery_commits(commits, directory, parent_hash)?;
         }
     }
-    return Ok(())
+    Ok(())
 }
 
 /// Creará el archivo donde se guarda el mensaje del commit

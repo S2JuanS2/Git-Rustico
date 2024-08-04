@@ -522,7 +522,7 @@ pub fn reference_discovery(
     stream: &mut TcpStream,
     message: String,
     src_repo: &str,
-    my_capabilities: &Vec<String>,
+    my_capabilities: &[String],
 ) -> Result<GitServer, UtilError> {
     send_message(stream, &message, UtilError::ReferenceDiscovey)?;
     let lines = pkt_line::read(stream)?;

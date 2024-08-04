@@ -11,6 +11,9 @@ use std::{env, thread};
 
 use super::errors::ServerError;
 
+type Handler = fn(&mut TcpStream, String, &Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>;
+type LogResult = Result<(Arc<Mutex<Sender<String>>>, JoinHandle<()>), GitError>;
+
 /// Inicia un servidor en la dirección IP y puerto proporcionados.
 ///
 /// # Argumentos
@@ -118,7 +121,7 @@ pub fn receive_client(
     name_server: String,
     shared_tx: Arc<Mutex<Sender<String>>>,
     src: &str,
-    handler: fn(&mut TcpStream, String, &Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>
+    handler: Handler,
 ) -> Result<Vec<JoinHandle<()>>, GitError> {
     // let shared_tx = Arc::new(Mutex::new(tx));
     let mut handles: Vec<JoinHandle<()>> = vec![];
@@ -212,7 +215,7 @@ pub fn create_listener(ip: &str, port: &String) -> Result<TcpListener, GitError>
 ///
 /// Puede fallar si hay errores al intentar iniciar el hilo de logging o al abrir el archivo de log.
 ///
-pub fn start_logging(path_log: String) -> Result<(Arc<Mutex<Sender<String>>>, JoinHandle<()>), GitError> {
+pub fn start_logging(path_log: String) -> LogResult {
     let (tx, rx) = mpsc::channel();
     let shared_tx = Arc::new(Mutex::new(tx));
     let log_handle = thread::spawn(move || {
@@ -247,7 +250,7 @@ pub fn start_server_thread(
     name_server: String,
     shared_tx: Arc<Mutex<Sender<String>>>,
     src: String,
-    handler: fn(&mut TcpStream, String, &Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>
+    handler: Handler,
 ) -> Result<JoinHandle<()>, GitError> {
     let handle = thread::spawn(move || {
         let _ = receive_client(&listener, name_server, shared_tx, &src, handler);
