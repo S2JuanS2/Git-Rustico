@@ -191,4 +191,20 @@ impl PullRequest {
     pub fn set_number(&mut self, number: usize) {
         self.id = Some(number);
     }
+
+    pub fn change_title(&mut self, new_title: &str) {
+        self.title = Some(new_title.to_string());
+    }
+
+    pub fn change_body(&mut self, new_body: &str) {
+        self.body = Some(new_body.to_string());
+    }
+
+    pub fn change_base(&mut self, new_base: &str) {
+        self.base = Some(new_base.to_string());
+    }
+
+    pub fn get_id(&self) -> Option<usize> {
+        self.id
+    }
 }

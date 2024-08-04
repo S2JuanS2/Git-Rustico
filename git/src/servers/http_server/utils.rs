@@ -199,7 +199,6 @@ pub fn get_next_pr_number(file_path: &str) -> Result<usize, ServerError> {
         .read(true)
         .write(true)
         .create(true)
-        .truncate(true)
         .open(file_path)
         .map_err(|_| ServerError::CreateNextPrFile)?;
 
@@ -207,7 +206,6 @@ pub fn get_next_pr_number(file_path: &str) -> Result<usize, ServerError> {
 
     // Lee el contenido del archivo
     file.read_to_string(&mut content).map_err(|_| ServerError::ReadNextPrFile)?;
-
     // Determina el número del próximo PR
     let next_pr_number = if content.trim().is_empty() {
         1 // Si el archivo está vacío, comienza con 1
