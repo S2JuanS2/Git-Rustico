@@ -372,27 +372,24 @@ pub fn delete_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx
 }
 
 fn update_pr_from_http_body(repo_name: &str, pr: &mut PullRequest, body: &HttpBody, src: &String) -> Result<(), StatusCode> {
-    match body.get_field("title") {
-        Ok(title) => pr.change_title(&title),
-        Err(_) => {},
-    };
+    if let Ok(title) = body.get_field("title") 
+    { 
+        pr.change_title(&title)
+    }
 
-    match body.get_field("body") {
-        Ok(body) => pr.change_body(&body),
-        Err(_) => {},
-    };
+    if let Ok(body) = body.get_field("body") 
+    {
+        pr.change_body(&body)
+    }
 
     // match body.get_field("state") {
     //     Ok(state) => pr.change_state(state),
     //     Err(_) => {},
     // };
 
-    match body.get_field("base") {
-        Ok(new_base) => {
-            change_base_in_pr(repo_name, pr, src, body, new_base)?
-        },
-        Err(_) => {},
-    };
+    if let Ok(new_base) = body.get_field("base") {
+        change_base_in_pr(repo_name, pr, src, body, new_base)?;
+    }
 
     Ok(())
 }
