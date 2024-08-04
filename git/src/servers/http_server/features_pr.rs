@@ -6,8 +6,8 @@ use crate::servers::errors::ServerError;
 use crate::util::files::{file_exists, folder_exists};
 use crate::consts::{APPLICATION_SERVER, FILE, OPEN, PR_FILE_EXTENSION, PR_FOLDER, PR_MAP_FILE};
 use super::pr::{CommitsPr, PullRequest};
-use super::pr_registry::{delete_pr_map, generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
-use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository};
+use super::pr_registry::{delete_pr_map, generate_head_base_hash, generate_pr_hash_key, pr_already_exists, read_pr_map, update_pr_map};
+use super::utils::{get_next_pr_number, save_pr_to_file, setup_pr_directory, valid_repository, validate_branch_changes};
 use super::{http_body::HttpBody, status_code::StatusCode};
 use crate::commands::branch::get_branch_current_hash;
 use crate::commands::cat_file::git_cat_file;
@@ -305,18 +305,30 @@ fn update_pr_attributes(directory: &str, body: HttpBody, pr: &mut PullRequest, p
 }
 
 pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
-    let file_path = get_pull_request_file_path(repo_name, pull_number, src);
-    if !file_exists(&file_path)
-    {
-        return Ok(StatusCode::ResourceNotFound("The pull request does not exist.".to_string()));
-    }
-    let _pr = match PullRequest::from_http_body(body)
-    {
+    let mut pr = match read_and_validate_pull_request(repo_name, pull_number, src) {
         Ok(pr) => pr,
-        Err(_) => return Ok(StatusCode::BadRequest("The request body does not contain a valid Pull Request.".to_string())),
+        Err(e) => return Ok(e),
     };
-    // LOGICA PARA MODIFICAR UNA SOLICITUD DE EXTRACCION
-    Ok(StatusCode::Forbidden("Pulcito volvio muajaja.".to_string()))
+
+    match update_pr_from_http_body(repo_name, &mut pr, body, src)
+    {
+            Ok(_) => {},
+            Err(e) => return Ok(e),
+    };
+    
+    let n_pull_number = match pull_number.parse::<usize>() {
+        Ok(value) => value,
+        Err(_) => return Ok(StatusCode::BadRequest("Invalid pull request number".to_string())),
+    };
+    let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
+    
+    let directory = format!("{}/{}", src, repo_name);
+    add_attributes(&directory, body.clone(), &mut pr, n_pull_number)?;
+    let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
+
+    let file_path = get_pull_request_file_path(repo_name, pull_number, src);
+    body.save_body_to_file(&file_path, APPLICATION_SERVER)?;
+    Ok(StatusCode::Ok(None))
 }
 
 /// Elimina una solicitud de extracción del repositorio.
@@ -354,6 +366,78 @@ pub fn delete_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx
     body.save_body_to_file(&file_path, APPLICATION_SERVER)?;
 
     Ok(StatusCode::Ok(None))
+}
+
+fn update_pr_from_http_body(repo_name: &str, pr: &mut PullRequest, body: &HttpBody, src: &String) -> Result<(), StatusCode> {
+    match body.get_field("title") {
+        Ok(title) => pr.change_title(&title),
+        Err(_) => {},
+    };
+
+    match body.get_field("body") {
+        Ok(body) => pr.change_body(&body),
+        Err(_) => {},
+    };
+
+    // match body.get_field("state") {
+    //     Ok(state) => pr.change_state(state),
+    //     Err(_) => {},
+    // };
+
+    match body.get_field("base") {
+        Ok(new_base) => {
+            change_base_in_pr(repo_name, pr, src, body, new_base)?
+        },
+        Err(_) => {},
+    };
+
+    Ok(())
+}
+
+pub fn change_base_in_pr(repo_name: &str, pr: &mut PullRequest, src: &String, body: &HttpBody, new_base: String) -> Result<(), StatusCode> {
+    if !pr.is_open(){
+        return Err(StatusCode::ValidationFailed("El pr esta cerrado. No se acepta modificaciones".to_string()));
+    }
+    
+    let head = body.get_field("head")?;
+    let validate = match validate_branch_changes(repo_name, src, &new_base, &head) {
+        Ok(v) => v,
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    };
+    if !validate {
+        return Err(StatusCode::ValidationFailed("No changes between branches".to_string()));
+    }
+    let pr_repo_folder_path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
+    let pr_map_path = format!("{}/{}", pr_repo_folder_path, PR_MAP_FILE);
+
+    let mut pr_map = read_pr_map(&pr_map_path)?;
+    let new_hash_key = generate_head_base_hash(&head, &new_base);
+    if pr_already_exists(&pr_map, &new_hash_key) {
+        return Err(StatusCode::ValidationFailed("The pull request already exists.".to_string()));
+    }
+    
+    // ELimino el pr
+    let old_base = match pr.get_base() {
+        Some(base) => base.to_string(),
+        None => return Err(StatusCode::InternalError("No base branch en el pr".to_string())),
+    };
+    let old_hash_key = generate_head_base_hash(&head, &old_base);
+    match delete_pr_map(&mut pr_map, &pr_map_path, &old_hash_key){
+        Ok(_) => {},
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    };
+
+    // Actualizo el pr
+    let id = match pr.get_id(){
+        Some(id) => id,
+        None => return Err(StatusCode::InternalError("No id en el pr".to_string())),
+    };
+    pr.change_base(&new_base);
+    match update_pr_map(&mut pr_map, &pr_map_path, new_hash_key, id) {
+        Ok(_) => {},
+        Err(e) => return Err(StatusCode::InternalError(e.to_string())),
+    };
+    Ok(())
 }
 
 /// Agrego los atributos "mergeable", "changed_files" "commits" al cuerpo del PullRequest
