@@ -747,7 +747,7 @@ mod tests {
         git_add(directory, "testfile.rs").expect("Error al ejecutar git add");
 
         let result_after_add = git_status(directory);
-        let result_after = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\tnew file: \tmain.rs\n\nChanges to be committed:\n  (use \"git reset HEAD <file>...\" to unstage)\n\n\tmodified:\t./test_status\\testfile.rs\n";
+        let result_after = "On branch master\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\n\tnew file: \tmain.rs\n\nChanges to be committed:\n  (use \"git reset HEAD <file>...\" to unstage)\n\n\tmodified:\t./test_status/testfile.rs\n";
         assert_eq!(result_after_add, Ok(result_after.to_string()));
 
         let test_commit1 = Commit::new(

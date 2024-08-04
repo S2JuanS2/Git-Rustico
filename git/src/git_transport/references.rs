@@ -869,6 +869,6 @@ mod tests {
 
         fs::remove_dir_all(directory).expect("Falló al remover los directorios");
 
-        assert_eq!(objects.len(), 5)
+        assert_eq!(objects.len(), 7)
     }
 }

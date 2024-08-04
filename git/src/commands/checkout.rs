@@ -267,6 +267,6 @@ mod tests {
         fs::remove_dir_all(directory).expect("Falló al remover el directorio temporal");
 
         assert!(result.is_ok());
-        assert_eq!(head_actualizado, "ref: /refs/heads/test_branch_switch2\n")
+        assert_eq!(head_actualizado, "ref: refs/heads/test_branch_switch2\n")
     }
 }
