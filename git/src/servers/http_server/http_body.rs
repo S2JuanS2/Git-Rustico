@@ -242,13 +242,15 @@ impl HttpBody {
         let content_type_and_body = match self {
             HttpBody::Json(json) => (APPLICATION_JSON.to_string(), json.to_string()),
             HttpBody::Xml(xml) => {
-                let map: HashMap<String, JsonValue> = serde_json::from_value(xml.clone()).unwrap();
+                let map: HashMap<String, JsonValue> = match serde_json::from_value(xml.clone()){
+                    Ok(map) => map,
+                    Err(_) => return Err(ServerError::Serialization("Error converting XML to JSON".to_string())),
+                };
                 let mut xml_str = String::new();
                 for (key, value) in map {
                     xml_str.push_str(&format!("<{}>{}</{}>", key, value, key));
                 };
                 (APPLICATION_XML.to_string(), xml_str)
-                // (APPLICATION_XML.to_string(), xml.unwrap())
             }
                 
             HttpBody::Yaml(yaml) => {
