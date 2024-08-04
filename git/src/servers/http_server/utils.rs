@@ -94,7 +94,7 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
 /// ```
 /// 
 pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, content_type: &str) -> Result<(), ServerError>{
-    let response = format!("{} {}{}", HTTP_VERSION, status_code.to_string(), CRLF);
+    let response = format!("{} {}{}", HTTP_VERSION, status_code, CRLF);
     let error = UtilError::UtilFromServer("Error sending response".to_string());
     match send_message(writer, &response, error)
     {
@@ -252,7 +252,7 @@ pub fn validate_branch_changes(repo_name: &str, base_path: &str, base: &str, hea
     let directory = format!("{}/{}", base_path, repo_name);
     let result = get_commits_pr(&directory, base, head)?;
 
-    return Ok(!result.is_empty())
+    Ok(!result.is_empty())
 }
 
 /// Guarda el cuerpo de un pull request en un archivo con un número de PR único.

@@ -42,7 +42,7 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    pub fn new(content: &Vec<Vec<u8>>, src_repo: &str, my_capabilities: &Vec<String>) -> Result<GitServer, UtilError> {
+    pub fn new(content: &Vec<Vec<u8>>, src_repo: &str, my_capabilities: &[String]) -> Result<GitServer, UtilError> {
         let classified = AdvertisedRefLine::classify_vec(content)?;
         GitServer::from_classified(classified, src_repo, my_capabilities)
     }

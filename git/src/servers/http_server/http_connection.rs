@@ -37,7 +37,7 @@ pub fn handle_client_http(
         None => APPLICATION_SERVER.to_string(),
     };
     
-    let message = format!("Response sent to client with status code: {}", status_code.to_string());
+    let message = format!("Response sent to client with status code: {}", status_code);
     log_message_with_signature(tx, &signature, &message);
 
     send_response_http(stream, &status_code, &content_type)?;
@@ -68,7 +68,7 @@ pub fn _handle_client_http(
     stream: &mut TcpStream,
     root_directory: String,
     tx: &Arc<Mutex<Sender<String>>>,
-    signature: &String,
+    signature: &str,
 ) -> (Option<HttpRequest>, StatusCode) {
     // Creo la solicitud HTTP
     let request = match HttpRequest::new_from_reader(stream) {

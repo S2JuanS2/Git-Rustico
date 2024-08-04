@@ -250,8 +250,9 @@ impl HttpBody {
                     .map_err(|e| ServerError::Serialization(e.to_string()))?,
                 HttpBody::Yaml(yaml) => {
                     // Convertir YAML a JSON primero, luego a XML
-                    let json_value = serde_json::from_str(&serde_json::to_string(yaml)
-                        .map_err(|e| ServerError::Serialization(e.to_string()))?)
+                    let json_string = serde_json::to_string(yaml)
+                    .map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let json_value: serde_json::Value = serde_json::from_str(&json_string)
                         .map_err(|e| ServerError::Serialization(e.to_string()))?;
                     xml_to_string(&json_value)
                         .map_err(|e| ServerError::Serialization(e.to_string()))?
@@ -263,8 +264,9 @@ impl HttpBody {
                     .map_err(|e| ServerError::Serialization(e.to_string()))?,
                 HttpBody::Xml(xml) => {
                     // Convertir XML a JSON primero, luego a YAML
-                    let json_value = serde_json::from_str(&xml_to_string(xml)
-                        .map_err(|e| ServerError::Serialization(e.to_string()))?)
+                    let json_string = xml_to_string(xml)
+                    .map_err(|e| ServerError::Serialization(e.to_string()))?;
+                    let json_value: serde_json::Value = serde_json::from_str(&json_string)
                         .map_err(|e| ServerError::Serialization(e.to_string()))?;
                     serde_yaml::to_string(&json_value)
                         .map_err(|e| ServerError::Serialization(e.to_string()))?

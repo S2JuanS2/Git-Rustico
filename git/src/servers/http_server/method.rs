@@ -1,5 +1,6 @@
 use crate::servers::errors::ServerError;
 use std::sync::{mpsc::Sender, Arc, Mutex};
+use std::fmt;
 
 use super::{features_pr::{create_pull_requests, delete_pull_request, get_pull_request, list_commits, list_pull_request, merge_pull_request, modify_pull_request}, http_body::HttpBody, status_code::StatusCode};
 
@@ -15,28 +16,6 @@ pub enum Method {
 }
 
 impl Method {
-    /// Convierte el método en su representación de cadena.
-    ///
-    /// # Returns
-    ///
-    /// Retorna una cadena que representa el método HTTP.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use git::servers::http_server::method::Method;
-    /// let method = Method::Get;
-    /// assert_eq!(method.to_string(), "GET");
-    /// ```
-    pub fn to_string(&self) -> String {
-        match self {
-            Method::Get => "GET".to_string(),
-            Method::Post => "POST".to_string(),
-            Method::Put => "PUT".to_string(),
-            Method::Delete => "DELETE".to_string(),
-            Method::Patch => "PATCH".to_string(),
-        }
-    }
 
     /// Crea un método HTTP a partir de su representación en cadena.
     ///
@@ -196,6 +175,19 @@ impl Method {
                 Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
         }
+    }
+}
+
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Method::Get => "GET",
+            Method::Post => "POST",
+            Method::Put => "PUT",
+            Method::Delete => "DELETE",
+            Method::Patch => "PATCH",
+        };
+        write!(f, "{}", s)
     }
 }
 

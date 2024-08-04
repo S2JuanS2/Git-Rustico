@@ -103,7 +103,7 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
     let pr_map_path = format!("{}/{}", pr_repo_folder_path, PR_MAP_FILE);
     let pr_map = read_pr_map(&pr_map_path)?;
 
-    if pr_map.len() == 0 {
+    if pr_map.is_empty() {
         let response = format!("No open pull request in {}", repo_name);
         return Ok(StatusCode::InternalError(response));
     }

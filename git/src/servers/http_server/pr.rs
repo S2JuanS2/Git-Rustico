@@ -39,7 +39,7 @@ impl Default for CommitsPr{
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct PullRequest {
     pub id: Option<usize>,
     pub owner: Option<String>,
@@ -190,24 +190,5 @@ impl PullRequest {
 
     pub fn set_number(&mut self, number: usize) {
         self.id = Some(number);
-    }
-}
-
-impl Default for PullRequest {
-    fn default() -> Self {
-        PullRequest {
-            id: None,
-            owner: None,
-            repo: None,
-            title: None,
-            body: None,
-            head: None,
-            base: None,
-            state: None,
-            mergeable: None,
-            changed_files: None,
-            commits: None,
-            amount_commits: None,
-        }
     }
 }
