@@ -121,7 +121,6 @@ fn commits_to_string(commit: &CommitsPr, content_type: &str) -> String {
     let message = commit.message.clone();
     let date = commit.date.clone();
 
-    println!("author_email: {}", author_email);
     match content_type {
         APPLICATION_JSON => {
             result.push_str(&format!("{{\t\"sha_1\": \"{}\",\n\t\"tree_hash\": \"{}\",\n\t\"parent\": \"{}\",\n\t\"author_name\": \"{}\",\n\t\"author_email\": {},\n\t\"committer_name\": \"{}\",\n\t\"committer_email\": {},\n\t\"message\": \"{}\",\n\t\"date\": \"{}\"}}", sha_1, tree_hash, parent, author_name, author_email, committer_name, committer_email, message, date));

@@ -55,7 +55,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx:
     let mut pr = PullRequest::from_http_body(body)?;
 
     pr.change_state(OPEN);
-    add_attributes(&directory, body.clone(), &mut pr, next_pr)?;
+    add_attributes(&directory, &body, &mut pr, next_pr)?;
 
     let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
     
@@ -114,18 +114,11 @@ pub fn list_pull_request(repo_name: &str, src: &String, _tx: &Arc<Mutex<Sender<S
         let body = HttpBody::create_from_file(APPLICATION_SERVER, &pr_path)?;
         let mut pr;
         pr = PullRequest::from_http_body(&body)?;
-        add_attributes(&directory, body.clone(), &mut pr, *value)?;
+        add_attributes(&directory, &body, &mut pr, *value)?;
         if pr.is_open() {
             pr_list.push(pr);
         }
     }
-    // let json_str = match serde_json::to_string(&pr_list) {
-    //     Ok(s) => s,
-    //     Err(_) => {
-    //         return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
-    //     }
-    // };
-    // let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
     Ok(StatusCode::Ok(Some(Model::ListPullRequest(pr_list))))
 }
 
@@ -162,7 +155,7 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
     let commits = body.get_array_field("commits")?;
     let files = body.get_array_field("changed_files")?;
     
-    if let Err(e) = update_pr_attributes(&directory, body, &mut pr, pull_number) {
+    if let Err(e) = update_pr_attributes(&directory, &body, &mut pr, pull_number) {
             return Ok(e);
     }
     if !pr.is_open() {
@@ -170,13 +163,6 @@ pub fn get_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &
         pr.set_amount_commits(commits.len());
         pr.set_changed_files(files);
     }
-    // let json_str = match serde_json::to_string(&pr) {
-    //     Ok(s) => s,
-    //     Err(_) => {
-    //         return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
-    //     }
-    // };
-    // let pr_list_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
     Ok(StatusCode::Ok(Some(Model::ListPullRequest(Vec::from([pr])))))
 }
 
@@ -210,14 +196,6 @@ pub fn list_commits(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<
     if body.get_field("state")? != OPEN {
         commits = build_commits(&directory, body.get_array_field("commits")?)?;
     }
-    // let json_str = match serde_json::to_string(&commits) {
-    //     Ok(s) => s,
-    //     Err(_) => {
-    //         return Ok(StatusCode::InternalError("Serialize error JSON".to_string()));
-    //     }
-    // };
-    // let commit_body = HttpBody::parse(APPLICATION_SERVER, &json_str)?;
-    
     Ok(StatusCode::Ok(Some(Model::ListCommits(commits))))
 }
 
@@ -258,7 +236,7 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
         return Ok(StatusCode::Conflict);
     }
     let mut pr = PullRequest::from_http_body(&body)?;
-    if let Err(e) = update_pr_attributes(&directory, body, &mut pr, pull_number) {
+    if let Err(e) = update_pr_attributes(&directory, &body, &mut pr, pull_number) {
         return Ok(e);
     }
     merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
@@ -299,10 +277,10 @@ fn extract_pr_fields(body: &HttpBody) -> Result<(String, String, String, String)
 /// - `body`: Cuerpo de la solicitud de extracción.
 /// - `pr`: Solicitud de extracción a actualizar.
 /// - `pull_number`: Número de la solicitud de extracción.
-fn update_pr_attributes(directory: &str, body: HttpBody, pr: &mut PullRequest, pull_number: &str) -> Result<(), StatusCode> {
+fn update_pr_attributes(directory: &str, body: &HttpBody, pr: &mut PullRequest, pull_number: &str) -> Result<(), StatusCode> {
     match pull_number.parse::<usize>() {
         Ok(value) => {
-            add_attributes(directory, body, pr, value).map_err(|_| StatusCode::InternalError("Failed to add attributes".to_string()))
+            add_attributes(directory, &body, pr, value).map_err(|_| StatusCode::InternalError("Failed to add attributes".to_string()))
         }
         Err(_) => Err(StatusCode::InternalError("Invalid pull request number".to_string())),
     }
@@ -327,7 +305,7 @@ pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, 
     let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
     
     let directory = format!("{}/{}", src, repo_name);
-    add_attributes(&directory, body.clone(), &mut pr, n_pull_number)?;
+    add_attributes(&directory, &body, &mut pr, n_pull_number)?;
     let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
 
     let file_path = get_pull_request_file_path(repo_name, pull_number, src);
@@ -352,15 +330,19 @@ pub fn modify_pull_request(body: &HttpBody, repo_name: &str, pull_number: &str, 
 /// - `Err(ServerError)`: Si ocurre un error al leer el archivo de la solicitud de extracción o al actualizar el mapa de solicitudes.
 /// 
 pub fn delete_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    let directory = format!("{}/{}", src, repo_name);
     let mut pr = match read_and_validate_pull_request(repo_name, pull_number, src) {
         Ok(pr) => pr,
         Err(e) => return Ok(e),
     };
     
     pr.close();
-
-    let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
     
+    let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
+    if let Err(e) = update_pr_attributes(&directory, &body, &mut pr, pull_number) {
+        return Ok(e);
+    }
+    let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
     let path = format!("{}/{}/{}", src, PR_FOLDER, repo_name);
     match delete_pr_in_map(&body, &path) {
         Ok(_) => {},
@@ -450,7 +432,7 @@ pub fn change_base_in_pr(repo_name: &str, pr: &mut PullRequest, src: &String, bo
 /// 
 /// # Retornos
 /// - `Err(ServerError)`: Si ocurre un error al leer el archivo de la solicitud de extracción o al actualizar el mapa de solicitudes.
-fn add_attributes(directory: &str, body: HttpBody, pr: &mut PullRequest, pull_number: usize) -> Result<(), ServerError>{
+fn add_attributes(directory: &str, body: &HttpBody, pr: &mut PullRequest, pull_number: usize) -> Result<(), ServerError>{
 
     let mergeable = is_mergeable(directory, &body.get_field("base")?, &body.get_field("head")?)?;
     pr.change_mergeable(&mergeable.to_string());
