@@ -4,7 +4,6 @@ use std::fmt;
 
 use super::{features_pr::{create_pull_requests, delete_pull_request, get_pull_request, list_commits, list_pull_request, merge_pull_request, modify_pull_request}, http_body::HttpBody, status_code::StatusCode};
 
-
 /// Enumera los posibles métodos HTTP que pueden ser utilizados en una solicitud.
 #[derive(Debug, PartialEq)]
 pub enum Method {
@@ -93,7 +92,7 @@ impl Method {
         }
     }
     
-    /// Maneja una solicitud HTTP POST.
+        /// Maneja una solicitud HTTP POST.
     ///
     /// # Parámetros
     /// 
@@ -109,6 +108,10 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
+                let _tx_lock = match tx.lock() {
+                    Ok(lock) => lock,
+                    Err(_) => return Err(ServerError::BadRequest("Failed lock".to_string())),
+                };
                 create_pull_requests(http_body, repo_name, src, tx)
             }
             _ => {
@@ -133,6 +136,10 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number, "merge"] => {
+                let _tx_lock = match tx.lock() {
+                    Ok(lock) => lock,
+                    Err(_) => return Err(ServerError::BadRequest("Failed lock".to_string())),
+                };
                 merge_pull_request(repo_name, pull_number, src, tx)
             },
             _ => {
@@ -157,6 +164,10 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
+                let _tx_lock = match tx.lock() {
+                    Ok(lock) => lock,
+                    Err(_) => return Err(ServerError::BadRequest("Failed lock".to_string())),
+                };
                 modify_pull_request(http_body, repo_name, pull_number, src, tx)
             },
             _ => {
@@ -169,6 +180,10 @@ impl Method {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
+                let _tx_lock = match tx.lock() {
+                    Ok(lock) => lock,
+                    Err(_) => return Err(ServerError::BadRequest("Failed lock".to_string())),
+                };
                 delete_pull_request(repo_name, pull_number, src, tx)
             },
             _ => {
