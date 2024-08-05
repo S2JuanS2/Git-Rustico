@@ -91,7 +91,7 @@ fn pull_request_to_string(pr: &PullRequest, content_type: &str) -> String {
                 id,
                 owner,
                 title,
-                body.replace("\n", "\n  "), // Indentar las líneas del cuerpo
+                body.replace('\n', "\n  "), // Indentar las líneas del cuerpo
                 state,
                 base,
                 head,
@@ -164,19 +164,19 @@ fn commits_to_string(commit: &CommitsPr, content_type: &str) -> String {
 
 fn convert_vector_in_string(vec: Vec<String>) -> String {
     let mut result = String::new();
-    result.push_str("[");
+    result.push('[');
     for (i, item) in vec.iter().enumerate() {
         result.push_str(format!("\"{}\"", item).as_str());
         if i < vec.len() - 1 {
             result.push_str(", ");
         }
     }
-    result.push_str("]");
+    result.push(']');
     result
 }
 
 
-fn list_pull_request_to_string(prs: &Vec<PullRequest>, content_type: &str) -> String {
+fn list_pull_request_to_string(prs: &[PullRequest], content_type: &str) -> String {
     let mut result = String::new();
     match content_type {
         APPLICATION_JSON => {
@@ -207,7 +207,7 @@ fn list_pull_request_to_string(prs: &Vec<PullRequest>, content_type: &str) -> St
     result
 }
 
-fn list_commits_to_string(commits: &Vec<CommitsPr>, content_type: &str) -> String {
+fn list_commits_to_string(commits: &[CommitsPr], content_type: &str) -> String {
     let mut result = String::new();
     match content_type {
         APPLICATION_JSON => {
@@ -258,7 +258,7 @@ fn message_to_string(message: &str, content_type: &str) -> String {
 
 fn escape_xml(input: &str) -> String {
     input
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
