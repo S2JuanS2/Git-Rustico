@@ -1,5 +1,5 @@
 use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
-use crate::{consts::{APPLICATION_JSON, APPLICATION_SERVER, CONTENT_LENGTH, CONTENT_TYPE, HTPP_SIGNATURE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
+use crate::{consts::{APPLICATION_JSON, APPLICATION_SERVER, CONTENT_LENGTH, CONTENT_TYPE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
 use super::{http_body::HttpBody, method::Method, status_code::StatusCode, utils::read_request};
 
 /// Representa una solicitud HTTP.
@@ -69,10 +69,10 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, _signature: &str) -> Result<StatusCode, ServerError> {
+    pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, signature: &str) -> Result<StatusCode, ServerError> {
         // Manejar la solicitud HTTP        
         let message = format!("{} request to path: {}", self.method, self.path);
-        log_message_with_signature(tx, HTPP_SIGNATURE, &message);
+        log_message_with_signature(tx, signature, &message);
 
         let method = match Method::create_method(&self.method) {
             Ok(method) => method,

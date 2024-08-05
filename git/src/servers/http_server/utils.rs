@@ -110,6 +110,7 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, cont
         | StatusCode::InternalError(message)
         | StatusCode::ResourceNotFound(message)
         | StatusCode::Forbidden(message)
+        | StatusCode::Conflict(message)
         | StatusCode::BadRequest(message) => {
             // let body = HttpBody::from_string(content_type, message, MESSAGE)?;
             let body = Model::Message(message.to_string());

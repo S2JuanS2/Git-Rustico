@@ -239,8 +239,12 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
     }
     let result_merge_pr = merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
     if result_merge_pr.contains("Conflict") {
-        // devolver conflicto ?
-        return Ok(StatusCode::Conflict);
+        let lines = result_merge_pr.split('\n').collect::<Vec<&str>>();
+        match lines.len() {
+            0 => return Ok(StatusCode::Conflict("".to_string())),
+            1 => return Ok(StatusCode::Conflict(lines[0].to_string())),
+            _ => return Ok(StatusCode::Conflict(lines[lines.len()-2].to_string())),
+        }
     }
 
     pr.change_state("closed");
