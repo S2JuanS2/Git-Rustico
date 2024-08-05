@@ -674,26 +674,7 @@ impl GitConfig {
 ///
 /// El archivo de configuración debe tener secciones entre corchetes y atributos en formato clave=valor.
 /// Las secciones actúan como claves en el HashMap externo, y los atributos como claves en los HashMap internos.
-///
-/// # Ejemplo
-///
-/// ```ignore
-/// [core]
-///     repositoryformatversion = 0
-///     filemode = true
-///     bare = false
-///     logallrefupdates = true
-/// [remote "origin"]
-///     url = git@github.com:Brubrux/Proyecto-AnInfo-.git
-///     fetch = +refs/heads/*:refs/remotes/origin/*
-/// [branch "main"]
-///     remote = origin
-///     merge = refs/heads/main
-/// [branch "6-feature-menu-principal-interfaz-del-juego"]
-///     remote = origin
-///     merge = refs/heads/6-feature-menu-principal-interfaz-del-juego
-/// ```
-///
+
 /// # Arguments
 ///
 /// * `path` - Ruta al archivo de configuración.

@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn commit_test() {
-        let directory = "./test_commit_repo";
+        let directory = "./test_commit_repo_push";
         git_init(directory).expect("Falló en el comando init");
 
         let file_path = format!("{}/{}", directory, "holamundo.txt");
