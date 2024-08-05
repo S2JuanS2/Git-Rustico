@@ -1,5 +1,6 @@
 use crate::commands::checkout::get_tree_hash;
-use crate::consts::{GIT_DIR, REFS_HEADS};
+use crate::commands::rm::remove_from_index;
+use crate::consts::{GIT_DIR, REFS_HEADS, PARENT_INITIAL, FILE, DIRECTORY};
 use crate::models::client::Client;
 use super::add::add_to_index;
 use super::checkout::extract_parent_hash;
@@ -10,6 +11,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use super::branch::{get_branch_current_hash, get_current_branch};
 use super::cat_file::git_cat_file;
+use std::io::{self, BufRead};
 
 #[derive(Eq, Hash, PartialEq, Clone, Debug)]
 struct FileEntry {
@@ -112,6 +114,11 @@ pub fn perform_merge(current_branch: &str, merge_branch: &str, directory: &str, 
         }
         result_merge.push_str("Merge made by the 'recursive' strategy.");
     }
+
+    if is_head{
+        update_work_directory(directory, &branch_to_merge_hash, &mut result_merge)?;
+    }
+
     Ok((result_merge, strategy))
 }
 
@@ -143,6 +150,95 @@ pub fn merge_pr(directory: &str, base_branch: &str, head_branch: &str, owner: &s
 
     Ok(result_merge)
 }
+
+/// Actualiza el repositorio en caso de recibir un commit con archivos eliminados
+/// 
+/// #Parametros:
+/// 'directory': path del repositorio
+/// 'branch_to_merge': nombre de la branch a mergear
+fn update_work_directory(directory: &str, branch_to_merge_hash: &str, result_merge: &mut String) -> Result<(), CommandsError>{
+    let content_commit = git_cat_file(directory, &branch_to_merge_hash, "-p")?;
+    let tree_hash = get_tree_hash(&content_commit).unwrap_or(PARENT_INITIAL);
+
+    let parent_hash = extract_parent_hash(&content_commit).unwrap_or(PARENT_INITIAL);
+    let parent_content = git_cat_file(directory, &parent_hash, "-p")?;
+    let parent_tree_hash = get_tree_hash(&parent_content).unwrap_or(PARENT_INITIAL);
+
+    let mut vec_objects_parent_hash: Vec<String> = Vec::new();
+    save_hash_objects(directory, &mut vec_objects_parent_hash, parent_tree_hash.to_string())?;
+
+    let mut vec_objects_hash: Vec<String> = Vec::new();
+    save_hash_objects(directory, &mut vec_objects_hash, tree_hash.to_string())?;
+    let index_path = format!("{}/.git/index", directory);
+    let index_file = open_file(&index_path.as_str())?;
+    let reader_index = io::BufReader::new(index_file);
+
+    for line in reader_index.lines(){
+        if let Ok(line) = line{
+            let parts: Vec<&str> = line.split_whitespace().collect();
+
+            if parts.len() == 3{
+                let path = parts[0];
+                let hash = parts[2];
+                if vec_objects_hash.contains(&hash.to_string()){
+                    // println!("Persiste");
+                }else{
+                    let lines_result_conflict: Vec<&str> = result_merge.lines().collect();
+                    if lines_result_conflict.len() >= 4{
+                        let fourth_line = lines_result_conflict[3];
+                        let mut chars = fourth_line.char_indices().filter(|&(_, c)| c == '/');
+                        if let (Some(_first_pos), Some(second_pos)) = (chars.next(), chars.next()){
+                            let result = &fourth_line[(&second_pos.0 + '/'.len_utf8())..];
+                            if path == result{
+                                // println!("Persiste, conflicto");
+                            }else{
+                                // println!("No persiste");
+                                remove_from_index(directory, path, hash)?;
+                            }
+                        }
+                    }else{
+                        if !vec_objects_parent_hash.contains(&hash.to_string()) {
+                            // println!("Persiste");
+                        } else {
+                            // println!("No persiste");
+                            remove_from_index(directory, path, hash)?; 
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Guarda en un vector recibido por parámetro los tree y blobs de un árbol principal
+/// 
+/// #Parametros:
+/// 'directory': Path del repositorio
+/// 'vec': Vector donde se guardaran los objetos
+/// 'tree_hash': arbol principal donde se leeran los objetos.
+fn save_hash_objects(directory: &str, vec: &mut Vec<String>, tree_hash: String) -> Result<(), CommandsError> {
+
+    let tree = git_cat_file(directory, &tree_hash, "-p")?;
+    for line in tree.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let file_mode;
+        if parts[0] == FILE || parts[0] == DIRECTORY {
+            file_mode = parts[0];
+        }else{
+            file_mode = parts[1];
+        }
+        let hash = parts[2];
+        if file_mode == FILE {
+            vec.push(hash.to_string());
+        } else if file_mode == DIRECTORY {
+            vec.push(hash.to_string());
+            save_hash_objects(directory, vec, hash.to_string())?;
+        }
+    }
+    Ok(())
+}
+
 
 /// Obtiene el resultado en caso de que haya un conflicto.
 /// ###Parametros:
