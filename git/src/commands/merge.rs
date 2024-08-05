@@ -245,7 +245,10 @@ fn update_logs_refs(directory: &str, strategy: String, current_branch: &str, mer
 /// 'client': cliente que realizó el merge
 fn update_refs(directory: &str, strategy: String, current_branch: &str, merge_branch: &str, current_branch_commit: &str, merge_branch_commit: &str, client: Client) -> Result<(), CommandsError> {
     let current_commit_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REFS_HEADS, current_branch);
-    let merge_commit_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REFS_HEADS, merge_branch);
+    let mut merge_commit_path = format!("{}/{}/{}/{}", directory, GIT_DIR, REFS_HEADS, merge_branch);
+    if merge_branch.contains('/'){
+        merge_commit_path = format!("{}/{}/{}", directory, GIT_DIR, merge_branch);
+    }
     let merge_commit_file = open_file(&merge_commit_path)?;
     let merge_commit_content = read_file_string(merge_commit_file)?;
 

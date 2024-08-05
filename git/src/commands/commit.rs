@@ -110,8 +110,10 @@ pub fn get_commits(directory: &str, branch: &str) -> Result<Vec<String>, Command
 
     let mut commits: Vec<String> = Vec::new();
     let git_dir = format!("{}/{}", directory, GIT_DIR);
-    let branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, branch);
-
+    let mut branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, branch);
+    if branch.contains('/'){
+        branch_current_path = format!("{}/{}", git_dir, branch);
+    }
     let mut current_commit = String::new();
     if fs::metadata(&branch_current_path).is_ok() {
         let file = open_file(&branch_current_path)?;
