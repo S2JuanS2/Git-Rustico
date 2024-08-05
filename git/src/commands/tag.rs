@@ -114,13 +114,12 @@ pub fn git_tag_create(
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, TAG_DIR, current_branch);
 
-    let commit_hash;
-    if fs::metadata(&branch_current_path).is_ok() {
+    let commit_hash = if fs::metadata(&branch_current_path).is_ok() {
         let file = open_file(&branch_current_path)?;
-        commit_hash = read_file_string(file)?;
+        read_file_string(file)?
     } else {
         return Err(CommandsError::OpenFileError);
-    }
+    };
 
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
