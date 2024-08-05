@@ -1,5 +1,5 @@
-use crate::consts::*;
 use super::errors::CommandsError;
+use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::files::{create_file, open_file, read_file, read_file_string};
 use std::fs;
@@ -27,9 +27,7 @@ pub fn handle_branch(args: Vec<&str>, client: Client) -> Result<String, Commands
 /// Obtiene el hash parent del commit
 /// ###Parametros:
 /// 'commit': Commit a buscar el parent
-pub fn get_doble_parent_hashes(
-    commit: String,
-) -> String {
+pub fn get_doble_parent_hashes(commit: String) -> String {
     let mut hash_parent = PARENT_INITIAL;
     let mut x = 0;
     for line in commit.lines() {
@@ -48,9 +46,7 @@ pub fn get_doble_parent_hashes(
 /// Obtiene el hash parent del commit
 /// ###Parametros:
 /// 'commit': Commit a buscar el parent
-pub fn get_parent_hashes(
-    commit: String,
-) -> String {
+pub fn get_parent_hashes(commit: String) -> String {
     let mut hash_parent = PARENT_INITIAL;
     for line in commit.lines() {
         if line.starts_with("parent ") {
@@ -66,9 +62,14 @@ pub fn get_parent_hashes(
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch': nombre de la branch a obtener el hash.
-pub fn get_branch_remote_current_hash(directory: &str, branch: String) -> Result<String, CommandsError>{
-
-    let dir_branch = format!("{}/{}/{}/remotes/{}/{}", directory, GIT_DIR, REFS, branch, branch);
+pub fn get_branch_remote_current_hash(
+    directory: &str,
+    branch: String,
+) -> Result<String, CommandsError> {
+    let dir_branch = format!(
+        "{}/{}/{}/remotes/{}/{}",
+        directory, GIT_DIR, REFS, branch, branch
+    );
     let file = open_file(&dir_branch)?;
     let hash = read_file_string(file)?;
 
@@ -79,8 +80,7 @@ pub fn get_branch_remote_current_hash(directory: &str, branch: String) -> Result
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch': nombre de la branch a obtener el hash.
-pub fn get_branch_current_hash(directory: &str, branch: String) -> Result<String, CommandsError>{
-
+pub fn get_branch_current_hash(directory: &str, branch: String) -> Result<String, CommandsError> {
     let dir_branch = format!("{}/{}/{}/heads/{}", directory, GIT_DIR, REFS, branch);
     let file = open_file(&dir_branch)?;
     let hash = read_file_string(file)?;
@@ -150,7 +150,11 @@ pub fn git_branch_list(directory: &str) -> Result<String, CommandsError> {
 /// 'directory': directorio del repositorio local.
 /// 'current_branch': Nombre de la branch actual.
 /// 'branch_name': Nombre de la branch a crear.
-pub fn copy_log(directory: &str, current_branch: &str, branch_name: &str) -> Result<(), CommandsError> {
+pub fn copy_log(
+    directory: &str,
+    current_branch: &str,
+    branch_name: &str,
+) -> Result<(), CommandsError> {
     let current_branch_log_path = format!(
         "{}/{}/logs/refs/heads/{}",
         directory, GIT_DIR, current_branch
@@ -393,8 +397,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parent(){
-
+    fn test_parent() {
         let commit = "tree 4abc6b1e60a965f4dfefbc673322f1c6e98c8b08\nparent ebc52673798d1baf34d9c8b13022c745bac28880\nauthor S2JuanS2 <juansdelrio@hotmail.com> 1701632634 -0300\ncommitter S2JuanS2 <juansdelrio@hotmail.com> 1701632634 -0300\n\ncarpeta\n";
 
         let result = get_parent_hashes(commit.to_string());

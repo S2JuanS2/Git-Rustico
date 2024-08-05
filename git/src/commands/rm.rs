@@ -1,5 +1,5 @@
-use crate::consts::*;
 use super::errors::CommandsError;
+use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
 use crate::util::formats::hash_generate;
@@ -68,7 +68,7 @@ pub fn remove_from_index_with_filename(
         if lines[index].starts_with(file_name) {
             lines.remove(index);
             let file_path = format!("{}/{}", directory, file_name);
-            if fs::metadata(&file_path).is_ok(){
+            if fs::metadata(&file_path).is_ok() {
                 // Se remueve del working directory
                 match fs::remove_file(&file_path) {
                     Ok(_) => {}
@@ -106,7 +106,7 @@ pub fn remove_from_index(
         if lines[index].ends_with(hash_file) {
             lines.remove(index);
             let file_path = format!("{}/{}", directory, file_name);
-            if fs::metadata(&file_path).is_ok(){
+            if fs::metadata(&file_path).is_ok() {
                 // Se remueve del working directory
                 match fs::remove_file(&file_path) {
                     Ok(_) => {}

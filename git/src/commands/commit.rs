@@ -1,14 +1,14 @@
-use crate::commands::cat_file::git_cat_file;
-use crate::commands::branch::get_doble_parent_hashes;
-use crate::consts::*;
 use super::errors::CommandsError;
 use super::log::insert_line_between_lines;
+use crate::commands::branch::get_doble_parent_hashes;
+use crate::commands::cat_file::git_cat_file;
+use crate::commands::checkout::get_tree_hash;
+use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::files::*;
 use crate::util::index::{open_index, recovery_index};
 use crate::util::objects::builder_object_commit;
-use crate::commands::checkout::get_tree_hash;
-use chrono::{DateTime, Local, FixedOffset, Utc};
+use chrono::{DateTime, FixedOffset, Local, Utc};
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -89,7 +89,12 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, Commands
     }
     let directory = client.get_directory_path();
 
-    let message = args.iter().skip(1).cloned().collect::<Vec<&str>>().join(" ");
+    let message = args
+        .iter()
+        .skip(1)
+        .cloned()
+        .collect::<Vec<&str>>()
+        .join(" ");
 
     let commit = Commit::new(
         message.to_string(),
@@ -107,11 +112,10 @@ pub fn handle_commit(args: Vec<&str>, client: Client) -> Result<String, Commands
 /// 'directory': Directorio del git
 /// 'branch': nombre de la rama
 pub fn get_commits(directory: &str, branch: &str) -> Result<Vec<String>, CommandsError> {
-
     let mut commits: Vec<String> = Vec::new();
     let git_dir = format!("{}/{}", directory, GIT_DIR);
     let mut branch_current_path = format!("{}/{}{}", git_dir, BRANCH_DIR, branch);
-    if branch.contains('/'){
+    if branch.contains('/') {
         branch_current_path = format!("{}/{}", git_dir, branch);
     }
     let mut current_commit = String::new();
@@ -123,37 +127,40 @@ pub fn get_commits(directory: &str, branch: &str) -> Result<Vec<String>, Command
     recovery_commits(&mut commits, directory, current_commit)?;
 
     Ok(commits)
-
 }
 
 /// Lee los parent commits y los guarda en un vector recibido por parámetro
-/// 
+///
 /// # Parametros
-/// 
+///
 /// - 'commits': Vector a llenar
 /// - 'directory': Directorio del git
 /// - 'current_commit': ultimo hash commit
-fn recovery_commits(commits: &mut Vec<String>, directory: &str, current_commit: String) -> Result<(), CommandsError>{
+fn recovery_commits(
+    commits: &mut Vec<String>,
+    directory: &str,
+    current_commit: String,
+) -> Result<(), CommandsError> {
     let content_commit = git_cat_file(directory, &current_commit, "-p")?;
-    if content_commit.lines().count() == 7{
+    if content_commit.lines().count() == 7 {
         let mut parent_hash = get_doble_parent_hashes(content_commit.clone());
-        if parent_hash != PARENT_INITIAL{
-            if !commits.contains(&parent_hash){
+        if parent_hash != PARENT_INITIAL {
+            if !commits.contains(&parent_hash) {
                 commits.push(parent_hash.clone());
             }
             recovery_commits(commits, directory, parent_hash)?;
         }
         parent_hash = get_parent_hashes(content_commit);
-        if parent_hash != PARENT_INITIAL{
-            if !commits.contains(&parent_hash){
+        if parent_hash != PARENT_INITIAL {
+            if !commits.contains(&parent_hash) {
                 commits.push(parent_hash.clone());
             }
             recovery_commits(commits, directory, parent_hash)?;
         }
-    }else{
+    } else {
         let parent_hash = get_parent_hashes(content_commit);
-        if parent_hash != PARENT_INITIAL{
-            if !commits.contains(&parent_hash){
+        if parent_hash != PARENT_INITIAL {
+            if !commits.contains(&parent_hash) {
                 commits.push(parent_hash.clone());
             }
             recovery_commits(commits, directory, parent_hash)?;
@@ -189,8 +196,9 @@ pub fn builder_commit_log(
     content: &str,
     hash_commit: &str,
     current_branch: &str,
-    path_log: &str
-) -> Result<(), CommandsError> {//logs/refs/heads
+    path_log: &str,
+) -> Result<(), CommandsError> {
+    //logs/refs/heads
     let logs_path = format!("{}/{}/{}", directory, GIT_DIR, path_log);
     if !Path::new(&logs_path).exists() {
         match fs::create_dir_all(logs_path.clone()) {
@@ -224,11 +232,10 @@ pub fn builder_commit_log(
 /// ###Parametros:
 /// 'commit': Estructura que contiene la información del commit
 fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) -> String {
-    
     let date: DateTime<Utc> = Utc::now();
     let timestamp = date.timestamp();
     let offset = FixedOffset::west_opt(3 * 3600).unwrap().to_string();
-    let offset_format: String = offset.chars().filter(|&c| c != ':').collect();  
+    let offset_format: String = offset.chars().filter(|&c| c != ':').collect();
     if parent_hash == PARENT_INITIAL {
         format!(
             "tree {}\nauthor {} <{}> {} {}\ncommitter {} <{}> {} {}\n\n{}\n",
@@ -243,7 +250,7 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
             offset_format,
             commit.get_message()
         )
-    }else{
+    } else {
         format!(
             "tree {}\nparent {}\nauthor {} <{}> {} {}\ncommitter {} <{}> {} {}\n\n{}\n",
             tree_hash,
@@ -261,12 +268,16 @@ fn commit_content_format(commit: &Commit, tree_hash: &str, parent_hash: &str) ->
     }
 }
 
-fn merge_commit_content_format(merge_commit: &Commit, tree_hash: &str, parent1_hash: &str, parent2_hash: &str) -> String {
-    
+fn merge_commit_content_format(
+    merge_commit: &Commit,
+    tree_hash: &str,
+    parent1_hash: &str,
+    parent2_hash: &str,
+) -> String {
     let date: DateTime<Utc> = Utc::now();
     let timestamp = date.timestamp();
     let offset = FixedOffset::west_opt(3 * 3600).unwrap().to_string();
-    let offset_format: String = offset.chars().filter(|&c| c != ':').collect();  
+    let offset_format: String = offset.chars().filter(|&c| c != ':').collect();
     format!(
         "tree {}\nparent {}\nparent {}\nauthor {} <{}> {} {}\ncommitter {} <{}> {} {}\n\n{}\n",
         tree_hash,
@@ -310,7 +321,7 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
     let tree_hash = recovery_index(&index_content, &git_dir)?;
     if parent_hash != PARENT_INITIAL {
         let content_commit = git_cat_file(directory, &parent_hash, "-p")?;
-        if let Some(hash_tree_commit) = get_tree_hash(&content_commit){
+        if let Some(hash_tree_commit) = get_tree_hash(&content_commit) {
             if tree_hash == hash_tree_commit {
                 return Ok("nothing to commit, working tree clean".to_string());
             }
@@ -318,15 +329,30 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
     }
     let mut commit_content = commit_content_format(&commit, &tree_hash, &parent_hash);
     let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
-    if commit_content.lines().count() == 5{
+    if commit_content.lines().count() == 5 {
         commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
     }
-    builder_commit_log(directory, &commit_content, &hash_commit, &current_branch, "logs/refs/heads")?;
+    builder_commit_log(
+        directory,
+        &commit_content,
+        &hash_commit,
+        &current_branch,
+        "logs/refs/heads",
+    )?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
-    create_or_replace_commit_into_branch(current_branch.clone(), branch_current_path, hash_commit.clone())?;
+    create_or_replace_commit_into_branch(
+        current_branch.clone(),
+        branch_current_path,
+        hash_commit.clone(),
+    )?;
 
-    let response = format!("[{} {}] {}", current_branch, &hash_commit.as_str()[..7], commit.get_message());
+    let response = format!(
+        "[{} {}] {}",
+        current_branch,
+        &hash_commit.as_str()[..7],
+        commit.get_message()
+    );
 
     Ok(response)
 }
@@ -337,7 +363,12 @@ pub fn git_commit(directory: &str, commit: Commit) -> Result<String, CommandsErr
 /// 'commit': Estructura que contiene la información del commit
 /// 'parent1_hash': Hash del primer parent
 /// 'parent2_hash': Hash del segundo parent
-pub fn merge_commit(directory: &str, commit: Commit, parent1_hash: &str, parent2_hash: &str) -> Result<String, CommandsError> {
+pub fn merge_commit(
+    directory: &str,
+    commit: Commit,
+    parent1_hash: &str,
+    parent2_hash: &str,
+) -> Result<String, CommandsError> {
     let git_dir = format!("{}/{}", directory, GIT_DIR);
     check_index_content(&git_dir)?;
 
@@ -346,14 +377,30 @@ pub fn merge_commit(directory: &str, commit: Commit, parent1_hash: &str, parent2
 
     let index_content = open_index(&git_dir)?;
     let tree_hash = recovery_index(&index_content, &git_dir)?;
-    let commit_content = merge_commit_content_format(&commit, &tree_hash, parent1_hash, parent2_hash);
+    let commit_content =
+        merge_commit_content_format(&commit, &tree_hash, parent1_hash, parent2_hash);
     let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
-    builder_commit_log(directory, &commit_content, &hash_commit, &current_branch, "logs/refs/heads")?;
+    builder_commit_log(
+        directory,
+        &commit_content,
+        &hash_commit,
+        &current_branch,
+        "logs/refs/heads",
+    )?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
-    create_or_replace_commit_into_branch(current_branch.clone(), branch_current_path, hash_commit.clone())?;
+    create_or_replace_commit_into_branch(
+        current_branch.clone(),
+        branch_current_path,
+        hash_commit.clone(),
+    )?;
 
-    let response = format!("[{} {}] {}", current_branch, &hash_commit.as_str()[..7], commit.get_message());
+    let response = format!(
+        "[{} {}] {}",
+        current_branch,
+        &hash_commit.as_str()[..7],
+        commit.get_message()
+    );
 
     Ok(response)
 }
@@ -363,7 +410,11 @@ pub fn merge_commit(directory: &str, commit: Commit, parent1_hash: &str, parent2
 /// 'directory': Directorio del git
 /// 'commit': Estructura que contiene la información del commit
 /// 'parent_hash': Hash del parent
-pub fn rebase_commit(directory: &str, commit: Commit, parent_hash: &str) -> Result<String, CommandsError> {
+pub fn rebase_commit(
+    directory: &str,
+    commit: Commit,
+    parent_hash: &str,
+) -> Result<String, CommandsError> {
     let git_dir = format!("{}/{}", directory, GIT_DIR);
     check_index_content(&git_dir)?;
 
@@ -375,12 +426,27 @@ pub fn rebase_commit(directory: &str, commit: Commit, parent_hash: &str) -> Resu
 
     let commit_content = commit_content_format(&commit, &tree_hash, parent_hash);
     let hash_commit = builder_object_commit(&commit_content, &git_dir)?;
-    builder_commit_log(directory, &commit_content, &hash_commit, &current_branch, "logs/refs/heads")?;
+    builder_commit_log(
+        directory,
+        &commit_content,
+        &hash_commit,
+        &current_branch,
+        "logs/refs/heads",
+    )?;
     builder_commit_msg_edit(directory, commit.get_message())?;
 
-    create_or_replace_commit_into_branch(current_branch.clone(), branch_current_path, hash_commit.clone())?;
+    create_or_replace_commit_into_branch(
+        current_branch.clone(),
+        branch_current_path,
+        hash_commit.clone(),
+    )?;
 
-    let response = format!("[{} {}] {}", current_branch, &hash_commit.as_str()[..7], commit.get_message());
+    let response = format!(
+        "[{} {}] {}",
+        current_branch,
+        &hash_commit.as_str()[..7],
+        commit.get_message()
+    );
 
     Ok(response)
 }

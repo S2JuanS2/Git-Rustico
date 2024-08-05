@@ -1,15 +1,14 @@
 use crate::commands::{
-    add::handle_add, branch::handle_branch, cat_file::handle_cat_file, 
-    check_ignore::handle_check_ignore, checkout::handle_checkout, 
-    clone::handle_clone, commit::handle_commit, errors::CommandsError, 
-    fetch::handle_fetch, hash_object::handle_hash_object, init::handle_init, 
-    log::handle_log, ls_files::handle_ls_files, ls_tree::handle_ls_tree, 
-    merge::handle_merge, pull::handle_pull, push::handle_push, 
-    rebase::handle_rebase, remote::handle_remote, rm::handle_rm, 
-    show_ref::handle_show_ref, status::handle_status, tag::handle_tag
+    add::handle_add, branch::handle_branch, cat_file::handle_cat_file,
+    check_ignore::handle_check_ignore, checkout::handle_checkout, clone::handle_clone,
+    commit::handle_commit, errors::CommandsError, fetch::handle_fetch,
+    hash_object::handle_hash_object, init::handle_init, log::handle_log, ls_files::handle_ls_files,
+    ls_tree::handle_ls_tree, merge::handle_merge, pull::handle_pull, push::handle_push,
+    rebase::handle_rebase, remote::handle_remote, rm::handle_rm, show_ref::handle_show_ref,
+    status::handle_status, tag::handle_tag,
 };
 
- use crate::errors::GitError;
+use crate::errors::GitError;
 use crate::models::client::Client;
 use crate::util::files::is_git_initialized;
 use crate::util::logger::write_client_log;
@@ -26,7 +25,10 @@ pub struct Controller {
 impl Controller {
     pub fn new(client: Client) -> Controller {
         let current_branch = "None".to_string();
-        Controller { client, current_branch }
+        Controller {
+            client,
+            current_branch,
+        }
     }
     pub fn send_command(&mut self, command: &str) -> Result<String, GitError> {
         match handle_command(command.to_string().clone(), &mut self.client) {
@@ -70,13 +72,13 @@ impl Controller {
     pub fn get_current_branch(&self) -> &str {
         &self.current_branch
     }
-    pub fn set_current_branch(&mut self) -> Result<(), CommandsError>{
+    pub fn set_current_branch(&mut self) -> Result<(), CommandsError> {
         let current_branch = get_current_branch(self.client.get_directory_path())?;
         self.current_branch = current_branch;
         Ok(())
     }
     pub fn set_branch_list(&self, label_branches: &gtk::Label) {
-        let branches = match git_branch_list_display(self.client.get_directory_path()){
+        let branches = match git_branch_list_display(self.client.get_directory_path()) {
             Ok(branches) => branches,
             Err(_) => return,
         };
@@ -106,8 +108,8 @@ fn handle_command(buffer: String, client: &mut Client) -> Result<String, GitErro
         return Err(GitError::NonGitCommandError);
     }
     let init = is_git_initialized(client.get_directory_path());
-    if !init.0 && commands[1] != "init" && commands[1] != "clone"{
-        return Err(GitError::NotAGitRepository)
+    if !init.0 && commands[1] != "init" && commands[1] != "clone" {
+        return Err(GitError::NotAGitRepository);
     }
 
     if commands[0] == "git" {

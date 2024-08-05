@@ -1,8 +1,7 @@
+use super::{http_body::HttpBody, utils::validate_branch_changes};
 use crate::consts::{APPLICATION_SERVER, OPEN};
 use crate::servers::errors::ServerError;
-use serde::{Serialize,Deserialize};
-use super::{http_body::HttpBody, utils::validate_branch_changes};
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CommitsPr {
@@ -17,9 +16,9 @@ pub struct CommitsPr {
     pub date: String,
 }
 
-impl CommitsPr{
-    pub fn new() -> Self{
-        Self{
+impl CommitsPr {
+    pub fn new() -> Self {
+        Self {
             sha_1: String::new(),
             tree_hash: String::new(),
             parent: String::new(),
@@ -33,8 +32,8 @@ impl CommitsPr{
     }
 }
 
-impl Default for CommitsPr{
-    fn default() -> Self{
+impl Default for CommitsPr {
+    fn default() -> Self {
         Self::new()
     }
 }
@@ -70,7 +69,10 @@ impl PullRequest {
     ///
     /// Retorna un `ServerError::HttpFieldNotFound` si no se encuentran los campos requeridos.
     pub fn from_http_body(body: &HttpBody) -> Result<Self, ServerError> {
-        let id = body.get_field("id").ok().and_then(|s| s.parse::<usize>().ok());
+        let id = body
+            .get_field("id")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok());
         let owner = body.get_field("owner").ok();
         let repo = body.get_field("repo").ok();
         let title = body.get_field("title").ok();
@@ -78,7 +80,7 @@ impl PullRequest {
         let base = body.get_field("base").ok();
         let state = body.get_field("state").ok();
         let body = body.get_field("body").ok();
-        
+
         Ok(PullRequest {
             id,
             owner,
@@ -135,17 +137,18 @@ impl PullRequest {
         let _title = http_body.get_field("title")?;
         let _body = http_body.get_field("body")?;
         let _state = OPEN.to_string();
-    
+
         let has_changes = validate_branch_changes(repo_name, base_path, &base, &head)?;
 
         if let Ok(repo) = http_body.get_field("repo") {
             if repo != repo_name {
                 return Err(ServerError::InvalidRequestNoChange(
-                    "The repository name does not match the repository name in the URL.".to_string(),
+                    "The repository name does not match the repository name in the URL."
+                        .to_string(),
                 ));
             }
         }
-    
+
         Ok(has_changes)
     }
 
@@ -156,13 +159,13 @@ impl PullRequest {
     pub fn change_mergeable(&mut self, mergeable: &str) {
         self.mergeable = Some(mergeable.to_string());
     }
-    pub fn set_changed_files(&mut self, files: Vec<String>){
+    pub fn set_changed_files(&mut self, files: Vec<String>) {
         self.changed_files = Some(files);
     }
-    pub fn set_amount_commits(&mut self, amount: usize){
+    pub fn set_amount_commits(&mut self, amount: usize) {
         self.amount_commits = Some(amount);
     }
-    pub fn set_commits(&mut self, commits: Vec<String>){
+    pub fn set_commits(&mut self, commits: Vec<String>) {
         self.commits = Some(commits);
     }
 
@@ -208,7 +211,7 @@ impl PullRequest {
         self.id
     }
     pub fn get_amount_commits(&self) -> usize {
-        match &self.amount_commits{
+        match &self.amount_commits {
             Some(a_c) => *a_c,
             None => 0,
         }

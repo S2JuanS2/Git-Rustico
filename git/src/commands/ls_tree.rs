@@ -1,5 +1,5 @@
 use super::errors::CommandsError;
-use crate::consts::{BLOB, TAG, COMMIT};
+use crate::consts::{BLOB, COMMIT, TAG};
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
 use std::fs;
@@ -28,8 +28,9 @@ pub fn git_ls_tree(directory: &str, tree_ish: &str) -> Result<String, CommandsEr
     if fs::metadata(&directory_tree).is_ok() {
         tree_hash = associated_commit(directory, &directory_tree)?;
     }
-    if git_cat_file(directory, &tree_hash, "-t")? == BLOB || 
-       git_cat_file(directory, &tree_hash, "-t")? == TAG{
+    if git_cat_file(directory, &tree_hash, "-t")? == BLOB
+        || git_cat_file(directory, &tree_hash, "-t")? == TAG
+    {
         return Err(CommandsError::InvalidTreeHashError);
     }
     if git_cat_file(directory, &tree_hash, "-t")? == COMMIT {

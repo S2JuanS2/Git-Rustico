@@ -1,7 +1,7 @@
-use crate::consts::{GIT_DIR, REFS_TAGS};
 use super::errors::CommandsError;
+use crate::consts::{GIT_DIR, REFS_TAGS};
 use crate::models::client::Client;
-use crate::util::files::{open_file, read_file_string, create_file, delete_file};
+use crate::util::files::{create_file, delete_file, open_file, read_file_string};
 use crate::util::objects::builder_object_tag;
 
 use super::branch::get_current_branch;
@@ -23,12 +23,12 @@ pub fn handle_tag(args: Vec<&str>, client: Client) -> Result<String, CommandsErr
     let directory = client.get_directory_path();
     if args.is_empty() {
         git_tag(client.get_directory_path())
-    }else if args.len() == 3 && args[0] == "-a" {
+    } else if args.len() == 3 && args[0] == "-a" {
         git_tag_create(directory, client.clone(), args[1], args[2])
-    }else if args.len() == 2 && args[0] == "-d" {
+    } else if args.len() == 2 && args[0] == "-d" {
         git_tag_delete(directory, args[1])
-    }else{
-        return Err(CommandsError::InvalidArgumentCountTagError)
+    } else {
+        return Err(CommandsError::InvalidArgumentCountTagError);
     }
 }
 
@@ -67,7 +67,6 @@ pub fn get_tags(directory: &str) -> Result<Vec<String>, CommandsError> {
 /// ###Parametros:
 /// 'directory': directory del repositorio que contiene la tag
 fn git_tag(directory: &str) -> Result<String, CommandsError> {
-
     let tags = get_tags(directory)?;
     let mut formatted_tags = String::new();
     for tag in tags {
@@ -83,7 +82,10 @@ fn git_tag(directory: &str) -> Result<String, CommandsError> {
 fn builder_tag_msg_edit(directory: &str, msg: &str) -> Result<(), CommandsError> {
     let commit_msg_path = format!("{}/{}/{}", directory, GIT_DIR, TAG_EDITMSG);
 
-    let format_content = format!("\n#\n# Write a message for tag:\n# {}\n# Lines starting with '#' will be ignored", msg);
+    let format_content = format!(
+        "\n#\n# Write a message for tag:\n# {}\n# Lines starting with '#' will be ignored",
+        msg
+    );
 
     create_file(&commit_msg_path, &format_content)?;
 
@@ -97,8 +99,12 @@ fn builder_tag_msg_edit(directory: &str, msg: &str) -> Result<(), CommandsError>
 /// 'client': Cliente que crea la tag.
 /// 'tag_name': nombre de la tag.
 /// 'version_name': comentario de la tag.
-pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_name: &str) -> Result<String, CommandsError> {
-    
+pub fn git_tag_create(
+    directory: &str,
+    client: Client,
+    tag_name: &str,
+    version_name: &str,
+) -> Result<String, CommandsError> {
     let tags = get_tags(directory)?;
     if tags.contains(&tag_name.to_string()) {
         return Err(CommandsError::TagAlreadyExistsError);
@@ -108,13 +114,12 @@ pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_n
     let current_branch = get_current_branch(directory)?;
     let branch_current_path = format!("{}/{}{}", git_dir, TAG_DIR, current_branch);
 
-    let commit_hash;
-    if fs::metadata(&branch_current_path).is_ok() {
+    let commit_hash = if fs::metadata(&branch_current_path).is_ok() {
         let file = open_file(&branch_current_path)?;
-        commit_hash = read_file_string(file)?;
-    }else{
-        return Err(CommandsError::OpenFileError)
-    }
+        read_file_string(file)?
+    } else {
+        return Err(CommandsError::OpenFileError);
+    };
 
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -137,7 +142,7 @@ pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_n
 
     create_file(&dir_tag, &tag_hash)?;
 
-    builder_tag_msg_edit(directory,version_name)?;
+    builder_tag_msg_edit(directory, version_name)?;
 
     let response = format!("Tag {} created", tag_name);
     Ok(response)
@@ -149,7 +154,6 @@ pub fn git_tag_create(directory: &str, client: Client, tag_name: &str, version_n
 /// 'directory': directory del repositorio que contiene la tag
 /// 'tag_name_delete': nombre de la tag a eliminar
 fn git_tag_delete(directory: &str, tag_name_delete: &str) -> Result<String, CommandsError> {
-
     let tags = get_tags(directory)?;
     if !tags.contains(&tag_name_delete.to_string()) {
         return Err(CommandsError::TagNotExistsError);

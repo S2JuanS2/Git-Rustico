@@ -2,7 +2,7 @@ use super::cat_file::git_cat_file;
 use super::checkout::extract_parent_hash;
 use super::commit::builder_commit_log;
 use super::errors::CommandsError;
-use crate::consts::{PARENT_INITIAL, GIT_DIR};
+use crate::consts::{GIT_DIR, PARENT_INITIAL};
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file_string};
 use std::fs::File;
@@ -55,7 +55,7 @@ pub fn git_log(directory: &str) -> Result<String, CommandsError> {
 /// 'formatted_result': String que contiene el resultado de git log formateado
 pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
-       
+
     for line in lines {
         if line.len() == 40 {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -63,14 +63,19 @@ pub fn get_parts_commit(lines: Vec<String>) -> Result<String, CommandsError> {
         } else if line.starts_with("author") {
             let parts: Vec<&str> = line.split_whitespace().collect();
             formatted_result.push_str(&format!("Author: {} {}\n", parts[1], parts[2]));
-            let timestamp = match parts[3].parse::<i64>(){
+            let timestamp = match parts[3].parse::<i64>() {
                 Ok(t) => t,
                 Err(_) => return Err(CommandsError::TimeStamp),
             };
             let date_time = chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
             formatted_result.push_str(&format!("Date: {}\n", date_time));
             formatted_result.push('\n');
-        } else if !line.is_empty() && line.len() != 40 && !line.starts_with("parent") && !line.starts_with("author") && !line.starts_with("committer") {
+        } else if !line.is_empty()
+            && line.len() != 40
+            && !line.starts_with("parent")
+            && !line.starts_with("author")
+            && !line.starts_with("committer")
+        {
             formatted_result.push_str(&format!("\t{}\n\n", line));
         }
     }
@@ -119,17 +124,26 @@ pub fn insert_line_between_lines(
 ///
 /// Un `Result` con un retorno `CommandsError` en caso de error.
 ///
-pub fn save_parent_log(directory: &str, commit: &str, branch_name: &str, path_log: &str) -> Result<(), CommandsError> {
-
-    if let Some(parent_hash) = extract_parent_hash(commit){
+pub fn save_parent_log(
+    directory: &str,
+    commit: &str,
+    branch_name: &str,
+    path_log: &str,
+) -> Result<(), CommandsError> {
+    if let Some(parent_hash) = extract_parent_hash(commit) {
         if parent_hash != PARENT_INITIAL {
             let mut parent_commit = git_cat_file(directory, parent_hash, "-p")?;
-            if parent_commit.lines().count() == 5{
+            if parent_commit.lines().count() == 5 {
                 parent_commit = insert_line_between_lines(&parent_commit, 1, PARENT_INITIAL);
             }
             save_parent_log(directory, &parent_commit, branch_name, path_log)?;
-            builder_commit_log(directory, &parent_commit, parent_hash, branch_name, path_log)?;
-
+            builder_commit_log(
+                directory,
+                &parent_commit,
+                parent_hash,
+                branch_name,
+                path_log,
+            )?;
         }
     };
 
@@ -147,17 +161,27 @@ pub fn save_parent_log(directory: &str, commit: &str, branch_name: &str, path_lo
 ///
 /// Un `Result` con un retorno `CommandsError` en caso de error.
 ///
-pub fn save_log(directory: &str, branch_name: &str, path_log: &str, path_branch: &str) -> Result<(), CommandsError>{
-
+pub fn save_log(
+    directory: &str,
+    branch_name: &str,
+    path_log: &str,
+    path_branch: &str,
+) -> Result<(), CommandsError> {
     let dir_branch = format!("{}/{}/{}/{}", directory, GIT_DIR, path_branch, branch_name);
     let file = open_file(&dir_branch)?;
     let hash_commit = read_file_string(file)?;
     let mut commit_content = git_cat_file(directory, &hash_commit, "-p")?;
-    if commit_content.lines().count() == 5{
+    if commit_content.lines().count() == 5 {
         commit_content = insert_line_between_lines(&commit_content, 1, PARENT_INITIAL);
     }
     save_parent_log(directory, &commit_content, branch_name, path_log)?;
-    builder_commit_log(directory, &commit_content, &hash_commit, branch_name, path_log)?;
+    builder_commit_log(
+        directory,
+        &commit_content,
+        &hash_commit,
+        branch_name,
+        path_log,
+    )?;
 
     Ok(())
 }

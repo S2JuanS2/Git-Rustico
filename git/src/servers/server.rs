@@ -3,15 +3,19 @@ use std::net::{TcpListener, TcpStream};
 use crate::config::Config;
 use crate::errors::GitError;
 use crate::git_transport::git_request::GitRequest;
-use crate::util::logger::{get_client_signature, handle_log_file, log_client_connect, log_client_disconnection_error, log_client_disconnection_success, log_message};
-use std::sync::{Arc, Mutex};
+use crate::util::logger::{
+    get_client_signature, handle_log_file, log_client_connect, log_client_disconnection_error,
+    log_client_disconnection_success, log_message,
+};
 use std::sync::mpsc::{self, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::{env, thread};
 
 use super::errors::ServerError;
 
-type Handler = fn(&mut TcpStream, String, &Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>;
+type Handler =
+    fn(&mut TcpStream, String, &Arc<Mutex<Sender<String>>>, String) -> Result<(), GitError>;
 type LogResult = Result<(Arc<Mutex<Sender<String>>>, JoinHandle<()>), GitError>;
 
 /// Inicia un servidor en la dirección IP y puerto proporcionados.
@@ -40,9 +44,9 @@ pub fn start_server(ip: &str) -> Result<TcpListener, ServerError> {
 ///
 /// # Returns
 ///
-/// Retorna un `Result` que contiene una `GitRequest` en caso de éxito o un `GitError` en caso 
+/// Retorna un `Result` que contiene una `GitRequest` en caso de éxito o un `GitError` en caso
 /// de fallo.
-/// 
+///
 pub fn receive_request(
     stream: &mut TcpStream,
     signature: String,
@@ -64,7 +68,6 @@ pub fn receive_request(
     }
 }
 
-
 /// Procesa una solicitud recibida del cliente.
 ///
 /// # Arguments
@@ -78,7 +81,7 @@ pub fn receive_request(
 /// # Returns
 ///
 /// Retorna un `Result` que contiene `()` en caso de éxito o un `GitError` en caso de fallo.
-/// 
+///
 pub fn process_request(
     stream: &mut TcpStream,
     tx: &Arc<Mutex<Sender<String>>>,
@@ -115,7 +118,7 @@ pub fn process_request(
 /// # Returns
 ///
 /// Retorna un `Result` que contiene un vector de `JoinHandle<()>` en caso de éxito o un `GitError` en caso de fallo.
-/// 
+///
 pub fn receive_client(
     listener: &TcpListener,
     name_server: String,
@@ -149,10 +152,15 @@ pub fn receive_client(
     Ok(handles)
 }
 
-pub fn log_request_result(stream: &TcpStream, name_server: &String, tx: &Arc<Mutex<Sender<String>>>, result: Result<(), GitError>) {
+pub fn log_request_result(
+    stream: &TcpStream,
+    name_server: &String,
+    tx: &Arc<Mutex<Sender<String>>>,
+    result: Result<(), GitError>,
+) {
     let signature = get_client_signature(stream, name_server);
     match result {
-        Ok(_) =>log_client_disconnection_success(tx, &signature),
+        Ok(_) => log_client_disconnection_success(tx, &signature),
         Err(GitError::RequestFailed(_)) => log_client_disconnection_error(tx, &signature),
         Err(e) => {
             let message = format!("Error al procesar la petición: {}", e);
@@ -162,12 +170,11 @@ pub fn log_request_result(stream: &TcpStream, name_server: &String, tx: &Arc<Mut
     }
 }
 
-
 /// Inicializa la configuración del programa a partir de los argumentos de línea de comandos.
 ///
 /// # Returns
 ///
-/// Retorna un `Result` que contiene la configuración inicializada si es exitosa, o un 
+/// Retorna un `Result` que contiene la configuración inicializada si es exitosa, o un
 /// `GitError` si falla.
 ///
 /// # Errors
@@ -199,7 +206,6 @@ pub fn create_listener(ip: &str, port: &String) -> Result<TcpListener, GitError>
     Ok(start_server(&address)?)
 }
 
-
 /// Inicia el logging en un hilo separado, escribiendo en el archivo de log especificado por `path_log`.
 ///
 /// # Arguments
@@ -224,7 +230,7 @@ pub fn start_logging(path_log: String) -> LogResult {
     Ok((shared_tx, log_handle))
 }
 
-/// Inicia un hilo para manejar conexiones entrantes en un servidor TCP, utilizando un 
+/// Inicia un hilo para manejar conexiones entrantes en un servidor TCP, utilizando un
 /// `TcpListener` dado.
 ///
 /// # Arguments
@@ -236,13 +242,13 @@ pub fn start_logging(path_log: String) -> LogResult {
 ///
 /// # Returns
 ///
-/// Retorna un `Result` que contiene un `JoinHandle<()>` que representa el handle del hilo de 
+/// Retorna un `Result` que contiene un `JoinHandle<()>` que representa el handle del hilo de
 /// servidor,
 /// o un `GitError` si falla.
 ///
 /// # Errors
 ///
-/// Puede fallar si hay errores al manejar conexiones entrantes o al ejecutar el handler de 
+/// Puede fallar si hay errores al manejar conexiones entrantes o al ejecutar el handler de
 /// conexión.
 ///
 pub fn start_server_thread(
@@ -270,8 +276,14 @@ pub fn start_server_thread(
 ///
 /// Puede generar un pánico si alguno de los hilos no finaliza correctamente.
 ///
-pub fn wait_for_threads(log_handle: JoinHandle<()>, daemon_handle: JoinHandle<()>, http_handle: JoinHandle<()>) {
-    log_handle.join().expect("No se pudo escribir el archivo de log");
+pub fn wait_for_threads(
+    log_handle: JoinHandle<()>,
+    daemon_handle: JoinHandle<()>,
+    http_handle: JoinHandle<()>,
+) {
+    log_handle
+        .join()
+        .expect("No se pudo escribir el archivo de log");
     daemon_handle.join().expect("No hay clientes en git-daemon");
     http_handle.join().expect("No hay clientes en HTTP");
 }

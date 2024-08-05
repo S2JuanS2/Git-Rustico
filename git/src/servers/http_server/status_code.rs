@@ -30,17 +30,23 @@ impl fmt::Display for StatusCode {
         let s = match self {
             StatusCode::Created => "201 Created",
             StatusCode::Forbidden(_) => "403 Forbidden",
-            StatusCode::ValidationFailed(_) => "422 Validation failed, or the endpoint has been spammed.",
+            StatusCode::ValidationFailed(_) => {
+                "422 Validation failed, or the endpoint has been spammed."
+            }
             StatusCode::Ok(_) => "200 OK",
             StatusCode::NotModified => "304 Not modified",
-            StatusCode::PassTheAppropriateMediaType => "200 Pass the appropriate media type to fetch diff and patch formats.",
+            StatusCode::PassTheAppropriateMediaType => {
+                "200 Pass the appropriate media type to fetch diff and patch formats."
+            }
             StatusCode::ResourceNotFound(_) => "404 Resource not found",
             StatusCode::Unacceptable => "406 Unacceptable",
             StatusCode::InternalError(_) => "500 Internal Error",
             StatusCode::ServiceUnavailable => "503 Service unavailable",
             StatusCode::MergeWasSuccessful => "200 OK if merge was successful",
             StatusCode::MethodNotAllowed => "405 Method Not Allowed",
-            StatusCode::Conflict(_) => "409 Conflict if sha was provided and pull request head did not match",
+            StatusCode::Conflict(_) => {
+                "409 Conflict if sha was provided and pull request head did not match"
+            }
             StatusCode::BadRequest(_) => "400 Bad Request",
             StatusCode::UnsupportedMediaType => "415 Unsupported Media Type",
             StatusCode::HttpVersionNotSupported => "505 HTTP Version Not Supported",
@@ -61,9 +67,15 @@ impl From<ServerError> for StatusCode {
             ServerError::InvalidPostPathError => StatusCode::ResourceNotFound(error.to_string()),
             ServerError::InvalidPutPathError => StatusCode::ResourceNotFound(error.to_string()),
             ServerError::InvalidPatchPathError => StatusCode::ResourceNotFound(error.to_string()),
-            ServerError::MissingRequestLine => StatusCode::BadRequest("Missing request line".to_string()),
-            ServerError::IncompleteRequestLine => StatusCode::BadRequest("Incomplete request line".to_string()),
-            ServerError::HttpFieldNotFound(e) => StatusCode::BadRequest(format!("Field not found: {}", e)),
+            ServerError::MissingRequestLine => {
+                StatusCode::BadRequest("Missing request line".to_string())
+            }
+            ServerError::IncompleteRequestLine => {
+                StatusCode::BadRequest("Incomplete request line".to_string())
+            }
+            ServerError::HttpFieldNotFound(e) => {
+                StatusCode::BadRequest(format!("Field not found: {}", e))
+            }
             ServerError::EmptyBody => StatusCode::BadRequest("Empty body".to_string()),
             _ => StatusCode::InternalError("Internal server error".to_string()),
         }

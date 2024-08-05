@@ -4,7 +4,7 @@ use crate::{errors::GitError, servers::errors::ServerError, util::errors::UtilEr
 
 #[derive(Clone, PartialEq)]
 pub enum CommandsError {
-    CommandsFromUtil(String), // Para tener polimofismo con UtilError
+    CommandsFromUtil(String),   // Para tener polimofismo con UtilError
     CommandsFromServer(String), // Para tener polimofismo con ServerError
     CloneMissingRepo,
     CommitEmptyIndex,
@@ -98,7 +98,7 @@ pub enum CommandsError {
     SendMessageReferenceUpdate,
     TimeStamp,
     PushInvalidStatusFromServer,
-    IsSameBranch
+    IsSameBranch,
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {

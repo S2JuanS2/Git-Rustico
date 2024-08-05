@@ -1,10 +1,12 @@
-use std::{collections::HashMap, hash::{Hash, Hasher}};
 use std::collections::hash_map::DefaultHasher;
+use std::{
+    collections::HashMap,
+    hash::{Hash, Hasher},
+};
 
 use crate::servers::errors::ServerError;
 
 use super::http_body::HttpBody;
-
 
 /// Guarda el mapa de pull requests en un archivo JSON.
 ///
@@ -22,9 +24,10 @@ use super::http_body::HttpBody;
 ///
 /// Devuelve `Ok(())` si el mapa se guarda correctamente.
 /// Devuelve `Err(ServerError::SaveMapPrFile)` si ocurre un error durante la serialización o escritura del archivo.
-/// 
+///
 pub fn save_pr_map(pr_map_path: &str, pr_map: &HashMap<String, usize>) -> Result<(), ServerError> {
-    let file_content = serde_json::to_string_pretty(pr_map).map_err(|_| ServerError::SaveMapPrFile)?;
+    let file_content =
+        serde_json::to_string_pretty(pr_map).map_err(|_| ServerError::SaveMapPrFile)?;
     std::fs::write(pr_map_path, file_content).map_err(|_| ServerError::SaveMapPrFile)?;
     Ok(())
 }
@@ -43,7 +46,7 @@ pub fn save_pr_map(pr_map_path: &str, pr_map: &HashMap<String, usize>) -> Result
 /// # Retornos
 ///
 /// Devuelve una cadena que representa la clave hash única para el pull request.
-/// 
+///
 pub fn generate_head_base_hash(head: &str, base: &str) -> String {
     let mut hasher = DefaultHasher::new();
     format!("{}:{}", head, base).hash(&mut hasher);
@@ -64,12 +67,11 @@ pub fn generate_head_base_hash(head: &str, base: &str) -> String {
 ///
 /// Devuelve `Ok(HashMap<String, usize>)` con el mapa de pull requests si la lectura y deserialización son exitosas.
 /// Devuelve `Err(ServerError::ReadMapPrFile)` si ocurre un error durante la lectura o deserialización del archivo.
-/// 
+///
 pub fn read_pr_map(pr_map_path: &str) -> Result<HashMap<String, usize>, ServerError> {
     let file_content = std::fs::read_to_string(pr_map_path).unwrap_or_else(|_| "{}".to_string());
     serde_json::from_str(&file_content).map_err(|_| ServerError::ReadMapPrFile)
 }
-
 
 /// Actualiza y guarda el mapa de pull requests con un nuevo número de PR asignado.
 ///
@@ -89,8 +91,13 @@ pub fn read_pr_map(pr_map_path: &str) -> Result<HashMap<String, usize>, ServerEr
 ///
 /// Devuelve `Ok(())` si el mapa se actualiza y guarda correctamente.
 /// Devuelve `Err(ServerError)` si ocurre un error durante la actualización o el guardado del mapa.
-/// 
-pub fn update_pr_map(pr_map: &mut HashMap<String, usize>, pr_map_path: &str, hash_key: String, pr_number: usize) -> Result<(), ServerError> {
+///
+pub fn update_pr_map(
+    pr_map: &mut HashMap<String, usize>,
+    pr_map_path: &str,
+    hash_key: String,
+    pr_number: usize,
+) -> Result<(), ServerError> {
     pr_map.insert(hash_key, pr_number);
     save_pr_map(pr_map_path, pr_map)?;
     Ok(())
@@ -109,7 +116,7 @@ pub fn update_pr_map(pr_map: &mut HashMap<String, usize>, pr_map_path: &str, has
 ///
 /// Devuelve `Ok(String)` que representa la clave hash única.
 /// Devuelve `Err(ServerError)` si hay un error al extraer los campos necesarios.
-/// 
+///
 pub fn generate_pr_hash_key(body: &HttpBody) -> Result<String, ServerError> {
     let head = body.get_field("head")?;
     let base = body.get_field("base")?;
@@ -130,7 +137,7 @@ pub fn generate_pr_hash_key(body: &HttpBody) -> Result<String, ServerError> {
 /// # Retornos
 ///
 /// Devuelve `true` si el pull request ya existe, `false` en caso contrario.
-/// 
+///
 pub fn pr_already_exists(pr_map: &HashMap<String, usize>, hash_key: &String) -> bool {
     pr_map.contains_key(hash_key)
 }
@@ -174,7 +181,11 @@ pub fn get_pr_number(pr_map: &HashMap<String, usize>, hash_key: &String) -> Opti
 /// Devuelve `Err(ServerError::PrNotFoundInMap)` si la clave hash no está presente en el mapa de pull requests.
 /// Devuelve `Err(ServerError)` si ocurre un error durante la actualización del archivo del mapa.
 ///
-pub fn delete_pr_map(pr_map: &mut HashMap<String, usize>, pr_map_path: &str, hash_key: &String) -> Result<(), ServerError> {
+pub fn delete_pr_map(
+    pr_map: &mut HashMap<String, usize>,
+    pr_map_path: &str,
+    hash_key: &String,
+) -> Result<(), ServerError> {
     if !pr_map.contains_key(hash_key) {
         return Err(ServerError::PrNotFoundInMap);
     }

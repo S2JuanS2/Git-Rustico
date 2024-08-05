@@ -23,7 +23,7 @@ use std::{
 
 use crate::{
     consts::*,
-    util::validation::{valid_email, valid_ip, valid_port, valid_directory_src},
+    util::validation::{valid_directory_src, valid_email, valid_ip, valid_port},
 };
 use crate::{errors::GitError, util::validation::valid_path_log};
 

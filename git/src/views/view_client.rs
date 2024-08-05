@@ -87,10 +87,14 @@ impl View {
                 .ok_or(GitError::ObjectBuildFailed)?,
         );
         let label_user: gtk::Label = builder.object("user").ok_or(GitError::ObjectBuildFailed)?;
-        let label_branch: gtk::Label = builder.object("label_branch").ok_or(GitError::ObjectBuildFailed)?;
+        let label_branch: gtk::Label = builder
+            .object("label_branch")
+            .ok_or(GitError::ObjectBuildFailed)?;
         let label_mail: gtk::Label = builder.object("mail").ok_or(GitError::ObjectBuildFailed)?;
         let label_path: gtk::Label = builder.object("path").ok_or(GitError::ObjectBuildFailed)?;
-        let label_branches: gtk::Label = builder.object("list_branches").ok_or(GitError::ObjectBuildFailed)?;
+        let label_branches: gtk::Label = builder
+            .object("list_branches")
+            .ok_or(GitError::ObjectBuildFailed)?;
 
         let controller = Rc::new(RefCell::new(controller));
         Ok(View {
@@ -137,7 +141,11 @@ impl View {
         self.label_path.set_text(text_format);
     }
 
-    fn response_write_buffer(result: Result<String, GitError>, response: Rc<gtk::TextView>, cmd: &str) {
+    fn response_write_buffer(
+        result: Result<String, GitError>,
+        response: Rc<gtk::TextView>,
+        cmd: &str,
+    ) {
         if let Some(buffer) = response.buffer() {
             let mut end_iter = buffer.end_iter();
             match result {
@@ -271,7 +279,7 @@ impl View {
             }
         }
     }
-    fn clicked_buttons(&self){
+    fn clicked_buttons(&self) {
         for button in self.buttons.values() {
             let controller = Rc::clone(&self.controller);
             let label_branch = self.label_branch.clone();
@@ -313,31 +321,25 @@ impl View {
     }
     fn destroy_dialogs(&self) {
         let window = self.window_dialog_push.clone();
-        self.window_dialog_push.connect_delete_event(move |_, _| {
-            window.hide_on_delete()
-        });
+        self.window_dialog_push
+            .connect_delete_event(move |_, _| window.hide_on_delete());
         let window = self.window_dialog_pull.clone();
-        self.window_dialog_pull.connect_delete_event(move |_, _| {
-            window.hide_on_delete()
-        });
+        self.window_dialog_pull
+            .connect_delete_event(move |_, _| window.hide_on_delete());
         let window = self.window_dialog_fetch.clone();
-        self.window_dialog_fetch.connect_delete_event(move |_, _| {
-            window.hide_on_delete()
-        });
+        self.window_dialog_fetch
+            .connect_delete_event(move |_, _| window.hide_on_delete());
         let window = self.window_dialog_clone.clone();
-        self.window_dialog_clone.connect_delete_event(move |_, _| {
-            window.hide_on_delete()
-        });
+        self.window_dialog_clone
+            .connect_delete_event(move |_, _| window.hide_on_delete());
         let window = self.window_dialog_cat_file.clone();
-        self.window_dialog_cat_file.connect_delete_event(move |_, _| {
-            window.hide_on_delete()
-        });
+        self.window_dialog_cat_file
+            .connect_delete_event(move |_, _| window.hide_on_delete());
         let window = self.window_dialog_hash_object.clone();
-        self.window_dialog_hash_object.connect_delete_event(move |_, _| {
-            window.hide_on_delete()
-        });
+        self.window_dialog_hash_object
+            .connect_delete_event(move |_, _| window.hide_on_delete());
     }
-    
+
     fn connect_buttons(&mut self) {
         self.connect_button_with_entry(ENTRY_CHECKOUT, BUTTON_CHECKOUT, "git checkout".to_string());
         self.connect_button_with_entry(ENTRY_ADD_RM, BUTTON_ADD, "git add".to_string());
@@ -345,12 +347,24 @@ impl View {
         self.connect_button_with_entry(ENTRY_COMMIT, BUTTON_COMMIT, "git commit -m".to_string());
         self.connect_button_with_entry(ENTRY_MERGE, BUTTON_MERGE, "git merge".to_string());
         self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH, "git branch -l".to_string());
-        self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH_CREATE, "git branch".to_string());
-        self.connect_button_with_entry(ENTRY_BRANCH, BUTTON_BRANCH_REMOVE, "git branch -d".to_string());
+        self.connect_button_with_entry(
+            ENTRY_BRANCH,
+            BUTTON_BRANCH_CREATE,
+            "git branch".to_string(),
+        );
+        self.connect_button_with_entry(
+            ENTRY_BRANCH,
+            BUTTON_BRANCH_REMOVE,
+            "git branch -d".to_string(),
+        );
         self.connect_button_with_entry(ENTRY_REMOTE, BUTTON_REMOTE, "git remote".to_string());
         self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_FILES, "git ls-files".to_string());
         self.connect_button_with_entry(ENTRY_LS, BUTTON_LS_TREE, "git ls-tree".to_string());
-        self.connect_button_with_entry(ENTRY_CHECK_IGNORE, BUTTON_CHECK_IGNORE, "git check-ignore".to_string());
+        self.connect_button_with_entry(
+            ENTRY_CHECK_IGNORE,
+            BUTTON_CHECK_IGNORE,
+            "git check-ignore".to_string(),
+        );
         self.connect_button_with_entry(ENTRY_TAG, BUTTON_TAG, "git tag".to_string());
         self.connect_button_with_entry(ENTRY_TAG, BUTTON_TAG_CREATE, "git tag -a".to_string());
         self.connect_button_with_entry(ENTRY_TAG, BUTTON_TAG_DELETE, "git tag -d".to_string());
@@ -440,7 +454,7 @@ impl View {
         self.window.connect_destroy(|_| {
             gtk::main_quit();
         });
-        
+
         self.destroy_dialogs();
         self.clicked_buttons();
         self.set_label_user();

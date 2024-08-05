@@ -452,7 +452,7 @@ pub fn valid_directory_src(path: &str) -> Result<String, GitError> {
 ///
 /// * `parent_path` - La ruta del directorio padre a verificar.
 /// * `child_name` - El nombre del posible subdirectorio.
-/// 
+///
 /// # Retorno
 ///
 /// Devuelve `true` si el directorio `parent_path` contiene un subdirectorio con el nombre `child_name`,

@@ -5,7 +5,7 @@ use crate::{commands::errors::CommandsError, errors::GitError, servers::errors::
 #[derive(PartialEq, Eq, Clone)]
 pub enum UtilError {
     UtilFromCommands(String), // Para tener polimorfismo con CommandsError
-    UtilFromServer(String), // Para tener polimorfismo con ServerError
+    UtilFromServer(String),   // Para tener polimorfismo con ServerError
     InvalidPacketLine,
     ServerConnection,
     ClientConnection,

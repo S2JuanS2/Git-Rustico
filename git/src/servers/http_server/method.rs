@@ -1,8 +1,15 @@
 use crate::servers::errors::ServerError;
-use std::sync::{mpsc::Sender, Arc, Mutex};
 use std::fmt;
+use std::sync::{mpsc::Sender, Arc, Mutex};
 
-use super::{features_pr::{create_pull_requests, delete_pull_request, get_pull_request, list_commits, list_pull_request, merge_pull_request, modify_pull_request}, http_body::HttpBody, status_code::StatusCode};
+use super::{
+    features_pr::{
+        create_pull_requests, delete_pull_request, get_pull_request, list_commits,
+        list_pull_request, merge_pull_request, modify_pull_request,
+    },
+    http_body::HttpBody,
+    status_code::StatusCode,
+};
 
 /// Enumera los posibles métodos HTTP que pueden ser utilizados en una solicitud.
 #[derive(Debug, PartialEq)]
@@ -15,7 +22,6 @@ pub enum Method {
 }
 
 impl Method {
-
     /// Crea un método HTTP a partir de su representación en cadena.
     ///
     /// # Argumentos
@@ -26,7 +32,7 @@ impl Method {
     ///
     /// Retorna un `Result` que contiene el `Method` si la conversión es exitosa,
     /// o un `ServerError::MethodNotAllowed` si el método no es reconocido.
-    /// 
+    ///
     pub fn create_method(method: &str) -> Result<Self, ServerError> {
         match method {
             "GET" => Ok(Method::Get),
@@ -51,8 +57,14 @@ impl Method {
     ///
     /// Retorna un `Result` que contiene el `StatusCode` si la solicitud se maneja con éxito,
     /// o un `ServerError` si ocurre un error.
-    /// 
-    pub fn handle_method(&self, path: &str, http_body: &HttpBody, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    ///
+    pub fn handle_method(
+        &self,
+        path: &str,
+        http_body: &HttpBody,
+        src: &String,
+        tx: &Arc<Mutex<Sender<String>>>,
+    ) -> Result<StatusCode, ServerError> {
         match self {
             Method::Get => self.handle_get_request(path, src, tx),
             Method::Post => self.handle_post_request(path, http_body, src, tx),
@@ -62,49 +74,58 @@ impl Method {
         }
     }
 
-         /// Maneja una solicitud HTTP GET.
+    /// Maneja una solicitud HTTP GET.
     ///
     /// # Parámetros
-    /// 
+    ///
     /// * `pr` - Una referencia a la estructura `PullRequest`.
     /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
     /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
     ///
     /// # Retornos
-    /// 
+    ///
     /// Devuelve un `Result` que contiene el status en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn handle_get_request(&self, path: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    ///
+    fn handle_get_request(
+        &self,
+        path: &str,
+        src: &String,
+        tx: &Arc<Mutex<Sender<String>>>,
+    ) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
-            ["repos", repo_name, "pulls"] => {
-                list_pull_request(repo_name, src, tx)
-            },
+            ["repos", repo_name, "pulls"] => list_pull_request(repo_name, src, tx),
             ["repos", repo_name, "pulls", pull_number] => {
                 get_pull_request(repo_name, pull_number, src, tx)
-            },
+            }
             ["repos", repo_name, "pulls", pull_number, "commits"] => {
                 list_commits(repo_name, pull_number, src, tx)
-            },
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
+            _ => Ok(StatusCode::ResourceNotFound(
+                "The requested path was not found on the server.".to_string(),
+            )),
         }
     }
-    
-        /// Maneja una solicitud HTTP POST.
+
+    /// Maneja una solicitud HTTP POST.
     ///
     /// # Parámetros
-    /// 
+    ///
     /// * `pr` - Una referencia a la estructura `PullRequest`.
     /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
     /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
     ///
     /// # Retornos
-    /// 
+    ///
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn handle_post_request(&self, path: &str, http_body: &HttpBody, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    ///
+    fn handle_post_request(
+        &self,
+        path: &str,
+        http_body: &HttpBody,
+        src: &String,
+        tx: &Arc<Mutex<Sender<String>>>,
+    ) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls"] => {
@@ -114,25 +135,30 @@ impl Method {
                 };
                 create_pull_requests(http_body, repo_name, src, tx)
             }
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
-            }
+            _ => Ok(StatusCode::ResourceNotFound(
+                "The requested path was not found on the server.".to_string(),
+            )),
         }
     }
-    
-     /// Maneja una solicitud HTTP PUT.
+
+    /// Maneja una solicitud HTTP PUT.
     ///
     /// # Parámetros
-    /// 
+    ///
     /// * `pr` - Una referencia a la estructura `PullRequest`.
     /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
     /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
     ///
     /// # Retornos
-    /// 
+    ///
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn handle_put_request(&self, path: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    ///
+    fn handle_put_request(
+        &self,
+        path: &str,
+        src: &String,
+        tx: &Arc<Mutex<Sender<String>>>,
+    ) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number, "merge"] => {
@@ -141,26 +167,32 @@ impl Method {
                     Err(_) => return Err(ServerError::BadRequest("Failed lock".to_string())),
                 };
                 merge_pull_request(repo_name, pull_number, src, tx)
-            },
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
+            _ => Ok(StatusCode::ResourceNotFound(
+                "The requested path was not found on the server.".to_string(),
+            )),
         }
     }
-    
+
     /// Maneja una solicitud HTTP PATCH.
     ///
     /// # Parámetros
-    /// 
+    ///
     /// * `pr` - Una referencia a la estructura `PullRequest`.
     /// * `src` - Una referencia a la cadena que contiene el directorio fuente.
     /// * `tx` - Un puntero compartido y seguro para subprocesos a un transmisor de mensajes.
     ///
     /// # Retornos
-    /// 
+    ///
     /// Devuelve un `Result` que contiene la respuesta en caso de éxito o un `ServerError` en caso de fallo.
-    /// 
-    fn handle_patch_request(&self, path: &str, http_body: &HttpBody, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    ///
+    fn handle_patch_request(
+        &self,
+        path: &str,
+        http_body: &HttpBody,
+        src: &String,
+        tx: &Arc<Mutex<Sender<String>>>,
+    ) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
@@ -169,14 +201,19 @@ impl Method {
                     Err(_) => return Err(ServerError::BadRequest("Failed lock".to_string())),
                 };
                 modify_pull_request(http_body, repo_name, pull_number, src, tx)
-            },
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
+            _ => Ok(StatusCode::ResourceNotFound(
+                "The requested path was not found on the server.".to_string(),
+            )),
         }
     }
 
-    fn handle_delete_request(&self, path: &str, src: &String, tx: &Arc<Mutex<Sender<String>>>) -> Result<StatusCode, ServerError> {
+    fn handle_delete_request(
+        &self,
+        path: &str,
+        src: &String,
+        tx: &Arc<Mutex<Sender<String>>>,
+    ) -> Result<StatusCode, ServerError> {
         let path_segments: Vec<&str> = segment_path(path);
         match path_segments.as_slice() {
             ["repos", repo_name, "pulls", pull_number] => {
@@ -185,10 +222,10 @@ impl Method {
                     Err(_) => return Err(ServerError::BadRequest("Failed lock".to_string())),
                 };
                 delete_pull_request(repo_name, pull_number, src, tx)
-            },
-            _ => {
-                Ok(StatusCode::ResourceNotFound("The requested path was not found on the server.".to_string()))
             }
+            _ => Ok(StatusCode::ResourceNotFound(
+                "The requested path was not found on the server.".to_string(),
+            )),
         }
     }
 }

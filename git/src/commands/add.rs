@@ -64,7 +64,11 @@ pub fn git_add_all(directory: &Path, repo_parts: usize) -> Result<String, Comman
 /// ###Parametros:
 /// 'full_path': PathBuf que contiene el path completo del archivo
 /// 'file_name': Nombre del archivo que se le hizo add
-fn add_file(full_path: &Path, file_name: &OsString, repo_parts: usize) -> Result<(), CommandsError> {
+fn add_file(
+    full_path: &Path,
+    file_name: &OsString,
+    repo_parts: usize,
+) -> Result<(), CommandsError> {
     let full_path_str = full_path.to_str().ok_or(CommandsError::PathToStringError)?;
     let parts: Vec<&str> = full_path_str.split('/').collect();
     let mut directory = String::new();
@@ -98,7 +102,6 @@ fn add_file(full_path: &Path, file_name: &OsString, repo_parts: usize) -> Result
 /// 'directory': directorio donde estará inicializado el repositorio
 /// 'file_name': Nombre del archivo del cual se leera el contenido para luego comprimirlo y generar el objeto
 pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError> {
-
     if !is_files_to_delete(directory, file_name)? {
         let file_path = format!("{}/{}", directory, file_name);
         let mut ignored_files = Vec::<String>::new();
@@ -110,14 +113,14 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError
         }
         let file = open_file(&file_path)?;
         let content = read_file(file)?;
-    
+
         let git_dir = format!("{}/{}", directory, GIT_DIR);
-    
+
         let hash_object = builder_object_blob(content, &git_dir)?;
-    
+
         // Se actualiza el index.
         add_to_index(git_dir, file_name, hash_object)?;
-    }else{
+    } else {
         remove_from_index_with_filename(directory, file_name)?;
     }
 
@@ -130,7 +133,11 @@ pub fn git_add(directory: &str, file_name: &str) -> Result<String, CommandsError
 /// 'git_dir': directorio donde esta el directory/.git
 /// 'file_name': Nombre del archivo que se le hizo add
 /// 'hash_object': Hash del objeto que se creó al hacer add
-pub fn add_to_index(git_dir: String, file_name: &str, hash_object: String) -> Result<(), CommandsError> {
+pub fn add_to_index(
+    git_dir: String,
+    file_name: &str,
+    hash_object: String,
+) -> Result<(), CommandsError> {
     let index_path = format!("{}/{}", &git_dir, INDEX);
 
     let index_file = open_file(index_path.as_str())?;
@@ -197,7 +204,8 @@ mod tests {
         git_init(directory).expect("Error al inicializar el repositorio");
 
         let gitignore_path = format!("{}/.gitignore", directory);
-        create_file_replace(&gitignore_path, "target/\nCargo.lock\n").expect("Error al crear el archivo");
+        create_file_replace(&gitignore_path, "target/\nCargo.lock\n")
+            .expect("Error al crear el archivo");
 
         let file_path = format!("{}/{}", directory, "filetoadd.txt");
         let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
@@ -214,13 +222,19 @@ mod tests {
         let git_dir = format!("{}/{}", directory, GIT_DIR);
         let index_content = get_index_content(&git_dir).expect("Error al leer el index");
 
-        assert_eq!(index_content, "filetoadd.txt blob 442bce82428f3a03efaa6edac44dcede0e1bd456");
+        assert_eq!(
+            index_content,
+            "filetoadd.txt blob 442bce82428f3a03efaa6edac44dcede0e1bd456"
+        );
 
         let result_2 = git_add(directory, "Cargo.lock");
         let index_content_2 = get_index_content(&git_dir).expect("Error al leer el index");
 
         // Chequeo que no agrego Cargo.lock al index
-        assert_eq!(index_content_2, "filetoadd.txt blob 442bce82428f3a03efaa6edac44dcede0e1bd456");
+        assert_eq!(
+            index_content_2,
+            "filetoadd.txt blob 442bce82428f3a03efaa6edac44dcede0e1bd456"
+        );
 
         fs::remove_dir_all(directory).expect("Error al eliminar el directorio");
         assert!(result.is_ok());

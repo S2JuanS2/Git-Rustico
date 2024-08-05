@@ -2,7 +2,6 @@ use crate::consts::{APPLICATION_JSON, APPLICATION_XML, APPLICATION_YAML, TEXT_XM
 
 use super::pr::{CommitsPr, PullRequest};
 
-
 #[derive(Debug, PartialEq)]
 pub enum Model {
     // PullRequest(HttpBody),
@@ -21,7 +20,6 @@ impl Model {
             Model::Message(s) => message_to_string(s, content_type),
         }
     }
-
 }
 
 fn pull_request_to_string(pr: &PullRequest, content_type: &str) -> String {
@@ -39,13 +37,12 @@ fn pull_request_to_string(pr: &PullRequest, content_type: &str) -> String {
     let amount_commits = pr.amount_commits.unwrap_or_default();
     let commits = convert_vector_in_string(pr.commits.clone().unwrap_or_default());
 
-
     match content_type {
         APPLICATION_JSON => {
             result.push_str(&format!("{{\t\"id\": {},\n\t\"owner\": \"{}\",\n\t\"title\": \"{}\",\n\t\"body\": \"{}\",\n\t\"state\": \"{}\",\n\t\"base\": \"{}\",\n\t\"head\": \"{}\",\n\t\"repo\": \"{}\",\n\t\"mergeable\": {},\n\t\"changed_files\": {},\n\t\"amount_commits\": {},\n\t\"commits\": {}}}", id, owner, title, body, state, base, head, repo, mergeable, changed_files, amount_commits, commits));
         }
-        TEXT_XML | APPLICATION_XML => { 
-                        result.push_str(&format!(
+        TEXT_XML | APPLICATION_XML => {
+            result.push_str(&format!(
                 "<pull_request>\n\
                 \t<id>{}</id>\n\
                 \t<owner>{}</owner>\n\
@@ -108,7 +105,6 @@ fn pull_request_to_string(pr: &PullRequest, content_type: &str) -> String {
     result
 }
 
-
 fn commits_to_string(commit: &CommitsPr, content_type: &str) -> String {
     let mut result = String::new();
     let sha_1 = commit.sha_1.clone();
@@ -125,7 +121,7 @@ fn commits_to_string(commit: &CommitsPr, content_type: &str) -> String {
         APPLICATION_JSON => {
             result.push_str(&format!("{{\t\"sha_1\": \"{}\",\n\t\"tree_hash\": \"{}\",\n\t\"parent\": \"{}\",\n\t\"author_name\": \"{}\",\n\t\"author_email\": {},\n\t\"committer_name\": \"{}\",\n\t\"committer_email\": {},\n\t\"message\": \"{}\",\n\t\"date\": \"{}\"}}", sha_1, tree_hash, parent, author_name, author_email, committer_name, committer_email, message, date));
         }
-        TEXT_XML | APPLICATION_XML => { 
+        TEXT_XML | APPLICATION_XML => {
             let author_email = escape_xml(author_email.as_str());
             let committer_email = escape_xml(committer_email.as_str());
             result.push_str(&format!(
@@ -140,7 +136,15 @@ fn commits_to_string(commit: &CommitsPr, content_type: &str) -> String {
                 \t<message>{}</message>\n\
                 \t<date>{}</date>\n\
                 </commit>",
-                sha_1, tree_hash, parent, author_name, author_email, committer_name, committer_email, message, date
+                sha_1,
+                tree_hash,
+                parent,
+                author_name,
+                author_email,
+                committer_name,
+                committer_email,
+                message,
+                date
             ))
         }
         TEXT_YAML | APPLICATION_YAML => {
@@ -154,7 +158,15 @@ fn commits_to_string(commit: &CommitsPr, content_type: &str) -> String {
                  committer_email: \"{}\"\n\
                  message: \"{}\"\n\
                  date: {}\n",
-                sha_1, tree_hash, parent, author_name, author_email, committer_name, committer_email, message, date
+                sha_1,
+                tree_hash,
+                parent,
+                author_name,
+                author_email,
+                committer_name,
+                committer_email,
+                message,
+                date
             ));
         }
         _ => return "".to_string(),
@@ -174,7 +186,6 @@ fn convert_vector_in_string(vec: Vec<String>) -> String {
     result.push(']');
     result
 }
-
 
 fn list_pull_request_to_string(prs: &[PullRequest], content_type: &str) -> String {
     let mut result = String::new();
@@ -254,7 +265,6 @@ fn message_to_string(message: &str, content_type: &str) -> String {
     };
     result
 }
-
 
 fn escape_xml(input: &str) -> String {
     input

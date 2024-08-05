@@ -3,10 +3,10 @@ use super::branch::get_branch;
 use super::branch::get_current_branch;
 use super::branch::git_branch_create;
 use super::cat_file::git_cat_file;
+use super::errors::CommandsError;
 use super::status::is_files_to_commit;
 use crate::consts::*;
 use crate::util::files::is_folder_empty;
-use super::errors::CommandsError;
 
 use crate::models::client::Client;
 use crate::util::files::create_directory;
@@ -71,7 +71,7 @@ fn load_files(
         if parts[0] == FILE || parts[0] == DIRECTORY {
             file_mode = parts[0];
             path_file = parts[1];
-        }else{
+        } else {
             path_file = parts[0];
             file_mode = parts[1];
         }
@@ -96,7 +96,8 @@ fn load_files(
             let new_path = format!("{}/{}", dir_path, path_file);
             load_files(directory, hash, mode, &new_path)?;
             let new_path_dir = format!("{}/{}", directory, new_path);
-            if mode == 1 && is_folder_empty(&new_path_dir)? && fs::remove_dir(new_path_dir).is_err() {
+            if mode == 1 && is_folder_empty(&new_path_dir)? && fs::remove_dir(new_path_dir).is_err()
+            {
                 return Err(CommandsError::RemoveFileError);
             }
         }
@@ -110,15 +111,15 @@ fn load_files(
 pub fn extract_parent_hash(commit: &str) -> Option<&str> {
     let mut count = 0;
     for line in commit.lines() {
-        if commit.lines().count() == 7{
+        if commit.lines().count() == 7 {
             if line.starts_with("parent") {
                 count += 1;
-                if count == 2{
+                if count == 2 {
                     let words: Vec<&str> = line.split_whitespace().collect();
                     return words.get(1).copied();
                 }
             }
-        }else if line.starts_with("parent") {
+        } else if line.starts_with("parent") {
             let words: Vec<&str> = line.split_whitespace().collect();
             return words.get(1).copied();
         }
@@ -130,7 +131,11 @@ pub fn extract_parent_hash(commit: &str) -> Option<&str> {
 /// ###Parametros:
 /// 'directory': directorio del repositorio local.
 /// 'hash_commit': Valor hash de 40 caracteres (SHA-1) del commit a leer.
-pub fn read_parent_commit(directory: &str, hash_commit: &str, mode: usize) -> Result<(), CommandsError> {
+pub fn read_parent_commit(
+    directory: &str,
+    hash_commit: &str,
+    mode: usize,
+) -> Result<(), CommandsError> {
     let commit = git_cat_file(directory, hash_commit, "-p")?;
 
     if let Some(tree_hash) = get_tree_hash(&commit) {
@@ -160,23 +165,26 @@ fn load_files_tree(directory: &str, branch_name: &str, mode: usize) -> Result<()
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
 /// 'branch_name': Nombre de la branch a cambiar.
-pub fn git_checkout_switch(directory: &str, branch_switch_name: &str) -> Result<String, CommandsError> {
+pub fn git_checkout_switch(
+    directory: &str,
+    branch_switch_name: &str,
+) -> Result<String, CommandsError> {
     //Falta implementar que verifique si realizó commit ante la pérdida de datos. <- con el status..
     let current_branch_name = get_current_branch(directory)?;
 
     if current_branch_name == branch_switch_name {
-        return Err(CommandsError::AlreadyOnThatBranch)
+        return Err(CommandsError::AlreadyOnThatBranch);
     }
 
     let branches = get_branch(directory)?;
     if !branches.contains(&branch_switch_name.to_string()) {
         return Err(CommandsError::BranchNotFoundError);
     }
-    
+
     if is_files_to_commit(directory)? {
-        return Ok("Please commit your changes\nAborting".to_string())
+        return Ok("Please commit your changes\nAborting".to_string());
     }
-    
+
     let directory_git = format!("{}/{}", directory, GIT_DIR);
     let head_file_path = Path::new(&directory_git).join(HEAD);
 

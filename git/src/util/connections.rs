@@ -13,7 +13,6 @@ use super::objects::ObjectEntry;
 use super::packfile::read_packfile_data;
 use super::packfile::read_packfile_header;
 
-
 /// Inicia una conexión de cliente con el servidor en la dirección IP proporcionada.
 ///
 /// # Argumentos

@@ -1,13 +1,12 @@
-use std::net::TcpStream;
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::Sender;
-use crate::consts::APPLICATION_SERVER;
-use crate::errors::GitError;
-use crate::util::logger::log_message_with_signature;
 use super::http_request::HttpRequest;
 use super::status_code::StatusCode;
 use super::utils::send_response_http;
-
+use crate::consts::APPLICATION_SERVER;
+use crate::errors::GitError;
+use crate::util::logger::log_message_with_signature;
+use std::net::TcpStream;
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
 
 /// Maneja las conexiones HTTP de los clientes.
 ///
@@ -29,14 +28,14 @@ pub fn handle_client_http(
     stream: &mut TcpStream,
     signature: String,
     tx: &Arc<Mutex<Sender<String>>>,
-    root_directory: String
+    root_directory: String,
 ) -> Result<(), GitError> {
     let (request, status_code) = _handle_client_http(stream, root_directory, tx, &signature);
     let content_type = match request {
         Some(request) => request.get_content_type(),
         None => APPLICATION_SERVER.to_string(),
     };
-    
+
     let message = format!("Response sent to client with status code: {}", status_code);
     log_message_with_signature(tx, &signature, &message);
 
@@ -44,7 +43,7 @@ pub fn handle_client_http(
 
     match status_code {
         StatusCode::Ok(_) => Ok(()),
-        _ => Err(GitError::RequestFailed(status_code.to_string()))
+        _ => Err(GitError::RequestFailed(status_code.to_string())),
     }
 }
 
@@ -76,11 +75,8 @@ pub fn _handle_client_http(
         Err(e) => return (None, e),
     };
     // Manejar la solicitud HTTP
-    match request.handle_http_request(&root_directory, tx, signature)
-    {
+    match request.handle_http_request(&root_directory, tx, signature) {
         Ok(status_code) => (Some(request), status_code),
         Err(e) => (Some(request), StatusCode::InternalError(e.to_string())),
     }
 }
-
-

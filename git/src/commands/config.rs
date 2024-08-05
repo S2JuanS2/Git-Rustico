@@ -4,7 +4,10 @@ use std::fs::File;
 use std::io;
 use std::io::Write;
 
-use crate::{consts::{CONFIG_FILE, GIT_DIR, CONFIG_REMOTE_FETCH}, git_server::GitServer};
+use crate::{
+    consts::{CONFIG_FILE, CONFIG_REMOTE_FETCH, GIT_DIR},
+    git_server::GitServer,
+};
 
 use super::errors::CommandsError;
 
@@ -22,7 +25,7 @@ impl BranchInfo {
         }
     }
 
-    fn update_info(&mut self, key: &str, value: &str) -> Result<(), CommandsError>{
+    fn update_info(&mut self, key: &str, value: &str) -> Result<(), CommandsError> {
         match key {
             "remote" => self.remote = Some(value.to_string()),
             "merge" => self.merge = Some(value.to_string()),
@@ -31,35 +34,31 @@ impl BranchInfo {
         Ok(())
     }
 
-    fn format(&self) -> String
-    {
+    fn format(&self) -> String {
         let mut format = String::new();
         match &self.remote {
             Some(value) => {
                 let s = format!("\tremote = {}\n", value);
                 format.extend(vec![s]);
-            },
+            }
             None => (),
         }
         match &self.merge {
             Some(value) => {
                 let s = format!("\tmerge = {}\n", value);
                 format.extend(vec![s]);
-            },
+            }
             None => (),
         }
         format
     }
 
-    pub fn valid_attribute(attribute: &str) -> bool
-    {
+    pub fn valid_attribute(attribute: &str) -> bool {
         matches!(attribute, "remote" | "merge")
     }
 
-    fn get_value(&self, key: &str) -> Option<&str>
-    {
-        match key
-        {
+    fn get_value(&self, key: &str) -> Option<&str> {
+        match key {
             "remote" => self.remote.as_deref(),
             "merge" => self.merge.as_deref(),
             _ => None,
@@ -81,56 +80,56 @@ impl RemoteInfo {
         }
     }
 
-    fn update_info(&mut self, key: &str, value: &str, name_remote: &str) -> Result<(), CommandsError>{
+    fn update_info(
+        &mut self,
+        key: &str,
+        value: &str,
+        name_remote: &str,
+    ) -> Result<(), CommandsError> {
         match key {
             "url" => {
                 self.url = Some(value.to_string());
-                let fetch  = format!("+refs/heads/*:refs/remotes/{}/*", name_remote);
+                let fetch = format!("+refs/heads/*:refs/remotes/{}/*", name_remote);
                 self.fetch = Some(fetch);
-            },
+            }
             "fetch" => self.fetch = Some(value.to_string()),
             _ => return Err(CommandsError::InvalidEntryConfigFile),
         };
         Ok(())
     }
 
-    fn format(&self) -> String
-    {
+    fn format(&self) -> String {
         let mut format = String::new();
         match &self.url {
             Some(value) => {
                 let s = format!("\turl = {}\n", value);
                 format.extend(vec![s]);
-            },
+            }
             None => (),
         }
         match &self.fetch {
             Some(value) => {
                 let s = format!("\tfetch = {}\n", value);
                 format.extend(vec![s]);
-            },
+            }
             None => (),
         }
         format
     }
 
-    fn get_value(&self, key: &str) -> Option<&str>
-    {
-        match key
-        {
+    fn get_value(&self, key: &str) -> Option<&str> {
+        match key {
             "url" => self.url.as_deref(),
             "fetch" => self.fetch.as_deref(),
             _ => None,
         }
     }
 
-    fn is_empty(&self) -> bool
-    {
+    fn is_empty(&self) -> bool {
         self.url.is_none()
     }
 
-    pub fn valid_attribute(attribute: &str) -> bool
-    {
+    pub fn valid_attribute(attribute: &str) -> bool {
         matches!(attribute, "url" | "fetch")
     }
 }
@@ -210,12 +209,10 @@ impl GitConfig {
     ///
     /// Devuelve un error [`CommandsError`] si hay algún problema al configurar el `GitConfig`.
     ///
-    pub fn new_from_server(server: &GitServer) -> Result<Self, CommandsError>
-    {
+    pub fn new_from_server(server: &GitServer) -> Result<Self, CommandsError> {
         let mut git_config = GitConfig::new();
         git_config.add_entry("url", &server.src_repo.to_string(), "remote origin")?;
-        for refs in server.get_references()
-        {
+        for refs in server.get_references() {
             let name = refs.get_name().to_string();
             let mut branch_info = BranchInfo::new();
             branch_info.update_info("remote", "origin")?;
@@ -233,7 +230,12 @@ impl GitConfig {
     /// * `value`: El valor de la entrada que se va a agregar.
     /// * `section`: La sección a la que pertenece la entrada.
     ///
-    pub fn add_entry(&mut self, key: &str, value: &str, section: &str) -> Result<(), CommandsError> {
+    pub fn add_entry(
+        &mut self,
+        key: &str,
+        value: &str,
+        section: &str,
+    ) -> Result<(), CommandsError> {
         if section == "core" {
             self.core.insert(key.to_string(), value.to_string());
             return Ok(());
@@ -245,18 +247,16 @@ impl GitConfig {
         }
         match parts[0].trim() {
             "remote" => {
-                let name = get_name_seccion(section)
-                .ok_or(CommandsError::InvalidEntryConfigFile)?;
+                let name =
+                    get_name_seccion(section).ok_or(CommandsError::InvalidEntryConfigFile)?;
 
-                if !RemoteInfo::valid_attribute(key)
-                {
+                if !RemoteInfo::valid_attribute(key) {
                     return Err(CommandsError::InvalidEntryConfigFile);
                 }
                 if !self.remotes.contains_key(&name) {
                     self.remotes.insert(name.to_string(), RemoteInfo::new());
                 }
-                let remote_info = match self.remotes.get_mut(&name)
-                {
+                let remote_info = match self.remotes.get_mut(&name) {
                     Some(remote_info) => remote_info,
                     None => return Err(CommandsError::InvalidEntryConfigFile),
                 };
@@ -265,18 +265,16 @@ impl GitConfig {
                 Ok(())
             }
             "branch" => {
-                let name = get_name_seccion(section)
-                    .ok_or(CommandsError::InvalidEntryConfigFile)?;
+                let name =
+                    get_name_seccion(section).ok_or(CommandsError::InvalidEntryConfigFile)?;
 
-                if !BranchInfo::valid_attribute(key)
-                {
+                if !BranchInfo::valid_attribute(key) {
                     return Err(CommandsError::InvalidEntryConfigFile);
                 }
                 if !self.branch.contains_key(&name) {
                     self.branch.insert(name.to_string(), BranchInfo::new());
                 }
-                let branch_info = match self.branch.get_mut(&name)
-                {
+                let branch_info = match self.branch.get_mut(&name) {
                     Some(branch_info) => branch_info,
                     None => return Err(CommandsError::InvalidEntryConfigFile),
                 };
@@ -309,8 +307,7 @@ impl GitConfig {
         let mut file = File::create(file_path)?;
 
         // Write core section
-        if !self.core.is_empty()
-        {
+        if !self.core.is_empty() {
             writeln!(file, "[core]")?;
             for (key, value) in &self.core {
                 writeln!(file, "\t{} = {}", key, value)?;
@@ -318,11 +315,9 @@ impl GitConfig {
         };
 
         // Write remote "origin" section
-        if !self.remotes.is_empty()
-        {
+        if !self.remotes.is_empty() {
             for (name, value) in &self.remotes {
-                if value.is_empty()
-                {
+                if value.is_empty() {
                     continue;
                 }
                 writeln!(file, "[remote \"{}\"]", name)?;
@@ -331,8 +326,7 @@ impl GitConfig {
         }
 
         // Write branch "main" section
-        if !self.branch.is_empty()
-        {        
+        if !self.branch.is_empty() {
             for (name, value) in &self.branch {
                 writeln!(file, "[branch \"{}\"]", name)?;
                 write!(file, "{}", value.format())?;
@@ -357,8 +351,7 @@ impl GitConfig {
     /// si no se encuentra la configuración del remoto o si la URL está ausente en la configuración.
     ///
     pub fn get_remote_url_by_name(&self, name_remote: &str) -> Result<String, CommandsError> {
-        let remote = match self.remotes.get(name_remote)
-        {
+        let remote = match self.remotes.get(name_remote) {
             Some(remote) => remote,
             None => return Err(CommandsError::MissingUrlConfig),
         };
@@ -382,29 +375,22 @@ impl GitConfig {
     /// Retorna un resultado que contiene el nombre del repositorio remoto si se encuentra, o un error
     /// si no se encuentra la configuración de la rama o si el remoto está ausente en la configuración.
     ///
-    pub fn get_remote_by_branch_name(&self, name_branch: &str) -> Result<String, CommandsError>
-    {
-        let branch = match self.branch.get(name_branch)
-        {
+    pub fn get_remote_by_branch_name(&self, name_branch: &str) -> Result<String, CommandsError> {
+        let branch = match self.branch.get(name_branch) {
             Some(b) => b,
             None => return Err(CommandsError::NoTrackingInformationForBranch),
         };
 
-        match &branch.remote
-        {
+        match &branch.remote {
             Some(remote) => Ok(remote.to_string()),
             None => Err(CommandsError::NoTrackingInformationForBranch),
         }
     }
 
-    pub fn get_name_remote_by_url(&self, url: &str) -> Option<String>
-    {
-        for (name, remote_info) in &self.remotes
-        {
-            if let Some(remote_url) = remote_info.get_value("url")
-            {
-                if remote_url == url
-                {
+    pub fn get_name_remote_by_url(&self, url: &str) -> Option<String> {
+        for (name, remote_info) in &self.remotes {
+            if let Some(remote_url) = remote_info.get_value("url") {
+                if remote_url == url {
                     return Some(name.to_string());
                 }
             }
@@ -431,8 +417,7 @@ impl GitConfig {
     /// Retorna un error del tipo `CommandsError` en caso de que no se encuentre la configuración de la rama o si
     /// la URL está ausente en la configuración del remoto.
     ///
-    pub fn get_branch_url_by_name(&self, name_branch: &str) -> Result<String, CommandsError>
-    {
+    pub fn get_branch_url_by_name(&self, name_branch: &str) -> Result<String, CommandsError> {
         let remote = self.get_remote_by_branch_name(name_branch)?;
 
         self.get_remote_url_by_name(&remote)
@@ -449,11 +434,9 @@ impl GitConfig {
     ///
     /// Devuelve `Some(&String)` si la entrada existe, o `None` si no se encuentra.
     ///
-    pub fn get_value(&self, section: &str, key: &str) -> Option<&str>
-    {
-        if section == "core"
-        {
-            return self.core.get(key).map(|x| x.as_str())
+    pub fn get_value(&self, section: &str, key: &str) -> Option<&str> {
+        if section == "core" {
+            return self.core.get(key).map(|x| x.as_str());
         }
         let parts: Vec<&str> = section.split_whitespace().collect();
         if parts.len() != 2 {
@@ -463,16 +446,14 @@ impl GitConfig {
         match parts[0].trim() {
             "remote" => {
                 let name = get_name_seccion(section)?;
-                match self.remotes.get(&name)
-                {
+                match self.remotes.get(&name) {
                     Some(r) => r.get_value(key),
                     None => None,
                 }
-            },
+            }
             "branch" => {
                 let name = get_name_seccion(section)?;
-                match self.branch.get(&name)
-                {
+                match self.branch.get(&name) {
                     Some(b) => b.get_value(key),
                     None => None,
                 }
@@ -498,10 +479,8 @@ impl GitConfig {
     /// Retorna un resultado indicando si la operación fue exitosa o si ocurrió un error al actualizar la
     /// configuración del remoto.
     ///
-    pub fn add_remote(&mut self, name_remote: &str, url: &str) -> Result<(), CommandsError>
-    {
-        if self.remotes.contains_key(name_remote)
-        {
+    pub fn add_remote(&mut self, name_remote: &str, url: &str) -> Result<(), CommandsError> {
+        if self.remotes.contains_key(name_remote) {
             self.remotes.remove(name_remote);
         }
         let mut remote_info = RemoteInfo::new();
@@ -532,10 +511,13 @@ impl GitConfig {
     ///
     /// Retorna un error del tipo `CommandsError` si ocurre algún problema al agregar o actualizar la información de la rama.
     ///
-    pub fn add_branch(&mut self, name_branch: &str, remote: &str, merge: &str) -> Result<(), CommandsError>
-    {
-        if self.branch.contains_key(name_branch)
-        {
+    pub fn add_branch(
+        &mut self,
+        name_branch: &str,
+        remote: &str,
+        merge: &str,
+    ) -> Result<(), CommandsError> {
+        if self.branch.contains_key(name_branch) {
             self.branch.remove(name_branch);
         }
         let mut branch_info = BranchInfo::new();
@@ -559,10 +541,8 @@ impl GitConfig {
     ///
     /// Puede retornar un error `CommandsError::BranchNotFound` si la rama no existe en la configuración del repositorio.
     ///
-    pub fn delete_branch(&mut self, name_branch: &str) -> Result<(), CommandsError>
-    {
-        if !self.branch.contains_key(name_branch)
-        {
+    pub fn delete_branch(&mut self, name_branch: &str) -> Result<(), CommandsError> {
+        if !self.branch.contains_key(name_branch) {
             return Err(CommandsError::BranchNotFound);
         }
         self.branch.remove(name_branch);
@@ -583,38 +563,30 @@ impl GitConfig {
     ///
     /// Puede retornar un error `CommandsError::RemoteNotFound` si el remoto no existe en la configuración del repositorio.
     ///
-    pub fn delete_remote(&mut self, name_remote: &str) -> Result<(), CommandsError>
-    {
-        if !self.remotes.contains_key(name_remote)
-        {
+    pub fn delete_remote(&mut self, name_remote: &str) -> Result<(), CommandsError> {
+        if !self.remotes.contains_key(name_remote) {
             return Err(CommandsError::RemoteNotFound);
         }
         self.remotes.remove(name_remote);
 
         // Eliminar las ramas que apuntan al remoto
         let mut branches_to_delete = Vec::new();
-        for (name_branch, branch_info) in &self.branch
-        {
-            if branch_info.remote.as_deref() == Some(name_remote)
-            {
+        for (name_branch, branch_info) in &self.branch {
+            if branch_info.remote.as_deref() == Some(name_remote) {
                 branches_to_delete.push(name_branch.to_string());
             }
         }
-        for name_branch in branches_to_delete
-        {
+        for name_branch in branches_to_delete {
             self.branch.remove(&name_branch);
         }
 
         Ok(())
     }
 
-    pub fn get_remotes_in_use(&self) -> HashSet<String>
-    {
+    pub fn get_remotes_in_use(&self) -> HashSet<String> {
         let mut remotes = HashSet::new();
-        for branch_info in self.branch.values()
-        {
-            if let Some(remote) = branch_info.get_value("remote")
-            {
+        for branch_info in self.branch.values() {
+            if let Some(remote) = branch_info.get_value("remote") {
                 remotes.insert(remote.to_string());
             }
         }
@@ -632,31 +604,25 @@ impl GitConfig {
     /// Un `Option<String>` que contiene la referencia completa de la rama remota si se encuentra.
     /// Si no se encuentra información para la rama especificada o si la referencia no es válida, se devuelve `None`.
     ///
-    pub fn get_remote_branch_ref(&self, name_branch: &str) -> Option<String>
-    {
-        let branch_info = match self.branch.get(name_branch)
-        {
+    pub fn get_remote_branch_ref(&self, name_branch: &str) -> Option<String> {
+        let branch_info = match self.branch.get(name_branch) {
             Some(branch_info) => branch_info,
             None => return None,
         };
-        let remote = match branch_info.get_value("remote")
-        {
+        let remote = match branch_info.get_value("remote") {
             Some(remote) => remote,
             None => return None,
         };
-        let remote_info = match self.remotes.get(remote)
-        {
+        let remote_info = match self.remotes.get(remote) {
             Some(remote_info) => remote_info,
             None => return None,
         };
-        let fetch = match remote_info.get_value("fetch")
-        {
+        let fetch = match remote_info.get_value("fetch") {
             Some(fetch) => fetch,
             None => return None,
         };
         let parts = fetch.split(':').collect::<Vec<&str>>();
-        if parts.len() != 2
-        {
+        if parts.len() != 2 {
             return None;
         }
         let location: &str = parts[1].trim();
@@ -664,8 +630,7 @@ impl GitConfig {
         Some(location.to_string())
     }
 
-    pub fn valid_remote(&self, name_remote: &str) -> bool
-    {
+    pub fn valid_remote(&self, name_remote: &str) -> bool {
         self.remotes.contains_key(name_remote)
     }
 }
@@ -683,10 +648,11 @@ impl GitConfig {
 ///
 /// Retorna un Resultado que contiene un HashMap donde las claves son las secciones y los valores son HashMaps
 /// de atributos en formato clave=valor. En caso de error, se devuelve un error CommandsError.
-/// 
-fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, String>>, CommandsError> {
-    let content = match fs::read_to_string(path)
-    {
+///
+fn read_format_config(
+    path: &str,
+) -> Result<HashMap<String, HashMap<String, String>>, CommandsError> {
+    let content = match fs::read_to_string(path) {
         Ok(content) => content,
         Err(_) => return Err(CommandsError::FileNotFoundConfig),
     };
@@ -697,7 +663,7 @@ fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, Stri
     for line in content.lines() {
         let line = line.trim();
 
-        if line.is_empty() || line.starts_with('#'){
+        if line.is_empty() || line.starts_with('#') {
             continue;
         }
 
@@ -708,7 +674,7 @@ fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, Stri
             current_attributes = HashMap::new();
             current_section = line[1..line.len() - 1].to_string();
             continue;
-        } 
+        }
         let parts: Vec<&str> = line.splitn(2, '=').collect();
 
         if parts.len() != 2 {
@@ -723,7 +689,6 @@ fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, Stri
     };
     Ok(result)
 }
-
 
 /// Extrae y devuelve el nombre de una sección a partir de una cadena dada.
 ///
@@ -740,8 +705,7 @@ fn read_format_config(path: &str) -> Result<HashMap<String, HashMap<String, Stri
 /// Retorna `Some` con el nombre de la sección si es válido, o `None` si el formato es incorrecto o no se encuentra
 /// un nombre válido.
 ///
-fn get_name_seccion(section: &str) -> Option<String>
-{
+fn get_name_seccion(section: &str) -> Option<String> {
     let parts: Vec<&str> = section.split_whitespace().collect();
     if parts.len() != 2 {
         println!("parts: {:?}", parts);
@@ -750,7 +714,9 @@ fn get_name_seccion(section: &str) -> Option<String>
     match parts[0].trim() {
         "remote" | "branch" => {
             let name = parts[1];
-            let name = name.trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace()).to_string();
+            let name = name
+                .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+                .to_string();
             Some(name.to_string())
         }
         _ => None,
@@ -766,7 +732,9 @@ mod tests {
     #[test]
     fn add_entry_valid_core() {
         let mut git_config = GitConfig::new();
-        git_config.add_entry("repositoryformatversion", "0", "core").unwrap();
+        git_config
+            .add_entry("repositoryformatversion", "0", "core")
+            .unwrap();
         assert_eq!(
             git_config.core.get("repositoryformatversion"),
             Some(&"0".to_string())
@@ -776,7 +744,9 @@ mod tests {
     #[test]
     fn add_entry_valid_remotes() {
         let mut git_config = GitConfig::new();
-        git_config.add_entry("url", "git@github.com:example/repo.git", "remote origin").unwrap();
+        git_config
+            .add_entry("url", "git@github.com:example/repo.git", "remote origin")
+            .unwrap();
         assert_eq!(
             git_config.get_remote_url_by_name("origin").unwrap(),
             "git@github.com:example/repo.git".to_string()
@@ -786,7 +756,9 @@ mod tests {
     #[test]
     fn add_entry_valid_branch() {
         let mut git_config = GitConfig::new();
-        git_config.add_entry("remote", "origin", "branch \"main\"").unwrap();
+        git_config
+            .add_entry("remote", "origin", "branch \"main\"")
+            .unwrap();
         assert_eq!(
             git_config.get_remote_by_branch_name("main").unwrap(),
             "origin"
@@ -829,7 +801,9 @@ mod tests {
         let mut git_config = GitConfig::new();
         let _ = git_config.add_entry("repositoryformatversion", "0", "core");
         assert_eq!(
-            git_config.get_value("core", "repositoryformatversion").unwrap(),
+            git_config
+                .get_value("core", "repositoryformatversion")
+                .unwrap(),
             "0"
         );
     }
@@ -881,7 +855,7 @@ mod tests {
                                 \tfetch = +refs/heads/*:refs/remotes/origin/*\n\
                                 [branch \"main\"]\n\
                                 \tremote = origin\n";
-                                
+
         // Cleanup
         fs::remove_file(file_path).expect("No se pudo eliminar el config del tests");
         assert_eq!(file_content, expected_content);
@@ -899,7 +873,10 @@ mod tests {
 
     #[test]
     fn test_get_name_seccion_valid_remote() {
-        assert_eq!(get_name_seccion("remote \"origin\""), Some("origin".to_string()));
+        assert_eq!(
+            get_name_seccion("remote \"origin\""),
+            Some("origin".to_string())
+        );
     }
 
     #[test]
@@ -909,7 +886,10 @@ mod tests {
 
     #[test]
     fn test_get_name_seccion_valid_single_quote() {
-        assert_eq!(get_name_seccion("branch 'feature'"), Some("feature".to_string()));
+        assert_eq!(
+            get_name_seccion("branch 'feature'"),
+            Some("feature".to_string())
+        );
     }
 
     #[test]
@@ -934,7 +914,9 @@ mod tests {
         let mut config = GitConfig::new();
 
         // Agregar una rama existente
-        config.add_branch("main", "origin", "refs/heads/main").unwrap();
+        config
+            .add_branch("main", "origin", "refs/heads/main")
+            .unwrap();
 
         // Actualizar la información de la rama
         let result = config.add_branch("main", "upstream", "refs/heads/upstream");
@@ -954,7 +936,9 @@ mod tests {
         let mut config = GitConfig::new();
 
         // Agregar una rama nueva
-        config.add_branch("main", "origin", "refs/heads/main").unwrap();
+        config
+            .add_branch("main", "origin", "refs/heads/main")
+            .unwrap();
 
         let result = config.add_branch("main", "upstream", "refs/heads/upstream");
         assert!(result.is_ok());
@@ -972,36 +956,52 @@ mod tests {
     fn test_delete_branch() {
         let mut git_config = GitConfig::new();
         git_config.add_remote("origin", "github").unwrap();
-        git_config.add_branch("main", "origin", "refs/heads/main").unwrap();
+        git_config
+            .add_branch("main", "origin", "refs/heads/main")
+            .unwrap();
 
         assert!(git_config.get_remote_by_branch_name("main").is_ok());
 
         assert_eq!(git_config.delete_branch("main"), Ok(()));
-        assert_eq!(git_config.get_remote_by_branch_name("main"), Err(CommandsError::NoTrackingInformationForBranch));
+        assert_eq!(
+            git_config.get_remote_by_branch_name("main"),
+            Err(CommandsError::NoTrackingInformationForBranch)
+        );
     }
 
     #[test]
     fn test_delete_remote() {
         let mut git_config = GitConfig::new();
         git_config.add_remote("origin", "github").unwrap();
-        git_config.add_branch("main", "origin", "refs/heads/main").unwrap();
+        git_config
+            .add_branch("main", "origin", "refs/heads/main")
+            .unwrap();
 
         assert!(git_config.get_remote_by_branch_name("main").is_ok());
         assert!(git_config.get_remote_url_by_name("origin").is_ok());
 
         assert_eq!(git_config.delete_remote("origin"), Ok(()));
         assert!(git_config.get_remote_url_by_name("main").is_err());
-        assert_eq!(git_config.get_remote_by_branch_name("main"), Err(CommandsError::NoTrackingInformationForBranch));
+        assert_eq!(
+            git_config.get_remote_by_branch_name("main"),
+            Err(CommandsError::NoTrackingInformationForBranch)
+        );
     }
 
     #[test]
     fn test_write_and_to_file() {
         let mut git_config = GitConfig::new();
         git_config.add_remote("origin", "Repository_1").unwrap();
-        git_config.add_branch("main", "origin", "refs/heads/main").unwrap();
+        git_config
+            .add_branch("main", "origin", "refs/heads/main")
+            .unwrap();
         git_config.add_remote("upstream", "Repository_2").unwrap();
-        git_config.add_branch("feature", "upstream", "refs/heads/feature").unwrap();
-        git_config.add_branch("master", "upstream", "refs/heads/master").unwrap();
+        git_config
+            .add_branch("feature", "upstream", "refs/heads/feature")
+            .unwrap();
+        git_config
+            .add_branch("master", "upstream", "refs/heads/master")
+            .unwrap();
         git_config.delete_branch("master").unwrap();
         let file_path = "./test_files/test_config_2";
         let _ = git_config.write_to_file(file_path);
@@ -1011,26 +1011,48 @@ mod tests {
         // Cleanup
         assert_eq!(git_config.branch.len(), 2);
         assert_eq!(git_config.remotes.len(), 2);
-        assert_eq!(git_config.get_remote_url_by_name("origin").unwrap(), "Repository_1");
-        assert_eq!(git_config.get_remote_url_by_name("upstream").unwrap(), "Repository_2");
-        assert_eq!(git_config.get_remote_by_branch_name("main").unwrap(), "origin");
-        assert_eq!(git_config.get_remote_by_branch_name("feature").unwrap(), "upstream");
-
+        assert_eq!(
+            git_config.get_remote_url_by_name("origin").unwrap(),
+            "Repository_1"
+        );
+        assert_eq!(
+            git_config.get_remote_url_by_name("upstream").unwrap(),
+            "Repository_2"
+        );
+        assert_eq!(
+            git_config.get_remote_by_branch_name("main").unwrap(),
+            "origin"
+        );
+        assert_eq!(
+            git_config.get_remote_by_branch_name("feature").unwrap(),
+            "upstream"
+        );
     }
 
     #[test]
-    fn test_get_remote_branch_ref()
-    {
+    fn test_get_remote_branch_ref() {
         let mut git_config = GitConfig::new();
         git_config.add_remote("origin", "Repository_1").unwrap();
-        git_config.add_branch("main", "origin", "refs/heads/main").unwrap();
+        git_config
+            .add_branch("main", "origin", "refs/heads/main")
+            .unwrap();
         git_config.add_remote("upstream", "Repository_2").unwrap();
-        git_config.add_branch("feature", "upstream", "refs/heads/feature").unwrap();
-        git_config.add_branch("master", "upstream", "refs/heads/master").unwrap();
+        git_config
+            .add_branch("feature", "upstream", "refs/heads/feature")
+            .unwrap();
+        git_config
+            .add_branch("master", "upstream", "refs/heads/master")
+            .unwrap();
         git_config.delete_branch("master").unwrap();
 
-        assert_eq!(git_config.get_remote_branch_ref("main"), Some("refs/remotes/origin/main".to_string()));
-        assert_eq!(git_config.get_remote_branch_ref("feature"), Some("refs/remotes/upstream/feature".to_string()));
+        assert_eq!(
+            git_config.get_remote_branch_ref("main"),
+            Some("refs/remotes/origin/main".to_string())
+        );
+        assert_eq!(
+            git_config.get_remote_branch_ref("feature"),
+            Some("refs/remotes/upstream/feature".to_string())
+        );
         assert_eq!(git_config.get_remote_branch_ref("master"), None);
     }
 }
