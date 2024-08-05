@@ -39,6 +39,17 @@ pub fn create_directory(directory: &Path) -> Result<(), UtilError> {
 /// 'file': archivo a crear.
 /// 'content': contenido que se escribirá en el archivo.
 pub fn create_file_replace(file: &str, content: &str) -> Result<(), UtilError> {
+    let path = Path::new(file);
+
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            match fs::create_dir_all(parent) {
+                Ok(_) => (),
+                Err(_) => return Err(UtilError::CreateDirError),
+            }
+        }
+    }
+    
     let mut file = match fs::File::create(file) {
         Ok(file) => file,
         Err(_) => return Err(UtilError::CreateFileError),

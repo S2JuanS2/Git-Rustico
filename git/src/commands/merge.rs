@@ -11,7 +11,7 @@ use std::hash::Hash;
 use super::branch::{get_branch_current_hash, get_current_branch};
 use super::cat_file::git_cat_file;
 
-#[derive(Eq, Hash, PartialEq, Clone)]
+#[derive(Eq, Hash, PartialEq, Clone, Debug)]
 struct FileEntry {
     path: String,
     hash: String,
@@ -344,9 +344,10 @@ fn fast_forward(directory: &str, merge_branch: &str) -> Result<Vec<FileEntry>, C
 
     // Obtener el tree del merge_branch
     let merge_tree_hash = get_tree_hash(&merge_commit_content).ok_or(CommandsError::InvalidTreeHashError)?;
-    let merge_tree = get_files_in_tree(directory, merge_tree_hash, &mut "".to_string())?;
+    let mut files_in_tree = Vec::new();
+    get_files_in_tree(directory, merge_tree_hash, &mut "".to_string(), &mut files_in_tree)?;
     
-    Ok(merge_tree)
+    Ok(files_in_tree)
 }
 
 // Función para realizar un Three way merge
@@ -369,14 +370,16 @@ fn three_way_merge(directory: &str, current_branch: &str, merge_branch: &str, me
     let merge_tree_hash = get_tree_hash(&merge_commit_content).ok_or(CommandsError::InvalidTreeHashError)?;
 
     // Obtener los files de ambas branches con el formato FileEntry (path, hash)
-    let current_tree = get_files_in_tree(directory, current_tree_hash, &mut "".to_string())?;
-    let merge_tree = get_files_in_tree(directory, merge_tree_hash, &mut "".to_string())?;
+    let mut files_in_current_tree = Vec::new();
+    let mut files_in_merge_tree = Vec::new();
+    get_files_in_tree(directory, current_tree_hash, &mut "".to_string(), &mut files_in_current_tree)?;
+    get_files_in_tree(directory, merge_tree_hash, &mut "".to_string(), &mut files_in_merge_tree)?;
 
     // Voy a devolver una estructura que sea un HashMap<FileEntry, String> con el FileEntry de los archivos y sus blobs y un string con OK o CONFLICT
     let mut result: HashMap<FileEntry, String> = HashMap::new();
 
-    for file in merge_tree.iter() {
-        if let Some(current_file) = current_tree.iter().find(|f| f.path == file.path) {
+    for file in files_in_merge_tree.iter() {
+        if let Some(current_file) = files_in_current_tree.iter().find(|f| f.path == file.path) {
             if current_file.hash != file.hash {
                 // El archivo existe en current_branch pero fue modificado en merge_branch
                 result.insert(file.clone(), "CONFLICT".to_string());
@@ -398,9 +401,8 @@ fn three_way_merge(directory: &str, current_branch: &str, merge_branch: &str, me
 /// 'directory': directorio del repositorio local
 /// 'tree_hash': hash del tree
 /// 'path': path del archivo
-fn get_files_in_tree(directory: &str, tree_hash: &str, path: &mut str) -> Result<Vec<FileEntry>, CommandsError> {
+fn get_files_in_tree(directory: &str, tree_hash: &str, path: &mut str, files_in_tree: &mut Vec<FileEntry>) -> Result<(), CommandsError> {
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
-    let mut files_in_tree: Vec<FileEntry> = Vec::new();
     for line in tree_content.lines() {
         if !line.is_empty() {
             let tree_parts: Vec<&str> = line.split_whitespace().collect();
@@ -411,13 +413,13 @@ fn get_files_in_tree(directory: &str, tree_hash: &str, path: &mut str) -> Result
             };
 
             if git_cat_file(directory, tree_parts[2], "-t")? == "tree" {
-                get_files_in_tree(directory, tree_parts[2], &mut current_path)?;
+                get_files_in_tree(directory, tree_parts[2], &mut current_path, files_in_tree)?;
             } else {
                 files_in_tree.push(FileEntry { path: current_path, hash: tree_parts[2].to_string() });
             }
         }
     }
-    Ok(files_in_tree)
+    Ok(())
 }
 
 /// Chequea cada linea de los archivos que difieren entre las ramas a mergear. Esto solo se hace en caso de merge o rebase, NO en caso de un merge PR.
