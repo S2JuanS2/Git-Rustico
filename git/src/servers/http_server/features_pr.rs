@@ -232,14 +232,16 @@ pub fn merge_pull_request(repo_name: &str, pull_number: &str, src: &String, _tx:
         Ok(fields) => fields,
         Err(e) => return Ok(e),
     };
-    if !is_mergeable(&directory, &base, &head)? {
-        return Ok(StatusCode::Conflict);
-    }
+
     let mut pr = PullRequest::from_http_body(&body)?;
     if let Err(e) = update_pr_attributes(&directory, &body, &mut pr, pull_number) {
         return Ok(e);
     }
-    merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
+    let result_merge_pr = merge_pr(&directory, &base, &head, &owner, &title, pull_number, repo_name)?;
+    if result_merge_pr.contains("Conflict") {
+        // devolver conflicto ?
+        return Ok(StatusCode::Conflict);
+    }
 
     pr.change_state("closed");
     let updated_body = match serde_json::to_string(&pr) {

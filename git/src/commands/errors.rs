@@ -97,7 +97,8 @@ pub enum CommandsError {
     PushCurrentBranchNotFound,
     SendMessageReferenceUpdate,
     TimeStamp,
-    PushInvalidStatusFromServer
+    PushInvalidStatusFromServer,
+    IsSameBranch
 }
 
 fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -203,6 +204,7 @@ fn format_error(error: &CommandsError, f: &mut fmt::Formatter<'_>) -> fmt::Resul
         CommandsError::SendMessageReferenceUpdate => write!(f, "No se pudo enviar el mensaje de actualización de referencia"),
         CommandsError::TimeStamp => write!(f, "No se pudo obtener el timestamp"),
         CommandsError::PushInvalidStatusFromServer => write!(f, "El servidor devolvió un estado inválido"),
+        CommandsError::IsSameBranch => write!(f, "No se puede hacer merge con la misma branch"),
     }
 }
 

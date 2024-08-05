@@ -4,7 +4,7 @@ use crate::util::files::{create_file_replace, open_file, read_file_string};
 use super::branch::get_current_branch;
 use super::commit::Commit;
 use super::errors::CommandsError;
-use super::merge::{get_log_from_branch, try_for_merge, logs_just_in_one_branch, get_branches_hashes, get_refs_path};
+use super::merge::{get_log_from_branch, perform_merge, logs_just_in_one_branch, get_branch_hash, get_refs_path};
 use super::cat_file::git_cat_file;
 
 /// Esta función se encarga de llamar al comando rebase con los parametros necesarios.
@@ -30,18 +30,17 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
     let current_branch = get_current_branch(directory)?;
     let path_current_branch = get_refs_path(directory, &current_branch);
     let path_branch_to_rebase = get_refs_path(directory, branch_name);
-    let (current_branch_hash, branch_to_rebase_hash) = get_branches_hashes(&path_current_branch, &path_branch_to_rebase)?;
+    let current_branch_hash = get_branch_hash(&path_current_branch)?;
+    let branch_to_rebase_hash = get_branch_hash(&path_branch_to_rebase)?;
     let log_current_branch = get_log_from_branch(directory, &current_branch_hash)?;
     let log_rebase_branch = get_log_from_branch(directory, &branch_to_rebase_hash)?;
 
     formatted_result.push_str("First, rewinding head to replay your work on top of it...\n");
-    let result_merge = try_for_merge(directory, &current_branch, branch_name, &client, "rebase")?;
+    let (result_merge, _) = perform_merge(&current_branch, branch_name, directory, "rebase")?;
 
     formatted_result.push_str(result_merge.as_str());
     if !result_merge.contains("CONFLICT") {
-
         let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch, log_rebase_branch);
-
         create_new_commits(directory, client, logs_just_in_current_branch, &current_branch, branch_name, &branch_to_rebase_hash, &mut formatted_result)?;
     }
 
