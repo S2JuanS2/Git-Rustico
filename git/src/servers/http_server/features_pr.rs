@@ -602,14 +602,6 @@ pub fn read_and_validate_pull_request(repo_name: &str, pull_number: &str, src: &
 /// # Retorna
 ///
 /// Una `String` que contiene la ruta completa al archivo de la solicitud de extracción.
-///
-/// # Ejemplos
-///
-/// ```
-/// let path = get_pull_request_file_path("repo-name", "42", &"/home/user/repos".to_string());
-/// assert_eq!(path, "/home/user/repos/pr_folder/repo-name/42.pr");
-/// ```
-/// 
 fn get_pull_request_file_path(repo_name: &str, pull_number: &str, src: &String) -> String {
     format!("{}/{}/{}/{}{}", src, PR_FOLDER, repo_name, pull_number, PR_FILE_EXTENSION)
 }

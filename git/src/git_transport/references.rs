@@ -820,7 +820,7 @@ mod tests {
 
     #[test]
     fn test_get_object_to_hash(){
-        let directory = "./test_commit_repo";
+        let directory = "./test_commit_repo_references";
         git_init(directory).expect("Falló en el comando init");
 
         let file_path = format!("{}/{}", directory, "holamundo.txt");

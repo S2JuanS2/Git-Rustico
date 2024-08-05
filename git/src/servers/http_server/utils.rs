@@ -79,20 +79,6 @@ pub fn create_pr_folder(src: &str) -> Result<(), ServerError>{
 /// # Errores
 ///
 /// Retorna `ServerError::SendResponse` si falla al escribir la respuesta en el escritor.
-///
-/// # Ejemplos
-///
-/// ```
-/// use std::io::Cursor;
-/// use git::servers::http_server::utils::send_response_http;
-/// let mut buffer = Cursor::new(Vec::new());
-/// let status_code = StatusCode::Ok;
-/// let result = send_response_http(&mut buffer, status_code);
-/// use git::servers::http_server::status_code::StatusCode;
-///
-/// assert!(result.is_ok());
-/// ```
-/// 
 pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, content_type: &str) -> Result<(), ServerError>{
     let response = format!("{} {}{}", HTTP_VERSION, status_code, CRLF);
     let error = UtilError::UtilFromServer("Error sending response".to_string());

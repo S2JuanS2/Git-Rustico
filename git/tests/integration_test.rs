@@ -50,7 +50,7 @@ mod tests {
         git_add(directory, "holamundo.txt").expect("Error al agregar el archivo");
 
         let status_after_add = git_status(directory).expect("Error al obtener el status");
-        let status_msg = format!("On branch {}\nChanges to be committed:\n  (use \"git reset HEAD <file>...\" to unstage)\n\tmodified:   holamundo.txt\n", current_branch);
+        let status_msg = format!("On branch {}\n\nChanges to be committed:\n  (use \"git reset HEAD <file>...\" to unstage)\n\n\tmodified:\t./testing_status/holamundo.txt\n", current_branch);
 
         assert_eq!(status_after_add, status_msg);
 

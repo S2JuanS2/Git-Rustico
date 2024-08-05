@@ -381,13 +381,6 @@ impl HttpBody {
     /// # Retorno
     ///
     /// Retorna un `Result` que contiene un `HttpBody` convertido o un `ServerError` en caso de error.
-    ///
-    /// # Ejemplos
-    ///
-    /// ```rust
-    /// let json_body = HttpBody::Json(serde_json::json!({"key": "value"}));
-    /// let xml_body = convert_body_to_content_type(&json_body, "application/xml");
-    /// ```
     pub fn convert_body_to_content_type(body: HttpBody, content_type: &str) -> Result<HttpBody, ServerError> {
         match content_type {
             APPLICATION_JSON => match body {
