@@ -1,11 +1,11 @@
 use crate::{
-    consts::{PACK_BYTES, PACK_SIGNATURE, BUFFER_SIZE},
+    consts::{BUFFER_SIZE, PACK_BYTES, PACK_SIGNATURE},
     git_server::GitServer,
     util::objects::read_type_and_length_from_vec,
 };
-use flate2::{read::ZlibDecoder, bufread::ZlibEncoder, Compression};
+use flate2::{bufread::ZlibEncoder, read::ZlibDecoder, Compression};
+use sha1::{Digest, Sha1};
 use std::io::{Read, Write};
-use sha1::{Sha1, Digest};
 
 use super::{
     connections::send_bytes,
@@ -27,8 +27,8 @@ pub fn read_packfile_data(
     objects: usize,
 ) -> Result<Vec<(ObjectEntry, Vec<u8>)>, UtilError> {
     let mut information: Vec<(ObjectEntry, Vec<u8>)> = Vec::new();
-     let mut buffer: Vec<u8> = Vec::new();
-     match reader.read_to_end(&mut buffer) // Necesita refactorizar, si el packfile es muy grande habra problema
+    let mut buffer: Vec<u8> = Vec::new();
+    match reader.read_to_end(&mut buffer) // Necesita refactorizar, si el packfile es muy grande habra problema
      {
          Ok(buffer) => buffer,
          Err(_) => return Err(UtilError::DataPackFiletReadObject),
@@ -67,18 +67,14 @@ fn read_object_data(data: &[u8], offset: &mut usize) -> Result<Vec<u8>, UtilErro
     Ok(decompressed_data)
 }
 
-pub fn read_data_packfile(
-    reader: &mut dyn Read,
-) -> Result<Vec<u8>, UtilError> {
+pub fn read_data_packfile(reader: &mut dyn Read) -> Result<Vec<u8>, UtilError> {
     let mut buffer = Vec::new();
     let mut temp_buffer = [0; BUFFER_SIZE];
     loop {
-        let bytes_read = match reader.read(&mut temp_buffer)
-        {
+        let bytes_read = match reader.read(&mut temp_buffer) {
             Ok(bytes_read) => bytes_read,
             Err(_) => return Err(UtilError::DataPackFiletReadObject),
-        }
-        ;
+        };
 
         if bytes_read != BUFFER_SIZE {
             buffer.extend_from_slice(&temp_buffer[..bytes_read]);
@@ -171,7 +167,7 @@ pub fn send_packfile(
     writer: &mut dyn Write,
     server: &GitServer,
     objects: Vec<(ObjectType, Vec<u8>)>,
-    decoder: bool
+    decoder: bool,
 ) -> Result<(), UtilError> {
     println!("Send packfile");
     let mut sha1 = Sha1::new();
@@ -217,7 +213,6 @@ pub fn send_packfile(
     Ok(())
 }
 
-
 pub fn send_object(
     writer: &mut dyn Write,
     obj_type: ObjectType,
@@ -251,15 +246,15 @@ pub fn send_object_enconder(
     let mut bytes = object.to_bytes();
 
     // sha1.update(&object.to_bytes());
-    
+
     let mut compressed_data: Vec<u8> = Vec::new();
     let mut zlib_encoder: ZlibEncoder<&[u8]> = ZlibEncoder::new(&content, Compression::default());
-    
+
     let _ = match zlib_encoder.read_to_end(&mut compressed_data) {
         Ok(n) => n,
         Err(_) => return Err(UtilError::ObjectSerialization),
     };
-    
+
     // sha1.update(&content);
     bytes.extend(compressed_data);
     sha1.update(&bytes);

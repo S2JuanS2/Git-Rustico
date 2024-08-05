@@ -1,12 +1,14 @@
 pub mod handle_references;
 pub mod reference_information;
 
-use std::{io::Write, collections::HashSet};
-
+use std::{collections::HashSet, io::Write};
 
 use crate::{
     consts::VERSION_DEFAULT,
-    git_transport::{advertised::AdvertisedRefLine, references::{Reference, ReferenceType}},
+    git_transport::{
+        advertised::AdvertisedRefLine,
+        references::{Reference, ReferenceType},
+    },
     util::{
         connections::{send_flush, send_message},
         errors::UtilError,
@@ -42,7 +44,11 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    pub fn new(content: &Vec<Vec<u8>>, src_repo: &str, my_capabilities: &[String]) -> Result<GitServer, UtilError> {
+    pub fn new(
+        content: &Vec<Vec<u8>>,
+        src_repo: &str,
+        my_capabilities: &[String],
+    ) -> Result<GitServer, UtilError> {
         let classified = AdvertisedRefLine::classify_vec(content)?;
         GitServer::from_classified(classified, src_repo, my_capabilities)
     }
@@ -61,7 +67,11 @@ impl GitServer {
     /// Devuelve un `Result` que contiene la estructura `GitServer` si la operación es exitosa,
     /// o un error de `UtilError` si ocurre algún problema durante el proceso.
     ///
-    fn from_classified(classified: Vec<AdvertisedRefLine>, src_repo: &str, my_capabilities: &[String]) -> Result<GitServer, UtilError> {
+    fn from_classified(
+        classified: Vec<AdvertisedRefLine>,
+        src_repo: &str,
+        my_capabilities: &[String],
+    ) -> Result<GitServer, UtilError> {
         let mut version: u32 = VERSION_DEFAULT;
         let mut capabilities: Vec<String> = Vec::new();
         let mut shallow: Vec<String> = Vec::new();
@@ -77,7 +87,7 @@ impl GitServer {
                 }
             }
         }
-        
+
         GitServer::filter_capabilities(&mut capabilities, my_capabilities)?;
         Ok(GitServer {
             src_repo: src_repo.to_string(),
@@ -143,7 +153,7 @@ impl GitServer {
     ) -> Result<GitServer, UtilError> {
         let available_references = Reference::extract_references_from_git(path_repo)?;
         // GitServer::filter_capabilities(&mut capabilities, );
-        
+
         Ok(GitServer {
             src_repo: path_repo.to_string(),
             version,
@@ -186,11 +196,13 @@ impl GitServer {
         Ok(())
     }
 
-    fn send_first_reference(&self, writer: &mut dyn Write) -> Result<(), UtilError>
-    {
-        let mut firts_references = format!("{} {}", self.available_references[0].get_hash(), self.available_references[0].get_ref_path());
-        if !self.capabilities.is_empty()
-        {
+    fn send_first_reference(&self, writer: &mut dyn Write) -> Result<(), UtilError> {
+        let mut firts_references = format!(
+            "{} {}",
+            self.available_references[0].get_hash(),
+            self.available_references[0].get_ref_path()
+        );
+        if !self.capabilities.is_empty() {
             let mut len = firts_references.len();
             firts_references.push('\0');
             len += 1;
@@ -201,7 +213,8 @@ impl GitServer {
             send_message(writer, &firts_references, UtilError::ReferencesObtaining)
         } else {
             firts_references.push('\n');
-            let firts_references = pkt_line::add_length_prefix(&firts_references, firts_references.len());
+            let firts_references =
+                pkt_line::add_length_prefix(&firts_references, firts_references.len());
             send_message(writer, &firts_references, UtilError::ReferencesObtaining)
         }
     }
@@ -279,7 +292,8 @@ impl GitServer {
     /// * `local_commits`: Vector de commits locales que se utilizará para confirmar referencias.
     ///
     pub fn confirm_local_references(&mut self, local_commits: &[String]) {
-        self.handle_references.confirm_local_references(local_commits);
+        self.handle_references
+            .confirm_local_references(local_commits);
     }
 
     /// Obtiene las referencias del servidor Git que necesitan ser actualizadas localmente.
@@ -312,7 +326,10 @@ impl GitServer {
     /// exitosamente, o un error de utilidad (`Err(UtilError::ServerCapabilitiesNotSupported)`) si
     /// las capacidades del servidor no son compatibles con las del cliente.
     ///
-    fn filter_capabilities(capabilities: &mut Vec<String>, my_capabilities: &[String]) -> Result<(), UtilError>{
+    fn filter_capabilities(
+        capabilities: &mut Vec<String>,
+        my_capabilities: &[String],
+    ) -> Result<(), UtilError> {
         retain_common_values(capabilities, my_capabilities);
         if capabilities.len() == my_capabilities.len() {
             Ok(())
@@ -321,14 +338,14 @@ impl GitServer {
         }
     }
     /// Verifica si el servidor Git soporta la capacidad de "multi_ack".
-    /// 
+    ///
     pub fn is_multiack(&self) -> bool {
         self.capabilities.contains(&"multi_ack".to_string())
     }
 
     /// Filtra las referencias del servidor para actualización basado en una lista de rutas de referencias.
     /// Asi solo se actualizan las referencias que se encuentran en la lista.
-    /// 
+    ///
     /// # Argumentos
     ///
     /// * `path_references`: Vec<String> que contiene las rutas de las referencias a ser filtradas.
@@ -338,11 +355,14 @@ impl GitServer {
     /// Un `Result<(), UtilError>` que indica si la operación fue exitosa o si ocurrió un error al filtrar
     /// las referencias. En caso de error, se proporciona un detalle específico en el tipo `UtilError`.
     ///
-    pub fn update_references_filtering(&mut self, path_references: Vec<String>) -> Result<(), UtilError>
-    {
-        self.handle_references.update_references_filtering(path_references)
+    pub fn update_references_filtering(
+        &mut self,
+        path_references: Vec<String>,
+    ) -> Result<(), UtilError> {
+        self.handle_references
+            .update_references_filtering(path_references)
     }
-    
+
     /// Verifica si una referencia específica está presente en las referencias del servidor.
     ///
     /// # Argumentos
@@ -369,9 +389,10 @@ impl GitServer {
     /// Si la referencia no existe, se devuelve `None`.
     ///
     pub fn get_remote_reference_hash(&self, path_reference: &str) -> Option<String> {
-        self.handle_references.get_remote_reference_hash(path_reference)
+        self.handle_references
+            .get_remote_reference_hash(path_reference)
     }
-    
+
     /// Filtra las referencias disponibles en base a un conjunto de hashes confirmados.
     ///
     /// Esta función retiene solo las referencias cuyos hashes no están presentes en
@@ -403,7 +424,10 @@ impl GitServer {
         }
     }
 
-    pub fn filter_capabilities_user(&mut self, my_capabilities: &[String]) -> Result<(), UtilError> {
+    pub fn filter_capabilities_user(
+        &mut self,
+        my_capabilities: &[String],
+    ) -> Result<(), UtilError> {
         GitServer::filter_capabilities(&mut self.capabilities, my_capabilities)
     }
 }
@@ -463,8 +487,7 @@ mod tests {
         // Crear algunas referencias para el ejemplo.
         let reference1 = Reference::new("hash1", "HEAD").unwrap();
         let reference2 = Reference::new("hash2", "refs/tags/v1").unwrap();
-        let reference3 =
-            Reference::new("hash3", "refs/heads/main").unwrap();
+        let reference3 = Reference::new("hash3", "refs/heads/main").unwrap();
 
         // Crear un vector de referencias inicial.
         let mut references = vec![reference1.clone(), reference2.clone(), reference3.clone()];
@@ -539,7 +562,9 @@ mod tests {
         // Retener solo los elementos comunes entre los dos vectores.
         retain_unconfirmed_references(&mut vec1, &hash);
         assert_eq!(vec1.len(), 1);
-        assert_eq!(vec1, vec![Reference::new("hash3", "refs/heads/main").unwrap()]);
-        
+        assert_eq!(
+            vec1,
+            vec![Reference::new("hash3", "refs/heads/main").unwrap()]
+        );
     }
 }

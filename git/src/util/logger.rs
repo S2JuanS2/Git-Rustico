@@ -42,17 +42,13 @@ fn send_message_channel(
 }
 
 pub fn write_client_log(directory: &str, content: String, path_log: &str) -> Result<(), GitError> {
-    
     let git_dir = format!("{}/{}", directory, GIT_DIR);
     let dir_path = Path::new(&git_dir);
     if dir_path.exists() {
         create_directory(dir_path)?;
         let log_path = format!("{}/{}/{}", directory, GIT_DIR, path_log);
 
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_path);
+        let file = OpenOptions::new().create(true).append(true).open(log_path);
 
         let mut file = match file {
             Ok(file) => file,
@@ -123,7 +119,11 @@ pub fn handle_log_file(log_path: &str, rx: Receiver<String>) -> Result<(), UtilE
 /// * `tx` - Arc Mutex del transmisor del canal para escribir mensajes de registro.
 /// * `name_server` - El nombre del servidor al que se conecta el cliente.
 ///
-pub fn log_client_connect(stream: &TcpStream, tx: &Arc<Mutex<Sender<String>>>, name_server: &String) {
+pub fn log_client_connect(
+    stream: &TcpStream,
+    tx: &Arc<Mutex<Sender<String>>>,
+    name_server: &String,
+) {
     match stream.peer_addr() {
         Ok(addr) => {
             let message = format!("{} Conexión establecida con {}", name_server, addr);
@@ -164,14 +164,14 @@ pub fn log_client_disconnection(tx: &Arc<Mutex<Sender<String>>>, signature: &str
 
 /// Registra un mensaje de error de desconexión del cliente.
 ///
-/// Esta función formatea y envía un mensaje de registro indicando que la conexión 
+/// Esta función formatea y envía un mensaje de registro indicando que la conexión
 /// con el cliente se terminó debido a un error.
 ///
 /// # Parámetros
 ///
 /// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
 /// - `signature`: Una cadena que contiene la firma del mensaje.
-/// 
+///
 pub fn log_client_disconnection_error(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada por error", signature);
     log_message(tx, &message)
@@ -179,14 +179,14 @@ pub fn log_client_disconnection_error(tx: &Arc<Mutex<Sender<String>>>, signature
 
 /// Registra un mensaje de desconexión exitosa del cliente.
 ///
-/// Esta función formatea y envía un mensaje de registro indicando que la conexión 
+/// Esta función formatea y envía un mensaje de registro indicando que la conexión
 /// con el cliente se terminó exitosamente.
 ///
 /// # Parámetros
 ///
 /// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
 /// - `signature`: Una cadena que contiene la firma del mensaje.
-/// 
+///
 pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signature: &str) {
     let message = format!("{}Conexión terminada", signature);
     log_message(tx, &message)
@@ -194,7 +194,7 @@ pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signatu
 
 /// Registra un mensaje de error en una firma especifica
 ///
-/// Esta función formatea y envía un mensaje de registro indicando que hubo un error 
+/// Esta función formatea y envía un mensaje de registro indicando que hubo un error
 /// en la solicitud de la firma, seguido del mensaje de error específico.
 ///
 /// # Parámetros
@@ -202,8 +202,8 @@ pub fn log_client_disconnection_success(tx: &Arc<Mutex<Sender<String>>>, signatu
 /// - `error`: Una cadena que contiene el mensaje de error.
 /// - `signature`: Una cadena que contiene la firma del mensaje.
 /// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
-/// 
-pub fn log_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<String>>>) {
+///
+pub fn log_request_error(error: &String, signature: &str, tx: &Arc<Mutex<Sender<String>>>) {
     let message = format!("{}Error en la solicitud.", signature);
     log_message(tx, &message);
     let message = format!("{}Error: {}", signature, error);
@@ -212,7 +212,7 @@ pub fn log_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<S
 
 /// Registra un mensaje con una firma especificada.
 ///
-/// Esta función formatea y envía un mensaje de registro precedido por una firma 
+/// Esta función formatea y envía un mensaje de registro precedido por una firma
 /// específica.
 ///
 /// # Parámetros
@@ -220,7 +220,7 @@ pub fn log_request_error(error: &String, signature: &str,tx: &Arc<Mutex<Sender<S
 /// - `tx`: Un `Arc<Mutex<Sender<String>>>` para enviar mensajes de registro.
 /// - `signature`: Una cadena que contiene la firma del mensaje.
 /// - `message`: Una cadena que contiene el mensaje a registrar.
-/// 
+///
 pub fn log_message_with_signature(tx: &Arc<Mutex<Sender<String>>>, signature: &str, message: &str) {
     let message = format!("{} {}", signature, message);
     log_message(tx, &message);
@@ -250,7 +250,10 @@ mod tests {
         let (tx, rx) = setup();
         let signature = "Client [127.0.0.1:8080] => ";
         log_client_disconnection_error(&tx, signature);
-        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Conexión terminada por error");
+        assert_eq!(
+            rx.recv().unwrap(),
+            "Client [127.0.0.1:8080] => Conexión terminada por error"
+        );
     }
 
     #[test]
@@ -258,7 +261,10 @@ mod tests {
         let (tx, rx) = setup();
         let signature = "Client [127.0.0.1:8080] => ";
         log_client_disconnection_success(&tx, signature);
-        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Conexión terminada");
+        assert_eq!(
+            rx.recv().unwrap(),
+            "Client [127.0.0.1:8080] => Conexión terminada"
+        );
     }
 
     #[test]
@@ -267,8 +273,14 @@ mod tests {
         let signature = "Client [127.0.0.1:8080] => ";
         let error = "404 Not Found".to_string();
         log_request_error(&error, signature, &tx);
-        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Error en la solicitud.");
-        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Error: 404 Not Found");
+        assert_eq!(
+            rx.recv().unwrap(),
+            "Client [127.0.0.1:8080] => Error en la solicitud."
+        );
+        assert_eq!(
+            rx.recv().unwrap(),
+            "Client [127.0.0.1:8080] => Error: 404 Not Found"
+        );
     }
 
     #[test]
@@ -277,6 +289,9 @@ mod tests {
         let signature = "Client [127.0.0.1:8080] =>";
         let message = "Solicitud recibida";
         log_message_with_signature(&tx, signature, message);
-        assert_eq!(rx.recv().unwrap(), "Client [127.0.0.1:8080] => Solicitud recibida");
+        assert_eq!(
+            rx.recv().unwrap(),
+            "Client [127.0.0.1:8080] => Solicitud recibida"
+        );
     }
 }

@@ -1,6 +1,10 @@
 use std::{collections::HashMap, fs};
 
-use crate::{consts::PARENT_INITIAL, git_transport::references::{Reference, ReferenceType}, util::errors::UtilError};
+use crate::{
+    consts::PARENT_INITIAL,
+    git_transport::references::{Reference, ReferenceType},
+    util::errors::UtilError,
+};
 
 use super::reference_information::ReferenceInformation;
 
@@ -10,7 +14,7 @@ use super::reference_information::ReferenceInformation;
 /// Explicacion de HashMap:
 /// - `clave`: Path de la referencia.
 /// - `valor`: Información sobre la referencia.
-/// 
+///
 #[derive(Debug)]
 pub struct HandleReferences {
     references: HashMap<String, ReferenceInformation>,
@@ -26,7 +30,7 @@ impl HandleReferences {
     ///
     /// * `references`: Vector de referencias que se utilizarán para inicializar `HandleReferences`.
     ///
-    /// 
+    ///
     pub fn new_from_references(references: &Vec<Reference>) -> Self {
         let mut references_map: HashMap<String, ReferenceInformation> = HashMap::new();
 
@@ -119,8 +123,7 @@ impl HandleReferences {
     ///
     /// * `local_commits`: Vector de commits locales que se utilizará para confirmar referencias.
     ///
-    pub fn confirm_local_references(&mut self, local_commits: &[String])
-    {
+    pub fn confirm_local_references(&mut self, local_commits: &[String]) {
         for value in self.references.values_mut() {
             if let Some(local_commit) = value.get_local_commit() {
                 if local_commits.contains(&local_commit.to_string()) {
@@ -170,17 +173,31 @@ impl HandleReferences {
     /// Un `Result<(), UtilError>` que indica si la operación fue exitosa o si ocurrió un error al filtrar
     /// las referencias. En caso de error, se proporciona un detalle específico en el tipo `UtilError`.
     ///
-    pub fn update_references_filtering(&mut self, path_references: Vec<String>) -> Result<(), UtilError> {
+    pub fn update_references_filtering(
+        &mut self,
+        path_references: Vec<String>,
+    ) -> Result<(), UtilError> {
         let mut new_refences: HashMap<String, ReferenceInformation> = HashMap::new();
         for path in path_references {
             let file_ref = path.clone();
-            if fs::metadata(file_ref).is_ok(){
+            if fs::metadata(file_ref).is_ok() {
                 if let Some(reference) = self.references.get(&path) {
-                    let local_commit = reference.get_local_commit().map(|commit| commit.to_string());
-                    new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), local_commit));
+                    let local_commit = reference
+                        .get_local_commit()
+                        .map(|commit| commit.to_string());
+                    new_refences.insert(
+                        path,
+                        ReferenceInformation::new(reference.get_remote_commit(), local_commit),
+                    );
                 }
-            }else if let Some(reference) = self.references.get(&path) {
-                new_refences.insert(path, ReferenceInformation::new(reference.get_remote_commit(), Some(PARENT_INITIAL.to_string())));
+            } else if let Some(reference) = self.references.get(&path) {
+                new_refences.insert(
+                    path,
+                    ReferenceInformation::new(
+                        reference.get_remote_commit(),
+                        Some(PARENT_INITIAL.to_string()),
+                    ),
+                );
             }
         }
         self.references = new_refences;
@@ -223,7 +240,7 @@ impl HandleReferences {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     // Función de utilidad para crear una referencia ficticia para pruebas.
     fn create_references() -> Vec<Reference> {
         vec![
@@ -242,8 +259,12 @@ mod tests {
         // Verifica que las referencias se hayan almacenado correctamente en HandleReferences
         assert_eq!(handle_references.references.len(), 3); // Head se debería omitir
         assert!(handle_references.references.contains_key("refs/heads/main"));
-        assert!(handle_references.references.contains_key("refs/heads/feature"));
-        assert!(handle_references.references.contains_key("refs/tags/v1.0.0"));
+        assert!(handle_references
+            .references
+            .contains_key("refs/heads/feature"));
+        assert!(handle_references
+            .references
+            .contains_key("refs/tags/v1.0.0"));
     }
 
     #[test]
@@ -258,8 +279,14 @@ mod tests {
         handle_references.update_local_commit(&references);
 
         // Verifica que los commits locales se hayan actualizado correctamente
-        assert_eq!(handle_references.references["refs/heads/main"].get_local_commit(), Some("newcommit1"));
-        assert_eq!(handle_references.references["refs/heads/feature"].get_local_commit(), Some("newcommit2"));
+        assert_eq!(
+            handle_references.references["refs/heads/main"].get_local_commit(),
+            Some("newcommit1")
+        );
+        assert_eq!(
+            handle_references.references["refs/heads/feature"].get_local_commit(),
+            Some("newcommit2")
+        );
     }
 
     #[test]
@@ -268,7 +295,10 @@ mod tests {
         let handle_references = HandleReferences::new_from_references(&references);
 
         let remote_references = handle_references.get_remote_references().unwrap();
-        let path_references: Vec<String> = remote_references.iter().map(|reference| reference.get_ref_path().to_string()).collect();
+        let path_references: Vec<String> = remote_references
+            .iter()
+            .map(|reference| reference.get_ref_path().to_string())
+            .collect();
         // Verifica que las referencias remotas se hayan obtenido correctamente
         assert!(path_references.contains(&"refs/heads/main".to_string()));
         assert!(path_references.contains(&"refs/heads/feature".to_string()));
@@ -286,7 +316,10 @@ mod tests {
 
         handle_references.update_local_commit(&references);
         let local_references = handle_references.get_local_references().unwrap();
-        let path_references: Vec<String> = local_references.iter().map(|reference| reference.get_ref_path().to_string()).collect();
+        let path_references: Vec<String> = local_references
+            .iter()
+            .map(|reference| reference.get_ref_path().to_string())
+            .collect();
 
         // Verifica que las referencias locales se hayan obtenido correctamente
         assert_eq!(path_references.len(), 2); // Solo la referencia con commit local
@@ -298,7 +331,7 @@ mod tests {
     fn test_confirm_local_references() {
         let references = create_references();
         let mut handle_references = HandleReferences::new_from_references(&references);
-        
+
         let references = vec![
             Reference::new("newcommit1", "refs/heads/main").unwrap(),
             Reference::new("newcommit2", "refs/heads/feature").unwrap(),
@@ -320,15 +353,23 @@ mod tests {
         let references = create_references();
         let mut handle_references = HandleReferences::new_from_references(&references);
 
-        handle_references.update_local_commit(&vec![Reference::new("abc123", "refs/heads/main").unwrap()]);
-        handle_references.update_local_commit(&vec![Reference::new("def456", "refs/heads/feature").unwrap()]);
+        handle_references
+            .update_local_commit(&vec![Reference::new("abc123", "refs/heads/main").unwrap()]);
+        handle_references.update_local_commit(&vec![Reference::new(
+            "def456",
+            "refs/heads/feature",
+        )
+        .unwrap()]);
 
         // Obtener referencias para actualizar
         let references_for_updating = handle_references.get_references_for_updating().unwrap();
 
         // Verificar que solo se obtenga la referencia que necesita actualización
         assert_eq!(references_for_updating.len(), 1);
-        assert_eq!(references_for_updating[0].get_ref_path(), "refs/tags/v1.0.0");
+        assert_eq!(
+            references_for_updating[0].get_ref_path(),
+            "refs/tags/v1.0.0"
+        );
     }
 
     #[test]
@@ -337,15 +378,26 @@ mod tests {
         let handle_references = HandleReferences::new_from_references(&references);
 
         // Verificar que se obtenga el hash de la referencia remota
-        assert_eq!(handle_references.get_remote_reference_hash("refs/heads/main"), Some("abc123".to_string()));
-        assert_eq!(handle_references.get_remote_reference_hash("refs/heads/feature"), Some("def456".to_string()));
-        assert_eq!(handle_references.get_remote_reference_hash("refs/tags/v1.0.0"), Some("ghi789".to_string()));
-        assert_eq!(handle_references.get_remote_reference_hash("refs/tags/v1.0.1"), None);
+        assert_eq!(
+            handle_references.get_remote_reference_hash("refs/heads/main"),
+            Some("abc123".to_string())
+        );
+        assert_eq!(
+            handle_references.get_remote_reference_hash("refs/heads/feature"),
+            Some("def456".to_string())
+        );
+        assert_eq!(
+            handle_references.get_remote_reference_hash("refs/tags/v1.0.0"),
+            Some("ghi789".to_string())
+        );
+        assert_eq!(
+            handle_references.get_remote_reference_hash("refs/tags/v1.0.1"),
+            None
+        );
     }
 
     #[test]
-    fn test_update_references_filtering()
-    {
+    fn test_update_references_filtering() {
         let references = create_references();
         let mut handle_references = HandleReferences::new_from_references(&references);
 
@@ -353,9 +405,13 @@ mod tests {
         path_references.push("refs/heads/main".to_string());
         path_references.push("refs/heads/feature".to_string());
 
-        handle_references.update_references_filtering(path_references).unwrap();
+        handle_references
+            .update_references_filtering(path_references)
+            .unwrap();
         assert_eq!(handle_references.references.len(), 2);
         assert!(handle_references.references.contains_key("refs/heads/main"));
-        assert!(handle_references.references.contains_key("refs/heads/feature"));
+        assert!(handle_references
+            .references
+            .contains_key("refs/heads/feature"));
     }
 }

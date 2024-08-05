@@ -1,12 +1,19 @@
-use std::{collections::HashMap, sync::{mpsc::Sender, Arc, Mutex}};
-use crate::{consts::{APPLICATION_JSON, APPLICATION_SERVER, CONTENT_LENGTH, CONTENT_TYPE, HTTP_VERSION}, servers::errors::ServerError, util::logger::log_message_with_signature};
 use super::{http_body::HttpBody, method::Method, status_code::StatusCode, utils::read_request};
+use crate::{
+    consts::{APPLICATION_JSON, APPLICATION_SERVER, CONTENT_LENGTH, CONTENT_TYPE, HTTP_VERSION},
+    servers::errors::ServerError,
+    util::logger::log_message_with_signature,
+};
+use std::{
+    collections::HashMap,
+    sync::{mpsc::Sender, Arc, Mutex},
+};
 
 /// Representa una solicitud HTTP.
 ///
 /// Esta estructura contiene los datos principales de una solicitud HTTP, como el método,
 /// la ruta y el cuerpo de la solicitud.
-/// 
+///
 #[derive(Debug, PartialEq)]
 pub struct HttpRequest {
     method: String,
@@ -27,9 +34,19 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna una nueva instancia de `HttpRequest`.
-    /// 
-    pub fn new(method: String, path: String, body: HttpBody, headers: HashMap<String, String>) -> Self {
-        HttpRequest { method, path, body , headers}
+    ///
+    pub fn new(
+        method: String,
+        path: String,
+        body: HttpBody,
+        headers: HashMap<String, String>,
+    ) -> Self {
+        HttpRequest {
+            method,
+            path,
+            body,
+            headers,
+        }
     }
 
     /// Crea una nueva instancia de `HttpRequest` a partir de un lector.
@@ -45,9 +62,9 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna una nueva instancia de `HttpRequest`.
-    /// 
+    ///
     pub fn new_from_reader(reader: &mut dyn std::io::Read) -> Result<Self, StatusCode> {
-        let request = match read_request(reader){
+        let request = match read_request(reader) {
             Ok(request) => request,
             Err(_) => return Err(StatusCode::BadRequest(ServerError::ReadRequest.to_string())),
         };
@@ -69,8 +86,13 @@ impl HttpRequest {
     /// # Retorna
     ///
     /// Retorna un `Result` que contiene la respuesta en caso de éxito, o un `ServerError` en caso de error.
-    pub fn handle_http_request(&self, source: &String, tx: &Arc<Mutex<Sender<String>>>, signature: &str) -> Result<StatusCode, ServerError> {
-        // Manejar la solicitud HTTP        
+    pub fn handle_http_request(
+        &self,
+        source: &String,
+        tx: &Arc<Mutex<Sender<String>>>,
+        signature: &str,
+    ) -> Result<StatusCode, ServerError> {
+        // Manejar la solicitud HTTP
         let message = format!("{} request to path: {}", self.method, self.path);
         log_message_with_signature(tx, signature, &message);
 
@@ -85,18 +107,19 @@ impl HttpRequest {
     /// Obtiene la ruta de la solicitud HTTP.
     ///
     /// # Retornos
-    /// 
+    ///
     /// Devuelve una referencia a la ruta de la solicitud.
     pub fn get_path(&self) -> &str {
         &self.path
     }
 
     pub fn get_content_type(&self) -> String {
-        self.headers.get(CONTENT_TYPE).unwrap_or(&APPLICATION_SERVER.to_string()).to_string()
+        self.headers
+            .get(CONTENT_TYPE)
+            .unwrap_or(&APPLICATION_SERVER.to_string())
+            .to_string()
     }
-
 }
-
 
 /// Parsea una solicitud HTTP en una instancia de `HttpRequest`.
 ///
@@ -123,7 +146,9 @@ impl HttpRequest {
 fn parse_http_request(request: &str) -> Result<HttpRequest, StatusCode> {
     let lines: Vec<&str> = request.lines().collect();
     if lines.is_empty() {
-        return Err(StatusCode::BadRequest(ServerError::MissingRequestLine.to_string()));
+        return Err(StatusCode::BadRequest(
+            ServerError::MissingRequestLine.to_string(),
+        ));
     }
 
     // Parsear la línea de solicitud (GET /path HTTP/1.1)
@@ -133,7 +158,10 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, StatusCode> {
     }
 
     // Parsear los encabezados
-    let header_end_index = lines.iter().position(|&line| line.is_empty()).unwrap_or(lines.len());
+    let header_end_index = lines
+        .iter()
+        .position(|&line| line.is_empty())
+        .unwrap_or(lines.len());
     let headers = parse_headers(&lines[1..header_end_index]);
 
     // Obtener el cuerpo de la solicitud
@@ -167,17 +195,19 @@ fn parse_http_request(request: &str) -> Result<HttpRequest, StatusCode> {
 ///
 fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBody, StatusCode> {
     // Obtener el cuerpo de la solicitud
-    let finish = headers.get(CONTENT_LENGTH).map(|v| v.parse::<usize>().unwrap_or(0)).unwrap_or(0);
+    let finish = headers
+        .get(CONTENT_LENGTH)
+        .map(|v| v.parse::<usize>().unwrap_or(0))
+        .unwrap_or(0);
     let body = &request[request.len() - finish..];
 
     // Parsear el cuerpo de la solicitud
     let binding = APPLICATION_JSON.to_string();
     let content_type = headers.get(CONTENT_TYPE).unwrap_or(&binding);
-    match HttpBody::parse(content_type, body){
+    match HttpBody::parse(content_type, body) {
         Ok(body) => Ok(body),
         Err(_) => Err(StatusCode::UnsupportedMediaType),
     }
-
 }
 
 /// Analiza la línea de solicitud de una solicitud HTTP.
@@ -197,13 +227,19 @@ fn parse_body(request: &str, headers: &HashMap<String, String>) -> Result<HttpBo
 /// # Errores
 ///
 /// Devuelve `ServerError::IncompleteRequestLine` si la línea de solicitud no contiene al menos tres partes.
-/// 
+///
 fn parse_request_line(line: &str) -> Result<(String, String, String), StatusCode> {
     let parts: Vec<&str> = line.split_whitespace().collect();
     if parts.len() < 3 {
-        return Err(StatusCode::BadRequest(ServerError::IncompleteRequestLine.to_string()));
+        return Err(StatusCode::BadRequest(
+            ServerError::IncompleteRequestLine.to_string(),
+        ));
     }
-    Ok((parts[0].to_string(), parts[1].to_string(), parts[2].to_string()))
+    Ok((
+        parts[0].to_string(),
+        parts[1].to_string(),
+        parts[2].to_string(),
+    ))
 }
 
 /// Analiza los encabezados de una solicitud HTTP.
@@ -215,7 +251,7 @@ fn parse_request_line(line: &str) -> Result<(String, String, String), StatusCode
 /// # Retornos
 ///
 /// Un `HashMap` que mapea los nombres de los encabezados a sus valores.
-/// 
+///
 fn parse_headers(lines: &[&str]) -> HashMap<String, String> {
     let mut headers = HashMap::new();
     for line in lines {
@@ -227,7 +263,6 @@ fn parse_headers(lines: &[&str]) -> HashMap<String, String> {
     }
     headers
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -241,7 +276,11 @@ mod tests {
             method: "POST".to_string(),
             path: "/path".to_string(),
             body: HttpBody::Json(json!({"key": "value"})),
-            headers: [("Content-Length", "18")].iter().cloned().map(|(a, b)| (a.to_string(), b.to_string())).collect(),
+            headers: [("Content-Length", "18")]
+                .iter()
+                .cloned()
+                .map(|(a, b)| (a.to_string(), b.to_string()))
+                .collect(),
         };
         assert_eq!(parse_http_request(request_str).unwrap(), expected_request);
     }

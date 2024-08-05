@@ -1,5 +1,5 @@
-use crate::consts::*;
 use super::errors::CommandsError;
+use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::files::*;
 use std::path::Path;
@@ -21,10 +21,9 @@ pub fn handle_init(args: Vec<&str>, client: Client) -> Result<String, CommandsEr
 /// ###Parametros:
 /// 'directory': dirección donde se inicializará el repositorio.
 pub fn git_init(directory: &str) -> Result<String, CommandsError> {
-
     let mut exist = 0;
     let git_dir = format!("{}/{}", directory, GIT_DIR);
-    if Path::new(&git_dir).is_dir(){
+    if Path::new(&git_dir).is_dir() {
         exist = 1;
     }
     create_directory(Path::new(directory))?;
@@ -51,12 +50,9 @@ pub fn git_init(directory: &str) -> Result<String, CommandsError> {
     create_file(&index_file, CONTENT_EMPTY)?;
     create_file(&config_file, CONTENT_EMPTY)?;
 
-    let result = if exist == 0{
-        format!(
-            "Initialized empty Git repository in {}/.git/",
-            directory
-        )
-    } else{
+    let result = if exist == 0 {
+        format!("Initialized empty Git repository in {}/.git/", directory)
+    } else {
         format!(
             "Reinitialized existing Git repository in {}/.git/",
             directory

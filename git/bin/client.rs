@@ -27,7 +27,7 @@ fn main() -> Result<(), GitError> {
     // if init.0 {
     //     client.set_directory_path(init.1);
     // }
-    
+
     let controller = Controller::new(client);
 
     let mut view = View::new(controller)?;

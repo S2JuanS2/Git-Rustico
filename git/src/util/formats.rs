@@ -54,7 +54,10 @@ pub fn compressor_object_with_bytes_content(store: Vec<u8>) -> Result<Vec<u8>, U
 /// ###Parametros:
 /// 'store': contenido que se comprimirá
 /// 'file_object': archivo donde se guardará el contenido comprimido
-pub fn compressor_object_with_bytes(store: Vec<u8>, mut file_object: File) -> Result<(), UtilError> {
+pub fn compressor_object_with_bytes(
+    store: Vec<u8>,
+    mut file_object: File,
+) -> Result<(), UtilError> {
     let mut compressor = ZlibEncoder::new(Vec::new(), Compression::default());
 
     match compressor.write_all(&store) {

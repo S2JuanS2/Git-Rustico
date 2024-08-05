@@ -13,7 +13,7 @@ pub fn handle_cat_file(args: Vec<&str>, client: Client) -> Result<String, Comman
     if args.len() != 2 {
         return Err(CommandsError::InvalidArgumentCountCatFileError);
     }
-    if args[0] != "-t" && args[0] != "-p" && args[0] != "-s"{
+    if args[0] != "-t" && args[0] != "-p" && args[0] != "-s" {
         return Err(CommandsError::FlagCatFileNotRecognizedError);
     }
 
@@ -34,7 +34,7 @@ pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, Com
         content = read_commit(&bytes)?;
     } else if type_object == TREE {
         content = read_tree(&bytes)?;
-    }else if type_object == TAG {
+    } else if type_object == TAG {
         content = read_tag(&bytes)?;
     }
 
@@ -45,7 +45,11 @@ pub fn git_cat_file_p(bytes: Vec<u8>, type_object: String) -> Result<String, Com
 /// ###Parametros:
 /// 'directory': dirección donde se encuentra inicializado el repositorio.
 /// 'object_hash': Valor hash de 40 caracteres (SHA-1) del objeto a leer.
-pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<String, CommandsError> {
+pub fn git_cat_file(
+    directory: &str,
+    object_hash: &str,
+    flag: &str,
+) -> Result<String, CommandsError> {
     if object_hash.len() != 40 {
         return Err(CommandsError::HashObjectInvalid);
     }
@@ -53,14 +57,14 @@ pub fn git_cat_file(directory: &str, object_hash: &str, flag: &str) -> Result<St
     let path = format!("{}/{}/objects/{}", directory, GIT_DIR, &object_hash[..2]);
     //Lee los demás digitos del hash contenidos en el nombre del archivo.
     let file_path = format!("{}/{}", path, &object_hash[2..]);
-    
+
     let content = decompression_object(&file_path)?;
 
     let mut result = read_type(&content)?;
 
     if flag == "-p" {
         result = git_cat_file_p(content, result)?;
-    }else if flag == "-s" {
+    } else if flag == "-s" {
         result = read_size(&content)?;
     }
 

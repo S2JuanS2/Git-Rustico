@@ -1,12 +1,14 @@
-use crate::commands::branch::{get_current_branch, get_branch, get_parent_hashes};
+use crate::commands::branch::{get_branch, get_current_branch, get_parent_hashes};
 use crate::commands::cat_file::git_cat_file;
-use crate::commands::checkout::{get_tree_hash, extract_parent_hash};
+use crate::commands::checkout::{extract_parent_hash, get_tree_hash};
 use crate::commands::commit::get_commits;
 use crate::commands::push::is_ancestor;
 use crate::consts::PARENT_INITIAL;
 use crate::git_server::GitServer;
 use crate::util::files::{open_file, read_file, read_file_string};
-use crate::util::formats::{compressor_object_content, decompression_object, compressor_object_with_bytes_content};
+use crate::util::formats::{
+    compressor_object_content, compressor_object_with_bytes_content, decompression_object,
+};
 use crate::util::objects::ObjectType;
 use crate::{
     consts::{DIRECTORY, FILE, GIT_DIR, HEAD, REFS_REMOTES, REFS_TAGS, REF_HEADS},
@@ -105,8 +107,7 @@ impl Reference {
     }
 
     pub fn get_type(&self) -> ReferenceType {
-        match self.reference_type
-        {
+        match self.reference_type {
             ReferenceType::Branch => ReferenceType::Branch,
             ReferenceType::Head => ReferenceType::Head,
             ReferenceType::Remote => ReferenceType::Remote,
@@ -128,7 +129,10 @@ impl Reference {
     }
 
     pub fn is_valid_references_path(ref_path: &str) -> bool {
-        ref_path == "HEAD" || ref_path.starts_with("refs/tags/") || ref_path.starts_with("refs/heads/") || ref_path.starts_with("refs/remotes/")
+        ref_path == "HEAD"
+            || ref_path.starts_with("refs/tags/")
+            || ref_path.starts_with("refs/heads/")
+            || ref_path.starts_with("refs/remotes/")
     }
 
     /// Obtiene la referencia actual (HEAD) de un repositorio local Git.
@@ -167,8 +171,10 @@ impl Reference {
         Ok(reference)
     }
 
-    pub fn create_from_name_branch(path_local: &str, name_branch: &str) -> Result<Reference, UtilError>
-    {
+    pub fn create_from_name_branch(
+        path_local: &str,
+        name_branch: &str,
+    ) -> Result<Reference, UtilError> {
         let ref_path = format!("{}/.git/refs/heads/{}", path_local, name_branch);
         let hash = match std::fs::read_to_string(ref_path) {
             Ok(reference) => reference,
@@ -272,8 +278,8 @@ pub fn recovery_tree(
             let path = format!("{}/{}/objects/{}", directory, GIT_DIR, &hash[..2]);
             let file_path = format!("{}/{}", path, &hash[2..]);
             let mut decompresed = decompression_object(&file_path)?;
-            if let Some(pos) = decompresed.iter().position(|&x| x == b'\0'){
-                let tree = decompresed.split_off(pos +1);
+            if let Some(pos) = decompresed.iter().position(|&x| x == b'\0') {
+                let tree = decompresed.split_off(pos + 1);
                 object_tree.1 = compressor_object_with_bytes_content(tree)?;
                 save_object_pack(objects, object_tree);
             }
@@ -295,21 +301,28 @@ pub fn recovery_tree(
 /// # Retorna
 ///
 /// En caso de error, retorna un error de tipo UtilError.
-pub fn recovery_commits(directory: &str,
+pub fn recovery_commits(
+    directory: &str,
     hash_commit: &str,
     commit: String,
     objects: &mut Vec<(ObjectType, Vec<u8>)>,
     hashes_commits: &mut Vec<String>,
-) -> Result<(), UtilError>{
+) -> Result<(), UtilError> {
     let mut object_commit: (ObjectType, Vec<u8>) = (ObjectType::Commit, Vec::new());
     object_commit.1 = get_content(directory, hash_commit)?;
     save_object_pack(objects, object_commit);
-    
+
     if let Some(parent_hash) = extract_parent_hash(&commit) {
         if parent_hash != PARENT_INITIAL {
             hashes_commits.push(parent_hash.to_string());
             let parent_commit = git_cat_file(directory, parent_hash, "-p")?;
-            recovery_commits(directory, parent_hash, parent_commit, objects, hashes_commits)?;
+            recovery_commits(
+                directory,
+                parent_hash,
+                parent_commit,
+                objects,
+                hashes_commits,
+            )?;
         }
     }
     Ok(())
@@ -317,13 +330,12 @@ pub fn recovery_commits(directory: &str,
 
 /// Guarda el objeto recibido por parámetro en el vector de objetos, solo si el vector
 /// no contiene al mismo.
-/// 
+///
 /// # Argumentos
 ///
 /// * `objects` - vector donde se almacenan los objetos
 /// * `object` - objeto a almacenar.
 fn save_object_pack(objects: &mut Vec<(ObjectType, Vec<u8>)>, object: (ObjectType, Vec<u8>)) {
-
     if !objects.contains(&object) {
         objects.push(object);
     }
@@ -345,7 +357,7 @@ fn save_object_pack(objects: &mut Vec<(ObjectType, Vec<u8>)>, object: (ObjectTyp
 pub fn get_objects_from_hash_to_hash(
     path_local: &str,
     prev_hash: &str,
-    current_hash: &str
+    current_hash: &str,
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, UtilError> {
     let mut objects = Vec::new();
 
@@ -357,13 +369,13 @@ pub fn get_objects_from_hash_to_hash(
             object_commit.1 = compressor_object_content(content_commit.clone())?;
             save_object_pack(&mut objects, object_commit);
             let commit = git_cat_file(path_local, &hash_commit, "-p")?;
-            if let Some(tree_hash) = get_tree_hash(&commit){
+            if let Some(tree_hash) = get_tree_hash(&commit) {
                 let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
                 let path = format!("{}/{}/objects/{}", path_local, GIT_DIR, &tree_hash[..2]);
                 let file_path = format!("{}/{}", path, &tree_hash[2..]);
                 let mut decompresed = decompression_object(&file_path)?;
-                if let Some(pos) = decompresed.iter().position(|&x| x == b'\0'){
-                    let tree = decompresed.split_off(pos +1);
+                if let Some(pos) = decompresed.iter().position(|&x| x == b'\0') {
+                    let tree = decompresed.split_off(pos + 1);
                     object_tree.1 = compressor_object_with_bytes_content(tree)?;
                     save_object_pack(&mut objects, object_tree);
                 }
@@ -394,7 +406,7 @@ pub fn get_objects_from_hash_to_hash(
 pub fn get_objects_fetch_with_hash_valid(
     directory: &str,
     references: Vec<Reference>,
-    confirmed_hashes: &Vec<String>
+    confirmed_hashes: &Vec<String>,
 ) -> Result<Vec<(ObjectType, Vec<u8>)>, UtilError> {
     let mut objects: Vec<(ObjectType, Vec<u8>)> = Vec::new();
     println!("{:?}", confirmed_hashes);
@@ -402,16 +414,16 @@ pub fn get_objects_fetch_with_hash_valid(
     if !references.is_empty() {
         println!("{:?}", references[0].get_name());
         let commits_in_repo = get_commits(directory, references[0].get_name())?;
-    
+
         let mut available = true;
         let mut send_hashes: Vec<String> = Vec::new();
-        for refe in commits_in_repo{
-            for hash in confirmed_hashes.iter(){
-                if refe == *hash.to_string(){
+        for refe in commits_in_repo {
+            for hash in confirmed_hashes.iter() {
+                if refe == *hash.to_string() {
                     available = false;
                 }
             }
-            if available{
+            if available {
                 send_hashes.push(refe.to_string());
             }
             available = true;
@@ -424,11 +436,11 @@ pub fn get_objects_fetch_with_hash_valid(
                 object_commit.1 = get_content(directory, &hash)?;
                 save_object_pack(&mut objects, object_commit);
                 let commit = git_cat_file(directory, &hash, "-p")?;
-                if let Some(tree_hash) = get_tree_hash(&commit){
-                let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
-                object_tree.1 = get_content(directory, tree_hash)?;
-                save_object_pack(&mut objects, object_tree);
-                recovery_tree_clone(directory, tree_hash, &mut objects)?;
+                if let Some(tree_hash) = get_tree_hash(&commit) {
+                    let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
+                    object_tree.1 = get_content(directory, tree_hash)?;
+                    save_object_pack(&mut objects, object_tree);
+                    recovery_tree_clone(directory, tree_hash, &mut objects)?;
                 }
             }
         }
@@ -461,7 +473,13 @@ pub fn get_objects(
         let hash_commit_current_branch = read_file_string(file_current_branch)?;
 
         let commit_content = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
-        recovery_commits(directory, &hash_commit_current_branch, commit_content, &mut objects, &mut hashes_commits)?;
+        recovery_commits(
+            directory,
+            &hash_commit_current_branch,
+            commit_content,
+            &mut objects,
+            &mut hashes_commits,
+        )?;
         let content_commit = git_cat_file(directory, &hash_commit_current_branch, "-p")?;
         if let Some(tree_hash) = get_tree_hash(&content_commit) {
             let mut object_tree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
@@ -471,7 +489,7 @@ pub fn get_objects(
 
             recovery_tree_clone(directory, tree_hash, &mut objects)?;
         };
-        for hash_commit in hashes_commits.clone(){
+        for hash_commit in hashes_commits.clone() {
             let content_commit = git_cat_file(directory, &hash_commit, "-p")?;
             if let Some(tree_hash) = get_tree_hash(&content_commit) {
                 let mut object_subtree: (ObjectType, Vec<u8>) = (ObjectType::Tree, Vec::new());
@@ -680,7 +698,11 @@ fn get_reference_head(path_git: &str, refs: &Vec<Reference>) -> Result<Reference
 mod tests {
     use std::io::Write;
 
-    use crate::commands::{init::git_init, commit::{Commit, git_commit}, add::git_add};
+    use crate::commands::{
+        add::git_add,
+        commit::{git_commit, Commit},
+        init::git_init,
+    };
 
     use super::*;
 
@@ -701,7 +723,10 @@ mod tests {
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
-            assert_eq!(reference.get_ref_path(), &"refs/tags/version-1.0".to_string());
+            assert_eq!(
+                reference.get_ref_path(),
+                &"refs/tags/version-1.0".to_string()
+            );
             assert_eq!(reference.get_type(), ReferenceType::Tag);
         }
     }
@@ -719,10 +744,7 @@ mod tests {
 
     #[test]
     fn test_create_remote_reference() {
-        let result = Reference::new(
-            "some_hash",
-            "refs/remotes/origin/main",
-        );
+        let result = Reference::new("some_hash", "refs/remotes/origin/main");
         assert!(result.is_ok());
 
         if let Ok(reference) = result {
@@ -757,7 +779,10 @@ mod tests {
             ref_path: "refs/tags/version-1.0".to_string(),
             reference_type: ReferenceType::Tag,
         };
-        assert_eq!(*reference.get_ref_path(), "refs/tags/version-1.0".to_string());
+        assert_eq!(
+            *reference.get_ref_path(),
+            "refs/tags/version-1.0".to_string()
+        );
     }
 
     #[test]
@@ -819,7 +844,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_object_to_hash(){
+    fn test_get_object_to_hash() {
         let directory = "./test_commit_repo_references";
         git_init(directory).expect("Falló en el comando init");
 
@@ -865,7 +890,8 @@ mod tests {
         let file_branch = open_file(&branch).expect("Error open file");
         let hash_current = read_file_string(file_branch).expect("Error read file");
 
-        let objects = get_objects_from_hash_to_hash(directory, &prev_hash, &hash_current).expect("Error get objects");
+        let objects = get_objects_from_hash_to_hash(directory, &prev_hash, &hash_current)
+            .expect("Error get objects");
 
         fs::remove_dir_all(directory).expect("Falló al remover los directorios");
 

@@ -49,7 +49,7 @@ pub fn create_file_replace(file: &str, content: &str) -> Result<(), UtilError> {
             }
         }
     }
-    
+
     let mut file = match fs::File::create(file) {
         Ok(file) => file,
         Err(_) => return Err(UtilError::CreateFileError),
@@ -126,7 +126,7 @@ pub fn read_file(mut file: File) -> Result<Vec<u8>, UtilError> {
 /// Elimina un archivo
 /// ###Parametros:
 /// 'file': ruta del archivo a eliminar.
-pub fn delete_file(path_file: &str) -> Result<(),UtilError> {
+pub fn delete_file(path_file: &str) -> Result<(), UtilError> {
     if fs::metadata(path_file).is_ok() {
         match fs::remove_file(path_file) {
             Ok(_) => (),
@@ -139,15 +139,15 @@ pub fn delete_file(path_file: &str) -> Result<(),UtilError> {
 }
 
 /// Verifica si hay un repositorio git en la carpeta (chequea si hay una subcarpeta .git)
-/// devuelve una tupla donde el primer elemento es un true o false (según lo anterior) 
+/// devuelve una tupla donde el primer elemento es un true o false (según lo anterior)
 /// y el segundo es el nombre del repositorio.
-pub fn is_git_initialized(current_src: &str) -> (bool,String) {
-    let mut result = (false,"".to_string());
+pub fn is_git_initialized(current_src: &str) -> (bool, String) {
+    let mut result = (false, "".to_string());
     let path_git = join_paths_correctly(current_src, ".git");
     if fs::read_dir(path_git).is_ok() {
         let parts: Vec<&str> = current_src.split('/').collect();
         let name = parts[parts.len() - 1];
-        result = (true,name.to_string());
+        result = (true, name.to_string());
     }
     result
 }
@@ -208,7 +208,6 @@ pub fn folder_exists(folder_path: &str) -> bool {
     path.is_dir()
 }
 
-
 /// Verifica si un archivo existe dado un path.
 ///
 /// # Argumentos
@@ -244,20 +243,18 @@ pub fn file_exists(file_path: &str) -> bool {
 /// Esta función retornará un `io::Error` si:
 /// - La ruta especificada no es un directorio.
 /// - Ocurre algún error al leer el contenido del directorio.
-/// 
+///
 pub fn list_directory_contents(path: &str) -> Result<Vec<String>, UtilError> {
     let mut entries = Vec::new();
     let path = Path::new(path);
 
     if path.is_dir() {
-        let dir_enty = match fs::read_dir(path)
-        {
+        let dir_enty = match fs::read_dir(path) {
             Ok(dir_enty) => dir_enty,
             Err(_) => return Err(UtilError::ReadDirError),
         };
         for entry in dir_enty {
-            let entry = match entry
-            {
+            let entry = match entry {
                 Ok(entry) => entry,
                 Err(_) => return Err(UtilError::ReadDirError),
             };
@@ -291,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_file_exists() {
-        assert_eq!(file_exists("./Cargo.toml"), true); 
+        assert_eq!(file_exists("./Cargo.toml"), true);
     }
 
     #[test]

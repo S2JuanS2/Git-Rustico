@@ -1,11 +1,13 @@
+use super::branch::get_current_branch;
+use super::cat_file::git_cat_file;
+use super::commit::Commit;
+use super::errors::CommandsError;
+use super::merge::{
+    get_branch_hash, get_log_from_branch, get_refs_path, logs_just_in_one_branch, perform_merge,
+};
 use crate::commands::commit::rebase_commit;
 use crate::models::client::Client;
 use crate::util::files::{create_file_replace, open_file, read_file_string};
-use super::branch::get_current_branch;
-use super::commit::Commit;
-use super::errors::CommandsError;
-use super::merge::{get_log_from_branch, perform_merge, logs_just_in_one_branch, get_branch_hash, get_refs_path};
-use super::cat_file::git_cat_file;
 
 /// Esta función se encarga de llamar al comando rebase con los parametros necesarios.
 /// ###Parametros:
@@ -25,7 +27,11 @@ pub fn handle_rebase(args: Vec<&str>, client: Client) -> Result<String, Commands
 /// 'directory': directorio del repositorio local
 /// 'branch_name': nombre de la branch sobre la que se hace el rebase
 /// 'client': Cliente que contiene la información del cliente que se conectó
-pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<String, CommandsError> {
+pub fn git_rebase(
+    directory: &str,
+    branch_name: &str,
+    client: Client,
+) -> Result<String, CommandsError> {
     let mut formatted_result = String::new();
     let current_branch = get_current_branch(directory)?;
     let path_current_branch = get_refs_path(directory, &current_branch);
@@ -40,14 +46,23 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
 
     formatted_result.push_str(result_merge.as_str());
     if !result_merge.contains("CONFLICT") {
-        let logs_just_in_current_branch = logs_just_in_one_branch(log_current_branch, log_rebase_branch);
-        create_new_commits(directory, client, logs_just_in_current_branch, &current_branch, branch_name, &branch_to_rebase_hash, &mut formatted_result)?;
+        let logs_just_in_current_branch =
+            logs_just_in_one_branch(log_current_branch, log_rebase_branch);
+        create_new_commits(
+            directory,
+            client,
+            logs_just_in_current_branch,
+            &current_branch,
+            branch_name,
+            &branch_to_rebase_hash,
+            &mut formatted_result,
+        )?;
     }
 
     Ok(formatted_result)
 }
 
-/// Crea un nuevo commit por cada commit que está en la branch actual y no en la branch sobre la 
+/// Crea un nuevo commit por cada commit que está en la branch actual y no en la branch sobre la
 /// que se hizo el rebase. Con estos nuevos commits se actualiza el log.
 /// ###Parametros:
 /// 'directory': directorio del repositorio local
@@ -56,10 +71,22 @@ pub fn git_rebase(directory: &str, branch_name: &str, client: Client) -> Result<
 /// 'current_branch': nombre de la branch actual
 /// 'branch_name': nombre de la branch sobre la que se hizo el rebase
 /// 'formatted_result': String que contiene el resultado de git rebase formateado
-fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<String>, current_branch: &str, branch_name: &str, branch_to_rebase_hash: &str, formatted_result: &mut String) -> Result<(), CommandsError> {
+fn create_new_commits(
+    directory: &str,
+    client: Client,
+    log_current_branch: Vec<String>,
+    current_branch: &str,
+    branch_name: &str,
+    branch_to_rebase_hash: &str,
+    formatted_result: &mut String,
+) -> Result<(), CommandsError> {
     update_log_current_branch(directory, current_branch, branch_name)?;
 
-    let log_current_branch_reversed = log_current_branch.iter().rev().cloned().collect::<Vec<String>>();
+    let log_current_branch_reversed = log_current_branch
+        .iter()
+        .rev()
+        .cloned()
+        .collect::<Vec<String>>();
     let mut commit_count = 0;
     for commit in log_current_branch_reversed {
         commit_count += 1;
@@ -91,8 +118,11 @@ fn create_new_commits(directory: &str, client: Client, log_current_branch: Vec<S
 /// 'directory': directorio del repositorio local
 /// 'current_branch': nombre de la branch actual
 /// 'rebase_branch': nombre de la branch sobre la que se hizo el rebase
-fn update_log_current_branch(directory: &str, current_branch: &str, rebase_branch: &str) -> Result<(), CommandsError> {
-    
+fn update_log_current_branch(
+    directory: &str,
+    current_branch: &str,
+    rebase_branch: &str,
+) -> Result<(), CommandsError> {
     let path_rebase_log = format!("{}/.git/logs/refs/heads/{}", directory, rebase_branch);
     let file_rebase_log = open_file(&path_rebase_log)?;
     let content_rebase_log = read_file_string(file_rebase_log)?;
@@ -108,7 +138,12 @@ fn update_log_current_branch(directory: &str, current_branch: &str, rebase_branc
 fn get_commit_msg(content_commit: String) -> String {
     let mut commit_message = String::new();
     for line in content_commit.lines() {
-        if !line.starts_with("tree") && !line.starts_with("parent") && !line.starts_with("author") && !line.starts_with("committer") && !line.is_empty() {
+        if !line.starts_with("tree")
+            && !line.starts_with("parent")
+            && !line.starts_with("author")
+            && !line.starts_with("committer")
+            && !line.is_empty()
+        {
             commit_message = line.to_string();
         }
     }
@@ -117,12 +152,15 @@ fn get_commit_msg(content_commit: String) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
     use std::fs;
+    use std::io::Write;
 
-    use crate::commands::{init::git_init, add::git_add, commit::git_commit, checkout::git_checkout_switch, branch::git_branch_create, log::git_log};
     use super::*;
-    
+    use crate::commands::{
+        add::git_add, branch::git_branch_create, checkout::git_checkout_switch, commit::git_commit,
+        init::git_init, log::git_log,
+    };
+
     #[test]
     fn test_rebase() {
         let directory = "./test_rebase";
@@ -135,12 +173,14 @@ mod tests {
 
         let file_path2 = format!("{}/{}", directory, "holamundo2.txt");
         let mut file2 = fs::File::create(&file_path2).expect("Error al crear el archivo");
-        file2.write_all(b"Hola Mundo 2")
+        file2
+            .write_all(b"Hola Mundo 2")
             .expect("Error al escribir en el archivo");
 
         let file_path3 = format!("{}/{}", directory, "holamundo3.txt");
         let mut file3 = fs::File::create(&file_path3).expect("Error al crear el archivo");
-        file3.write_all(b"Hola Mundo 3")
+        file3
+            .write_all(b"Hola Mundo 3")
             .expect("Error al escribir en el archivo");
 
         git_add(directory, "holamundo.txt").expect("Error al hacer git add");
@@ -188,7 +228,8 @@ mod tests {
 
         let file_path2 = format!("{}/{}", directory, "holamundo2.txt");
         let mut file2 = fs::File::create(&file_path2).expect("Error al crear el archivo");
-        file2.write_all(b"Hola Mundo 2")
+        file2
+            .write_all(b"Hola Mundo 2")
             .expect("Error al escribir en el archivo");
 
         git_add(directory, "holamundo2.txt").expect("Error al hacer git add");
@@ -204,7 +245,7 @@ mod tests {
         git_commit(directory, test_commit4).expect("Error al hacer git commit");
 
         let client = Client::new(
-            "Valen".to_string(), 
+            "Valen".to_string(),
             "vlanzillotta@fi.uba.ar".to_string(),
             "19992020".to_string(),
             "9090".to_string(),
@@ -217,7 +258,7 @@ mod tests {
 
         let log_current_branch_after_rebase = git_log(directory).expect("Error al hacer git log");
         assert!(log_current_branch_after_rebase.contains(&log_nueva_branch));
-        
+
         fs::remove_dir_all(directory).expect("Error al borrar el directorio");
         assert!(result.is_ok());
     }
@@ -234,12 +275,14 @@ mod tests {
 
         let file_path2 = format!("{}/{}", directory, "holamundo2.txt");
         let mut file2 = fs::File::create(&file_path2).expect("Error al crear el archivo");
-        file2.write_all(b"Hola Mundo 2")
+        file2
+            .write_all(b"Hola Mundo 2")
             .expect("Error al escribir en el archivo");
 
         let file_path3 = format!("{}/{}", directory, "holamundo3.txt");
         let mut file3 = fs::File::create(&file_path3).expect("Error al crear el archivo");
-        file3.write_all(b"Hola Mundo 3")
+        file3
+            .write_all(b"Hola Mundo 3")
             .expect("Error al escribir en el archivo");
 
         git_add(directory, "holamundo.txt").expect("Error al hacer git add");
@@ -288,7 +331,8 @@ mod tests {
         // ESTA VEZ VA A HABER CONFLICTO EN HOLAMUNDO2.TXT
         let file_path2 = format!("{}/{}", directory, "holamundo2.txt");
         let mut file2 = fs::File::create(&file_path2).expect("Error al crear el archivo");
-        file2.write_all(b"conflicto")
+        file2
+            .write_all(b"conflicto")
             .expect("Error al escribir en el archivo");
 
         git_add(directory, "holamundo2.txt").expect("Error al hacer git add");
@@ -304,7 +348,7 @@ mod tests {
         git_commit(directory, test_commit4).expect("Error al hacer git commit");
 
         let client = Client::new(
-            "Valen".to_string(), 
+            "Valen".to_string(),
             "vlanzillotta@fi.uba.ar".to_string(),
             "19992020".to_string(),
             "9090".to_string(),
@@ -317,7 +361,7 @@ mod tests {
 
         let log_current_branch_after_rebase = git_log(directory).expect("Error al hacer git log");
         assert!(!log_current_branch_after_rebase.contains(&log_nueva_branch));
-        
+
         fs::remove_dir_all(directory).expect("Error al borrar el directorio");
         assert!(result.is_ok());
     }

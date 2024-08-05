@@ -107,8 +107,6 @@ impl From<CommandsError> for ServerError {
     }
 }
 
-
-
 impl fmt::Display for ServerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         format_error(self, f)

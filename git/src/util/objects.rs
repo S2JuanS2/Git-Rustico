@@ -263,9 +263,9 @@ pub fn builder_object_tag(content: &str, git_dir: &str) -> Result<String, UtilEr
     let content_size = content_bytes.len().to_string();
     let header = format!("{} {}\0", TAG, content_size);
     let store = header + content;
-    
+
     let tag_hash = hash_generate(content);
-    
+
     let file_object = builder_object(git_dir, &tag_hash)?;
     compressor_object(store, file_object)?;
 
@@ -318,7 +318,7 @@ fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, UtilError> {
             let file_name = parts[0];
             let mut mode = parts[1];
             let hash = parts[2];
-    
+
             if mode == BLOB {
                 mode = FILE;
             } else if mode == TREE {
@@ -332,7 +332,7 @@ fn builder_format_tree(index_content: &str) -> Result<Vec<u8>, UtilError> {
                     u8::from_str_radix(&hex_str, 16).ok()
                 })
                 .collect::<Vec<u8>>();
-    
+
             format_tree.extend_from_slice(file_name.as_bytes());
             format_tree.push(SPACE);
             format_tree.extend_from_slice(mode.as_bytes());
@@ -488,12 +488,10 @@ pub fn read_tree(decompressed_data: &[u8]) -> Result<String, UtilError> {
             }
         }
         index -= 1;
-        let hex_string = hash
-            .iter()
-            .fold(String::new(), |mut acc, byte| {
-                write!(&mut acc, "{:02x}", byte).expect("Unable to write");
-                acc
-            });
+        let hex_string = hash.iter().fold(String::new(), |mut acc, byte| {
+            write!(&mut acc, "{:02x}", byte).expect("Unable to write");
+            acc
+        });
         let object_format = format!(
             "{} {} {}\n",
             String::from_utf8_lossy(&type_object),

@@ -1,5 +1,5 @@
-use super::files::{open_file, read_file_string, create_file_replace};
-use crate::consts::{INDEX, GIT_DIR, FILE, DIRECTORY, BLOB};
+use super::files::{create_file_replace, open_file, read_file_string};
+use crate::consts::{BLOB, DIRECTORY, FILE, GIT_DIR, INDEX};
 use crate::util::errors::UtilError;
 use crate::util::objects::builder_object_tree;
 
@@ -62,10 +62,10 @@ pub fn recovery_index(index_content: &str, git_dir: &str) -> Result<String, Util
             let mut mode = parts[1];
             let hash = parts[2];
 
-            if mode == BLOB{
+            if mode == BLOB {
                 mode = FILE;
             }
-            
+
             if file_name.contains('/') {
                 handle_folder_entry(
                     &mut tree,

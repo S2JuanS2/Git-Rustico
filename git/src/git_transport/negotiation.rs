@@ -1,12 +1,14 @@
 use crate::{
-    consts::{HAVE, PKT_DONE, PKT_NAK, GIT_DIR, REFS_HEADS},
+    commands::branch::get_branch,
+    consts::{GIT_DIR, HAVE, PKT_DONE, PKT_NAK, REFS_HEADS},
     git_server::GitServer,
     util::{
-        connections::{send_flush, send_message, send_done},
+        connections::{send_done, send_flush, send_message},
         errors::UtilError,
+        files::{open_file, read_file_string},
         pkt_line,
-        validation::is_valid_obj_id, files::{open_file, read_file_string},
-    }, commands::branch::get_branch,
+        validation::is_valid_obj_id,
+    },
 };
 use std::{
     io::{Read, Write},
@@ -22,7 +24,11 @@ pub struct PackfileNegotiation {
 }
 
 impl PackfileNegotiation {
-    pub fn new(capabilities: Vec<String>, wanted_objects: Vec<String>, common_objects: Vec<String>) -> Self {
+    pub fn new(
+        capabilities: Vec<String>,
+        wanted_objects: Vec<String>,
+        common_objects: Vec<String>,
+    ) -> Self {
         Self {
             capabilities,
             wanted_objects,
@@ -31,7 +37,11 @@ impl PackfileNegotiation {
     }
 
     pub fn get_components(&self) -> (Vec<String>, Vec<String>, Vec<String>) {
-        (self.capabilities.clone(), self.wanted_objects.clone(), self.common_objects.clone())
+        (
+            self.capabilities.clone(),
+            self.wanted_objects.clone(),
+            self.common_objects.clone(),
+        )
     }
 }
 
@@ -150,14 +160,11 @@ pub fn receive_done(stream: &mut dyn Read, err: UtilError) -> Result<(), UtilErr
 ///
 /// Retorna un `UtilError` en caso de cualquier problema durante la comunicación o si no se recibe el mensaje "done" esperado.
 
-pub fn receive_request(
-    stream: &mut dyn Read,
-) -> Result<PackfileNegotiation, UtilError> {
+pub fn receive_request(stream: &mut dyn Read) -> Result<PackfileNegotiation, UtilError> {
     // Want
     println!("Recibiendo solicitudes...");
     let lines = pkt_line::read(stream)?;
-    if lines.is_empty()
-    {
+    if lines.is_empty() {
         return Ok(PackfileNegotiation::new(Vec::new(), Vec::new(), Vec::new()));
     }
     for line in &lines {
@@ -177,7 +184,11 @@ pub fn receive_request(
     let request_have = receive_request_type(lines, "have", UtilError::UnexpectedRequestNotHave)?;
     println!("Termine de procesar el have");
     // Done
-    Ok(PackfileNegotiation::new(capabilities, request, request_have))
+    Ok(PackfileNegotiation::new(
+        capabilities,
+        request,
+        request_have,
+    ))
 }
 
 /// Procesa las solicitudes recibidas a partir de un conjunto de líneas de bytes.
@@ -408,13 +419,12 @@ pub fn packfile_negotiation_partial(
 
     let ack_references = recive_acknowledgments_multi_ack(stream, server)?;
     server.confirm_local_references(&ack_references);
-    
+
     println!("ACKS: {:?}", ack_references);
     println!("Le enviare el done");
     send_done(stream, UtilError::UploadRequestDone)?;
     Ok(())
 }
-
 
 /// Obtiene las referencias locales de un repositorio Git ubicado en la ruta especificada.
 ///
@@ -427,19 +437,17 @@ pub fn packfile_negotiation_partial(
 /// Retorna un `Result` que puede contener un vector de referencias locales (`Ok(Vec<Reference>)`)
 /// o un error de utilidad (`Err(UtilError)`).
 ///
-fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
+fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError> {
     let mut result_branches = Vec::new();
 
     let branches = get_branch(path_repo).expect("Error");
-    for branch in branches.iter(){
+    for branch in branches.iter() {
         let path_branch = format!("{}/{}/{}/{}", path_repo, GIT_DIR, REFS_HEADS, branch);
-        let file_branch = match open_file(&path_branch)
-        {
+        let file_branch = match open_file(&path_branch) {
             Ok(file) => file,
             Err(_) => return Err(UtilError::GetLocalReferences),
         };
-        let hash_branch = match read_file_string(file_branch)
-        {
+        let hash_branch = match read_file_string(file_branch) {
             Ok(hash) => hash,
             Err(_) => return Err(UtilError::GetLocalReferences),
         };
@@ -448,14 +456,14 @@ fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
     }
     Ok(result_branches)
 }
-    // [TODO N#2]
-    // Dado las referencias que tenemos en server->references de las branch que
-    // tenemos, debemos de buscar en local
-    // los ultimos commit de cada referencia para enviarle al servidor
-    // Para esto me podes dar un vector con los ultimos commit de cada branch
-    // NOta: Si la branch no la tenemos no hace falta que me lo agregues al vector porque
-    // El servidor entendera que no tenemos nada y nos enviara todo de esa branch
-    // Para conversar: Que pasa si el ultimo commit el local es un commit de mas adelante del servidor
+// [TODO N#2]
+// Dado las referencias que tenemos en server->references de las branch que
+// tenemos, debemos de buscar en local
+// los ultimos commit de cada referencia para enviarle al servidor
+// Para esto me podes dar un vector con los ultimos commit de cada branch
+// NOta: Si la branch no la tenemos no hace falta que me lo agregues al vector porque
+// El servidor entendera que no tenemos nada y nos enviara todo de esa branch
+// Para conversar: Que pasa si el ultimo commit el local es un commit de mas adelante del servidor
 // fn get_commits(
 //     sv_references: Vec<(String,String)>,
 //     local_references: Vec<(String,String)>
@@ -493,13 +501,15 @@ fn get_local_references(path_repo: &str) -> Result<Vec<Reference>, UtilError>{
 /// - `UtilError::ExpectedHashInAckResponse`: Se esperaba un hash en la respuesta ACK y no se encontró.
 /// - `UtilError::ExpectedStatusInAckResponse`: Se esperaba un estado en la respuesta ACK y no se encontró.
 ///
-pub fn recive_acknowledgments_multi_ack(stream: &mut TcpStream, server: &GitServer) -> Result<Vec<String>, UtilError> {
-    if !server.is_multiack()
-    {
+pub fn recive_acknowledgments_multi_ack(
+    stream: &mut TcpStream,
+    server: &GitServer,
+) -> Result<Vec<String>, UtilError> {
+    if !server.is_multiack() {
         println!("No es multiack el server!");
         return Err(UtilError::MultiAckNotSupported);
     }
-    
+
     let lines = pkt_line::read(stream)?;
     println!("Lines: {:?}", lines);
     let mut acks = Vec::new();
@@ -558,8 +568,11 @@ pub fn process_ack_response(response: Vec<u8>) -> Result<String, UtilError> {
     Ok(hash.to_string())
 }
 
-pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_server: &GitServer) -> Result<(), UtilError>
-{
+pub fn send_firts_request(
+    writer: &mut dyn Write,
+    references: &Reference,
+    git_server: &GitServer,
+) -> Result<(), UtilError> {
     let mut message = format!("want {}", references.get_hash());
     let capabilities = git_server.get_capabilities();
     if !capabilities.is_empty() {
@@ -571,16 +584,15 @@ pub fn send_firts_request(writer: &mut dyn Write, references: &Reference, git_se
     send_message(writer, &message, UtilError::UploadRequest)
 }
 
-
-pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut GitServer) -> Result<Vec<ReferencesUpdate>, UtilError>
-{
-    let update_request = match pkt_line::read(stream)
-    {
+pub fn receive_reference_update_request(
+    stream: &mut TcpStream,
+    git_server: &mut GitServer,
+) -> Result<Vec<ReferencesUpdate>, UtilError> {
+    let update_request = match pkt_line::read(stream) {
         Ok(lines) => lines,
         Err(_) => return Err(UtilError::ReceiveReferenceUpdateRequest),
     };
-    if update_request.is_empty()
-    {
+    if update_request.is_empty() {
         return Ok(Vec::new());
     }
     let mut result = Vec::new();
@@ -599,8 +611,9 @@ pub fn receive_reference_update_request(stream: &mut TcpStream, git_server: &mut
     Ok(result)
 }
 
-pub fn recieve_first_reference_update(line: &[u8]) -> Result<(ReferencesUpdate, Vec<String>), UtilError>
-{
+pub fn recieve_first_reference_update(
+    line: &[u8],
+) -> Result<(ReferencesUpdate, Vec<String>), UtilError> {
     if let Ok(line_str) = std::str::from_utf8(line) {
         let parts = line_str.split('\0').collect::<Vec<&str>>();
         if parts.len() > 2 {
@@ -610,8 +623,11 @@ pub fn recieve_first_reference_update(line: &[u8]) -> Result<(ReferencesUpdate, 
             let refupdate = ReferencesUpdate::new_from_line(parts[0])?;
             return Ok((refupdate, Vec::new()));
         }
-        let capabilites: Vec<String> = parts[1].split_ascii_whitespace().map(|s| s.to_string()).collect();
-        return Ok((ReferencesUpdate::new_from_line(parts[0])?, capabilites))
+        let capabilites: Vec<String> = parts[1]
+            .split_ascii_whitespace()
+            .map(|s| s.to_string())
+            .collect();
+        return Ok((ReferencesUpdate::new_from_line(parts[0])?, capabilites));
     }
     Err(UtilError::InvalidReferenceUpdateRequest)
 }

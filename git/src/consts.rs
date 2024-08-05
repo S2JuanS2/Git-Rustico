@@ -199,4 +199,4 @@ pub const PR_MAP_FILE: &str = "pr_map.json";
 
 pub const MESSAGE: &str = "message";
 
-pub const OPEN : &str = "open";
+pub const OPEN: &str = "open";

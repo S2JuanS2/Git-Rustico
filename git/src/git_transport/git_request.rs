@@ -1,22 +1,27 @@
 use std::fmt;
+use std::fs;
 use std::io::Read;
 use std::net::TcpStream;
 use std::path::Path;
-use std::fs;
 
 use crate::commands::branch::get_parent_hashes;
 use crate::commands::cat_file::git_cat_file;
 use crate::commands::fetch::save_objects;
 use crate::commands::log::save_log;
 use crate::commands::merge::git_merge;
-use crate::consts::{END_OF_STRING, VERSION_DEFAULT, CAPABILITIES_FETCH, PKT_NAK, PARENT_INITIAL, CAPABILITIES_PUSH, GIT_DIR};
+use crate::consts::{
+    CAPABILITIES_FETCH, CAPABILITIES_PUSH, END_OF_STRING, GIT_DIR, PARENT_INITIAL, PKT_NAK,
+    VERSION_DEFAULT,
+};
 use crate::git_server::GitServer;
-use crate::git_transport::negotiation::{receive_request, receive_reference_update_request};
+use crate::git_transport::negotiation::{receive_reference_update_request, receive_request};
 use crate::models::client::Client;
-use crate::util::connections::{send_message, receive_packfile};
+use crate::util::connections::{receive_packfile, send_message};
 use crate::util::errors::UtilError;
-use crate::util::files::{create_directory, create_file, create_file_replace, open_file, read_file_string};
-use crate::util::objects::{ObjectType, ObjectEntry};
+use crate::util::files::{
+    create_directory, create_file, create_file_replace, open_file, read_file_string,
+};
+use crate::util::objects::{ObjectEntry, ObjectType};
 use crate::util::packfile::send_packfile;
 use crate::util::pkt_line::{add_length_prefix, read_line_from_bytes, read_pkt_line};
 use crate::util::validation::join_paths_correctly;
@@ -233,7 +238,7 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
 
         // Envio el ultimo ACK
         send_acknowledge_last_reference(stream, &local_hashes)?;
-        
+
         let objects = get_objects_fetch(&mut server, local_hashes)?;
         println!("Objects: {:?}", objects);
         send_packfile(stream, &server, objects, true)?;
@@ -251,16 +256,12 @@ fn handle_upload_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String,
     Ok("Clone exitoso".to_string())
 }
 
-
 // [TODO #4]
 // Dado las referencias(local_hash: Vector de hashes) que el cliente supuestamente tiene
 // Se deben filtrar los hash que tiene el servidor
 // Me debes devolver un Vec<String> con los hash que tenemos en comun
 // Acordate que el repo esta en path_repo
-pub fn search_available_references(
-    path_repo: &str,
-    local_hash: &Vec<String>,
-) -> Vec<String> {
+pub fn search_available_references(path_repo: &str, local_hash: &Vec<String>) -> Vec<String> {
     let mut confirmed_commits: Vec<String> = Vec::new();
     let commits_in_repo = match get_commits(path_repo) {
         Ok(commits) => commits,
@@ -275,7 +276,7 @@ pub fn search_available_references(
             confirmed_commits.push(hash.to_string());
         }
     }
-    if confirmed_commits.is_empty(){
+    if confirmed_commits.is_empty() {
         if let Some(current_hash) = local_hash.first() {
             confirmed_commits.push(current_hash.to_string())
         }
@@ -297,7 +298,8 @@ fn get_commits(path_repo: &str) -> Result<Vec<String>, UtilError> {
         };
         let branch_name = branch.file_name();
         if let Some(branch_name) = branch_name.to_str() {
-            let branch_path = join_paths_correctly(path_repo, &format!(".git/refs/heads/{}", branch_name));
+            let branch_path =
+                join_paths_correctly(path_repo, &format!(".git/refs/heads/{}", branch_name));
             let branch_file = open_file(&branch_path)?;
             let branch_content = read_file_string(branch_file)?;
             recover_commits(path_repo, &branch_content, &mut commits)?;
@@ -307,7 +309,11 @@ fn get_commits(path_repo: &str) -> Result<Vec<String>, UtilError> {
     Ok(commits)
 }
 
-fn recover_commits(path_repo: &str, branch_content: &str, commits: &mut Vec<String>) -> Result<(), UtilError> {
+fn recover_commits(
+    path_repo: &str,
+    branch_content: &str,
+    commits: &mut Vec<String>,
+) -> Result<(), UtilError> {
     commits.push(branch_content.to_string());
     let commit_content = git_cat_file(path_repo, branch_content, "-p")?;
     let parent_commit = get_parent_hashes(commit_content);
@@ -405,28 +411,28 @@ fn get_path_repository(root: &str, pathname: &str) -> Result<String, UtilError> 
     Ok(path_repo)
 }
 
-
 // [TODO #7]
 // Pero la diferencia de esta funcion, es que no tengo que enviar todos los objs.
 // Las referencias que tengo que enviar son las que el cliente no tiene
 // Estan estan en &git_server.available_references
 // Y los hash que el cliente tiene y nosotros validamos que ya teniamos estan en _confirmed_hashes
 // Te elimino el HEAD en las referencias por posibles bugs
-pub fn get_objects_fetch(git_server: &mut GitServer, confirmed_hashes: Vec<String>) -> Result<Vec<(ObjectType, Vec<u8>)>,UtilError>
-{
+pub fn get_objects_fetch(
+    git_server: &mut GitServer,
+    confirmed_hashes: Vec<String>,
+) -> Result<Vec<(ObjectType, Vec<u8>)>, UtilError> {
     git_server.delete_head_in_available_references();
     let references = &git_server.available_references;
     let objects = get_objects_fetch_with_hash_valid(
         &git_server.src_repo,
         references.to_vec(),
-        &confirmed_hashes
-        )?;
+        &confirmed_hashes,
+    )?;
 
     Ok(objects)
 }
 
-
-pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String, UtilError>{
+pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<String, UtilError> {
     let capabilitites: Vec<String> = CAPABILITIES_PUSH.iter().map(|&s| s.to_string()).collect();
     let mut server = GitServer::create_from_path(path_repo, VERSION_DEFAULT, &capabilitites)?;
     println!("Server: {:?}", server);
@@ -441,11 +447,10 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<St
     // El server no enviara estatus
     // match process_request_update(requests, objects, path_repo)
     // {
-        //     Ok(status) => send_decompressed_package_status(stream, &status),
-        //     Err(_) => send_decompression_failure_status(stream),
+    //     Ok(status) => send_decompressed_package_status(stream, &status),
+    //     Err(_) => send_decompression_failure_status(stream),
     // }
-    match process_request_update(requests, objects, path_repo)
-    {
+    match process_request_update(requests, objects, path_repo) {
         Ok(_) => Ok("Se pusheo correctamente".to_string()),
         Err(e) => Err(e),
     }
@@ -465,14 +470,13 @@ pub fn handle_receive_pack(stream: &mut TcpStream, path_repo: &str) -> Result<St
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
 fn save_references_with_name_head(repo_path: &str, name: &str) -> Result<(), UtilError> {
-
     let log_dir = format!("{}/.git/logs/refs/heads", repo_path);
     let log_full_dir = format!("{}/{}", log_dir, name);
-    create_directory(Path::new(&log_dir))?; 
+    create_directory(Path::new(&log_dir))?;
     if fs::metadata(log_full_dir).is_err() {
         let path_log = "logs/refs/heads".to_string();
         let path_branch = "refs/heads".to_string();
-        save_log(repo_path, name, &path_log, &path_branch)?;    
+        save_log(repo_path, name, &path_log, &path_branch)?;
     }
     Ok(())
 }
@@ -491,15 +495,14 @@ fn save_references_with_name_head(repo_path: &str, name: &str) -> Result<(), Uti
 ///   se devuelve un error del tipo `CommandsError::RemotoNotInitialized`.
 ///
 fn save_references_with_name_remote(name: &str, repo_path: &str) -> Result<(), UtilError> {
-
     let log_dir = format!("{}/.git/logs/refs/remotes/origin", repo_path);
     create_directory(Path::new(&log_dir))?;
 
     let path_log = "logs/refs/remotes".to_string();
-    
+
     let path_branch = "refs/remotes".to_string();
 
-    save_log(repo_path, name, &path_log, &path_branch)?;    
+    save_log(repo_path, name, &path_log, &path_branch)?;
 
     Ok(())
 }
@@ -514,9 +517,9 @@ fn save_references_with_name_remote(name: &str, repo_path: &str) -> Result<(), U
 // - new: String -> Hash del objeto nuevo
 // - path_refs: String -> Ruta de la referencia -> Ejemplo: refs/heads/master
 // ReferencesUpdate tambien se usara para saber lo que el cliente quiere hacer:
-//   create branch     =  old-id=zero-id  new-id 
+//   create branch     =  old-id=zero-id  new-id
 //   delete branch     =  old-id          new-id=zero-id
-//   update branch     =  old-id          new-id 
+//   update branch     =  old-id          new-id
 // Se puede devolvera un vector del tipo Vec<(String, bool)>
 // Donde el String es la referencia y el bool es si fue exitosa o no
 // ESto se usara para decirle al cliente si la actualizacion fue exitosa o no
@@ -525,9 +528,8 @@ fn save_references_with_name_remote(name: &str, repo_path: &str) -> Result<(), U
 pub fn process_request_update(
     requests: Vec<ReferencesUpdate>,
     objects: Vec<(ObjectEntry, Vec<u8>)>,
-    path_repo: &str
+    path_repo: &str,
 ) -> Result<Vec<(String, bool)>, UtilError> {
-
     if objects.is_empty() {
         println!("Objects is empty");
         // let mut result: Vec<(String, bool)> = Vec::new();
@@ -544,29 +546,34 @@ pub fn process_request_update(
         let hash_reference_new = branch_hash.get_new();
         let hash_reference_old = branch_hash.get_old();
         if hash_reference_new != hash_reference_old {
-
             save_objects(objects, path_repo)?;
             let current_branch_path = path_reference.split('/').collect::<Vec<_>>();
             let mut current_branch = "master";
             if current_branch_path.len() >= 3 {
                 current_branch = current_branch_path[2];
             }
-            let mut branch_path = format!("{}/{}/{}/{}", path_repo, GIT_DIR, "refs/heads", current_branch);
+            let mut branch_path = format!(
+                "{}/{}/{}/{}",
+                path_repo, GIT_DIR, "refs/heads", current_branch
+            );
 
             let mut new = 0;
             let path = Path::new(&branch_path);
-            if path.exists(){
+            if path.exists() {
                 new = 1;
             }
             create_file(branch_path.as_str(), hash_reference_new.as_str())?;
             save_references_with_name_head(path_repo, current_branch)?;
-            branch_path = format!("{}/{}/{}/{}", path_repo, GIT_DIR, "refs/remotes", current_branch);
+            branch_path = format!(
+                "{}/{}/{}/{}",
+                path_repo, GIT_DIR, "refs/remotes", current_branch
+            );
             create_file_replace(branch_path.as_str(), hash_reference_new.as_str())?;
             save_references_with_name_remote(current_branch, path_repo)?;
 
-            if new == 1{
+            if new == 1 {
                 let client: Client = Client::new(
-                    "test".to_string(), 
+                    "test".to_string(),
                     "test@fi.uba.ar".to_string(),
                     "19992020".to_string(),
                     "9090".to_string(),
@@ -583,21 +590,20 @@ pub fn process_request_update(
                 }
                 result.0 = hash_reference_new.to_string();
                 result.1 = true;
-        
-                result_vec.push(result.clone());   
-                }else{
+
+                result_vec.push(result.clone());
+            } else {
                 result.0 = hash_reference_old.to_string();
                 result.1 = false;
                 result_vec.push(result.clone());
-                }
             }
+        }
     };
     if result_vec.is_empty() {
         result_vec.push(result);
     }
     Ok(result_vec)
 }
-
 
 #[cfg(test)]
 mod tests {

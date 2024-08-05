@@ -1,11 +1,11 @@
-use crate::consts::*;
-use crate::util::index::{open_index, recovery_index};
 use super::check_ignore::{check_gitignore, get_gitignore_content};
 use super::errors::CommandsError;
+use crate::commands::checkout::get_tree_hash;
+use crate::consts::*;
 use crate::models::client::Client;
 use crate::util::files::{open_file, read_file, read_file_string};
-use crate::commands::checkout::get_tree_hash;
 use crate::util::formats::hash_generate;
+use crate::util::index::{open_index, recovery_index};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -196,7 +196,11 @@ fn print_changes(
         );
     }
     if !files_not_commited_list.is_empty() || !deleted_staged_files_list.is_empty() {
-        branch_missing_commits(&mut formatted_result, &files_not_commited_list, &deleted_staged_files_list);
+        branch_missing_commits(
+            &mut formatted_result,
+            &files_not_commited_list,
+            &deleted_staged_files_list,
+        );
     }
 
     Ok(formatted_result)
@@ -207,7 +211,6 @@ fn print_changes(
 /// 'directory': directorio del repositorio local.
 /// 'file_name': nombre del archivo.
 pub fn is_files_to_delete(directory: &str, file_name: &str) -> Result<bool, CommandsError> {
-
     let dir_git = format!("{}/{}", directory, GIT_DIR);
 
     let index_content = get_index_content(&dir_git)?;
@@ -215,11 +218,12 @@ pub fn is_files_to_delete(directory: &str, file_name: &str) -> Result<bool, Comm
     let working_directory_hash_list = get_hashes_working_directory(directory)?;
     let index_hashes = get_hashes_index(index_files)?;
 
-    let deleted_files_list = check_for_deleted_files(&index_hashes, &working_directory_hash_list, directory);
+    let deleted_files_list =
+        check_for_deleted_files(&index_hashes, &working_directory_hash_list, directory);
 
     for deleted_file in deleted_files_list {
-        if deleted_file == file_name{
-            return Ok(true)
+        if deleted_file == file_name {
+            return Ok(true);
         }
     }
     Ok(false)
@@ -243,13 +247,13 @@ pub fn is_files_to_commit(directory: &str) -> Result<bool, CommandsError> {
         contents = read_file_string(file)?;
     }
 
-    if contents.is_empty(){
-        return Ok(false)
-    }else{
+    if contents.is_empty() {
+        return Ok(false);
+    } else {
         let content_commit = git_cat_file(directory, &contents, "-p")?;
         let tree_hash_commit = get_tree_hash(&content_commit).unwrap_or(PARENT_INITIAL);
         if tree_hash == tree_hash_commit {
-            return Ok(false)
+            return Ok(false);
         }
     }
     Ok(true)
@@ -287,8 +291,9 @@ fn branch_with_untracked_changes(
         }
     }
     if untracked_files_list.is_empty() {
-        formatted_result
-            .push_str("\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
+        formatted_result.push_str(
+            "\n\nno changes added to commit (use \"git add\" and/or \"git commit -a\")\n",
+        );
     }
 }
 
@@ -326,7 +331,11 @@ fn branch_with_untracked_files(
 /// 'formatted_result': string con el resultado del status formateado.
 /// 'files_not_commited_list': vector con los nombres de los archivos que estan en el staging area y se van a incluir en el proximo commit.
 /// 'deleted_staged_files_list': vector con los nombres de los archivos que se eliminaron del working directory y del index, que se incluiran en el proximo commit.
-fn branch_missing_commits(formatted_result: &mut String, files_not_commited_list: &Vec<String>, deleted_staged_files_list: &Vec<String>) {
+fn branch_missing_commits(
+    formatted_result: &mut String,
+    files_not_commited_list: &Vec<String>,
+    deleted_staged_files_list: &Vec<String>,
+) {
     formatted_result.push_str("\n\nChanges to be committed:\n");
     formatted_result.push_str("  (use \"git reset HEAD <file>...\" to unstage)\n\n");
 
@@ -476,7 +485,6 @@ pub fn check_for_deleted_staged_files(
             if !found_file_in_tree {
                 deleted_staged_files_list.push(file);
             }
-        
         }
     }
     Ok(deleted_staged_files_list)
@@ -505,7 +513,12 @@ fn get_files_in_tree(
             };
 
             if git_cat_file(directory, tree_parts[2], "-t")? == "tree" {
-                get_files_in_tree(directory, tree_parts[2], &mut current_path.clone(), files_in_tree)?;
+                get_files_in_tree(
+                    directory,
+                    tree_parts[2],
+                    &mut current_path.clone(),
+                    files_in_tree,
+                )?;
             } else {
                 files_in_tree.push(current_path);
             }
@@ -550,7 +563,9 @@ fn check_for_commit(
 /// Devuelve un vector con los nombres de los archivos en el index y sus hashes.
 /// ###Parámetros:
 /// 'index_files_list': vector con las lineas del index.
-pub fn get_hashes_index(index_files_list: Vec<String>) -> Result<Vec<(String, String)>, CommandsError> {
+pub fn get_hashes_index(
+    index_files_list: Vec<String>,
+) -> Result<Vec<(String, String)>, CommandsError> {
     let mut index_hashes: Vec<(String, String)> = Vec::new();
     for file in index_files_list {
         let parts: Vec<&str> = file.split(' ').collect();
@@ -623,7 +638,7 @@ fn get_tree_content(
     let tree_content = git_cat_file(directory, tree_hash, "-p")?;
     let tree_lines = tree_content.split('\n');
     for tree_line in tree_lines {
-        if !tree_line.is_empty(){
+        if !tree_line.is_empty() {
             let tree_parts: Vec<&str> = tree_line.split_whitespace().collect();
             if git_cat_file(directory, tree_parts[2], "-t")? == "tree" {
                 get_tree_content(directory, tree_parts[2], file_hash, commited, parent_commit)?;
@@ -643,11 +658,17 @@ fn get_tree_content(
 /// Devuelve un HashMap con los nombres de los archivos en el working directory y sus hashes correspondientes.
 /// ###Parámetros:
 /// 'directory': directorio del repositorio local.
-pub fn get_hashes_working_directory(directory: &str) -> Result<HashMap<String, String>, CommandsError> {
+pub fn get_hashes_working_directory(
+    directory: &str,
+) -> Result<HashMap<String, String>, CommandsError> {
     let mut working_directory_hash_list: HashMap<String, String> = HashMap::new();
     let working_directory = directory.to_string();
     let gitignore_content = get_gitignore_content(directory)?;
-    calculate_directory_hashes(&working_directory, &mut working_directory_hash_list, &gitignore_content)?;
+    calculate_directory_hashes(
+        &working_directory,
+        &mut working_directory_hash_list,
+        &gitignore_content,
+    )?;
     Ok(working_directory_hash_list)
 }
 
@@ -718,11 +739,14 @@ fn create_hash_working_dir(
 
 #[cfg(test)]
 mod tests {
-    use crate::{commands::{
-        add::git_add,
-        commit::{git_commit, Commit},
-        init::git_init,
-    }, util::files::create_file_replace};
+    use crate::{
+        commands::{
+            add::git_add,
+            commit::{git_commit, Commit},
+            init::git_init,
+        },
+        util::files::create_file_replace,
+    };
 
     use super::*;
     use std::io::Write;
@@ -800,13 +824,14 @@ mod tests {
         git_init(directory).expect("Error al ejecutar git init");
 
         let gitignore_path = format!("{}/.gitignore", directory);
-        create_file_replace(&gitignore_path, "target/\nCargo.lock\n").expect("Error al crear el archivo");
+        create_file_replace(&gitignore_path, "target/\nCargo.lock\n")
+            .expect("Error al crear el archivo");
 
         let file_path = format!("{}/{}", directory, "testfile.rs");
         let mut file = fs::File::create(&file_path).expect("Falló al crear el archivo");
         file.write_all(b"Hola Mundo")
             .expect("Error al escribir en el archivo");
-        
+
         let file_path2 = format!("{}/{}", directory, "Cargo.lock");
         let mut file = fs::File::create(&file_path2).expect("Falló al crear el archivo");
         file.write_all(b"Chau Mundo")
