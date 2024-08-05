@@ -55,7 +55,7 @@ pub fn create_pull_requests(body: &HttpBody, repo_name: &str, src: &String, _tx:
     let mut pr = PullRequest::from_http_body(body)?;
 
     pr.change_state(OPEN);
-    add_attributes(&directory, &body, &mut pr, next_pr)?;
+    add_attributes(&directory, body, &mut pr, next_pr)?;
 
     let body = HttpBody::create_from_pr(&pr, APPLICATION_SERVER)?;
     
@@ -282,7 +282,7 @@ fn extract_pr_fields(body: &HttpBody) -> Result<(String, String, String, String)
 fn update_pr_attributes(directory: &str, body: &HttpBody, pr: &mut PullRequest, pull_number: &str) -> Result<(), StatusCode> {
     match pull_number.parse::<usize>() {
         Ok(value) => {
-            add_attributes(directory, &body, pr, value).map_err(|_| StatusCode::InternalError("Failed to add attributes".to_string()))
+            add_attributes(directory, body, pr, value).map_err(|_| StatusCode::InternalError("Failed to add attributes".to_string()))
         }
         Err(_) => Err(StatusCode::InternalError("Invalid pull request number".to_string())),
     }

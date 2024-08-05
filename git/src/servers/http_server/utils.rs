@@ -104,7 +104,7 @@ pub fn send_response_http(writer: &mut dyn Write, status_code: &StatusCode, cont
     match status_code {
         StatusCode::Ok(Some(body)) => {
             // let body = HttpBody::convert_body_to_content_type(body.clone(), content_type)?;
-            send_body_model(writer, &body, content_type)
+            send_body_model(writer, body, content_type)
         },
         StatusCode::ValidationFailed(message)
         | StatusCode::InternalError(message)
