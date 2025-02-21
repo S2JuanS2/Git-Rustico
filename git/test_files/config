@@ -1,0 +1,23 @@
+[core]
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	repositoryformatversion = 0
+[remote "origin"]
+	url = git@github.com:Brubrux/Proyecto-AnInfo-.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "7-feature-mensajes-para-informar-el-estado-del-juego"]
+	remote = origin
+	merge = refs/heads/7-feature-mensajes-para-informar-el-estado-del-juego
+[branch "3-feature-guardar-letras-ya-mencionadas-por-el-jugador"]
+	remote = origin
+	merge = refs/heads/3-feature-guardar-letras-ya-mencionadas-por-el-jugador
+[branch "brunoBranch"]
+	remote = origin
+	merge = refs/heads/brunoBranch
+[branch "6-feature-menu-principal-interfaz-del-juego"]
+	remote = origin
+	merge = refs/heads/6-feature-menu-principal-interfaz-del-juego
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
